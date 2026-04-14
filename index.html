@@ -8,17 +8,23 @@
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
 
     :root {
-      --bg: #f6f3ea;
-      --surface: rgba(255, 255, 255, 0.88);
-      --text: #17332d;
-      --muted: #5f716c;
-      --brand: #1aa3a8;
-      --brand-deep: #0e7d86;
-      --accent: #ef8c21;
-      --success: #18794e;
-      --danger: #b33b2e;
-      --warning: #a76411;
-      --shadow: 0 24px 60px rgba(25, 42, 39, 0.12);
+      --bg: #f7f5ef;
+      --surface: rgba(255, 255, 255, 0.9);
+      --text: #1f3032;
+      --muted: #5c6e74;
+      --brand: #1fb0ba;
+      --brand-deep: #138d99;
+      --accent: #f59a1b;
+      --sun: #f7c52a;
+      --berry: #e73679;
+      --rose: #e181b1;
+      --sky: #56b4df;
+      --lime: #b9d53a;
+      --mist: #aeb3b7;
+      --success: #1d8b66;
+      --danger: #b84b48;
+      --warning: #c97d15;
+      --shadow: 0 24px 60px rgba(31, 48, 50, 0.12);
       --radius-xl: 24px;
       --radius-lg: 18px;
       --radius-md: 14px;
@@ -32,9 +38,10 @@
       margin: 0;
       min-height: 100%;
       background:
-        radial-gradient(circle at top left, rgba(26, 163, 168, 0.18), transparent 28%),
-        radial-gradient(circle at top right, rgba(239, 140, 33, 0.16), transparent 22%),
-        linear-gradient(180deg, #fbf8f0 0%, #f2eee2 100%);
+        radial-gradient(circle at top left, rgba(31, 176, 186, 0.2), transparent 28%),
+        radial-gradient(circle at 82% 10%, rgba(247, 197, 42, 0.18), transparent 20%),
+        radial-gradient(circle at 64% 0%, rgba(231, 54, 121, 0.14), transparent 18%),
+        linear-gradient(180deg, #fbfaf4 0%, #f1ede3 100%);
       color: var(--text);
       font-family: var(--font-body);
     }
@@ -75,7 +82,7 @@
       width: 160px;
       height: 160px;
       border-radius: 50%;
-      background: linear-gradient(135deg, rgba(26, 163, 168, 0.24), rgba(239, 140, 33, 0.22));
+      background: linear-gradient(135deg, rgba(86, 180, 223, 0.24), rgba(185, 213, 58, 0.26) 48%, rgba(245, 154, 27, 0.24));
       filter: blur(8px);
     }
 
@@ -131,13 +138,13 @@
     }
 
     .pill.brand {
-      background: rgba(26, 163, 168, 0.12);
+      background: rgba(31, 176, 186, 0.14);
       color: var(--brand-deep);
     }
 
     .pill.accent {
-      background: rgba(239, 140, 33, 0.14);
-      color: var(--warning);
+      background: rgba(231, 54, 121, 0.14);
+      color: var(--berry);
     }
 
     .top-grid {
@@ -250,17 +257,17 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+      background: linear-gradient(135deg, var(--brand), var(--sky));
       color: white;
     }
 
     .btn-secondary {
-      background: rgba(23, 51, 45, 0.08);
-      color: var(--text);
+      background: linear-gradient(135deg, rgba(231, 54, 121, 0.12), rgba(225, 129, 177, 0.16));
+      color: #8e2454;
     }
 
     .btn-accent {
-      background: linear-gradient(135deg, var(--accent), #d76d10);
+      background: linear-gradient(135deg, var(--sun), var(--accent));
       color: white;
     }
 
@@ -281,7 +288,7 @@
     }
 
     .tab-btn.is-active {
-      background: var(--text);
+      background: linear-gradient(135deg, var(--berry), var(--brand));
       color: white;
     }
 
@@ -316,10 +323,10 @@
       font-weight: 700;
     }
 
-    .status-banner.info { border-color: rgba(26, 163, 168, 0.3); }
+    .status-banner.info { border-color: rgba(31, 176, 186, 0.32); color: var(--brand-deep); }
     .status-banner.success { border-color: rgba(24, 121, 78, 0.35); color: var(--success); }
     .status-banner.error { border-color: rgba(179, 59, 46, 0.35); color: var(--danger); }
-    .status-banner.warn { border-color: rgba(239, 140, 33, 0.35); color: var(--warning); }
+    .status-banner.warn { border-color: rgba(245, 154, 27, 0.35); color: var(--warning); }
 
     .checklist {
       max-height: 240px;
@@ -455,7 +462,7 @@
         <div class="stack">
           <p>1. Abre la pagina y entra con tu facilitador, directora o admin.</p>
           <p>2. Carga catalogos y empieza a trabajar sobre el backend real.</p>
-          <p>3. Para reportes, usa el boton inmediato o la cola V8.</p>
+          <p>3. Para reportes, solicita o regenera y luego revisa el estado del worker.</p>
           <p>4. La conexion al Web App ya queda fija dentro del frontend.</p>
         </div>
       </div>
@@ -738,6 +745,7 @@
                   <select id="evaHabilidad"></select>
                 </div>
               </div>
+              <div class="helper">Submateria y habilidad son opcionales para evaluacion rapida por materia.</div>
               <div>
                 <label for="evaComentario">Comentario</label>
                 <textarea id="evaComentario" placeholder="Que evidencia viste, que logro, que necesita reforzar"></textarea>
@@ -806,7 +814,7 @@
             <div class="card-head">
               <div>
                 <h2>Reportes de alumno</h2>
-                <p class="subtle">Puedes forzar el PDF premium o usar la cola V8.</p>
+                <p class="subtle">Solicita, regenera y monitorea reportes institucionales en segundo plano. Disponible solo para direccion y admin.</p>
               </div>
             </div>
             <div class="stack">
@@ -821,11 +829,11 @@
                 </div>
               </div>
               <div class="actions">
-                <button id="generateNowBtn" class="btn-primary" type="button">Generar ahora</button>
-                <button id="requestReportBtn" class="btn-secondary" type="button">Solicitar en cola</button>
+                <button id="generateNowBtn" class="btn-primary" type="button">Solicitar / actualizar</button>
+                <button id="requestReportBtn" class="btn-secondary" type="button">Forzar regeneracion</button>
                 <button id="statusReportBtn" class="btn-ghost" type="button">Revisar estado</button>
               </div>
-              <div class="helper">La ruta inmediata usa el PDF premium; la cola usa REPORTES_CACHE y worker.</div>
+              <div class="helper">La generacion es asincrona: el worker arma el PDF, este panel solo encola y consulta estado, y el PDF puede quedar listo unos minutos despues.</div>
             </div>
           </article>
 
@@ -851,7 +859,7 @@
     };
 
     const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzF61zDQkF15kTFBQykHx-J2XAY1TFcqI_Gze_UtVZhD80DTlbkMEYTBIdQ-_HIqlSf/exec';
-    const DEFAULT_PERIODS = 'P1|Primer trimestre';
+    const DEFAULT_PERIODS = '';
 
     const state = {
       config: {
@@ -868,11 +876,14 @@
         habilidades: [],
         talleres: [],
         refuerzos: [],
+        periodos: [],
         semanas: []
       },
       planeaciones: [],
       activeTab: 'planeaciones'
     };
+
+    const inFlightActions = new Map();
 
     const $ = (id) => document.getElementById(id);
 
@@ -885,6 +896,67 @@
 
     function uid(prefix = 'RID') {
       return prefix + '-' + Math.random().toString(36).slice(2, 10).toUpperCase();
+    }
+
+    function createEmptyCatalogos() {
+      return {
+        alumnos: [],
+        facilitadores: [],
+        grupos: [],
+        niveles: [],
+        materias: [],
+        submaterias: [],
+        habilidades: [],
+        talleres: [],
+        refuerzos: [],
+        periodos: [],
+        semanas: []
+      };
+    }
+
+    function resetReportResult() {
+      const host = $('reportResult');
+      if (host) {
+        host.innerHTML = '<div class="subtle">Todavia no hay una consulta de reporte.</div>';
+      }
+    }
+
+    function clearLoadedData() {
+      state.planeaciones = [];
+      state.catalogos = createEmptyCatalogos();
+      state.activeTab = 'planeaciones';
+      resetReportResult();
+    }
+
+    function clearSessionScopedState() {
+      saveSession(null);
+      clearLoadedData();
+      renderAll();
+    }
+
+    function normalizeActionKeyPart(value) {
+      const text = String(value == null ? '' : value).trim();
+      if (!text) return '-';
+      return text.replace(/[\s:|]+/g, '_').slice(0, 80);
+    }
+
+    function buildActionKey(action, parts) {
+      return [action].concat((parts || []).map(normalizeActionKeyPart)).join(':');
+    }
+
+    function setButtonBusy(button, busy) {
+      if (!button) return;
+      if (busy) {
+        if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Procesando...';
+        return;
+      }
+      button.disabled = false;
+      if (button.dataset.originalText) {
+        button.textContent = button.dataset.originalText;
+        delete button.dataset.originalText;
+      }
     }
 
     function parsePeriodsConfig(raw) {
@@ -951,8 +1023,49 @@
       return err.code ? err.code + ': ' + err.message : err.message || String(err);
     }
 
+    function getCurrentRole() {
+      return state.session && state.session.usuario ? state.session.usuario.rol : '';
+    }
+
+    function isTruthyValue(value) {
+      if (value === true) return true;
+      const normalized = String(value == null ? '' : value).trim().toLowerCase();
+      return normalized === 'si' || normalized === 'sí' || normalized === 'true' || normalized === '1' || normalized === 'x' || normalized === 'yes';
+    }
+
+    function canUseReportes() {
+      const role = getCurrentRole();
+      return role === 'directora' || role === 'admin';
+    }
+
+    function ensureCanUseReportes() {
+      if (!canUseReportes()) {
+        throw new Error('Los reportes solo estan disponibles para direccion y admin.');
+      }
+    }
+
     function getLocalPeriods() {
       return parsePeriodsConfig(state.config.periodConfig);
+    }
+
+    function getAvailablePeriods() {
+      const backendPeriods = Array.isArray(state.catalogos.periodos) ? state.catalogos.periodos : [];
+      if (backendPeriods.length) {
+        return backendPeriods
+          .filter((item) => isTruthyValue(item.activo))
+          .map((item) => ({
+            id: String(item.periodo_id || '').trim(),
+            name: String(item.nombre_visible || item.periodo_id || '').trim()
+          }))
+          .filter((item) => item.id);
+      }
+      return [];
+    }
+
+    function ensureBackendPeriodsReady() {
+      if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
+        throw new Error('El backend no devolvio periodos activos. Revisa la hoja PERIODOS antes de continuar.');
+      }
     }
 
     async function api(action, payload = {}, options = {}) {
@@ -979,6 +1092,9 @@
         err.code = json.code || 'ERROR';
         err.details = json.details || null;
         throw err;
+      }
+      if (json.meta && json.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
+        return Object.assign({}, json.data, { _meta: json.meta });
       }
       return json.data;
     }
@@ -1010,6 +1126,8 @@
 
     async function logout() {
       if (!state.session || !state.session.token) {
+        clearLoadedData();
+        renderAll();
         saveSession(null);
         setBanner('No habia una sesion activa.', 'info');
         return;
@@ -1018,19 +1136,7 @@
         await api('logout', {});
       } catch (_) {}
       saveSession(null);
-      state.planeaciones = [];
-      state.catalogos = {
-        alumnos: [],
-        facilitadores: [],
-        grupos: [],
-        niveles: [],
-        materias: [],
-        submaterias: [],
-        habilidades: [],
-        talleres: [],
-        refuerzos: [],
-        semanas: []
-      };
+      clearLoadedData();
       renderAll();
       setBanner('Sesion cerrada.', 'success');
     }
@@ -1057,7 +1163,22 @@
       await refreshCatalogos();
       await refreshPlaneaciones();
       renderAll();
+      if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
+        setBanner('Faltan periodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
+        return;
+      }
       setBanner('Datos actualizados.', 'success');
+    }
+
+    function syncRoleUi() {
+      const reportTabBtn = document.querySelector('.tab-btn[data-tab="reportes"]');
+      const reportPanel = $('panel-reportes');
+      const canViewReportes = canUseReportes();
+      if (reportTabBtn) reportTabBtn.hidden = !canViewReportes;
+      if (reportPanel) reportPanel.hidden = !canViewReportes;
+      if (!canViewReportes && state.activeTab === 'reportes') {
+        state.activeTab = 'planeaciones';
+      }
     }
 
     function renderSession() {
@@ -1067,6 +1188,7 @@
         badge.textContent = 'Sin sesion';
         badge.className = 'pill';
         info.textContent = 'Todavia no hay usuario autenticado.';
+        syncRoleUi();
         return;
       }
       badge.textContent = state.session.usuario.rol;
@@ -1075,6 +1197,7 @@
         '<strong>' + escapeHtml(state.session.usuario.nombre) + '</strong><br>' +
         '<span class="mini">' + escapeHtml(state.session.usuario.facilitador_id) + ' · ' +
         escapeHtml(state.session.usuario.rol) + '</span>';
+      syncRoleUi();
     }
 
     function renderStats() {
@@ -1099,10 +1222,11 @@
     }
 
     function renderPeriodSelects() {
-      const periods = getLocalPeriods();
+      const periods = getAvailablePeriods();
       ['obsPeriodo', 'evaPeriodo', 'notaPeriodo', 'repPeriodo'].forEach((id) => {
-        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' · ' + p.name, 'Selecciona periodo');
+        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona periodo');
       });
+      syncNotePeriodoState();
     }
 
     function formatPlanShort(plan) {
@@ -1199,6 +1323,16 @@
       fillSelect($('evaHabilidad'), habilidades, (item) => item.habilidad_id, (item) => item.nombre || item.habilidad_id, 'Selecciona habilidad');
     }
 
+    function syncNotePeriodoState() {
+      const alcance = $('notaAlcance').value;
+      const periodo = $('notaPeriodo');
+      const isGlobal = alcance === 'global';
+      periodo.disabled = isGlobal;
+      if (isGlobal) {
+        periodo.value = '';
+      }
+    }
+
     function renderPlaneacionesList() {
       const host = $('planeacionesList');
       const role = state.session && state.session.usuario ? state.session.usuario.rol : '';
@@ -1264,19 +1398,26 @@
 
     function renderReportResult(data) {
       const host = $('reportResult');
-      const warnings = data && data.warnings_json ? safeJsonParse(data.warnings_json) : null;
+      const warnings = Array.isArray(data && data.warnings)
+        ? data.warnings
+        : (data && data.warnings_json ? safeJsonParse(data.warnings_json) : null);
+      const status = data && (data.status || data.estado) ? (data.status || data.estado) : '-';
       host.innerHTML = [
-        '<div><strong>Estado:</strong> ' + escapeHtml(data && data.status ? data.status : '-') + '</div>',
+        '<div><strong>Estado:</strong> ' + escapeHtml(status) + '</div>',
         data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
         data && data.version_datos ? '<div><strong>Version datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
         data && data.version_pdf ? '<div><strong>Version PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
         data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
+        data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
         Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
         data && data.next_retry_at ? '<div><strong>Reintento:</strong> ' + escapeHtml(data.next_retry_at) + '</div>' : ''
       ].filter(Boolean).join('');
     }
 
     function activateTab(tabName) {
+      if (tabName === 'reportes' && !canUseReportes()) {
+        tabName = 'planeaciones';
+      }
       state.activeTab = tabName;
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.classList.toggle('is-active', btn.dataset.tab === tabName);
@@ -1296,6 +1437,7 @@
       renderObsAlumnoSelect();
       renderEvaluationDependencies();
       renderPlaneacionesList();
+      syncRoleUi();
       activateTab(state.activeTab);
     }
 
@@ -1321,6 +1463,7 @@
       const plan = getPlanById($('activitiesPlan').value);
       if (!plan) throw new Error('Selecciona una planeacion borrador.');
       const lines = $('activitiesText').value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      if (!lines.length) throw new Error('Escribe al menos una actividad.');
       const actividades = lines.map((texto, index) => ({ orden: index + 1, texto, material_en_carpeta: false }));
       await api('crearActividades', {
         planeacion_id: plan.planeacion_id,
@@ -1335,6 +1478,11 @@
 
     async function saveObservation() {
       ensureLoggedIn();
+      ensureBackendPeriodsReady();
+      if (!$('obsPlan').value) throw new Error('Selecciona una planeacion.');
+      if (!$('obsAlumno').value) throw new Error('Selecciona un alumno.');
+      if (!$('obsPeriodo').value) throw new Error('Selecciona un periodo.');
+      if (!$('obsNota').value.trim()) throw new Error('Escribe la observacion.');
       await api('crearObsAlumno', {
         planeacion_id: $('obsPlan').value,
         alumno_id: $('obsAlumno').value,
@@ -1353,6 +1501,10 @@
 
     async function saveEvaluation() {
       ensureLoggedIn();
+      ensureBackendPeriodsReady();
+      if (!$('evaAlumno').value) throw new Error('Selecciona un alumno.');
+      if (!$('evaPeriodo').value) throw new Error('Selecciona un periodo.');
+      if (!$('evaMateria').value) throw new Error('Selecciona una materia.');
       const data = await api('guardarEvaluacion', {
         alumno_id: $('evaAlumno').value,
         materia_id: $('evaMateria').value,
@@ -1370,13 +1522,20 @@
 
     async function saveNote() {
       ensureLoggedIn();
+      ensureBackendPeriodsReady();
+      if (!$('notaAlumno').value) throw new Error('Selecciona un alumno.');
+      if (!$('notaTexto').value.trim()) throw new Error('Escribe el texto de la nota.');
+      if ($('notaAlcance').value === 'periodo' && !$('notaPeriodo').value) {
+        throw new Error('Selecciona un periodo para la nota.');
+      }
       await api('crearNotaDirectora', {
         alumno_id: $('notaAlumno').value,
         tipo: $('notaTipo').value,
         alcance: $('notaAlcance').value,
-        periodo_id: $('notaPeriodo').value,
+        periodo_id: $('notaAlcance').value === 'global' ? '' : $('notaPeriodo').value,
         texto: $('notaTexto').value.trim(),
-        visible_en_reporte: $('notaVisible').checked ? 'si' : 'no'
+        visible_en_reporte: $('notaVisible').checked ? 'si' : 'no',
+        request_id: uid('NTA')
       });
       $('notaTexto').value = '';
       setBanner('Nota de direccion guardada.', 'success');
@@ -1384,43 +1543,79 @@
 
     async function generateReportNow() {
       ensureLoggedIn();
-      const data = await api('generarReporteAlumnoPdf', {
+      ensureCanUseReportes();
+      ensureBackendPeriodsReady();
+      if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
+      if (!$('repPeriodo').value) throw new Error('Selecciona un periodo.');
+      const data = await api('requestReporteAlumno', {
         alumno_id: $('repAlumno').value,
-        periodo_id: $('repPeriodo').value
+        periodo_id: $('repPeriodo').value,
+        request_id: uid('REP')
       });
-      renderReportResult(Object.assign({ status: data.status || 'listo' }, data));
-      setBanner('Reporte generado.', 'success');
+      renderReportResult(data);
+      if (data.status === 'listo' && data.url) {
+        setBanner('El reporte ya estaba vigente y listo para abrir.', 'success');
+        return;
+      }
+      setBanner('Solicitud registrada. El worker generara o actualizara el reporte en segundo plano.', 'success');
     }
 
     async function requestReport() {
       ensureLoggedIn();
-      const data = await api('requestReporte', {
+      ensureCanUseReportes();
+      ensureBackendPeriodsReady();
+      if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
+      if (!$('repPeriodo').value) throw new Error('Selecciona un periodo.');
+      const data = await api('regenerarReporteAlumno', {
         alumno_id: $('repAlumno').value,
-        periodo_id: $('repPeriodo').value
+        periodo_id: $('repPeriodo').value,
+        request_id: uid('RRG')
       });
       renderReportResult(data);
-      setBanner('Solicitud enviada al modulo de reportes.', 'success');
+      setBanner('Regeneracion forzada registrada. El worker armara una nueva version del PDF.', 'success');
     }
 
     async function checkReportStatus() {
       ensureLoggedIn();
-      const data = await api('statusReporte', {
+      ensureCanUseReportes();
+      ensureBackendPeriodsReady();
+      if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
+      if (!$('repPeriodo').value) throw new Error('Selecciona un periodo.');
+      const data = await api('getReporteAlumnoStatus', {
         alumno_id: $('repAlumno').value,
         periodo_id: $('repPeriodo').value
       });
       renderReportResult(data);
-      setBanner('Estado de reporte actualizado.', 'info');
+      setBanner('Estado de reporte actualizado.', data.status === 'listo' ? 'success' : 'info');
     }
 
-    async function handleAction(label, fn) {
+    async function handleAction(label, fn, options = {}) {
+      const actionKey = options.key || label;
+      const button = options.button || null;
+      if (inFlightActions.has(actionKey)) {
+        setBanner('Ya hay una solicitud en curso para esta accion.', 'info');
+        return inFlightActions.get(actionKey);
+      }
+
+      const runner = (async () => {
       try {
+          setButtonBusy(button, true);
         await fn();
       } catch (err) {
         if (err && err.code === 'INVALID_SESSION') {
-          saveSession(null);
+            clearSessionScopedState();
+            setBanner('Tu sesion expiro o ya no es valida. Vuelve a iniciar sesion.', 'error');
+            return;
         }
         setBanner(formatApiError(err), 'error');
+      } finally {
+          inFlightActions.delete(actionKey);
+          setButtonBusy(button, false);
       }
+      })();
+
+      inFlightActions.set(actionKey, runner);
+      return runner;
     }
 
     async function planAction(planId, action) {
@@ -1429,7 +1624,7 @@
         await refreshPlaneaciones();
         renderAll();
         setBanner('Accion completada: ' + action, 'success');
-      });
+      }, { key: buildActionKey(action, [planId]) });
     }
 
     async function confirmClosePlan(planId) {
@@ -1445,7 +1640,7 @@
         await refreshPlaneaciones();
         renderAll();
         setBanner('Cierre confirmado.', 'success');
-      });
+      }, { key: buildActionKey('confirmarCierre', [planId]) });
     }
 
     function usePlanForActivities(planId) {
@@ -1463,30 +1658,55 @@
     }
 
     function bindEvents() {
-      $('pingBtn').addEventListener('click', () => handleAction('ping', pingBackend));
-      $('loginBtn').addEventListener('click', () => handleAction('login', login));
-      $('logoutBtn').addEventListener('click', () => handleAction('logout', logout));
-      $('reloadBtn').addEventListener('click', () => handleAction('refresh', refreshAll));
-      $('createPlanBtn').addEventListener('click', () => handleAction('crearPlaneacion', createPlaneacion));
-      $('saveActivitiesBtn').addEventListener('click', () => handleAction('crearActividades', saveActivities));
-      $('saveObsBtn').addEventListener('click', () => handleAction('crearObsAlumno', saveObservation));
-      $('saveEvaBtn').addEventListener('click', () => handleAction('guardarEvaluacion', saveEvaluation));
-      $('saveNotaBtn').addEventListener('click', () => handleAction('crearNotaDirectora', saveNote));
-      $('generateNowBtn').addEventListener('click', () => handleAction('generarReporteAlumnoPdf', generateReportNow));
-      $('requestReportBtn').addEventListener('click', () => handleAction('requestReporte', requestReport));
-      $('statusReportBtn').addEventListener('click', () => handleAction('statusReporte', checkReportStatus));
+      $('pingBtn').addEventListener('click', (event) => handleAction('ping', pingBackend, { button: event.currentTarget }));
+      $('loginBtn').addEventListener('click', (event) => handleAction('login', login, {
+        button: event.currentTarget,
+        key: buildActionKey('login', [$('facilitadorId').value])
+      }));
+      $('logoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
+      $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
+      $('createPlanBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', createPlaneacion, {
+        button: event.currentTarget,
+        key: buildActionKey('crearPlaneacion', [$('planSemana').value, $('planGrupo').value, $('planMateria').value, getSelectedPlanAlumnos().sort().join(',')])
+      }));
+      $('saveActivitiesBtn').addEventListener('click', (event) => handleAction('crearActividades', saveActivities, {
+        button: event.currentTarget,
+        key: buildActionKey('crearActividades', [$('activitiesPlan').value, $('activitiesVersion').value, $('activitiesText').value.trim().slice(0, 40)])
+      }));
+      $('saveObsBtn').addEventListener('click', (event) => handleAction('crearObsAlumno', saveObservation, {
+        button: event.currentTarget,
+        key: buildActionKey('crearObsAlumno', [$('obsPlan').value, $('obsAlumno').value, $('obsPeriodo').value, $('obsTipo').value, $('obsNota').value.trim().slice(0, 40)])
+      }));
+      $('saveEvaBtn').addEventListener('click', (event) => handleAction('guardarEvaluacion', saveEvaluation, {
+        button: event.currentTarget,
+        key: buildActionKey('guardarEvaluacion', [$('evaAlumno').value, $('evaMateria').value, $('evaPeriodo').value, $('evaNivel').value, $('evaComentario').value.trim().slice(0, 40)])
+      }));
+      $('saveNotaBtn').addEventListener('click', (event) => handleAction('crearNotaDirectora', saveNote, {
+        button: event.currentTarget,
+        key: buildActionKey('crearNotaDirectora', [$('notaAlumno').value, $('notaAlcance').value, $('notaPeriodo').value, $('notaTipo').value, $('notaTexto').value.trim().slice(0, 40)])
+      }));
+      $('generateNowBtn').addEventListener('click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
+        button: event.currentTarget,
+        key: buildActionKey('requestReporteAlumno', [$('repAlumno').value, $('repPeriodo').value])
+      }));
+      $('requestReportBtn').addEventListener('click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
+        button: event.currentTarget,
+        key: buildActionKey('regenerarReporteAlumno', [$('repAlumno').value, $('repPeriodo').value])
+      }));
+      $('statusReportBtn').addEventListener('click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
+        button: event.currentTarget,
+        key: buildActionKey('getReporteAlumnoStatus', [$('repAlumno').value, $('repPeriodo').value])
+      }));
       $('planGrupo').addEventListener('change', renderPlanAlumnosChecklist);
       $('activitiesPlan').addEventListener('change', renderActivitiesForm);
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
       $('evaMateria').addEventListener('change', renderEvaluationDependencies);
-      $('filterPlaneacionesBtn').addEventListener('click', () => handleAction('filtrar planeaciones', async () => {
+      $('filterPlaneacionesBtn').addEventListener('click', (event) => handleAction('filtrar planeaciones', async () => {
         await refreshPlaneaciones();
         renderAll();
         setBanner('Planeaciones filtradas.', 'info');
-      }));
-      $('notaAlcance').addEventListener('change', () => {
-        $('notaPeriodo').disabled = false;
-      });
+      }, { button: event.currentTarget }));
+      $('notaAlcance').addEventListener('change', syncNotePeriodoState);
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
       });
