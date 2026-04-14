@@ -55,7 +55,7 @@
 
     .hero {
       display: grid;
-      grid-template-columns: 1.3fr 0.9fr;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);
       gap: 20px;
       margin-bottom: 22px;
     }
@@ -73,6 +73,108 @@
       padding: 28px;
       position: relative;
       overflow: hidden;
+    }
+
+    .hero-card--brand {
+      display: grid;
+      gap: 24px;
+    }
+
+    .brand-lockup {
+      display: grid;
+      grid-template-columns: 122px minmax(0, 1fr);
+      gap: 22px;
+      align-items: center;
+    }
+
+    .brand-mark {
+      width: 122px;
+      height: 122px;
+      border-radius: 30px;
+      display: grid;
+      place-items: center;
+      padding: 14px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(247, 245, 239, 0.8)),
+        linear-gradient(135deg, rgba(31, 176, 186, 0.18), rgba(185, 213, 58, 0.2), rgba(245, 154, 27, 0.14));
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      box-shadow: 0 20px 44px rgba(31, 48, 50, 0.12);
+    }
+
+    .brand-mark img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .brand-copy {
+      display: grid;
+      gap: 10px;
+    }
+
+    .brand-copy p {
+      max-width: 58ch;
+    }
+
+    .hero-feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .hero-feature {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(249, 247, 239, 0.82));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .hero-feature strong,
+    .hero-step strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-family: var(--font-title);
+      font-size: 0.98rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-feature p,
+    .hero-step p {
+      font-size: 0.92rem;
+    }
+
+    .hero-step-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .hero-step {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .hero-step-index {
+      width: 42px;
+      height: 42px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-family: var(--font-title);
+      font-size: 1rem;
+      font-weight: 800;
+      color: white;
+      background: linear-gradient(135deg, var(--berry), var(--brand));
+      box-shadow: 0 14px 28px rgba(31, 176, 186, 0.22);
     }
 
     .hero-card::after {
@@ -149,9 +251,10 @@
 
     .top-grid {
       display: grid;
-      grid-template-columns: 1.2fr 1fr 1fr;
+      grid-template-columns: minmax(320px, 0.96fr) minmax(0, 1.04fr);
       gap: 20px;
       margin-bottom: 22px;
+      align-items: start;
     }
 
     .workspace { display: grid; gap: 20px; }
@@ -328,6 +431,32 @@
     .status-banner.error { border-color: rgba(179, 59, 46, 0.35); color: var(--danger); }
     .status-banner.warn { border-color: rgba(245, 154, 27, 0.35); color: var(--warning); }
 
+    .action-toast-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .action-toast {
+      position: fixed;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(23, 51, 45, 0.12);
+      background: rgba(255, 255, 255, 0.96);
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 700;
+      line-height: 1.35;
+      box-shadow: 0 18px 38px rgba(31, 48, 50, 0.16);
+      backdrop-filter: blur(8px);
+    }
+
+    .action-toast.info { border-color: rgba(31, 176, 186, 0.35); color: var(--brand-deep); }
+    .action-toast.success { border-color: rgba(24, 121, 78, 0.35); color: var(--success); }
+    .action-toast.error { border-color: rgba(179, 59, 46, 0.35); color: var(--danger); }
+    .action-toast.warn { border-color: rgba(245, 154, 27, 0.35); color: var(--warning); }
+
     .checklist {
       max-height: 240px;
       overflow: auto;
@@ -426,77 +555,128 @@
     @media (max-width: 1180px) {
       .hero,
       .top-grid,
-      .stats,
       .grid-4,
       .grid-3,
       .grid-2 { grid-template-columns: 1fr; }
+
+      .hero-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 920px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 720px) {
       body { padding: 16px; }
       .hero-card,
       .card { padding: 18px; }
+      .action-toast { max-width: calc(100vw - 32px) !important; }
+      .brand-lockup,
+      .hero-feature-grid,
+      .stats { grid-template-columns: 1fr; }
+      .brand-mark {
+        width: 98px;
+        height: 98px;
+        border-radius: 24px;
+      }
+      .card-head,
+      .actions,
+      .inline-actions {
+        align-items: stretch;
+      }
+      .card-head {
+        flex-direction: column;
+      }
+      .actions > button,
+      .inline-actions > button {
+        width: 100%;
+      }
+      .hero-step {
+        grid-template-columns: 38px minmax(0, 1fr);
+      }
+      .hero-step-index {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .stats { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="page">
     <section class="hero">
-      <div class="hero-card">
-        <div class="pill brand">Frontend limpio para Apps Script V7.5 + V8</div>
-        <h1>LibreAprendiz en una sola pantalla de trabajo.</h1>
-        <p>
-          Este frontend habla con tu Web App real. Ya no guarda planeaciones en localStorage ni trae un backend falso incrustado:
-          todo lo importante vive en tu Apps Script y en tu Google Sheet.
-        </p>
-        <div class="hero-meta">
-          <div class="pill">Login real</div>
-          <div class="pill">Planeaciones</div>
-          <div class="pill">Observaciones</div>
-          <div class="pill">Evaluaciones</div>
-          <div class="pill accent">Reportes V8</div>
+      <div class="hero-card hero-card--brand">
+        <div class="brand-lockup">
+          <div class="brand-mark">
+            <img id="brandLogo" alt="Libre Aprendiz">
+          </div>
+          <div class="brand-copy">
+            <div class="pill brand">Libre Aprendiz</div>
+            <h1>Planeacion, seguimiento y reportes en una sola vista de trabajo.</h1>
+            <p>
+              Un espacio para acompanar el proceso pedagogico de cada alumno con claridad, continuidad y criterio compartido entre facilitadores, direccion y administracion.
+            </p>
+          </div>
+        </div>
+        <div class="hero-feature-grid">
+          <div class="hero-feature">
+            <strong>Planeacion semanal</strong>
+            <p>Organiza borradores, actividades y cierres desde el mismo flujo de trabajo.</p>
+          </div>
+          <div class="hero-feature">
+            <strong>Seguimiento significativo</strong>
+            <p>Registra observaciones, evaluaciones y notas con contexto real de alumno, periodo y materia.</p>
+          </div>
+          <div class="hero-feature">
+            <strong>Reportes institucionales</strong>
+            <p>Solicita reportes y acompana su estado sin salir de la plataforma.</p>
+          </div>
         </div>
       </div>
       <div class="hero-card">
-        <h2>Como usarlo</h2>
-        <div class="stack">
-          <p>1. Abre la pagina y entra con tu facilitador, directora o admin.</p>
-          <p>2. Carga catalogos y empieza a trabajar sobre el backend real.</p>
-          <p>3. Para reportes, solicita o regenera y luego revisa el estado del worker.</p>
-          <p>4. La conexion al Web App ya queda fija dentro del frontend.</p>
+        <div class="pill accent">Acompanamiento vivo</div>
+        <h2>Una jornada pensada para el equipo pedagogico</h2>
+        <p>
+          Desde aqui puedes iniciar tu jornada, actualizar el panorama general del sistema y moverte con rapidez entre planeaciones, seguimiento y reportes.
+        </p>
+        <div class="hero-step-list">
+          <div class="hero-step">
+            <div class="hero-step-index">1</div>
+            <div>
+              <strong>Entra con tu rol</strong>
+              <p>Usa tu ID institucional para abrir la vista correspondiente a facilitador, direccion o admin.</p>
+            </div>
+          </div>
+          <div class="hero-step">
+            <div class="hero-step-index">2</div>
+            <div>
+              <strong>Actualiza tu panorama</strong>
+              <p>Recarga los datos del dia para trabajar con alumnos, semanas, materias y planeaciones vigentes.</p>
+            </div>
+          </div>
+          <div class="hero-step">
+            <div class="hero-step-index">3</div>
+            <div>
+              <strong>Documenta y acompana</strong>
+              <p>Captura avances, observaciones y notas con el mismo lenguaje de acompanamiento de Libre Aprendiz.</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <div id="statusBanner" class="status-banner info">Frontend listo para iniciar sesion.</div>
+    <div id="statusBanner" class="status-banner info">Todo listo para comenzar la jornada.</div>
 
     <section class="top-grid">
       <article class="card">
         <div class="card-head">
           <div>
-            <h2>Conexion fija</h2>
-            <p class="subtle">Los facilitadores ya no necesitan capturar URL ni claves.</p>
-          </div>
-        </div>
-        <div class="stack">
-          <div>
-            <label>Web App activa</label>
-            <div class="report-box">
-              <div class="code" id="backendUrlText"></div>
-              <div class="helper">Si cambias la implementación del Apps Script, solo hay que actualizar este frontend una vez.</div>
-            </div>
-          </div>
-          <div class="actions">
-            <button id="pingBtn" class="btn-secondary" type="button">Probar conexion</button>
-          </div>
-        </div>
-      </article>
-
-      <article class="card">
-        <div class="card-head">
-          <div>
-            <h2>Sesion</h2>
-            <p class="subtle">Usa el token real del backend.</p>
+            <h2>Acceso del equipo</h2>
+            <p class="subtle">Ingresa con tu rol para abrir planeaciones, seguimiento y reportes segun tus permisos.</p>
           </div>
           <div id="sessionBadge" class="pill">Sin sesion</div>
         </div>
@@ -504,31 +684,33 @@
           <div class="grid-2">
             <div>
               <label for="facilitadorId">Facilitador ID</label>
-              <input id="facilitadorId" type="text" placeholder="FAC-001">
+              <input id="facilitadorId" type="text" placeholder="Tu ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
             </div>
             <div>
               <label for="pinInput">PIN</label>
-              <input id="pinInput" type="password" placeholder="4101">
+              <input id="pinInput" type="password" placeholder="Tu PIN" autocomplete="off" inputmode="numeric">
             </div>
           </div>
           <div class="actions">
             <button id="loginBtn" class="btn-primary" type="button">Iniciar sesion</button>
             <button id="logoutBtn" class="btn-ghost" type="button">Cerrar sesion</button>
+            <button id="pingBtn" class="btn-secondary" type="button">Verificar conexion</button>
           </div>
-          <div id="sessionInfo" class="subtle">Todavia no hay usuario autenticado.</div>
+          <div id="sessionInfo" class="subtle">Aun no hay una sesion activa.</div>
         </div>
       </article>
 
       <article class="card">
         <div class="card-head">
           <div>
-            <h2>Resumen</h2>
-            <p class="subtle">Se llena al cargar catalogos y planeaciones.</p>
+            <h2>Pulso general</h2>
+            <p class="subtle">Una lectura rapida del movimiento actual dentro de Libre Aprendiz.</p>
           </div>
           <div class="actions">
-            <button id="reloadBtn" class="btn-secondary" type="button">Recargar datos</button>
+            <button id="reloadBtn" class="btn-secondary" type="button">Actualizar vista</button>
           </div>
         </div>
+        <p class="helper">Los indicadores se actualizan desde el backend institucional y reflejan el trabajo vigente cargado en el sistema.</p>
         <div class="stats">
           <div class="stat">
             <div class="stat-label">Alumnos</div>
@@ -859,6 +1041,7 @@
     };
 
     const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzF61zDQkF15kTFBQykHx-J2XAY1TFcqI_Gze_UtVZhD80DTlbkMEYTBIdQ-_HIqlSf/exec';
+    const BRAND_LOGO = 'data:image/png;base64,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';
     const DEFAULT_PERIODS = '';
 
     const state = {
@@ -884,6 +1067,8 @@
     };
 
     const inFlightActions = new Map();
+    const feedbackAnchors = [];
+    let actionToastTimer = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -926,11 +1111,18 @@
       state.catalogos = createEmptyCatalogos();
       state.activeTab = 'planeaciones';
       resetReportResult();
+      clearActionToast();
+    }
+
+    function clearLoginInputs() {
+      if ($('facilitadorId')) $('facilitadorId').value = '';
+      if ($('pinInput')) $('pinInput').value = '';
     }
 
     function clearSessionScopedState() {
       saveSession(null);
       clearLoadedData();
+      clearLoginInputs();
       renderAll();
     }
 
@@ -959,6 +1151,93 @@
       }
     }
 
+    function captureFeedbackAnchor(button) {
+      if (!button) return null;
+      const rect = button.getBoundingClientRect();
+      return {
+        button,
+        rect: {
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height
+        }
+      };
+    }
+
+    function pushFeedbackAnchor(anchor) {
+      feedbackAnchors.push(anchor || null);
+    }
+
+    function popFeedbackAnchor() {
+      if (feedbackAnchors.length) feedbackAnchors.pop();
+    }
+
+    function getActiveFeedbackAnchor() {
+      return feedbackAnchors.length ? feedbackAnchors[feedbackAnchors.length - 1] : null;
+    }
+
+    function getActionToastLayer() {
+      let layer = $('actionToastLayer');
+      if (!layer) {
+        layer = document.createElement('div');
+        layer.id = 'actionToastLayer';
+        layer.className = 'action-toast-layer';
+        document.body.appendChild(layer);
+      }
+      return layer;
+    }
+
+    function clearActionToast() {
+      if (actionToastTimer) {
+        clearTimeout(actionToastTimer);
+        actionToastTimer = null;
+      }
+      const layer = $('actionToastLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+    }
+
+    function showActionToast(anchor, message, kind = 'info') {
+      if (!anchor) return false;
+      const rect = anchor.button && document.body.contains(anchor.button)
+        ? anchor.button.getBoundingClientRect()
+        : anchor.rect;
+      if (!rect) return false;
+
+      const layer = getActionToastLayer();
+      const toast = document.createElement('div');
+      const viewportPadding = 16;
+      const maxWidth = Math.min(420, Math.max(240, window.innerWidth - (viewportPadding * 2)));
+      let left = rect.right + 14;
+      let top = rect.top + (rect.height / 2);
+      let transform = 'translateY(-50%)';
+
+      if (left + maxWidth > window.innerWidth - viewportPadding) {
+        left = Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - maxWidth - viewportPadding));
+        top = Math.min(window.innerHeight - viewportPadding - 64, rect.bottom + 12);
+        transform = 'none';
+      } else {
+        top = Math.max(viewportPadding + 24, top);
+      }
+
+      clearActionToast();
+      toast.className = 'action-toast ' + kind;
+      toast.textContent = message;
+      toast.style.left = Math.round(left) + 'px';
+      toast.style.top = Math.round(top) + 'px';
+      toast.style.maxWidth = maxWidth + 'px';
+      toast.style.transform = transform;
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      layer.appendChild(toast);
+
+      actionToastTimer = window.setTimeout(clearActionToast, 4200);
+      return true;
+    }
+
     function parsePeriodsConfig(raw) {
       return String(raw || '')
         .split(/\r?\n/)
@@ -973,7 +1252,14 @@
         .filter(Boolean);
     }
 
-    function setBanner(message, kind = 'info') {
+    function setBanner(message, kind = 'info', options = {}) {
+      const anchor = Object.prototype.hasOwnProperty.call(options, 'anchor')
+        ? options.anchor
+        : (Object.prototype.hasOwnProperty.call(options, 'button')
+          ? captureFeedbackAnchor(options.button)
+          : getActiveFeedbackAnchor());
+      if (anchor && showActionToast(anchor, message, kind)) return;
+      clearActionToast();
       const el = $('statusBanner');
       el.className = 'status-banner ' + kind;
       el.textContent = message;
@@ -981,11 +1267,10 @@
 
     function loadConfig() {
       state.config.periodConfig = DEFAULT_PERIODS;
-      $('backendUrlText').textContent = FIXED_BACKEND_URL;
+      if ($('brandLogo')) $('brandLogo').src = BRAND_LOGO;
     }
 
     function refreshStaticConfigUi() {
-      $('backendUrlText').textContent = FIXED_BACKEND_URL;
       renderPeriodSelects();
     }
 
@@ -1106,8 +1391,8 @@
       const json = await response.json();
       if (!json.ok) throw new Error(json.error || 'Ping fallido');
       setBanner(
-        'Conexion OK. Backend ' + (json.data && json.data.version || '-') +
-        ' | modulo reportes ' + (json.data && json.data.report_module || '-'),
+        'Conexion activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
+        ' | modulo de reportes ' + (json.data && json.data.report_module || '-'),
         'success'
       );
     }
@@ -1119,7 +1404,7 @@
       setBanner('Iniciando sesion...', 'info');
       const data = await api('login', { facilitador_id: facilitadorId, pin });
       saveSession({ token: data.token, usuario: data.usuario });
-      $('pinInput').value = '';
+      clearLoginInputs();
       setBanner('Sesion iniciada como ' + data.usuario.nombre + '.', 'success');
       await refreshAll();
     }
@@ -1127,6 +1412,7 @@
     async function logout() {
       if (!state.session || !state.session.token) {
         clearLoadedData();
+        clearLoginInputs();
         renderAll();
         saveSession(null);
         setBanner('No habia una sesion activa.', 'info');
@@ -1137,6 +1423,7 @@
       } catch (_) {}
       saveSession(null);
       clearLoadedData();
+      clearLoginInputs();
       renderAll();
       setBanner('Sesion cerrada.', 'success');
     }
@@ -1187,7 +1474,7 @@
       if (!state.session || !state.session.usuario) {
         badge.textContent = 'Sin sesion';
         badge.className = 'pill';
-        info.textContent = 'Todavia no hay usuario autenticado.';
+        info.textContent = 'Aun no hay una sesion activa.';
         syncRoleUi();
         return;
       }
@@ -1349,16 +1636,16 @@
         const actividades = (plan.actividades || []).map((item) => '<div class="tag">' + escapeHtml(String(item.orden || '?') + '. ' + (item.texto || '')) + '</div>').join('');
         const buttons = [];
         if (plan.estado === 'borrador') {
-          buttons.push('<button class="btn-primary" type="button" onclick="planAction(\'' + escapeHtml(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
+          buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
         }
         if (plan.estado === 'activa') {
-          buttons.push('<button class="btn-accent" type="button" onclick="planAction(\'' + escapeHtml(plan.planeacion_id) + '\', \'solicitarCierre\')">Solicitar cierre</button>');
+          buttons.push('<button class="btn-accent" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'solicitarCierre\')">Solicitar cierre</button>');
         }
         if (plan.estado === 'cierre_pendiente') {
-          buttons.push('<button class="btn-secondary" type="button" onclick="confirmClosePlan(\'' + escapeHtml(plan.planeacion_id) + '\')">Confirmar cierre</button>');
+          buttons.push('<button class="btn-secondary" type="button" onclick="confirmClosePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Confirmar cierre</button>');
         }
         if (plan.estado === 'cerrada' && (role === 'directora' || role === 'admin')) {
-          buttons.push('<button class="btn-ghost" type="button" onclick="planAction(\'' + escapeHtml(plan.planeacion_id) + '\', \'archivarPlaneacion\')">Archivar</button>');
+          buttons.push('<button class="btn-ghost" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'archivarPlaneacion\')">Archivar</button>');
         }
 
         return (
@@ -1379,8 +1666,8 @@
             '<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
             '<div class="tag-cloud">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
-              '<button class="btn-ghost" type="button" onclick="usePlanForActivities(\'' + escapeHtml(plan.planeacion_id) + '\')">Usar en actividades</button>' +
-              '<button class="btn-ghost" type="button" onclick="usePlanForObservation(\'' + escapeHtml(plan.planeacion_id) + '\')">Usar en observacion</button>' +
+              '<button class="btn-ghost" type="button" onclick="usePlanForActivities(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Usar en actividades</button>' +
+              '<button class="btn-ghost" type="button" onclick="usePlanForObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Usar en observacion</button>' +
               buttons.join('') +
             '</div>' +
           '</article>'
@@ -1592,42 +1879,46 @@
     async function handleAction(label, fn, options = {}) {
       const actionKey = options.key || label;
       const button = options.button || null;
+      const feedbackAnchor = captureFeedbackAnchor(button);
       if (inFlightActions.has(actionKey)) {
-        setBanner('Ya hay una solicitud en curso para esta accion.', 'info');
+        setBanner('Ya hay una solicitud en curso para esta accion.', 'info', { anchor: feedbackAnchor });
         return inFlightActions.get(actionKey);
       }
 
       const runner = (async () => {
-      try {
+        pushFeedbackAnchor(feedbackAnchor);
+        try {
+          clearActionToast();
           setButtonBusy(button, true);
-        await fn();
-      } catch (err) {
-        if (err && err.code === 'INVALID_SESSION') {
+          await fn();
+        } catch (err) {
+          if (err && err.code === 'INVALID_SESSION') {
             clearSessionScopedState();
-            setBanner('Tu sesion expiro o ya no es valida. Vuelve a iniciar sesion.', 'error');
+            setBanner('Tu sesion expiro o ya no es valida. Vuelve a iniciar sesion.', 'error', { anchor: feedbackAnchor });
             return;
-        }
-        setBanner(formatApiError(err), 'error');
-      } finally {
+          }
+          setBanner(formatApiError(err), 'error', { anchor: feedbackAnchor });
+        } finally {
+          popFeedbackAnchor();
           inFlightActions.delete(actionKey);
           setButtonBusy(button, false);
-      }
+        }
       })();
 
       inFlightActions.set(actionKey, runner);
       return runner;
     }
 
-    async function planAction(planId, action) {
+    async function planAction(button, planId, action) {
       await handleAction(action, async () => {
         await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
         await refreshPlaneaciones();
         renderAll();
         setBanner('Accion completada: ' + action, 'success');
-      }, { key: buildActionKey(action, [planId]) });
+      }, { button, key: buildActionKey(action, [planId]) });
     }
 
-    async function confirmClosePlan(planId) {
+    async function confirmClosePlan(button, planId) {
       const material = window.confirm('Confirma si el material quedo preparado / confirmado.');
       const obs = window.prompt('Observacion final de la semana (opcional):', '') || '';
       await handleAction('confirmarCierre', async () => {
@@ -1640,21 +1931,21 @@
         await refreshPlaneaciones();
         renderAll();
         setBanner('Cierre confirmado.', 'success');
-      }, { key: buildActionKey('confirmarCierre', [planId]) });
+      }, { button, key: buildActionKey('confirmarCierre', [planId]) });
     }
 
-    function usePlanForActivities(planId) {
+    function usePlanForActivities(button, planId) {
       $('activitiesPlan').value = planId;
       renderActivitiesForm();
       activateTab('planeaciones');
-      setBanner('Planeacion cargada en el editor de actividades.', 'info');
+      setBanner('Planeacion cargada en el editor de actividades.', 'info', { button });
     }
 
-    function usePlanForObservation(planId) {
+    function usePlanForObservation(button, planId) {
       $('obsPlan').value = planId;
       renderObsAlumnoSelect();
       activateTab('seguimiento');
-      setBanner('Planeacion cargada en observaciones.', 'info');
+      setBanner('Planeacion cargada en observaciones.', 'info', { button });
     }
 
     function bindEvents() {
@@ -1716,6 +2007,7 @@
       loadConfig();
       loadSession();
       bindEvents();
+      clearLoginInputs();
       refreshStaticConfigUi();
       renderAll();
       if (state.session && state.session.token) {
