@@ -453,40 +453,33 @@
       <div class="hero-card">
         <h2>Como usarlo</h2>
         <div class="stack">
-          <p>1. Pega la URL de tu Web App y tu REPORT_API_KEY.</p>
-          <p>2. Inicia sesion con un facilitador, directora o admin.</p>
-          <p>3. Carga catalogos y empieza a trabajar sobre el backend real.</p>
-          <p>4. Para reportes, usa el boton inmediato o la cola V8.</p>
+          <p>1. Abre la pagina y entra con tu facilitador, directora o admin.</p>
+          <p>2. Carga catalogos y empieza a trabajar sobre el backend real.</p>
+          <p>3. Para reportes, usa el boton inmediato o la cola V8.</p>
+          <p>4. La conexion al Web App ya queda fija dentro del frontend.</p>
         </div>
       </div>
     </section>
 
-    <div id="statusBanner" class="status-banner info">Listo para configurar el backend.</div>
+    <div id="statusBanner" class="status-banner info">Frontend listo para iniciar sesion.</div>
 
     <section class="top-grid">
       <article class="card">
         <div class="card-head">
           <div>
-            <h2>Configuracion</h2>
-            <p class="subtle">Se guarda en tu navegador. No toca el Sheet.</p>
+            <h2>Conexion fija</h2>
+            <p class="subtle">Los facilitadores ya no necesitan capturar URL ni claves.</p>
           </div>
         </div>
         <div class="stack">
           <div>
-            <label for="backendUrl">URL del Web App</label>
-            <input id="backendUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
-          </div>
-          <div>
-            <label for="reportApiKey">REPORT_API_KEY</label>
-            <input id="reportApiKey" type="text" placeholder="Clave de reportes">
-          </div>
-          <div>
-            <label for="periodConfig">Periodos locales</label>
-            <textarea id="periodConfig" placeholder="P1|Primer trimestre&#10;P2|Segundo trimestre"></textarea>
-            <div class="helper">El backend sigue validando el periodo real. Aqui solo armamos el selector del frontend.</div>
+            <label>Web App activa</label>
+            <div class="report-box">
+              <div class="code" id="backendUrlText"></div>
+              <div class="helper">Si cambias la implementación del Apps Script, solo hay que actualizar este frontend una vez.</div>
+            </div>
           </div>
           <div class="actions">
-            <button id="saveConfigBtn" class="btn-primary" type="button">Guardar configuracion</button>
             <button id="pingBtn" class="btn-secondary" type="button">Probar conexion</button>
           </div>
         </div>
@@ -854,18 +847,14 @@
 
   <script>
     const STORAGE_KEYS = {
-      backendUrl: 'la_v8_backend_url',
-      reportApiKey: 'la_v8_report_api_key',
-      periods: 'la_v8_periods',
       session: 'la_v8_session'
     };
 
+    const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzF61zDQkF15kTFBQykHx-J2XAY1TFcqI_Gze_UtVZhD80DTlbkMEYTBIdQ-_HIqlSf/exec';
     const DEFAULT_PERIODS = 'P1|Primer trimestre';
 
     const state = {
       config: {
-        backendUrl: '',
-        reportApiKey: '',
         periodConfig: DEFAULT_PERIODS
       },
       session: null,
@@ -919,23 +908,13 @@
     }
 
     function loadConfig() {
-      state.config.backendUrl = localStorage.getItem(STORAGE_KEYS.backendUrl) || '';
-      state.config.reportApiKey = localStorage.getItem(STORAGE_KEYS.reportApiKey) || '';
-      state.config.periodConfig = localStorage.getItem(STORAGE_KEYS.periods) || DEFAULT_PERIODS;
-      $('backendUrl').value = state.config.backendUrl;
-      $('reportApiKey').value = state.config.reportApiKey;
-      $('periodConfig').value = state.config.periodConfig;
+      state.config.periodConfig = DEFAULT_PERIODS;
+      $('backendUrlText').textContent = FIXED_BACKEND_URL;
     }
 
-    function saveConfig() {
-      state.config.backendUrl = $('backendUrl').value.trim();
-      state.config.reportApiKey = $('reportApiKey').value.trim();
-      state.config.periodConfig = $('periodConfig').value.trim() || DEFAULT_PERIODS;
-      localStorage.setItem(STORAGE_KEYS.backendUrl, state.config.backendUrl);
-      localStorage.setItem(STORAGE_KEYS.reportApiKey, state.config.reportApiKey);
-      localStorage.setItem(STORAGE_KEYS.periods, state.config.periodConfig);
+    function refreshStaticConfigUi() {
+      $('backendUrlText').textContent = FIXED_BACKEND_URL;
       renderPeriodSelects();
-      setBanner('Configuracion guardada localmente.', 'success');
     }
 
     function loadSession() {
@@ -960,8 +939,7 @@
     }
 
     function requireBackendUrl() {
-      if (!state.config.backendUrl) throw new Error('Primero guarda la URL del Web App.');
-      return state.config.backendUrl;
+      return FIXED_BACKEND_URL;
     }
 
     function ensureLoggedIn() {
@@ -981,10 +959,6 @@
       const backendUrl = requireBackendUrl();
       const body = { action, payload };
       if (state.session && state.session.token) body.token = state.session.token;
-      if (options.includeReportKey) {
-        if (!state.config.reportApiKey) throw new Error('Falta REPORT_API_KEY en la configuracion del frontend.');
-        body.api_key = state.config.reportApiKey;
-      }
 
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -1423,7 +1397,7 @@
       const data = await api('requestReporte', {
         alumno_id: $('repAlumno').value,
         periodo_id: $('repPeriodo').value
-      }, { includeReportKey: true });
+      });
       renderReportResult(data);
       setBanner('Solicitud enviada al modulo de reportes.', 'success');
     }
@@ -1433,7 +1407,7 @@
       const data = await api('statusReporte', {
         alumno_id: $('repAlumno').value,
         periodo_id: $('repPeriodo').value
-      }, { includeReportKey: true });
+      });
       renderReportResult(data);
       setBanner('Estado de reporte actualizado.', 'info');
     }
@@ -1489,7 +1463,6 @@
     }
 
     function bindEvents() {
-      $('saveConfigBtn').addEventListener('click', saveConfig);
       $('pingBtn').addEventListener('click', () => handleAction('ping', pingBackend));
       $('loginBtn').addEventListener('click', () => handleAction('login', login));
       $('logoutBtn').addEventListener('click', () => handleAction('logout', logout));
@@ -1523,6 +1496,7 @@
       loadConfig();
       loadSession();
       bindEvents();
+      refreshStaticConfigUi();
       renderAll();
       if (state.session && state.session.token) {
         await handleAction('restore', refreshAll);
