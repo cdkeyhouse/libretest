@@ -113,8 +113,17 @@
       gap: 10px;
     }
 
+    .brand-overline {
+      font-size: 0.86rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--brand-deep);
+    }
+
     .brand-copy p {
       max-width: 58ch;
+      font-size: 1.03rem;
     }
 
     .hero-feature-grid {
@@ -175,6 +184,49 @@
       color: white;
       background: linear-gradient(135deg, var(--berry), var(--brand));
       box-shadow: 0 14px 28px rgba(31, 176, 186, 0.22);
+    }
+
+    body.auth-mode .hero {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 980px;
+      margin-inline: auto;
+      margin-bottom: 16px;
+    }
+
+    body.auth-mode .top-grid {
+      grid-template-columns: minmax(320px, 560px);
+      justify-content: center;
+      margin-inline: auto;
+    }
+
+    body.auth-mode #summaryCard,
+    body.auth-mode .workspace,
+    body.auth-mode #statusBanner {
+      display: none;
+    }
+
+    body.auth-mode #sessionCard {
+      box-shadow: 0 28px 72px rgba(31, 48, 50, 0.16);
+      background:
+        radial-gradient(circle at top right, rgba(31, 176, 186, 0.12), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(245, 154, 27, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 247, 239, 0.92));
+    }
+
+    body.auth-mode .brand-lockup {
+      grid-template-columns: 144px minmax(0, 1fr);
+      gap: 26px;
+    }
+
+    body.auth-mode .brand-mark {
+      width: 144px;
+      height: 144px;
+      border-radius: 34px;
+      padding: 16px;
+    }
+
+    body:not(.auth-mode) .hero {
+      display: none;
     }
 
     .hero-card::after {
@@ -260,6 +312,23 @@
     .workspace { display: grid; gap: 20px; }
     .card { padding: 22px; }
 
+    #sessionCard {
+      position: relative;
+      overflow: hidden;
+    }
+
+    #sessionCard::after {
+      content: "";
+      position: absolute;
+      right: -36px;
+      top: -36px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(31, 176, 186, 0.18), transparent 70%);
+      pointer-events: none;
+    }
+
     .card-head {
       display: flex;
       align-items: center;
@@ -277,6 +346,16 @@
 
     .helper,
     .mini { font-size: 0.82rem; }
+
+    .session-note {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(31, 176, 186, 0.08);
+      border: 1px solid rgba(31, 176, 186, 0.14);
+      color: var(--brand-deep);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
 
     .grid-2,
     .grid-3,
@@ -570,10 +649,29 @@
       body { padding: 16px; }
       .hero-card,
       .card { padding: 18px; }
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+      button {
+        min-height: 48px;
+      }
       .action-toast { max-width: calc(100vw - 32px) !important; }
       .brand-lockup,
       .hero-feature-grid,
       .stats { grid-template-columns: 1fr; }
+      .hero { margin-bottom: 16px; }
+      .brand-copy {
+        text-align: center;
+      }
+      .brand-copy p {
+        max-width: none;
+      }
+      .brand-overline,
+      .pill.brand {
+        justify-self: center;
+      }
       .brand-mark {
         width: 98px;
         height: 98px;
@@ -587,9 +685,25 @@
       .card-head {
         flex-direction: column;
       }
-      .actions > button,
-      .inline-actions > button {
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .actions > *,
+      .inline-actions > * {
         width: 100%;
+      }
+      .tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+      }
+      .tab-btn {
+        flex: 0 0 auto;
+      }
+      .plan-top {
+        flex-direction: column;
       }
       .hero-step {
         grid-template-columns: 38px minmax(0, 1fr);
@@ -603,6 +717,13 @@
 
     @media (max-width: 520px) {
       .stats { grid-template-columns: 1fr; }
+      body.auth-mode .brand-mark {
+        width: 92px;
+        height: 92px;
+      }
+      h1 {
+        font-size: clamp(1.9rem, 12vw, 2.8rem);
+      }
     }
   </style>
 </head>
@@ -612,58 +733,29 @@
       <div class="hero-card hero-card--brand">
         <div class="brand-lockup">
           <div class="brand-mark">
-            <img id="brandLogo" alt="Libre Aprendiz">
+            <img id="brandLogo" src="./logo-la.png" alt="Libre Aprendiz">
           </div>
           <div class="brand-copy">
             <div class="pill brand">Libre Aprendiz</div>
-            <h1>Planeacion, seguimiento y reportes en una sola vista de trabajo.</h1>
+            <div class="brand-overline">Espacio institucional de trabajo pedagógico</div>
+            <h1>Planeación, seguimiento y reportes en una sola vista de trabajo.</h1>
             <p>
-              Un espacio para acompanar el proceso pedagogico de cada alumno con claridad, continuidad y criterio compartido entre facilitadores, direccion y administracion.
+              Un espacio para acompañar el proceso pedagógico de cada alumno con claridad, continuidad y criterio compartido entre facilitadores, dirección y administración.
             </p>
           </div>
         </div>
         <div class="hero-feature-grid">
           <div class="hero-feature">
-            <strong>Planeacion semanal</strong>
+            <strong>Planeación semanal</strong>
             <p>Organiza borradores, actividades y cierres desde el mismo flujo de trabajo.</p>
           </div>
           <div class="hero-feature">
             <strong>Seguimiento significativo</strong>
-            <p>Registra observaciones, evaluaciones y notas con contexto real de alumno, periodo y materia.</p>
+            <p>Registra observaciones, evaluaciones y notas con contexto real de alumno, período y materia.</p>
           </div>
           <div class="hero-feature">
             <strong>Reportes institucionales</strong>
-            <p>Solicita reportes y acompana su estado sin salir de la plataforma.</p>
-          </div>
-        </div>
-      </div>
-      <div class="hero-card">
-        <div class="pill accent">Acompanamiento vivo</div>
-        <h2>Una jornada pensada para el equipo pedagogico</h2>
-        <p>
-          Desde aqui puedes iniciar tu jornada, actualizar el panorama general del sistema y moverte con rapidez entre planeaciones, seguimiento y reportes.
-        </p>
-        <div class="hero-step-list">
-          <div class="hero-step">
-            <div class="hero-step-index">1</div>
-            <div>
-              <strong>Entra con tu rol</strong>
-              <p>Usa tu ID institucional para abrir la vista correspondiente a facilitador, direccion o admin.</p>
-            </div>
-          </div>
-          <div class="hero-step">
-            <div class="hero-step-index">2</div>
-            <div>
-              <strong>Actualiza tu panorama</strong>
-              <p>Recarga los datos del dia para trabajar con alumnos, semanas, materias y planeaciones vigentes.</p>
-            </div>
-          </div>
-          <div class="hero-step">
-            <div class="hero-step-index">3</div>
-            <div>
-              <strong>Documenta y acompana</strong>
-              <p>Captura avances, observaciones y notas con el mismo lenguaje de acompanamiento de Libre Aprendiz.</p>
-            </div>
+            <p>Solicita reportes y acompaña su estado sin salir de la plataforma.</p>
           </div>
         </div>
       </div>
@@ -672,13 +764,13 @@
     <div id="statusBanner" class="status-banner info">Todo listo para comenzar la jornada.</div>
 
     <section class="top-grid">
-      <article class="card">
+      <article id="sessionCard" class="card">
         <div class="card-head">
           <div>
-            <h2>Acceso del equipo</h2>
-            <p class="subtle">Ingresa con tu rol para abrir planeaciones, seguimiento y reportes segun tus permisos.</p>
+            <h2>Bienvenida</h2>
+            <p class="subtle">Ingresa con tu facilitador ID y tu PIN para abrir tu espacio de trabajo en Libre Aprendiz.</p>
           </div>
-          <div id="sessionBadge" class="pill">Sin sesion</div>
+          <div id="sessionBadge" class="pill">Sin sesión</div>
         </div>
         <div class="stack">
           <div class="grid-2">
@@ -692,19 +784,20 @@
             </div>
           </div>
           <div class="actions">
-            <button id="loginBtn" class="btn-primary" type="button">Iniciar sesion</button>
-            <button id="logoutBtn" class="btn-ghost" type="button">Cerrar sesion</button>
-            <button id="pingBtn" class="btn-secondary" type="button">Verificar conexion</button>
+            <button id="loginBtn" class="btn-primary" type="button">Iniciar sesión</button>
+            <button id="logoutBtn" class="btn-ghost" type="button">Cerrar sesión</button>
+            <button id="pingBtn" class="btn-secondary" type="button">Verificar conexión</button>
           </div>
-          <div id="sessionInfo" class="subtle">Aun no hay una sesion activa.</div>
+          <div id="sessionInfo" class="subtle">Aún no hay una sesión activa.</div>
+          <div class="session-note">Tu acceso define qué módulos, acciones y reportes puedes usar dentro del sistema.</div>
         </div>
       </article>
 
-      <article class="card">
+      <article id="summaryCard" class="card">
         <div class="card-head">
           <div>
             <h2>Pulso general</h2>
-            <p class="subtle">Una lectura rapida del movimiento actual dentro de Libre Aprendiz.</p>
+            <p class="subtle">Una lectura rápida del movimiento actual dentro de Libre Aprendiz.</p>
           </div>
           <div class="actions">
             <button id="reloadBtn" class="btn-secondary" type="button">Actualizar vista</button>
@@ -744,7 +837,7 @@
           <article class="card">
             <div class="card-head">
               <div>
-                <h2>Nueva planeacion</h2>
+                <h2>Nueva planeación</h2>
                 <p class="subtle">Crea el borrador base y enlaza alumnos del grupo.</p>
               </div>
             </div>
@@ -765,14 +858,14 @@
               </div>
               <div>
                 <label for="planFrase">Frase de la semana</label>
-                <textarea id="planFrase" placeholder="Idea o enfoque pedagogico de la semana"></textarea>
+                <textarea id="planFrase" placeholder="Idea o enfoque pedagógico de la semana"></textarea>
               </div>
               <div>
                 <label>Alumnos del grupo</label>
                 <div id="planAlumnosChecklist" class="checklist"></div>
               </div>
               <div class="actions">
-                <button id="createPlanBtn" class="btn-primary" type="button">Crear planeacion</button>
+                <button id="createPlanBtn" class="btn-primary" type="button">Crear planeación</button>
               </div>
             </div>
           </article>
@@ -787,18 +880,18 @@
             <div class="stack">
               <div class="grid-2">
                 <div>
-                  <label for="activitiesPlan">Planeacion borrador</label>
+                  <label for="activitiesPlan">Planeación borrador</label>
                   <select id="activitiesPlan"></select>
                 </div>
                 <div>
-                  <label for="activitiesVersion">Version actual</label>
-                  <input id="activitiesVersion" type="text" readonly placeholder="Sin version">
+                  <label for="activitiesVersion">Versión actual</label>
+                  <input id="activitiesVersion" type="text" readonly placeholder="Sin versión">
                 </div>
               </div>
               <div>
                 <label for="activitiesText">Bloque de actividades</label>
-                <textarea id="activitiesText" placeholder="Una actividad por linea. Ejemplo:&#10;Lectura compartida&#10;Juego de sumas&#10;Cierre reflexivo"></textarea>
-                <div class="helper">Cada linea se guarda como una actividad con orden consecutivo.</div>
+                <textarea id="activitiesText" placeholder="Una actividad por línea. Ejemplo:&#10;Lectura compartida&#10;Juego de sumas&#10;Cierre reflexivo"></textarea>
+                <div class="helper">Cada línea se guarda como una actividad con orden consecutivo.</div>
               </div>
               <div class="actions">
                 <button id="saveActivitiesBtn" class="btn-accent" type="button">Guardar actividades</button>
@@ -811,7 +904,7 @@
           <div class="card-head">
             <div>
               <h2>Planeaciones activas y borradores</h2>
-              <p class="subtle">Puedes activar, solicitar cierre, confirmar cierre y archivar desde aqui.</p>
+              <p class="subtle">Puedes activar, solicitar cierre, confirmar cierre y archivar desde aquí.</p>
             </div>
             <div class="actions">
               <select id="filterSemana"></select>
@@ -835,14 +928,14 @@
           <article class="card">
             <div class="card-head">
               <div>
-                <h2>Observacion de alumno</h2>
-                <p class="subtle">Se guarda ligada a planeacion y periodo.</p>
+                <h2>Observación de alumno</h2>
+                <p class="subtle">Se guarda ligada a planeación y período.</p>
               </div>
             </div>
             <div class="stack">
               <div class="grid-2">
                 <div>
-                  <label for="obsPlan">Planeacion</label>
+                  <label for="obsPlan">Planeación</label>
                   <select id="obsPlan"></select>
                 </div>
                 <div>
@@ -852,13 +945,13 @@
               </div>
               <div class="grid-3">
                 <div>
-                  <label for="obsPeriodo">Periodo</label>
+                  <label for="obsPeriodo">Período</label>
                   <select id="obsPeriodo"></select>
                 </div>
                 <div>
                   <label for="obsTipo">Tipo</label>
                   <select id="obsTipo">
-                    <option value="academica">academica</option>
+                    <option value="academica">académica</option>
                     <option value="importante">importante</option>
                     <option value="socioemocional">socioemocional</option>
                     <option value="conducta">conducta</option>
@@ -872,14 +965,14 @@
               </div>
               <div>
                 <label for="obsNota">Nota</label>
-                <textarea id="obsNota" placeholder="Observacion breve y concreta"></textarea>
+                <textarea id="obsNota" placeholder="Observación breve y concreta"></textarea>
               </div>
               <div class="inline-actions">
                 <label class="list-row"><input id="obsVisible" type="checkbox" checked> Visible en reporte</label>
-                <label class="list-row"><input id="obsRevision" type="checkbox"> Requiere revision de direccion</label>
+                <label class="list-row"><input id="obsRevision" type="checkbox"> Requiere revisión de dirección</label>
               </div>
               <div class="actions">
-                <button id="saveObsBtn" class="btn-primary" type="button">Guardar observacion</button>
+                <button id="saveObsBtn" class="btn-primary" type="button">Guardar observación</button>
               </div>
             </div>
           </article>
@@ -887,7 +980,7 @@
           <article class="card">
             <div class="card-head">
               <div>
-                <h2>Evaluacion academica</h2>
+                <h2>Evaluación académica</h2>
                 <p class="subtle">Usa submaterias y habilidades para enriquecer el reporte premium.</p>
               </div>
             </div>
@@ -898,7 +991,7 @@
                   <select id="evaAlumno"></select>
                 </div>
                 <div>
-                  <label for="evaPeriodo">Periodo</label>
+                  <label for="evaPeriodo">Período</label>
                   <select id="evaPeriodo"></select>
                 </div>
               </div>
@@ -927,16 +1020,16 @@
                   <select id="evaHabilidad"></select>
                 </div>
               </div>
-              <div class="helper">Submateria y habilidad son opcionales para evaluacion rapida por materia.</div>
+              <div class="helper">Submateria y habilidad son opcionales para evaluación rápida por materia.</div>
               <div>
                 <label for="evaComentario">Comentario</label>
-                <textarea id="evaComentario" placeholder="Que evidencia viste, que logro, que necesita reforzar"></textarea>
+                <textarea id="evaComentario" placeholder="Qué evidencia viste, qué logró, qué necesita reforzar"></textarea>
               </div>
               <div class="inline-actions">
                 <label class="list-row"><input id="evaVisible" type="checkbox" checked> Visible en reporte</label>
               </div>
               <div class="actions">
-                <button id="saveEvaBtn" class="btn-accent" type="button">Guardar evaluacion</button>
+                <button id="saveEvaBtn" class="btn-accent" type="button">Guardar evaluación</button>
               </div>
             </div>
           </article>
@@ -945,8 +1038,8 @@
         <article class="card">
           <div class="card-head">
             <div>
-              <h2>Nota de direccion</h2>
-              <p class="subtle">Solo funcionara si entras con directora o admin.</p>
+              <h2>Nota de dirección</h2>
+              <p class="subtle">Solo funcionará si entras con directora o admin.</p>
             </div>
           </div>
           <div class="grid-4">
@@ -957,7 +1050,7 @@
             <div>
               <label for="notaTipo">Tipo</label>
               <select id="notaTipo">
-                <option value="academica">academica</option>
+                <option value="academica">académica</option>
                 <option value="importante">importante</option>
                 <option value="seguimiento_familia">seguimiento_familia</option>
                 <option value="interna">interna</option>
@@ -966,19 +1059,19 @@
             <div>
               <label for="notaAlcance">Alcance</label>
               <select id="notaAlcance">
-                <option value="periodo">periodo</option>
+                <option value="periodo">período</option>
                 <option value="global">global</option>
               </select>
             </div>
             <div>
-              <label for="notaPeriodo">Periodo</label>
+              <label for="notaPeriodo">Período</label>
               <select id="notaPeriodo"></select>
             </div>
           </div>
           <div class="stack" style="margin-top:14px;">
             <div>
               <label for="notaTexto">Texto</label>
-              <textarea id="notaTexto" placeholder="Nota visible o interna desde direccion"></textarea>
+              <textarea id="notaTexto" placeholder="Nota visible o interna desde dirección"></textarea>
             </div>
             <div class="inline-actions">
               <label class="list-row"><input id="notaVisible" type="checkbox" checked> Visible en reporte</label>
@@ -996,7 +1089,7 @@
             <div class="card-head">
               <div>
                 <h2>Reportes de alumno</h2>
-                <p class="subtle">Solicita, regenera y monitorea reportes institucionales en segundo plano. Disponible solo para direccion y admin.</p>
+                <p class="subtle">Solicita, regenera y monitorea reportes institucionales en segundo plano. Disponible solo para dirección y admin.</p>
               </div>
             </div>
             <div class="stack">
@@ -1006,16 +1099,16 @@
                   <select id="repAlumno"></select>
                 </div>
                 <div>
-                  <label for="repPeriodo">Periodo</label>
+                  <label for="repPeriodo">Período</label>
                   <select id="repPeriodo"></select>
                 </div>
               </div>
               <div class="actions">
                 <button id="generateNowBtn" class="btn-primary" type="button">Solicitar / actualizar</button>
-                <button id="requestReportBtn" class="btn-secondary" type="button">Forzar regeneracion</button>
+                <button id="requestReportBtn" class="btn-secondary" type="button">Forzar regeneración</button>
                 <button id="statusReportBtn" class="btn-ghost" type="button">Revisar estado</button>
               </div>
-              <div class="helper">La generacion es asincrona: el worker arma el PDF, este panel solo encola y consulta estado, y el PDF puede quedar listo unos minutos despues.</div>
+              <div class="helper">La generación es asíncrona: el worker arma el PDF, este panel solo encola y consulta estado, y el PDF puede quedar listo unos minutos después.</div>
             </div>
           </article>
 
@@ -1023,11 +1116,11 @@
             <div class="card-head">
               <div>
                 <h2>Resultado</h2>
-                <p class="subtle">Aqui aparecen URL, warnings y estado del cache.</p>
+                <p class="subtle">Aquí aparecen URL, warnings y estado del caché.</p>
               </div>
             </div>
             <div id="reportResult" class="report-box">
-              <div class="subtle">Todavia no hay una consulta de reporte.</div>
+              <div class="subtle">Todavía no hay una consulta de reporte.</div>
             </div>
           </article>
         </div>
@@ -1073,6 +1166,7 @@
     const $ = (id) => document.getElementById(id);
 
     const escapeHtml = (value) => String(value == null ? '' : value)
+      .replace(/\u00C2\u00B7/g, '\u00B7')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -1102,7 +1196,7 @@
     function resetReportResult() {
       const host = $('reportResult');
       if (host) {
-        host.innerHTML = '<div class="subtle">Todavia no hay una consulta de reporte.</div>';
+        host.innerHTML = '<div class="subtle">Todavía no hay una consulta de reporte.</div>';
       }
     }
 
@@ -1267,7 +1361,6 @@
 
     function loadConfig() {
       state.config.periodConfig = DEFAULT_PERIODS;
-      if ($('brandLogo')) $('brandLogo').src = BRAND_LOGO;
     }
 
     function refreshStaticConfigUi() {
@@ -1285,6 +1378,11 @@
       }
     }
 
+    function syncAuthMode() {
+      const isLoggedIn = !!(state.session && state.session.token && state.session.usuario);
+      document.body.classList.toggle('auth-mode', !isLoggedIn);
+    }
+
     function saveSession(session) {
       state.session = session;
       if (session) {
@@ -1292,6 +1390,7 @@
       } else {
         localStorage.removeItem(STORAGE_KEYS.session);
       }
+      syncAuthMode();
       renderSession();
     }
 
@@ -1300,7 +1399,7 @@
     }
 
     function ensureLoggedIn() {
-      if (!state.session || !state.session.token) throw new Error('Primero inicia sesion.');
+      if (!state.session || !state.session.token) throw new Error('Primero inicia sesión.');
     }
 
     function formatApiError(err) {
@@ -1325,7 +1424,7 @@
 
     function ensureCanUseReportes() {
       if (!canUseReportes()) {
-        throw new Error('Los reportes solo estan disponibles para direccion y admin.');
+        throw new Error('Los reportes solo están disponibles para dirección y admin.');
       }
     }
 
@@ -1349,7 +1448,7 @@
 
     function ensureBackendPeriodsReady() {
       if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
-        throw new Error('El backend no devolvio periodos activos. Revisa la hoja PERIODOS antes de continuar.');
+        throw new Error('El backend no devolvió períodos activos. Revisa la hoja PERIODOS antes de continuar.');
       }
     }
 
@@ -1391,8 +1490,8 @@
       const json = await response.json();
       if (!json.ok) throw new Error(json.error || 'Ping fallido');
       setBanner(
-        'Conexion activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
-        ' | modulo de reportes ' + (json.data && json.data.report_module || '-'),
+        'Conexión activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
+        ' | módulo de reportes ' + (json.data && json.data.report_module || '-'),
         'success'
       );
     }
@@ -1401,11 +1500,11 @@
       const facilitadorId = $('facilitadorId').value.trim();
       const pin = $('pinInput').value.trim();
       if (!facilitadorId || !pin) throw new Error('Captura facilitador_id y PIN.');
-      setBanner('Iniciando sesion...', 'info');
+      setBanner('Iniciando sesión...', 'info');
       const data = await api('login', { facilitador_id: facilitadorId, pin });
       saveSession({ token: data.token, usuario: data.usuario });
       clearLoginInputs();
-      setBanner('Sesion iniciada como ' + data.usuario.nombre + '.', 'success');
+      setBanner('Sesión iniciada como ' + data.usuario.nombre + '.', 'success');
       await refreshAll();
     }
 
@@ -1415,7 +1514,7 @@
         clearLoginInputs();
         renderAll();
         saveSession(null);
-        setBanner('No habia una sesion activa.', 'info');
+        setBanner('No había una sesión activa.', 'info');
         return;
       }
       try {
@@ -1425,7 +1524,7 @@
       clearLoadedData();
       clearLoginInputs();
       renderAll();
-      setBanner('Sesion cerrada.', 'success');
+      setBanner('Sesión cerrada.', 'success');
     }
 
     async function refreshCatalogos() {
@@ -1446,12 +1545,12 @@
 
     async function refreshAll() {
       ensureLoggedIn();
-      setBanner('Cargando catalogos y planeaciones...', 'info');
+      setBanner('Cargando catálogos y planeaciones...', 'info');
       await refreshCatalogos();
       await refreshPlaneaciones();
       renderAll();
       if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
-        setBanner('Faltan periodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
+        setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
         return;
       }
       setBanner('Datos actualizados.', 'success');
@@ -1472,9 +1571,9 @@
       const badge = $('sessionBadge');
       const info = $('sessionInfo');
       if (!state.session || !state.session.usuario) {
-        badge.textContent = 'Sin sesion';
+        badge.textContent = 'Sin sesión';
         badge.className = 'pill';
-        info.textContent = 'Aun no hay una sesion activa.';
+        info.textContent = 'Aún no hay una sesión activa.';
         syncRoleUi();
         return;
       }
@@ -1484,6 +1583,7 @@
         '<strong>' + escapeHtml(state.session.usuario.nombre) + '</strong><br>' +
         '<span class="mini">' + escapeHtml(state.session.usuario.facilitador_id) + ' · ' +
         escapeHtml(state.session.usuario.rol) + '</span>';
+      info.innerHTML = info.innerHTML.replace(/\u00C2\u00B7/g, '\u00B7');
       syncRoleUi();
     }
 
@@ -1511,7 +1611,7 @@
     function renderPeriodSelects() {
       const periods = getAvailablePeriods();
       ['obsPeriodo', 'evaPeriodo', 'notaPeriodo', 'repPeriodo'].forEach((id) => {
-        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona periodo');
+        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona período');
       });
       syncNotePeriodoState();
     }
@@ -1543,7 +1643,7 @@
       fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
       const borradores = state.planeaciones.filter((plan) => plan.estado === 'borrador');
       fillSelect($('activitiesPlan'), borradores, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona borrador');
-      fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeacion');
+      fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
     }
 
     function renderPlanAlumnosChecklist() {
@@ -1624,7 +1724,7 @@
       const host = $('planeacionesList');
       const role = state.session && state.session.usuario ? state.session.usuario.rol : '';
       if (!state.planeaciones.length) {
-        host.innerHTML = '<div class="empty">Todavia no hay planeaciones para los filtros actuales.</div>';
+        host.innerHTML = '<div class="empty">Todavía no hay planeaciones para los filtros actuales.</div>';
         return;
       }
 
@@ -1661,13 +1761,13 @@
             '<div class="meta-grid">' +
               '<div><strong>ID:</strong> <span class="code">' + escapeHtml(plan.planeacion_id) + '</span></div>' +
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-              '<div><strong>Actividades version:</strong> <span class="code">' + escapeHtml(plan.actividades_version_actual || '-') + '</span></div>' +
+              '<div><strong>Actividades versión:</strong> <span class="code">' + escapeHtml(plan.actividades_version_actual || '-') + '</span></div>' +
             '</div>' +
             '<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
             '<div class="tag-cloud">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
               '<button class="btn-ghost" type="button" onclick="usePlanForActivities(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Usar en actividades</button>' +
-              '<button class="btn-ghost" type="button" onclick="usePlanForObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Usar en observacion</button>' +
+              '<button class="btn-ghost" type="button" onclick="usePlanForObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Usar en observación</button>' +
               buttons.join('') +
             '</div>' +
           '</article>'
@@ -1692,8 +1792,8 @@
       host.innerHTML = [
         '<div><strong>Estado:</strong> ' + escapeHtml(status) + '</div>',
         data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
-        data && data.version_datos ? '<div><strong>Version datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
-        data && data.version_pdf ? '<div><strong>Version PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
+        data && data.version_datos ? '<div><strong>Versión datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
+        data && data.version_pdf ? '<div><strong>Versión PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
         data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
         data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
         Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
@@ -1715,6 +1815,7 @@
     }
 
     function renderAll() {
+      syncAuthMode();
       renderSession();
       renderStats();
       renderPeriodSelects();
@@ -1742,13 +1843,13 @@
       renderPlanAlumnosChecklist();
       await refreshPlaneaciones();
       renderAll();
-      setBanner('Planeacion creada.', 'success');
+      setBanner('Planeación creada.', 'success');
     }
 
     async function saveActivities() {
       ensureLoggedIn();
       const plan = getPlanById($('activitiesPlan').value);
-      if (!plan) throw new Error('Selecciona una planeacion borrador.');
+      if (!plan) throw new Error('Selecciona una planeación borrador.');
       const lines = $('activitiesText').value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       if (!lines.length) throw new Error('Escribe al menos una actividad.');
       const actividades = lines.map((texto, index) => ({ orden: index + 1, texto, material_en_carpeta: false }));
@@ -1766,10 +1867,10 @@
     async function saveObservation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
-      if (!$('obsPlan').value) throw new Error('Selecciona una planeacion.');
+      if (!$('obsPlan').value) throw new Error('Selecciona una planeación.');
       if (!$('obsAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('obsPeriodo').value) throw new Error('Selecciona un periodo.');
-      if (!$('obsNota').value.trim()) throw new Error('Escribe la observacion.');
+      if (!$('obsPeriodo').value) throw new Error('Selecciona un período.');
+      if (!$('obsNota').value.trim()) throw new Error('Escribe la observación.');
       await api('crearObsAlumno', {
         planeacion_id: $('obsPlan').value,
         alumno_id: $('obsAlumno').value,
@@ -1783,14 +1884,14 @@
       });
       $('obsNota').value = '';
       $('obsRevision').checked = false;
-      setBanner('Observacion guardada.', 'success');
+      setBanner('Observación guardada.', 'success');
     }
 
     async function saveEvaluation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
       if (!$('evaAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('evaPeriodo').value) throw new Error('Selecciona un periodo.');
+      if (!$('evaPeriodo').value) throw new Error('Selecciona un período.');
       if (!$('evaMateria').value) throw new Error('Selecciona una materia.');
       const data = await api('guardarEvaluacion', {
         alumno_id: $('evaAlumno').value,
@@ -1804,7 +1905,7 @@
         request_id: uid('EVA')
       });
       $('evaComentario').value = '';
-      setBanner('Evaluacion guardada (' + data.evaluacion_id + ').', 'success');
+      setBanner('Evaluación guardada (' + data.evaluacion_id + ').', 'success');
     }
 
     async function saveNote() {
@@ -1813,7 +1914,7 @@
       if (!$('notaAlumno').value) throw new Error('Selecciona un alumno.');
       if (!$('notaTexto').value.trim()) throw new Error('Escribe el texto de la nota.');
       if ($('notaAlcance').value === 'periodo' && !$('notaPeriodo').value) {
-        throw new Error('Selecciona un periodo para la nota.');
+        throw new Error('Selecciona un período para la nota.');
       }
       await api('crearNotaDirectora', {
         alumno_id: $('notaAlumno').value,
@@ -1825,7 +1926,7 @@
         request_id: uid('NTA')
       });
       $('notaTexto').value = '';
-      setBanner('Nota de direccion guardada.', 'success');
+      setBanner('Nota de dirección guardada.', 'success');
     }
 
     async function generateReportNow() {
@@ -1833,7 +1934,7 @@
       ensureCanUseReportes();
       ensureBackendPeriodsReady();
       if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('repPeriodo').value) throw new Error('Selecciona un periodo.');
+      if (!$('repPeriodo').value) throw new Error('Selecciona un período.');
       const data = await api('requestReporteAlumno', {
         alumno_id: $('repAlumno').value,
         periodo_id: $('repPeriodo').value,
@@ -1844,7 +1945,7 @@
         setBanner('El reporte ya estaba vigente y listo para abrir.', 'success');
         return;
       }
-      setBanner('Solicitud registrada. El worker generara o actualizara el reporte en segundo plano.', 'success');
+      setBanner('Solicitud registrada. El worker generará o actualizará el reporte en segundo plano.', 'success');
     }
 
     async function requestReport() {
@@ -1852,14 +1953,14 @@
       ensureCanUseReportes();
       ensureBackendPeriodsReady();
       if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('repPeriodo').value) throw new Error('Selecciona un periodo.');
+      if (!$('repPeriodo').value) throw new Error('Selecciona un período.');
       const data = await api('regenerarReporteAlumno', {
         alumno_id: $('repAlumno').value,
         periodo_id: $('repPeriodo').value,
         request_id: uid('RRG')
       });
       renderReportResult(data);
-      setBanner('Regeneracion forzada registrada. El worker armara una nueva version del PDF.', 'success');
+      setBanner('Regeneración forzada registrada. El worker armará una nueva versión del PDF.', 'success');
     }
 
     async function checkReportStatus() {
@@ -1867,7 +1968,7 @@
       ensureCanUseReportes();
       ensureBackendPeriodsReady();
       if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('repPeriodo').value) throw new Error('Selecciona un periodo.');
+      if (!$('repPeriodo').value) throw new Error('Selecciona un período.');
       const data = await api('getReporteAlumnoStatus', {
         alumno_id: $('repAlumno').value,
         periodo_id: $('repPeriodo').value
@@ -1881,7 +1982,7 @@
       const button = options.button || null;
       const feedbackAnchor = captureFeedbackAnchor(button);
       if (inFlightActions.has(actionKey)) {
-        setBanner('Ya hay una solicitud en curso para esta accion.', 'info', { anchor: feedbackAnchor });
+        setBanner('Ya hay una solicitud en curso para esta acción.', 'info', { anchor: feedbackAnchor });
         return inFlightActions.get(actionKey);
       }
 
@@ -1894,7 +1995,7 @@
         } catch (err) {
           if (err && err.code === 'INVALID_SESSION') {
             clearSessionScopedState();
-            setBanner('Tu sesion expiro o ya no es valida. Vuelve a iniciar sesion.', 'error', { anchor: feedbackAnchor });
+            setBanner('Tu sesión expiró o ya no es válida. Vuelve a iniciar sesión.', 'error', { anchor: feedbackAnchor });
             return;
           }
           setBanner(formatApiError(err), 'error', { anchor: feedbackAnchor });
@@ -1914,13 +2015,13 @@
         await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
         await refreshPlaneaciones();
         renderAll();
-        setBanner('Accion completada: ' + action, 'success');
+        setBanner('Acción completada: ' + action, 'success');
       }, { button, key: buildActionKey(action, [planId]) });
     }
 
     async function confirmClosePlan(button, planId) {
-      const material = window.confirm('Confirma si el material quedo preparado / confirmado.');
-      const obs = window.prompt('Observacion final de la semana (opcional):', '') || '';
+      const material = window.confirm('Confirma si el material quedó preparado / confirmado.');
+      const obs = window.prompt('Observación final de la semana (opcional):', '') || '';
       await handleAction('confirmarCierre', async () => {
         await api('confirmarCierre', {
           planeacion_id: planId,
@@ -1938,14 +2039,14 @@
       $('activitiesPlan').value = planId;
       renderActivitiesForm();
       activateTab('planeaciones');
-      setBanner('Planeacion cargada en el editor de actividades.', 'info', { button });
+      setBanner('Planeación cargada en el editor de actividades.', 'info', { button });
     }
 
     function usePlanForObservation(button, planId) {
       $('obsPlan').value = planId;
       renderObsAlumnoSelect();
       activateTab('seguimiento');
-      setBanner('Planeacion cargada en observaciones.', 'info', { button });
+      setBanner('Planeación cargada en observaciones.', 'info', { button });
     }
 
     function bindEvents() {
