@@ -200,6 +200,7 @@
     }
 
     body.auth-mode #summaryCard,
+    body.auth-mode #alertsCard,
     body.auth-mode .workspace,
     body.auth-mode #statusBanner {
       display: none;
@@ -227,6 +228,14 @@
 
     body:not(.auth-mode) .hero {
       display: none;
+    }
+
+    body:not(.auth-mode) #sessionCard,
+    body:not(.auth-mode) #summaryCard,
+    body:not(.auth-mode) .tabs,
+    body:not(.auth-mode) #panel-seguimiento,
+    body:not(.auth-mode) #panel-reportes {
+      display: none !important;
     }
 
     .hero-card::after {
@@ -582,10 +591,75 @@
     }
 
     .badge.borrador { background: rgba(23, 51, 45, 0.08); color: var(--text); }
+    .badge.borrador_pendiente_aprobacion { background: rgba(245, 154, 27, 0.18); color: var(--warning); }
+    .badge.rechazada { background: rgba(224, 78, 90, 0.15); color: #9b1c27; }
     .badge.activa { background: rgba(26, 163, 168, 0.14); color: var(--brand-deep); }
     .badge.cierre_pendiente { background: rgba(239, 140, 33, 0.16); color: var(--warning); }
     .badge.cerrada { background: rgba(24, 121, 78, 0.14); color: var(--success); }
     .badge.archivada { background: rgba(95, 113, 108, 0.12); color: var(--muted); }
+
+    .alert-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .alert-item {
+      border-radius: 18px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: rgba(255, 255, 255, 0.82);
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .alert-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .alert-type {
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .alert-status {
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .obs-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .obs-item {
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: rgba(255, 255, 255, 0.7);
+      display: grid;
+      gap: 6px;
+    }
+
+    .obs-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .obs-alumno-card {
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: rgba(255, 255, 255, 0.7);
+      display: grid;
+      gap: 8px;
+    }
 
     .meta-grid {
       display: grid;
@@ -725,6 +799,261 @@
         font-size: clamp(1.9rem, 12vw, 2.8rem);
       }
     }
+
+    .admin-shell {
+      display: none;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+    .admin-toolbar,
+    .admin-panel {
+      background: var(--surface);
+      border: 1px solid rgba(29, 182, 193, 0.14);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+    .admin-toolbar {
+      padding: 18px 20px;
+      display: grid;
+      gap: 14px;
+    }
+    .admin-toolbar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .admin-toolbar-head h2 {
+      margin-bottom: 4px;
+    }
+    .admin-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .admin-nav-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: rgba(23, 51, 45, 0.07);
+      color: var(--text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+    .admin-nav-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(29, 182, 193, 0.12);
+    }
+    .admin-nav-btn.is-active {
+      background: linear-gradient(135deg, rgba(29, 182, 193, 0.18), rgba(227, 50, 116, 0.12));
+      color: var(--brand-deep);
+      box-shadow: inset 0 0 0 1px rgba(29, 182, 193, 0.16);
+    }
+    .admin-panel {
+      display: none;
+      padding: 24px;
+    }
+    .admin-panel.is-active {
+      display: grid;
+      gap: 18px;
+    }
+    .admin-panel-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .module-card {
+      border-radius: 24px;
+      padding: 20px;
+      border: 1px solid rgba(29, 182, 193, 0.12);
+      background:
+        radial-gradient(circle at top right, rgba(179, 221, 46, 0.14), transparent 34%),
+        rgba(250, 251, 247, 0.98);
+      display: grid;
+      gap: 12px;
+    }
+    .module-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 14px;
+    }
+    .module-card-count {
+      min-width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: rgba(29, 182, 193, 0.12);
+      color: var(--brand-deep);
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+    .module-card h3,
+    .admin-placeholder h3 {
+      margin-bottom: 6px;
+    }
+    .admin-panel-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .admin-kpi {
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(23, 51, 45, 0.05);
+      border: 1px solid rgba(23, 51, 45, 0.08);
+    }
+    .admin-kpi-label {
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .admin-kpi-value {
+      margin-top: 6px;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .admin-placeholder {
+      border-radius: 24px;
+      padding: 22px;
+      background: rgba(250, 251, 247, 0.98);
+      border: 1px solid rgba(29, 182, 193, 0.12);
+      display: grid;
+      gap: 14px;
+    }
+    .admin-action-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .admin-action-chip {
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(227, 50, 116, 0.08);
+      color: var(--berry);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+    .admin-note {
+      border-left: 4px solid rgba(29, 182, 193, 0.72);
+      padding: 12px 14px;
+      border-radius: 0 18px 18px 0;
+      background: rgba(29, 182, 193, 0.06);
+      color: var(--text);
+    }
+    .admin-planeaciones-shell {
+      display: none;
+    }
+    .admin-planeaciones-shell.is-active {
+      display: block;
+    }
+
+    .inline-note {
+      min-height: 52px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(31, 58, 55, 0.12);
+      background: rgba(244, 248, 245, 0.92);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+    }
+    .inline-note.is-closed {
+      border-color: rgba(176, 102, 20, 0.2);
+      background: rgba(255, 245, 229, 0.95);
+      color: #9a5a10;
+    }
+    .inline-note.is-open {
+      border-color: rgba(11, 151, 111, 0.15);
+      background: rgba(237, 251, 245, 0.95);
+      color: #0f7d5d;
+    }
+    .actions.compact {
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    .checklist-groups {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    .group-block {
+      border: 1px solid rgba(31, 58, 55, 0.1);
+      border-radius: 22px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.88);
+    }
+    .group-block + .group-block {
+      margin-top: 12px;
+    }
+    .group-block-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .group-block-head .actions {
+      gap: 8px;
+    }
+    .inline-head {
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .activity-editor {
+      border: 1px solid rgba(31, 58, 55, 0.1);
+      border-radius: 22px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    .activity-editor textarea {
+      min-height: 96px;
+    }
+    .activity-editor-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .activity-inline-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .activity-card {
+      border: 1px solid rgba(31, 58, 55, 0.1);
+      border-radius: 20px;
+      padding: 14px;
+      background: rgba(249, 250, 247, 0.94);
+    }
+    .activity-card + .activity-card {
+      margin-top: 12px;
+    }
+    .activity-card .actions {
+      margin-top: 12px;
+    }
+    @media (max-width: 720px) {
+      .activity-inline-grid {
+        grid-template-columns: 1fr;
+      }
+      .group-block-head,
+      .activity-editor-top,
+      .admin-toolbar-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .admin-panel-grid,
+      .admin-panel-kpis {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -738,24 +1067,24 @@
           <div class="brand-copy">
             <div class="pill brand">Libre Aprendiz</div>
             <div class="brand-overline">Espacio institucional de trabajo pedagógico</div>
-            <h1>Planeación, seguimiento y reportes en una sola vista de trabajo.</h1>
+            <h1>Planeación académica semanal en una sola vista de trabajo.</h1>
             <p>
-              Un espacio para acompañar el proceso pedagógico de cada alumno con claridad, continuidad y criterio compartido entre facilitadores, dirección y administración.
+              Un espacio para registrar lo que cada grupo trabajó durante el ciclo, dar seguimiento interno y preparar un reporte académico claro para las familias.
             </p>
           </div>
         </div>
         <div class="hero-feature-grid">
           <div class="hero-feature">
-            <strong>Planeación semanal</strong>
-            <p>Organiza borradores, actividades y cierres desde el mismo flujo de trabajo.</p>
+            <strong>Planeación unificada</strong>
+            <p>Crea semana, grupos, alumnos y actividades desde una sola hoja de trabajo.</p>
           </div>
           <div class="hero-feature">
-            <strong>Seguimiento significativo</strong>
-            <p>Registra observaciones, evaluaciones y notas con contexto real de alumno, período y materia.</p>
+            <strong>Observaciones internas</strong>
+            <p>Agrega notas generales o finales por alumno para administración sin mezclarlo con el reporte académico.</p>
           </div>
           <div class="hero-feature">
-            <strong>Reportes institucionales</strong>
-            <p>Solicita reportes y acompaña su estado sin salir de la plataforma.</p>
+            <strong>Cierre de semana</strong>
+            <p>Marca qué actividades sí se realizaron, documenta pendientes y deja la planeación lista para administración.</p>
           </div>
         </div>
       </div>
@@ -823,33 +1152,217 @@
           </div>
         </div>
       </article>
+
+      <article id="alertsCard" class="card">
+        <div class="card-head">
+          <div>
+            <h2>Alertas internas</h2>
+            <p class="subtle">Aquí aparecen avisos de aprobación, material pendiente y mensajes internos relevantes para tu sesión.</p>
+          </div>
+        </div>
+        <div id="alertsList" class="alert-list">
+          <div class="empty">Todavía no hay alertas visibles para esta sesión.</div>
+        </div>
+      </article>
     </section>
 
+    <section id="adminShell" class="admin-shell">
+      <article class="admin-toolbar">
+        <div class="admin-toolbar-head">
+          <div>
+            <h2 id="adminShellTitle">Centro de control</h2>
+            <p class="subtle">Administra catálogos, histórico de planeaciones, alertas y salidas institucionales.</p>
+          </div>
+          <div class="pill accent" id="adminRolePill">Administración</div>
+        </div>
+        <div class="admin-nav">
+          <button class="admin-nav-btn is-active" type="button" data-admin-module="dashboard">Dashboard</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="planeaciones">Planeaciones</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="alumnos">Alumnos</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="reporte-ciclo">Reporte de ciclo</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="facilitadores">Facilitadores</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="materias">Materias</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="configuracion">Configuración</button>
+        </div>
+      </article>
+
+      <section id="admin-panel-dashboard" class="admin-panel is-active">
+        <div class="admin-panel-kpis">
+          <div class="admin-kpi">
+            <div class="admin-kpi-label">Planeaciones abiertas</div>
+            <div id="adminKpiOpenPlans" class="admin-kpi-value">0</div>
+          </div>
+          <div class="admin-kpi">
+            <div class="admin-kpi-label">Planeaciones cerradas</div>
+            <div id="adminKpiClosedPlans" class="admin-kpi-value">0</div>
+          </div>
+          <div class="admin-kpi">
+            <div class="admin-kpi-label">Alertas abiertas</div>
+            <div id="adminKpiAlerts" class="admin-kpi-value">0</div>
+          </div>
+          <div class="admin-kpi">
+            <div class="admin-kpi-label">Facilitadores activos</div>
+            <div id="adminKpiFacilitadores" class="admin-kpi-value">0</div>
+          </div>
+        </div>
+        <div class="admin-panel-grid">
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
+                <h3>Catálogo de alumnos</h3>
+                <p>Alta, edición, cambio de grupo, archivo y reactivación desde un solo módulo.</p>
+              </div>
+              <div class="module-card-count" id="adminCountAlumnos">0</div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" type="button" data-admin-module-launch="alumnos">Abrir alumnos</button>
+            </div>
+          </article>
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
+                <h3>Planeaciones</h3>
+                <p>Accede al histórico completo, alertas y edición total incluso sobre cerradas o archivadas.</p>
+              </div>
+              <div class="module-card-count" id="adminCountPlaneaciones">0</div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" type="button" data-admin-module-launch="planeaciones">Abrir planeaciones</button>
+            </div>
+          </article>
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
+                <h3>Reporte de ciclo</h3>
+                <p>Prepara la salida académica para familias con las actividades registradas en el ciclo.</p>
+              </div>
+              <div class="module-card-count" id="adminCountReportes">PDF</div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" type="button" data-admin-module-launch="reporte-ciclo">Abrir reporte</button>
+            </div>
+          </article>
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
+                <h3>Facilitadores y materias</h3>
+                <p>Gestiona usuarios operativos, orden visual, estatus y catálogo institucional.</p>
+              </div>
+              <div class="module-card-count" id="adminCountMaterias">0</div>
+            </div>
+            <div class="actions">
+              <button class="btn-secondary" type="button" data-admin-module-launch="facilitadores">Facilitadores</button>
+              <button class="btn-ghost" type="button" data-admin-module-launch="materias">Materias</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="admin-panel-alumnos" class="admin-panel">
+        <article class="admin-placeholder">
+          <div>
+            <h3>Catálogo de alumnos</h3>
+            <p>Esta pantalla administrará alta, edición, cambio de grupo, archivo, reactivación e historial por alumno.</p>
+          </div>
+          <div class="admin-action-list">
+            <span class="admin-action-chip">Nuevo alumno</span>
+            <span class="admin-action-chip">Editar ficha</span>
+            <span class="admin-action-chip">Cambiar grupo</span>
+            <span class="admin-action-chip">Archivar / Reactivar</span>
+          </div>
+          <div class="admin-note">Siguiente fase: construir buscador, filtros por grupo/estatus y acceso rápido al historial y reporte de ciclo.</div>
+        </article>
+      </section>
+
+      <section id="admin-panel-reporte-ciclo" class="admin-panel">
+        <article class="admin-placeholder">
+          <div>
+            <h3>Reporte de ciclo</h3>
+            <p>Esta pantalla reunirá por alumno las actividades realizadas en el ciclo para generar la salida académica para familias.</p>
+          </div>
+          <div class="admin-action-list">
+            <span class="admin-action-chip">Buscar alumno</span>
+            <span class="admin-action-chip">Vista previa</span>
+            <span class="admin-action-chip">Exportar PDF</span>
+            <span class="admin-action-chip">Imprimir</span>
+          </div>
+          <div class="admin-note">Aquí no entrarán observaciones internas, habilidades ni socioemocional. Solo actividades académicas y su estado de realización.</div>
+        </article>
+      </section>
+
+      <section id="admin-panel-facilitadores" class="admin-panel">
+        <article class="admin-placeholder">
+          <div>
+            <h3>Facilitadores</h3>
+            <p>Administración podrá crear, editar, activar/desactivar, resetear PIN y archivar facilitadores.</p>
+          </div>
+          <div class="admin-action-list">
+            <span class="admin-action-chip">Nuevo facilitador</span>
+            <span class="admin-action-chip">Editar</span>
+            <span class="admin-action-chip">Resetear PIN</span>
+            <span class="admin-action-chip">Activar / Desactivar</span>
+          </div>
+          <div class="admin-note">Siguiente fase: tabla compacta con acciones por fila y control total para directora/admin.</div>
+        </article>
+      </section>
+
+      <section id="admin-panel-materias" class="admin-panel">
+        <article class="admin-placeholder">
+          <div>
+            <h3>Materias</h3>
+            <p>Administración podrá crear, editar, reordenar, activar/desactivar y archivar materias.</p>
+          </div>
+          <div class="admin-action-list">
+            <span class="admin-action-chip">Nueva materia</span>
+            <span class="admin-action-chip">Editar</span>
+            <span class="admin-action-chip">Subir / Bajar</span>
+            <span class="admin-action-chip">Archivar</span>
+          </div>
+          <div class="admin-note">Siguiente fase: lista ordenable con control de orden visual y estatus operativo.</div>
+        </article>
+      </section>
+
+      <section id="admin-panel-configuracion" class="admin-panel">
+        <article class="admin-placeholder">
+          <div>
+            <h3>Configuración</h3>
+            <p>Reservado para diagnósticos, semanas, periodos, propiedades y mantenimiento del sistema.</p>
+          </div>
+          <div class="admin-action-list">
+            <span class="admin-action-chip">Diagnóstico</span>
+            <span class="admin-action-chip">Semanas</span>
+            <span class="admin-action-chip">Triggers</span>
+            <span class="admin-action-chip">Propiedades</span>
+          </div>
+          <div class="admin-note">La idea es mantener esta zona técnica separada de la operación diaria para no estorbar el trabajo del equipo.</div>
+        </article>
+      </section>
+    </section>
+
+    <section id="adminPlaneacionesShell" class="admin-planeaciones-shell">
     <section class="workspace">
       <div class="tabs">
         <button class="tab-btn is-active" data-tab="planeaciones" type="button">Planeaciones</button>
-        <button class="tab-btn" data-tab="seguimiento" type="button">Seguimiento</button>
-        <button class="tab-btn" data-tab="reportes" type="button">Reportes</button>
       </div>
 
       <section id="panel-planeaciones" class="panel is-active">
         <div class="grid-2">
-          <article class="card">
+          <article class="card" id="planBuilderCard">
             <div class="card-head">
               <div>
-                <h2>Nueva planeación</h2>
-                <p class="subtle">Crea el borrador base y enlaza alumnos del grupo.</p>
+                <h2 id="planEditorTitle">Nueva planeación</h2>
+                <p class="subtle">Captura la fecha, elige uno o varios grupos y guarda a la vez alumnos y actividades.</p>
               </div>
             </div>
             <div class="stack">
               <div class="grid-3">
                 <div>
-                  <label for="planSemana">Semana</label>
-                  <select id="planSemana"></select>
+                  <label for="planFecha">Fecha de referencia</label>
+                  <input id="planFecha" type="date">
                 </div>
                 <div>
-                  <label for="planGrupo">Grupo</label>
-                  <select id="planGrupo"></select>
+                  <label>Semana detectada</label>
+                  <div id="planSemanaResolved" class="inline-note">Selecciona una fecha para resolver la semana.</div>
                 </div>
                 <div>
                   <label for="planMateria">Materia</label>
@@ -857,65 +1370,71 @@
                 </div>
               </div>
               <div>
+                <label>Grupos</label>
+                <div class="actions compact">
+                  <button id="selectAllGroupsBtn" class="btn-ghost" type="button">Seleccionar todos</button>
+                  <button id="clearAllGroupsBtn" class="btn-ghost" type="button">Limpiar</button>
+                </div>
+                <div id="planGruposChecklist" class="checklist checklist-groups"></div>
+              </div>
+              <div>
                 <label for="planFrase">Frase de la semana</label>
                 <textarea id="planFrase" placeholder="Idea o enfoque pedagógico de la semana"></textarea>
               </div>
               <div>
-                <label>Alumnos del grupo</label>
+                <label>Alumnos</label>
+                <div class="actions compact">
+                  <button id="selectAllVisibleAlumnosBtn" class="btn-ghost" type="button">Seleccionar visibles</button>
+                  <button id="clearVisibleAlumnosBtn" class="btn-ghost" type="button">Quitar visibles</button>
+                </div>
                 <div id="planAlumnosChecklist" class="checklist"></div>
               </div>
+              <div>
+                <div class="card-head inline-head">
+                  <div>
+                    <label>Actividades</label>
+                    <p class="subtle">Captura las actividades planeadas y deja listo el material requerido para cada una.</p>
+                  </div>
+                  <button id="addActivityBtn" class="btn-accent" type="button">Agregar actividad</button>
+                </div>
+                <div id="planActivitiesList" class="stack"></div>
+              </div>
               <div class="actions">
-                <button id="createPlanBtn" class="btn-primary" type="button">Crear planeación</button>
+                <button id="savePlanBtn" class="btn-primary" type="button">Guardar planeación</button>
+                <button id="resetPlanEditorBtn" class="btn-secondary" type="button">Limpiar editor</button>
               </div>
             </div>
           </article>
 
-          <article class="card">
-            <div class="card-head">
-              <div>
-                <h2>Actividades</h2>
-                <p class="subtle">Reemplaza el bloque completo de actividades de un borrador.</p>
-              </div>
-            </div>
-            <div class="stack">
-              <div class="grid-2">
-                <div>
-                  <label for="activitiesPlan">Planeación borrador</label>
-                  <select id="activitiesPlan"></select>
-                </div>
-                <div>
-                  <label for="activitiesVersion">Versión actual</label>
-                  <input id="activitiesVersion" type="text" readonly placeholder="Sin versión">
-                </div>
-              </div>
-              <div>
-                <label for="activitiesText">Bloque de actividades</label>
-                <textarea id="activitiesText" placeholder="Una actividad por línea. Ejemplo:&#10;Lectura compartida&#10;Juego de sumas&#10;Cierre reflexivo"></textarea>
-                <div class="helper">Cada línea se guarda como una actividad con orden consecutivo.</div>
-              </div>
-              <div class="actions">
-                <button id="saveActivitiesBtn" class="btn-accent" type="button">Guardar actividades</button>
-              </div>
-            </div>
-          </article>
         </div>
 
         <article class="card">
           <div class="card-head">
             <div>
-              <h2>Planeaciones activas y borradores</h2>
-              <p class="subtle">Puedes activar, solicitar cierre, confirmar cierre y archivar desde aquí.</p>
+              <h2 id="planeacionesSectionTitle">Planeaciones abiertas</h2>
+              <p id="planeacionesSectionCopy" class="subtle">Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.</p>
             </div>
             <div class="actions">
               <select id="filterSemana"></select>
               <select id="filterEstado">
                 <option value="">Todos los estados</option>
                 <option value="borrador">Borrador</option>
+                <option value="borrador_pendiente_aprobacion">Pendiente de aprobación</option>
+                <option value="rechazada">Rechazada</option>
                 <option value="activa">Activa</option>
                 <option value="cierre_pendiente">Cierre pendiente</option>
                 <option value="cerrada">Cerrada</option>
                 <option value="archivada">Archivada</option>
               </select>
+              <select id="filterGrupo"></select>
+              <select id="filterFacilitador"></select>
+              <div style="min-width:260px;flex:1 1 260px;display:grid;gap:8px;">
+                <input id="filterAlumnoSearch" type="text" list="filterAlumnoSuggestions" placeholder="Buscar alumno por nombre o matrícula">
+                <datalist id="filterAlumnoSuggestions"></datalist>
+                <input id="filterAlumnoId" type="hidden">
+                <div class="mini" id="filterAlumnoChip">Sin filtro de alumno</div>
+              </div>
+              <button id="clearAlumnoFilterBtn" class="btn-ghost" type="button">Quitar alumno</button>
               <button id="filterPlaneacionesBtn" class="btn-secondary" type="button">Filtrar</button>
             </div>
           </div>
@@ -1126,6 +1645,7 @@
         </div>
       </section>
     </section>
+    </section>
   </div>
 
   <script>
@@ -1156,7 +1676,18 @@
         semanas: []
       },
       planeaciones: [],
-      activeTab: 'planeaciones'
+      alertas: [],
+      planEditor: {
+        mode: 'create',
+        planId: '',
+        lockedSemanaId: '',
+        lockedGrupoId: '',
+        lastKnownUpdatedAt: '',
+        lastKnownActivitiesVersion: '',
+        activities: []
+      },
+      activeTab: 'planeaciones',
+      activeAdminModule: 'dashboard'
     };
 
     const inFlightActions = new Map();
@@ -1202,8 +1733,10 @@
 
     function clearLoadedData() {
       state.planeaciones = [];
+      state.alertas = [];
       state.catalogos = createEmptyCatalogos();
       state.activeTab = 'planeaciones';
+      state.activeAdminModule = 'dashboard';
       resetReportResult();
       clearActionToast();
     }
@@ -1422,6 +1955,11 @@
       return role === 'directora' || role === 'admin';
     }
 
+    function canUseAdminShell() {
+      const role = getCurrentRole();
+      return role === 'directora' || role === 'admin';
+    }
+
     function ensureCanUseReportes() {
       if (!canUseReportes()) {
         throw new Error('Los reportes solo están disponibles para dirección y admin.');
@@ -1537,10 +2075,22 @@
       const payload = { limit: 200 };
       const semanaFilter = $('filterSemana').value;
       const estadoFilter = $('filterEstado').value;
+      const grupoFilter = $('filterGrupo').value;
+      const facilitadorFilter = $('filterFacilitador').value;
+      const alumnoFilter = $('filterAlumnoId').value;
       if (semanaFilter) payload.semana_id = semanaFilter;
       if (estadoFilter) payload.estado = estadoFilter;
+      if (grupoFilter) payload.grupo_id = grupoFilter;
+      if (facilitadorFilter) payload.facilitador_id = facilitadorFilter;
+      if (alumnoFilter) payload.alumno_id = alumnoFilter;
       const data = await api('getPlaneaciones', payload);
       state.planeaciones = Array.isArray(data.rows) ? data.rows : [];
+    }
+
+    async function refreshAlertas() {
+      ensureLoggedIn();
+      const data = await api('getAlertas', { limit: 20 });
+      state.alertas = Array.isArray(data.rows) ? data.rows : [];
     }
 
     async function refreshAll() {
@@ -1548,6 +2098,7 @@
       setBanner('Cargando catálogos y planeaciones...', 'info');
       await refreshCatalogos();
       await refreshPlaneaciones();
+      await refreshAlertas();
       renderAll();
       if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
         setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
@@ -1557,11 +2108,53 @@
     }
 
     function syncRoleUi() {
+      const tabs = document.querySelector('.tabs');
+      const seguimientoTabBtn = document.querySelector('.tab-btn[data-tab="seguimiento"]');
       const reportTabBtn = document.querySelector('.tab-btn[data-tab="reportes"]');
+      const summaryCard = $('summaryCard');
+      const alertsCard = $('alertsCard');
+      const adminShell = $('adminShell');
+      const adminPlaneacionesShell = $('adminPlaneacionesShell');
+      const seguimientoPanel = $('panel-seguimiento');
       const reportPanel = $('panel-reportes');
+      const estadoFilter = $('filterEstado');
+      const role = getCurrentRole();
+      const facilitatorMode = role === 'facilitador';
+      const adminMode = canUseAdminShell();
       const canViewReportes = canUseReportes();
+      if (tabs) tabs.hidden = facilitatorMode || adminMode;
+      if (adminShell) adminShell.style.display = adminMode ? 'grid' : 'none';
+      if (adminPlaneacionesShell) adminPlaneacionesShell.classList.toggle('is-active', !adminMode || state.activeAdminModule === 'planeaciones');
+      if (summaryCard) summaryCard.hidden = facilitatorMode || (adminMode && state.activeAdminModule !== 'dashboard');
+      if (alertsCard) alertsCard.hidden = adminMode && state.activeAdminModule !== 'dashboard';
+      if (seguimientoTabBtn) seguimientoTabBtn.hidden = facilitatorMode;
+      if (seguimientoPanel) seguimientoPanel.hidden = facilitatorMode;
       if (reportTabBtn) reportTabBtn.hidden = !canViewReportes;
-      if (reportPanel) reportPanel.hidden = !canViewReportes;
+      if (reportPanel) reportPanel.hidden = facilitatorMode || adminMode || !canViewReportes;
+      if (estadoFilter) {
+        Array.from(estadoFilter.options).forEach((option) => {
+          option.hidden = facilitatorMode && ['cierre_pendiente', 'cerrada', 'archivada'].includes(option.value);
+        });
+        if (facilitatorMode && ['cierre_pendiente', 'cerrada', 'archivada'].includes(estadoFilter.value)) {
+          estadoFilter.value = '';
+        }
+      }
+      ['filterGrupo', 'filterFacilitador', 'filterAlumnoSearch', 'clearAlumnoFilterBtn', 'filterAlumnoChip'].forEach((id) => {
+        const el = $(id);
+        if (el) el.hidden = facilitatorMode;
+      });
+      if (facilitatorMode) {
+        if ($('filterGrupo')) $('filterGrupo').value = '';
+        if ($('filterFacilitador')) $('filterFacilitador').value = '';
+        if ($('filterAlumnoSearch')) $('filterAlumnoSearch').value = '';
+        if ($('filterAlumnoId')) $('filterAlumnoId').value = '';
+      }
+      if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'reporte-ciclo', 'facilitadores', 'materias', 'configuracion'].includes(state.activeAdminModule)) {
+        state.activeAdminModule = 'dashboard';
+      }
+      if (facilitatorMode && state.activeTab !== 'planeaciones') {
+        state.activeTab = 'planeaciones';
+      }
       if (!canViewReportes && state.activeTab === 'reportes') {
         state.activeTab = 'planeaciones';
       }
@@ -1594,6 +2187,48 @@
       $('statMaterias').textContent = String(state.catalogos.materias.length || 0);
     }
 
+    function activateAdminModule(moduleName) {
+      if (!canUseAdminShell()) return;
+      state.activeAdminModule = moduleName || 'dashboard';
+      renderAdminShell();
+      syncRoleUi();
+    }
+
+    function renderAdminShell() {
+      const adminShell = $('adminShell');
+      if (!adminShell) return;
+      if (!canUseAdminShell()) {
+        adminShell.style.display = 'none';
+        return;
+      }
+      const user = state.session && state.session.usuario ? state.session.usuario : null;
+      const openPlans = state.planeaciones.filter((plan) => ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente'].includes(String(plan.estado || '').trim())).length;
+      const closedPlans = state.planeaciones.filter((plan) => ['cerrada', 'archivada'].includes(String(plan.estado || '').trim())).length;
+      const openAlerts = state.alertas.filter((alerta) => String(alerta.estado || '').trim() !== 'resuelta').length;
+      const activeFacilitadores = state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)).length;
+
+      if ($('adminShellTitle')) {
+        $('adminShellTitle').textContent = 'Centro de control' + (user ? ' de ' + (user.nombre || user.nombre_mostrado || user.facilitador_id || '') : '');
+      }
+      if ($('adminRolePill')) {
+        $('adminRolePill').textContent = user ? (user.rol === 'admin' ? 'Admin' : 'Directora') : 'Administración';
+      }
+      if ($('adminKpiOpenPlans')) $('adminKpiOpenPlans').textContent = String(openPlans);
+      if ($('adminKpiClosedPlans')) $('adminKpiClosedPlans').textContent = String(closedPlans);
+      if ($('adminKpiAlerts')) $('adminKpiAlerts').textContent = String(openAlerts);
+      if ($('adminKpiFacilitadores')) $('adminKpiFacilitadores').textContent = String(activeFacilitadores);
+      if ($('adminCountAlumnos')) $('adminCountAlumnos').textContent = String(state.catalogos.alumnos.length || 0);
+      if ($('adminCountPlaneaciones')) $('adminCountPlaneaciones').textContent = String(state.planeaciones.length || 0);
+      if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(state.catalogos.materias.length || 0);
+
+      document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.adminModule === state.activeAdminModule);
+      });
+      document.querySelectorAll('.admin-panel').forEach((panel) => {
+        panel.classList.toggle('is-active', panel.id === 'admin-panel-' + state.activeAdminModule);
+      });
+    }
+
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
       const current = select.value;
       const options = ['<option value="">' + escapeHtml(placeholder) + '</option>'];
@@ -1616,12 +2251,161 @@
       syncNotePeriodoState();
     }
 
+    function createEmptyActivityDraft() {
+      return {
+        key: uid('ACTROW'),
+        texto: '',
+        material_en_carpeta: 'no_requiere',
+        realizada: '',
+        comentario_cierre: '',
+        actividad_id: '',
+        last_known_updated_at: ''
+      };
+    }
+
+    function emptyPlanEditorState() {
+      return {
+        mode: 'create',
+        planId: '',
+        lockedSemanaId: '',
+        lockedGrupoId: '',
+        lastKnownUpdatedAt: '',
+        lastKnownActivitiesVersion: '',
+        activities: [createEmptyActivityDraft()]
+      };
+    }
+
+    function normalizeMaterialStatus(value) {
+      const raw = String(value == null ? '' : value).trim().toLowerCase();
+      if (!raw) return 'no_requiere';
+      if (['listo', 'si', 'sí', 'true', '1'].includes(raw)) return 'listo';
+      if (['no_listo', 'no', 'false', '0'].includes(raw)) return 'no_listo';
+      return 'no_requiere';
+    }
+
+    function normalizeRealizadaStatus(value) {
+      const raw = String(value == null ? '' : value).trim().toLowerCase();
+      if (['si', 'sí', 'true', '1'].includes(raw)) return 'si';
+      if (['no', 'false', '0'].includes(raw)) return 'no';
+      return '';
+    }
+
+    function toYmdFrontend_(value) {
+      if (value === undefined || value === null || value === '') return '';
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        const match = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+      }
+      const date = new Date(value);
+      if (isNaN(date.getTime())) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function getSortedSemanas() {
+      return [...state.catalogos.semanas].sort((a, b) => toYmdFrontend_(a.fecha_inicio).localeCompare(toYmdFrontend_(b.fecha_inicio)));
+    }
+
+    function getWeekById(semanaId) {
+      return state.catalogos.semanas.find((item) => item.semana_id === semanaId) || null;
+    }
+
+    function getWeekByDate(dateValue) {
+      const target = toYmdFrontend_(dateValue);
+      if (!target) return null;
+      return getSortedSemanas().find((semana) => {
+        const start = toYmdFrontend_(semana.fecha_inicio);
+        const end = toYmdFrontend_(semana.fecha_fin);
+        return start && end && start <= target && target <= end;
+      }) || null;
+    }
+
+    function formatSemanaLabel(semana) {
+      if (!semana) return 'Semana sin resolver';
+      const start = toYmdFrontend_(semana.fecha_inicio);
+      const end = toYmdFrontend_(semana.fecha_fin);
+      return [
+        semana.nombre_visible || semana.semana_id,
+        start && end ? (start + ' a ' + end) : '',
+        String(semana.cerrada_global || '').toLowerCase() === 'si' ? 'cerrada' : 'abierta'
+      ].filter(Boolean).join(' · ');
+    }
+
+    function getPlanStatusLabel(status) {
+      return ({
+        borrador: 'Borrador',
+        borrador_pendiente_aprobacion: 'Pendiente de aprobación',
+        rechazada: 'Rechazada',
+        activa: 'Activa',
+        cierre_pendiente: 'Cierre pendiente',
+        cerrada: 'Cerrada',
+        archivada: 'Archivada'
+      })[String(status || '').trim()] || String(status || 'Sin estado');
+    }
+
+    function getSelectedGroupIds() {
+      const host = $('planGruposChecklist');
+      if (!host) return [];
+      return Array.from(host.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+    }
+
+    function getSelectedPlanAlumnos() {
+      return Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+    }
+
+    function resetPlanEditor() {
+      state.planEditor = emptyPlanEditorState();
+      $('planFecha').value = '';
+      $('planFrase').value = '';
+      renderPlanEditor();
+      renderAlumnoFilterUi();
+      if ($('planeacionesSectionTitle')) {
+        $('planeacionesSectionTitle').textContent = canUseAdminShell() ? 'Planeaciones' : 'Planeaciones abiertas';
+      }
+      if ($('planeacionesSectionCopy')) {
+        $('planeacionesSectionCopy').textContent = canUseAdminShell()
+          ? 'Consulta histórico, filtra y corrige cualquier planeación del sistema.'
+          : 'Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
+      }
+    }
+
+    function loadPlanIntoEditor(plan) {
+      const semana = getWeekById(plan.semana_id);
+      state.planEditor = {
+        mode: 'edit',
+        planId: plan.planeacion_id,
+        lockedSemanaId: plan.semana_id,
+        lockedGrupoId: plan.grupo_id,
+        lastKnownUpdatedAt: plan.fecha_actualizacion || '',
+        lastKnownActivitiesVersion: plan.actividades_version_actual || '',
+        activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
+          key: actividad.actividad_id || uid('ACTROW'),
+          actividad_id: actividad.actividad_id || '',
+          texto: actividad.texto || '',
+          material_en_carpeta: normalizeMaterialStatus(actividad.material_en_carpeta),
+          realizada: normalizeRealizadaStatus(actividad.realizada),
+          comentario_cierre: actividad.comentario_cierre || '',
+          last_known_updated_at: actividad.fecha_actualizacion || ''
+        })) : [createEmptyActivityDraft()]
+      };
+      $('planFecha').value = semana && semana.fecha_inicio ? toYmdFrontend_(semana.fecha_inicio) : '';
+      $('planFrase').value = plan.frase_semana || '';
+      $('planMateria').value = plan.materia_id || '';
+      renderPlanEditor();
+      Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = (plan.alumnos || []).some((row) => row.alumno_id === input.value);
+      });
+    }
+
     function formatPlanShort(plan) {
       const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
       const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
       const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
       return [
-        plan.planeacion_id,
         grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id,
         materia ? (materia.nombre || materia.materia_id) : plan.materia_id,
         semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id
@@ -1632,57 +2416,184 @@
       return state.planeaciones.find((plan) => plan.planeacion_id === planId) || null;
     }
 
-    function renderBaseSelects() {
-      fillSelect($('planSemana'), state.catalogos.semanas, (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Selecciona semana');
-      fillSelect($('planGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => g.nombre_grupo || g.grupo_id, 'Selecciona grupo');
-      fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
-      fillSelect($('filterSemana'), state.catalogos.semanas, (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
-      fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
-      fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
-      fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
-      fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
-      const borradores = state.planeaciones.filter((plan) => plan.estado === 'borrador');
-      fillSelect($('activitiesPlan'), borradores, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona borrador');
-      fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
+    function renderPlanWeekResolved() {
+      const host = $('planSemanaResolved');
+      const week = state.planEditor.mode === 'edit' && !canUseAdminShell()
+        ? getWeekById(state.planEditor.lockedSemanaId)
+        : getWeekByDate($('planFecha').value);
+      host.textContent = week ? formatSemanaLabel(week) : 'Selecciona una fecha para resolver la semana.';
+      host.className = 'inline-note';
+      if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
+      if (week && String(week.cerrada_global || '').toLowerCase() === 'si' && state.planEditor.mode !== 'edit') {
+        host.textContent += '. Si la guarda un facilitador, quedará pendiente de aprobación.';
+      }
     }
 
-    function renderPlanAlumnosChecklist() {
-      const grupoId = $('planGrupo').value;
-      const alumnos = state.catalogos.alumnos.filter((alumno) => !grupoId || alumno.grupo_id === grupoId);
-      const host = $('planAlumnosChecklist');
-      if (!alumnos.length) {
-        host.innerHTML = '<div class="empty">No hay alumnos para ese grupo.</div>';
-        return;
-      }
-      host.innerHTML = alumnos.map((alumno) => {
-        const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
+    function renderPlanGroupChecklist() {
+      const host = $('planGruposChecklist');
+      const editLocked = state.planEditor.mode === 'edit' && !canUseAdminShell();
+      const currentSelectedGroups = getSelectedGroupIds();
+      const checkedSet = new Set(
+        state.planEditor.mode === 'edit'
+          ? (currentSelectedGroups.length ? currentSelectedGroups : [state.planEditor.lockedGrupoId])
+          : currentSelectedGroups
+      );
+      const groups = [...state.catalogos.grupos].sort((a, b) => String(a.nombre_grupo || '').localeCompare(String(b.nombre_grupo || '')));
+      host.innerHTML = groups.map((group) => {
+        const disabled = editLocked && group.grupo_id !== state.planEditor.lockedGrupoId;
+        const checked = editLocked ? group.grupo_id === state.planEditor.lockedGrupoId : checkedSet.has(group.grupo_id);
         return (
           '<label class="check-item">' +
-            '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '">' +
-            '<span><strong>' + escapeHtml(label) + '</strong><br><span class="mini">' +
-              escapeHtml(alumno.alumno_id) + ' · grupo ' + escapeHtml(alumno.grupo_id || '-') +
-            '</span></span>' +
+            '<input type="checkbox" value="' + escapeHtml(group.grupo_id) + '"' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '') + '>' +
+            '<span><strong>' + escapeHtml(group.nombre_grupo || group.grupo_id) + '</strong><br><span class="mini">' + escapeHtml(group.nivel || '') + '</span></span>' +
           '</label>'
         );
       }).join('');
     }
 
-    function getSelectedPlanAlumnos() {
-      return Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]:checked'))
-        .map((input) => input.value);
-    }
-
-    function renderActivitiesForm() {
-      const plan = getPlanById($('activitiesPlan').value);
-      $('activitiesVersion').value = plan ? (plan.actividades_version_actual || '') : '';
-      if (!plan) {
-        $('activitiesText').value = '';
-        $('activitiesText').placeholder = 'Una actividad por linea.';
+    function renderPlanAlumnosChecklist() {
+      const host = $('planAlumnosChecklist');
+      const selected = new Set(getSelectedPlanAlumnos());
+      const selectedGroups = getSelectedGroupIds();
+      const groupIds = state.planEditor.mode === 'edit'
+        ? ((canUseAdminShell() ? selectedGroups : []).length ? selectedGroups : [state.planEditor.lockedGrupoId])
+        : selectedGroups;
+      if (!groupIds.length) {
+        host.innerHTML = '<div class="empty">Selecciona al menos un grupo para cargar alumnos.</div>';
         return;
       }
-      const lines = (plan.actividades || []).map((item) => item.texto || '').filter(Boolean);
-      $('activitiesText').value = lines.join('\n');
-      $('activitiesText').placeholder = 'Una actividad por linea.';
+      host.innerHTML = groupIds.map((groupId) => {
+        const group = state.catalogos.grupos.find((row) => row.grupo_id === groupId);
+        const alumnos = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === groupId);
+        return (
+          '<div class="group-block">' +
+            '<div class="group-block-head">' +
+              '<div><strong>' + escapeHtml(group ? (group.nombre_grupo || group.grupo_id) : groupId) + '</strong></div>' +
+              '<div class="actions compact">' +
+                '<button class="btn-ghost" type="button" onclick="togglePlanAlumnosByGroup(\'' + escapeHtml(groupId) + '\', true)">Todos</button>' +
+                '<button class="btn-ghost" type="button" onclick="togglePlanAlumnosByGroup(\'' + escapeHtml(groupId) + '\', false)">Ninguno</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="checklist">' +
+              alumnos.map((alumno) => {
+                const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
+                return (
+                  '<label class="check-item">' +
+                    '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + '>' +
+                    '<span><strong>' + escapeHtml(label) + '</strong><br><span class="mini">' + escapeHtml(alumno.matricula || alumno.alumno_id) + '</span></span>' +
+                  '</label>'
+                );
+              }).join('') +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    function renderPlanActivitiesEditor() {
+      const host = $('planActivitiesList');
+      if (!state.planEditor.activities.length) state.planEditor.activities = [createEmptyActivityDraft()];
+      const showSeguimientoFields = canUseAdminShell() && state.planEditor.mode === 'edit';
+      host.innerHTML = state.planEditor.activities.map((activity, index) => {
+        const seguimientoHtml = showSeguimientoFields
+          ? '<div class="activity-inline-grid">' +
+              '<div><label>Material</label><select onchange="updateEditorActivityField(' + index + ', \'material_en_carpeta\', this.value)"><option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option><option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option><option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option></select></div>' +
+              '<div><label>¿Se realizó?</label><select onchange="updateEditorActivityField(' + index + ', \'realizada\', this.value)"><option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option><option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option><option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option></select></div>' +
+              '<div><label>Comentario</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateEditorActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>' +
+            '</div>'
+          : '<div class="activity-inline-grid">' +
+              '<div><label>Material</label><select onchange="updateEditorActivityField(' + index + ', \'material_en_carpeta\', this.value)"><option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option><option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option><option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option></select></div>' +
+              '<div class="helper" style="grid-column: span 2;">El seguimiento de realizada / no realizada se captura al cerrar la semana.</div>' +
+            '</div>';
+        return (
+          '<div class="activity-editor">' +
+            '<div class="activity-editor-top">' +
+              '<strong>Actividad ' + (index + 1) + '</strong>' +
+              '<div class="actions compact">' +
+                '<button class="btn-ghost" type="button" onclick="moveEditorActivity(' + index + ', -1)">Subir</button>' +
+                '<button class="btn-ghost" type="button" onclick="moveEditorActivity(' + index + ', 1)">Bajar</button>' +
+                '<button class="btn-ghost" type="button" onclick="removeEditorActivity(' + index + ')">Quitar</button>' +
+              '</div>' +
+            '</div>' +
+            '<label>Actividad</label>' +
+            '<textarea onchange="updateEditorActivityField(' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
+            seguimientoHtml +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    function renderPlanEditor() {
+      const isEdit = state.planEditor.mode === 'edit';
+      const hasAdminPower = canUseAdminShell();
+      $('planEditorTitle').textContent = isEdit ? 'Editar planeación' : 'Nueva planeación';
+      $('savePlanBtn').textContent = isEdit ? 'Guardar cambios' : 'Guardar planeación';
+      $('planFecha').disabled = isEdit && !hasAdminPower;
+      $('planMateria').disabled = isEdit && !hasAdminPower;
+      renderPlanWeekResolved();
+      renderPlanGroupChecklist();
+      renderPlanAlumnosChecklist();
+      renderPlanActivitiesEditor();
+    }
+
+    function renderBaseSelects() {
+      fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
+      fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
+      fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => g.nombre_grupo || g.grupo_id, 'Todos los grupos');
+      fillSelect($('filterFacilitador'), state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)), (f) => f.facilitador_id, (f) => f.nombre_mostrado || f.nombre_completo || f.facilitador_id, 'Todos los facilitadores');
+      fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
+      fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
+      renderPlanEditor();
+    }
+
+    function updateEditorActivityField(index, field, value) {
+      if (!state.planEditor.activities[index]) return;
+      state.planEditor.activities[index][field] = value;
+    }
+
+    function addEditorActivity() {
+      state.planEditor.activities.push(createEmptyActivityDraft());
+      renderPlanActivitiesEditor();
+    }
+
+    function removeEditorActivity(index) {
+      if (state.planEditor.activities.length <= 1) return;
+      state.planEditor.activities.splice(index, 1);
+      renderPlanActivitiesEditor();
+    }
+
+    function moveEditorActivity(index, direction) {
+      const target = index + direction;
+      if (target < 0 || target >= state.planEditor.activities.length) return;
+      const copy = [...state.planEditor.activities];
+      const temp = copy[index];
+      copy[index] = copy[target];
+      copy[target] = temp;
+      state.planEditor.activities = copy;
+      renderPlanActivitiesEditor();
+    }
+
+    function togglePlanAlumnosByGroup(groupId, checked) {
+      Array.from($('planAlumnosChecklist').querySelectorAll('input[data-group-id="' + groupId + '"]')).forEach((input) => {
+        input.checked = checked;
+      });
+    }
+
+    function toggleAllVisibleAlumnos(checked) {
+      Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = checked;
+      });
+    }
+
+    function toggleAllGroups(checked) {
+      if (state.planEditor.mode === 'edit') return;
+      Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = checked;
+      });
+      renderPlanAlumnosChecklist();
     }
 
     function renderObsAlumnoSelect() {
@@ -1709,6 +2620,52 @@
       fillSelect($('evaSubmateria'), submaterias, (item) => item.submateria_id, (item) => item.nombre || item.submateria_id, 'Selecciona submateria');
       fillSelect($('evaHabilidad'), habilidades, (item) => item.habilidad_id, (item) => item.nombre || item.habilidad_id, 'Selecciona habilidad');
     }
+    function renderAlumnoFilterUi() {
+      const search = $('filterAlumnoSearch');
+      const dataList = $('filterAlumnoSuggestions');
+      const hidden = $('filterAlumnoId');
+      const chip = $('filterAlumnoChip');
+      if (!search || !dataList || !hidden || !chip) return;
+      const rows = [...state.catalogos.alumnos]
+        .map((alumno) => {
+          const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
+            .filter(Boolean)
+            .join(' · ');
+          return { id: alumno.alumno_id, label };
+        })
+        .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+      dataList.innerHTML = rows.map((row) => '<option value="' + escapeHtml(row.label) + '"></option>').join('');
+      const active = rows.find((row) => row.id === hidden.value) || null;
+      chip.textContent = active ? ('Alumno: ' + active.label) : 'Sin filtro de alumno';
+      if (active && search.value !== active.label) search.value = active.label;
+    }
+
+    function syncAlumnoFilterFromInput() {
+      const search = $('filterAlumnoSearch');
+      const hidden = $('filterAlumnoId');
+      if (!search || !hidden) return;
+      const query = String(search.value || '').trim().toLowerCase();
+      if (!query) {
+        hidden.value = '';
+        renderAlumnoFilterUi();
+        return;
+      }
+      const match = state.catalogos.alumnos.find((alumno) => {
+        const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
+          .filter(Boolean)
+          .join(' · ')
+          .toLowerCase();
+        return label === query;
+      });
+      hidden.value = match ? match.alumno_id : '';
+      renderAlumnoFilterUi();
+    }
+
+    function clearAlumnoFilter() {
+      if ($('filterAlumnoSearch')) $('filterAlumnoSearch').value = '';
+      if ($('filterAlumnoId')) $('filterAlumnoId').value = '';
+      renderAlumnoFilterUi();
+    }
 
     function syncNotePeriodoState() {
       const alcance = $('notaAlcance').value;
@@ -1720,31 +2677,116 @@
       }
     }
 
+    function getVisiblePlaneaciones() {
+      const role = state.session && state.session.usuario ? state.session.usuario.rol : '';
+      let rows = [...state.planeaciones];
+      if (role === 'facilitador') {
+        rows = rows.filter((plan) => !['cerrada', 'archivada', 'cierre_pendiente'].includes(plan.estado));
+      }
+      return rows;
+    }
+
+    function getPlanGeneralObservations(plan) {
+      return Array.isArray(plan.obs_semana) ? plan.obs_semana : [];
+    }
+
+    function getPlanAlumnoFinalMap(plan) {
+      return (Array.isArray(plan.obs_alumno_final) ? plan.obs_alumno_final : []).reduce((acc, row) => {
+        acc[row.alumno_id] = row;
+        return acc;
+      }, {});
+    }
+
     function renderPlaneacionesList() {
       const host = $('planeacionesList');
       const role = state.session && state.session.usuario ? state.session.usuario.rol : '';
-      if (!state.planeaciones.length) {
+      const visiblePlans = getVisiblePlaneaciones();
+      if (!visiblePlans.length) {
         host.innerHTML = '<div class="empty">Todavía no hay planeaciones para los filtros actuales.</div>';
         return;
       }
 
-      host.innerHTML = state.planeaciones.map((plan) => {
+      host.innerHTML = visiblePlans.map((plan) => {
         const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
         const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
+        const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
+        const hasAdminPower = role === 'admin' || role === 'directora';
         const alumnos = (plan.alumnos || []).map((pa) => pa.nombre_snapshot || pa.alumno_id);
-        const actividades = (plan.actividades || []).map((item) => '<div class="tag">' + escapeHtml(String(item.orden || '?') + '. ' + (item.texto || '')) + '</div>').join('');
+        const alumnosRows = plan.alumnos || [];
+        const obsGenerales = getPlanGeneralObservations(plan);
+        const obsAlumnoFinalMap = getPlanAlumnoFinalMap(plan);
+        const allowStructureEdit = hasAdminPower || ((['borrador', 'activa'].includes(plan.estado) && !weekClosed) || plan.estado === 'rechazada');
+        const allowGeneralObs = hasAdminPower || !weekClosed;
+        const allowAlumnoObs = hasAdminPower || !weekClosed;
+        const allowClose = ['activa', 'cierre_pendiente'].includes(plan.estado);
+        const actividades = (plan.actividades || []).map((item) => {
+          const material = normalizeMaterialStatus(item.material_en_carpeta);
+          const realizada = normalizeRealizadaStatus(item.realizada);
+          const editableSeguimiento = hasAdminPower || (plan.estado === 'activa' && !weekClosed);
+          return (
+            '<div class="activity-card">' +
+              '<div><strong>' + escapeHtml(String(item.orden || '?') + '. ' + (item.texto || '')) + '</strong></div>' +
+              '<div class="activity-inline-grid">' +
+                '<div><label>Material</label><select id="activity-material-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
+                  '<option value="no_requiere"' + (material === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
+                  '<option value="listo"' + (material === 'listo' ? ' selected' : '') + '>Listo</option>' +
+                  '<option value="no_listo"' + (material === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
+                '</select></div>' +
+                '<div><label>¿Se realizó?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
+                  '<option value=""' + (!realizada ? ' selected' : '') + '>Pendiente</option>' +
+                  '<option value="si"' + (realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
+                  '<option value="no"' + (realizada === 'no' ? ' selected' : '') + '>No</option>' +
+                '</select></div>' +
+                '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
+              '</div>' +
+              (hasAdminPower
+                ? `<div class="actions"><button class="btn-ghost" type="button" onclick="saveActivityProgress(this, '${escapeHtml(item.actividad_id)}', '${escapeHtml(item.fecha_actualizacion || '')}')">Guardar actividad</button></div>`
+                : (editableSeguimiento ? '<div class="mini">Confirma si se realizó cada actividad y luego pulsa Cerrar semana.</div>' : '')) +
+            '</div>'
+          );
+        }).join('');
+        const obsGeneralesHtml = obsGenerales.length
+          ? '<div class="obs-list">' + obsGenerales.map((obs) => (
+              '<div class="obs-item">' +
+                '<div>' + escapeHtml(obs.texto || '') + '</div>' +
+                '<div class="mini">' + escapeHtml(obs.fecha || obs.fecha_creacion || '') + '</div>' +
+              '</div>'
+            )).join('') + '</div>'
+          : '<div class="mini">Todavía no hay observaciones generales.</div>';
+        const obsAlumnoHtml = alumnosRows.length
+          ? '<div class="obs-grid">' + alumnosRows.map((alumnoRow) => {
+              const alumnoObs = obsAlumnoFinalMap[alumnoRow.alumno_id] || null;
+              const alumnoNombre = alumnoRow.nombre_snapshot || alumnoRow.alumno_id;
+              return (
+                '<div class="obs-alumno-card">' +
+                  '<div><strong>' + escapeHtml(alumnoNombre) + '</strong></div>' +
+                  '<textarea id="obs-final-' + escapeHtml(plan.planeacion_id) + '-' + escapeHtml(alumnoRow.alumno_id) + '" placeholder="Observación final interna para administración"' + (allowAlumnoObs ? '' : ' disabled') + '>' + escapeHtml(alumnoObs ? (alumnoObs.nota || '') : '') + '</textarea>' +
+                  '<div class="actions compact">' +
+                    (allowAlumnoObs ? '<button class="btn-ghost" type="button" onclick="saveAlumnoFinalObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'' + escapeHtml(alumnoRow.alumno_id) + '\')">Guardar observación final</button>' : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
+                  '</div>' +
+                '</div>'
+              );
+            }).join('') + '</div>'
+          : '<div class="mini">No hay alumnos ligados a esta planeación.</div>';
         const buttons = [];
         if (plan.estado === 'borrador') {
           buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
         }
-        if (plan.estado === 'activa') {
-          buttons.push('<button class="btn-accent" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'solicitarCierre\')">Solicitar cierre</button>');
+        if (allowStructureEdit) {
+          buttons.push('<button class="btn-ghost" type="button" onclick="editPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Editar</button>');
         }
-        if (plan.estado === 'cierre_pendiente') {
-          buttons.push('<button class="btn-secondary" type="button" onclick="confirmClosePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Confirmar cierre</button>');
+        if (plan.estado === 'borrador_pendiente_aprobacion' && hasAdminPower) {
+          buttons.push('<button class="btn-primary" type="button" onclick="approvePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Aprobar</button>');
+          buttons.push('<button class="btn-secondary" type="button" onclick="rejectPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Rechazar</button>');
         }
-        if (plan.estado === 'cerrada' && (role === 'directora' || role === 'admin')) {
+        if (plan.estado === 'rechazada') {
+          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Reenviar aprobación</button>');
+        }
+        if (allowClose) {
+          buttons.push('<button class="btn-accent" type="button" onclick="confirmClosePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Cerrar semana</button>');
+        }
+        if (plan.estado === 'cerrada' && hasAdminPower) {
           buttons.push('<button class="btn-ghost" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'archivarPlaneacion\')">Archivar</button>');
         }
 
@@ -1756,21 +2798,78 @@
                 '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
                 ' · ' + escapeHtml(semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id) + '</div>' +
               '</div>' +
-              '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(plan.estado) + '</span>' +
+              '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
             '</div>' +
             '<div class="meta-grid">' +
-              '<div><strong>ID:</strong> <span class="code">' + escapeHtml(plan.planeacion_id) + '</span></div>' +
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-              '<div><strong>Actividades versión:</strong> <span class="code">' + escapeHtml(plan.actividades_version_actual || '-') + '</span></div>' +
+              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnos.length || 0)) + '</div>' +
             '</div>' +
             '<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
-            '<div class="tag-cloud">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>' +
+            '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>' +
+            '<div class="stack">' +
+              '<div><strong>Observaciones generales</strong></div>' +
+              obsGeneralesHtml +
+              '<div class="actions compact">' +
+                '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
+                (allowGeneralObs ? '<button class="btn-ghost" type="button" onclick="saveGeneralObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Agregar observación general</button>' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
+              '</div>' +
+            '</div>' +
+            '<div class="stack">' +
+              '<div><strong>Observación final por alumno</strong></div>' +
+              obsAlumnoHtml +
+            '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
-              '<button class="btn-ghost" type="button" onclick="usePlanForActivities(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Usar en actividades</button>' +
-              '<button class="btn-ghost" type="button" onclick="usePlanForObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Usar en observación</button>' +
               buttons.join('') +
             '</div>' +
           '</article>'
+        );
+      }).join('');
+    }
+
+    function getAlertTypeLabel(tipo) {
+      return ({
+        planeacion_semana_cerrada_aprobacion: 'Aprobación pendiente',
+        planeacion_rechazada: 'Planeación rechazada',
+        material_inicio_semana_pendiente: 'Material pendiente'
+      })[String(tipo || '').trim()] || String(tipo || 'Alerta');
+    }
+
+    function getAlertStatusLabel(status) {
+      return ({
+        abierta: 'Abierta',
+        en_revision: 'En revisión',
+        resuelta: 'Resuelta'
+      })[String(status || '').trim()] || String(status || 'Sin estado');
+    }
+
+    function renderAlertas() {
+      const host = $('alertsList');
+      if (!host) return;
+      if (!state.alertas.length) {
+        host.innerHTML = '<div class="empty">Todavía no hay alertas visibles para esta sesión.</div>';
+        return;
+      }
+
+      host.innerHTML = state.alertas.map((alerta) => {
+        const plan = state.planeaciones.find((item) => item.planeacion_id === alerta.planeacion_id);
+        const grupo = plan ? state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id) : null;
+        const materia = plan ? state.catalogos.materias.find((item) => item.materia_id === plan.materia_id) : null;
+        const semana = plan ? state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id) : null;
+        const contexto = plan ? [
+          grupo ? (grupo.nombre_grupo || grupo.grupo_id) : '',
+          materia ? (materia.nombre || materia.materia_id) : '',
+          semana ? (semana.nombre_visible || semana.semana_id) : ''
+        ].filter(Boolean).join(' · ') : '';
+        return (
+          '<div class="alert-item">' +
+            '<div class="alert-item-top">' +
+              '<div class="alert-type">' + escapeHtml(getAlertTypeLabel(alerta.tipo_alerta)) + '</div>' +
+              '<div class="alert-status">' + escapeHtml(getAlertStatusLabel(alerta.estado)) + '</div>' +
+            '</div>' +
+            '<div>' + escapeHtml(alerta.descripcion || '') + '</div>' +
+            (contexto ? '<div class="mini">' + escapeHtml(contexto) + '</div>' : '') +
+            (alerta.fecha_creacion ? '<div class="mini">Creada: ' + escapeHtml(alerta.fecha_creacion) + '</div>' : '') +
+          '</div>'
         );
       }).join('');
     }
@@ -1802,6 +2901,9 @@
     }
 
     function activateTab(tabName) {
+      if (getCurrentRole() === 'facilitador' && tabName !== 'planeaciones') {
+        tabName = 'planeaciones';
+      }
       if (tabName === 'reportes' && !canUseReportes()) {
         tabName = 'planeaciones';
       }
@@ -1818,50 +2920,92 @@
       syncAuthMode();
       renderSession();
       renderStats();
+      renderAdminShell();
       renderPeriodSelects();
       renderBaseSelects();
-      renderPlanAlumnosChecklist();
-      renderActivitiesForm();
       renderObsAlumnoSelect();
       renderEvaluationDependencies();
       renderPlaneacionesList();
+      renderAlertas();
       syncRoleUi();
       activateTab(state.activeTab);
     }
 
-    async function createPlaneacion() {
+    async function savePlanEditor() {
       ensureLoggedIn();
-      await api('crearPlaneacion', {
-        semana_id: $('planSemana').value,
-        grupo_id: $('planGrupo').value,
-        materia_id: $('planMateria').value,
-        frase_semana: $('planFrase').value.trim(),
-        alumnos_ids: getSelectedPlanAlumnos(),
-        request_id: uid('PLA')
-      });
-      $('planFrase').value = '';
-      renderPlanAlumnosChecklist();
-      await refreshPlaneaciones();
-      renderAll();
-      setBanner('Planeación creada.', 'success');
-    }
+      const hasAdminPower = canUseAdminShell();
+      const editorMode = state.planEditor.mode;
+      const semana = state.planEditor.mode === 'edit' && !hasAdminPower
+        ? getWeekById(state.planEditor.lockedSemanaId)
+        : getWeekByDate($('planFecha').value);
+      if (!semana) throw new Error('Selecciona una fecha válida dentro de una semana registrada.');
+      if (!$('planMateria').value) throw new Error('Selecciona una materia.');
+      const grupoIds = state.planEditor.mode === 'edit'
+        ? (hasAdminPower ? getSelectedGroupIds() : [state.planEditor.lockedGrupoId])
+        : getSelectedGroupIds();
+      if (!grupoIds.length) throw new Error('Selecciona al menos un grupo.');
+      if (editorMode === 'edit' && hasAdminPower && grupoIds.length !== 1) {
+        throw new Error('Administración debe seleccionar exactamente un grupo al editar una planeación.');
+      }
+      const alumnosIds = getSelectedPlanAlumnos();
+      if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
+      const includeSeguimientoOnEditor = canUseAdminShell() && editorMode === 'edit';
+      const actividades = state.planEditor.activities
+        .map((activity) => ({
+          actividad_id: activity.actividad_id || '',
+          texto: String(activity.texto || '').trim(),
+          material_en_carpeta: activity.material_en_carpeta || 'no_requiere',
+          realizada: includeSeguimientoOnEditor ? (activity.realizada || '') : '',
+          comentario_cierre: includeSeguimientoOnEditor ? String(activity.comentario_cierre || '').trim() : '',
+          last_known_updated_at: activity.last_known_updated_at || ''
+        }))
+        .filter((activity) => activity.texto);
+      if (!actividades.length) throw new Error('Captura al menos una actividad.');
+      if (includeSeguimientoOnEditor) {
+        actividades.forEach((activity, index) => {
+          if (activity.realizada === 'no' && !activity.comentario_cierre) {
+            throw new Error('La actividad ' + (index + 1) + ' necesita comentario porque no se realizó.');
+          }
+        });
+      }
 
-    async function saveActivities() {
-      ensureLoggedIn();
-      const plan = getPlanById($('activitiesPlan').value);
-      if (!plan) throw new Error('Selecciona una planeación borrador.');
-      const lines = $('activitiesText').value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-      if (!lines.length) throw new Error('Escribe al menos una actividad.');
-      const actividades = lines.map((texto, index) => ({ orden: index + 1, texto, material_en_carpeta: false }));
-      await api('crearActividades', {
-        planeacion_id: plan.planeacion_id,
-        last_known_activities_version: plan.actividades_version_actual || '',
-        actividades,
-        request_id: uid('ACT')
-      });
+      let responseData = null;
+      if (editorMode === 'edit') {
+        responseData = await api('guardarPlaneacionCompleta', {
+          planeacion_id: state.planEditor.planId,
+          semana_id: semana.semana_id,
+          grupo_id: grupoIds[0],
+          materia_id: $('planMateria').value,
+          frase_semana: $('planFrase').value.trim(),
+          alumnos_ids: alumnosIds,
+          actividades,
+          last_known_updated_at: state.planEditor.lastKnownUpdatedAt,
+          last_known_activities_version: state.planEditor.lastKnownActivitiesVersion,
+          request_id: uid('PLAUPD')
+        });
+      } else {
+        responseData = await api('crearPlaneacion', {
+          fecha_planeacion: $('planFecha').value,
+          semana_id: semana.semana_id,
+          grupo_ids: grupoIds,
+          materia_id: $('planMateria').value,
+          frase_semana: $('planFrase').value.trim(),
+          alumnos_ids: alumnosIds,
+          actividades,
+          request_id: uid('PLA')
+        });
+      }
+
+      resetPlanEditor();
       await refreshPlaneaciones();
+      await refreshAlertas();
       renderAll();
-      setBanner('Bloque de actividades actualizado.', 'success');
+      setBanner(
+        responseData && responseData._meta && responseData._meta.message
+          ? responseData._meta.message
+          : (editorMode === 'edit' ? 'Planeación actualizada.' : 'Planeación guardada.'),
+        'success'
+      );
     }
 
     async function saveObservation() {
@@ -2014,32 +3158,151 @@
       await handleAction(action, async () => {
         await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
         await refreshPlaneaciones();
+        await refreshAlertas();
         renderAll();
         setBanner('Acción completada: ' + action, 'success');
       }, { button, key: buildActionKey(action, [planId]) });
     }
 
+    async function saveActivityProgress(button, actividadId, lastKnownUpdatedAt) {
+      const realizada = $('activity-realizada-' + actividadId).value;
+      const material = $('activity-material-' + actividadId).value;
+      const comentario = $('activity-comment-' + actividadId).value.trim();
+      await handleAction('actualizarActividad', async () => {
+        await api('actualizarActividad', {
+          actividad_id: actividadId,
+          realizada,
+          material_en_carpeta: material,
+          comentario_cierre: comentario,
+          last_known_updated_at: lastKnownUpdatedAt,
+          request_id: uid('ACTUPD')
+        });
+        await refreshPlaneaciones();
+        renderAll();
+        setBanner('Actividad actualizada.', 'success');
+      }, { button, key: buildActionKey('actualizarActividad', [actividadId, realizada, material, comentario.slice(0, 20)]) });
+    }
+
+    async function saveGeneralObservation(button, planId) {
+      const input = $('obs-general-' + planId);
+      const texto = input ? input.value.trim() : '';
+      if (!texto) throw new Error('Escribe la observación general.');
+      await handleAction('crearObsSemana', async () => {
+        await api('crearObsSemana', {
+          planeacion_id: planId,
+          texto,
+          request_id: uid('OSG')
+        });
+        if (input) input.value = '';
+        await refreshPlaneaciones();
+        renderAll();
+        setBanner('Observación general guardada.', 'success');
+      }, { button, key: buildActionKey('crearObsSemana', [planId, texto.slice(0, 40)]) });
+    }
+
+    async function saveAlumnoFinalObservation(button, planId, alumnoId) {
+      const input = $('obs-final-' + planId + '-' + alumnoId);
+      const nota = input ? input.value.trim() : '';
+      if (!nota) throw new Error('Escribe la observación final del alumno.');
+      await handleAction('guardarObsAlumnoFinal', async () => {
+        await api('guardarObsAlumnoFinal', {
+          planeacion_id: planId,
+          alumno_id: alumnoId,
+          nota,
+          request_id: uid('OAF')
+        });
+        await refreshPlaneaciones();
+        renderAll();
+        setBanner('Observación final por alumno guardada.', 'success');
+      }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
+    }
+
+    async function editPlan(button, planId) {
+      const plan = getPlanById(planId);
+      if (!plan) throw new Error('Planeación no encontrada.');
+      loadPlanIntoEditor(plan);
+      activateTab('planeaciones');
+      setBanner('Planeación cargada en el editor.', 'info', { button });
+    }
+
+    async function approvePlan(button, planId) {
+      await handleAction('aprobarPlaneacionPendiente', async () => {
+        await api('aprobarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('APP') });
+        await refreshPlaneaciones();
+        await refreshAlertas();
+        renderAll();
+        setBanner('Planeación aprobada.', 'success');
+      }, { button, key: buildActionKey('aprobarPlaneacionPendiente', [planId]) });
+    }
+
+    async function rejectPlan(button, planId) {
+      const comentario = window.prompt('Escribe el comentario de rechazo:', '') || '';
+      if (!comentario.trim()) throw new Error('El rechazo necesita comentario.');
+      await handleAction('rechazarPlaneacionPendiente', async () => {
+        await api('rechazarPlaneacionPendiente', {
+          planeacion_id: planId,
+          comentario: comentario.trim(),
+          request_id: uid('REJ')
+        });
+        await refreshPlaneaciones();
+        await refreshAlertas();
+        renderAll();
+        setBanner('Planeación rechazada.', 'success');
+      }, { button, key: buildActionKey('rechazarPlaneacionPendiente', [planId, comentario.trim().slice(0, 30)]) });
+    }
+
+    async function resubmitPlan(button, planId) {
+      await handleAction('reenviarPlaneacionPendiente', async () => {
+        await api('reenviarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('REAPP') });
+        await refreshPlaneaciones();
+        await refreshAlertas();
+        renderAll();
+        setBanner('Planeación reenviada a aprobación.', 'success');
+      }, { button, key: buildActionKey('reenviarPlaneacionPendiente', [planId]) });
+    }
+
     async function confirmClosePlan(button, planId) {
-      const material = window.confirm('Confirma si el material quedó preparado / confirmado.');
+      const plan = getPlanById(planId);
+      if (!plan) throw new Error('Planeación no encontrada.');
       const obs = window.prompt('Observación final de la semana (opcional):', '') || '';
       await handleAction('confirmarCierre', async () => {
+        const activityRows = Array.isArray(plan.actividades) ? plan.actividades : [];
+        if (!activityRows.length) {
+          throw new Error('No puedes cerrar una planeación sin actividades.');
+        }
+        for (const item of activityRows) {
+          const realizada = $('activity-realizada-' + item.actividad_id).value;
+          const material = $('activity-material-' + item.actividad_id).value;
+          const comentario = $('activity-comment-' + item.actividad_id).value.trim();
+          if (!['si', 'no'].includes(realizada)) {
+            throw new Error('Debes confirmar si se realizó la actividad ' + String(item.orden || '?') + '.');
+          }
+          if (realizada === 'no' && !comentario) {
+            throw new Error('La actividad ' + String(item.orden || '?') + ' necesita comentario porque no se realizó.');
+          }
+          await api('actualizarActividad', {
+            actividad_id: item.actividad_id,
+            realizada,
+            material_en_carpeta: material,
+            comentario_cierre: comentario,
+            last_known_updated_at: item.fecha_actualizacion || '',
+            request_id: uid('ACTCLOSE')
+          });
+        }
         await api('confirmarCierre', {
           planeacion_id: planId,
-          material_confirmado: material ? 'si' : 'no',
           obs_semana: obs,
           request_id: uid('CIE')
         });
         await refreshPlaneaciones();
+        await refreshAlertas();
         renderAll();
         setBanner('Cierre confirmado.', 'success');
       }, { button, key: buildActionKey('confirmarCierre', [planId]) });
     }
 
     function usePlanForActivities(button, planId) {
-      $('activitiesPlan').value = planId;
-      renderActivitiesForm();
-      activateTab('planeaciones');
-      setBanner('Planeación cargada en el editor de actividades.', 'info', { button });
+      editPlan(button, planId);
     }
 
     function usePlanForObservation(button, planId) {
@@ -2057,14 +3320,16 @@
       }));
       $('logoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
-      $('createPlanBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', createPlaneacion, {
+      $('savePlanBtn').addEventListener('click', (event) => handleAction(state.planEditor.mode === 'edit' ? 'guardarPlaneacionCompleta' : 'crearPlaneacion', savePlanEditor, {
         button: event.currentTarget,
-        key: buildActionKey('crearPlaneacion', [$('planSemana').value, $('planGrupo').value, $('planMateria').value, getSelectedPlanAlumnos().sort().join(',')])
+        key: buildActionKey(state.planEditor.mode === 'edit' ? 'guardarPlaneacionCompleta' : 'crearPlaneacion', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
-      $('saveActivitiesBtn').addEventListener('click', (event) => handleAction('crearActividades', saveActivities, {
-        button: event.currentTarget,
-        key: buildActionKey('crearActividades', [$('activitiesPlan').value, $('activitiesVersion').value, $('activitiesText').value.trim().slice(0, 40)])
-      }));
+      $('resetPlanEditorBtn').addEventListener('click', () => resetPlanEditor());
+      $('addActivityBtn').addEventListener('click', () => addEditorActivity());
+      $('selectAllGroupsBtn').addEventListener('click', () => toggleAllGroups(true));
+      $('clearAllGroupsBtn').addEventListener('click', () => toggleAllGroups(false));
+      $('selectAllVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(true));
+      $('clearVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(false));
       $('saveObsBtn').addEventListener('click', (event) => handleAction('crearObsAlumno', saveObservation, {
         button: event.currentTarget,
         key: buildActionKey('crearObsAlumno', [$('obsPlan').value, $('obsAlumno').value, $('obsPeriodo').value, $('obsTipo').value, $('obsNota').value.trim().slice(0, 40)])
@@ -2089,11 +3354,15 @@
         button: event.currentTarget,
         key: buildActionKey('getReporteAlumnoStatus', [$('repAlumno').value, $('repPeriodo').value])
       }));
-      $('planGrupo').addEventListener('change', renderPlanAlumnosChecklist);
-      $('activitiesPlan').addEventListener('change', renderActivitiesForm);
+      $('planFecha').addEventListener('change', renderPlanWeekResolved);
+      $('planGruposChecklist').addEventListener('change', renderPlanAlumnosChecklist);
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
       $('evaMateria').addEventListener('change', renderEvaluationDependencies);
+      $('filterAlumnoSearch').addEventListener('change', syncAlumnoFilterFromInput);
+      $('filterAlumnoSearch').addEventListener('blur', syncAlumnoFilterFromInput);
+      $('clearAlumnoFilterBtn').addEventListener('click', clearAlumnoFilter);
       $('filterPlaneacionesBtn').addEventListener('click', (event) => handleAction('filtrar planeaciones', async () => {
+        syncAlumnoFilterFromInput();
         await refreshPlaneaciones();
         renderAll();
         setBanner('Planeaciones filtradas.', 'info');
@@ -2101,6 +3370,12 @@
       $('notaAlcance').addEventListener('change', syncNotePeriodoState);
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+      });
+      document.querySelectorAll('[data-admin-module]').forEach((btn) => {
+        btn.addEventListener('click', () => activateAdminModule(btn.dataset.adminModule));
+      });
+      document.querySelectorAll('[data-admin-module-launch]').forEach((btn) => {
+        btn.addEventListener('click', () => activateAdminModule(btn.dataset.adminModuleLaunch));
       });
     }
 
@@ -2117,7 +3392,18 @@
     }
 
     window.planAction = planAction;
+    window.saveActivityProgress = saveActivityProgress;
+    window.editPlan = editPlan;
+    window.approvePlan = approvePlan;
+    window.rejectPlan = rejectPlan;
+    window.resubmitPlan = resubmitPlan;
     window.confirmClosePlan = confirmClosePlan;
+    window.saveGeneralObservation = saveGeneralObservation;
+    window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
+    window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
+    window.updateEditorActivityField = updateEditorActivityField;
+    window.moveEditorActivity = moveEditorActivity;
+    window.removeEditorActivity = removeEditorActivity;
     window.usePlanForActivities = usePlanForActivities;
     window.usePlanForObservation = usePlanForObservation;
 
