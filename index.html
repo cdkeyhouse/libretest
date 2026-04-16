@@ -1170,6 +1170,323 @@
         grid-template-columns: 1fr;
       }
     }
+  
+    /* --- V5 visual refresh: compact semi-dark facilitator shell --- */
+    [hidden] { display: none !important; }
+    #planBuilderBody[hidden],
+    .plan-detail-wrap[hidden],
+    #adminPlaneacionesShell[hidden] { display:none !important; }
+
+    body:not(.auth-mode) {
+      background:
+        radial-gradient(circle at 12% 10%, rgba(86, 180, 223, 0.22), transparent 25%),
+        radial-gradient(circle at 86% 8%, rgba(245, 154, 27, 0.18), transparent 22%),
+        linear-gradient(180deg, #e8ece7 0%, #efe9df 100%);
+    }
+
+    .workspace {
+      gap: 16px;
+    }
+
+    #panel-planeaciones {
+      gap: 16px;
+    }
+
+    .plan-builder-shell,
+    .planeaciones-shell-card {
+      background:
+        linear-gradient(180deg, rgba(34, 42, 47, 0.96), rgba(48, 42, 43, 0.92));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 26px 60px rgba(17, 24, 27, 0.18);
+      color: #f5f4f0;
+      backdrop-filter: blur(18px);
+    }
+
+    .plan-builder-shell h2,
+    .planeaciones-shell-card h2,
+    .plan-builder-shell h3,
+    .planeaciones-shell-card h3,
+    .plan-builder-shell strong,
+    .planeaciones-shell-card strong {
+      color: #fbfaf6;
+    }
+
+    .plan-builder-shell .subtle,
+    .planeaciones-shell-card .subtle,
+    .plan-builder-shell .helper,
+    .planeaciones-shell-card .helper,
+    .plan-builder-shell .mini,
+    .planeaciones-shell-card .mini {
+      color: rgba(245, 244, 240, 0.72);
+    }
+
+    .plan-builder-shell .accordion-head,
+    .planeaciones-shell-head {
+      align-items: center;
+      gap: 18px;
+    }
+
+    .plan-builder-shell {
+      padding: 18px 20px;
+    }
+
+    .plan-builder-shell #planBuilderBody {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 14px;
+    }
+
+    .plan-builder-shell input,
+    .plan-builder-shell select,
+    .plan-builder-shell textarea,
+    .planeaciones-shell-card input,
+    .planeaciones-shell-card select,
+    .planeaciones-shell-card textarea {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fbfaf6;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .plan-builder-shell input::placeholder,
+    .plan-builder-shell textarea::placeholder,
+    .planeaciones-shell-card input::placeholder,
+    .planeaciones-shell-card textarea::placeholder {
+      color: rgba(245, 244, 240, 0.5);
+    }
+
+    .plan-builder-shell input:focus,
+    .plan-builder-shell select:focus,
+    .plan-builder-shell textarea:focus,
+    .planeaciones-shell-card input:focus,
+    .planeaciones-shell-card select:focus,
+    .planeaciones-shell-card textarea:focus {
+      border-color: rgba(86, 180, 223, 0.7);
+      box-shadow: 0 0 0 4px rgba(86, 180, 223, 0.16);
+    }
+
+    .plan-builder-shell .inline-note,
+    .planeaciones-shell-card .inline-note {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: rgba(245, 244, 240, 0.78);
+    }
+
+    .plan-builder-shell .checklist,
+    .planeaciones-shell-card .checklist,
+    .plan-builder-shell .group-block,
+    .planeaciones-shell-card .group-block,
+    .plan-builder-shell .activity-editor,
+    .planeaciones-shell-card .activity-card,
+    .planeaciones-shell-card .obs-item,
+    .planeaciones-shell-card .obs-alumno-card,
+    .planeaciones-shell-card .plan-inline-students {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.08);
+      color: #fbfaf6;
+    }
+
+    .plan-builder-shell .btn-ghost,
+    .planeaciones-shell-card .btn-ghost {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fbfaf6;
+    }
+
+    .plan-builder-shell .btn-primary,
+    .planeaciones-shell-card .btn-primary {
+      background: linear-gradient(135deg, #54b7d8, #40a5d6);
+      color: white;
+    }
+
+    .plan-builder-shell .btn-secondary,
+    .planeaciones-shell-card .btn-secondary {
+      background: linear-gradient(135deg, rgba(231, 54, 121, 0.22), rgba(225, 129, 177, 0.18));
+      color: #ffd0e2;
+    }
+
+    .plan-builder-shell .btn-accent,
+    .planeaciones-shell-card .btn-accent {
+      background: linear-gradient(135deg, #f7c52a, #f59a1b);
+      color: white;
+    }
+
+    .planeaciones-shell-card {
+      padding: 18px 20px;
+    }
+
+    .planeaciones-shell-head {
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .planeaciones-filter-bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      width: min(760px, 100%);
+      margin-left: auto;
+    }
+
+    .planeaciones-filter-bar button {
+      min-width: 112px;
+    }
+
+    #planeacionesList {
+      display: grid;
+      gap: 14px;
+    }
+
+    .compact-plan-card {
+      padding: 16px 16px 14px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.04));
+      box-shadow: 0 18px 38px rgba(10, 16, 18, 0.14);
+    }
+
+    .compact-plan-summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .compact-plan-summary h3 {
+      margin-bottom: 6px;
+      font-size: 1.12rem;
+    }
+
+    .compact-plan-summary .subtle {
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    .compact-plan-meta {
+      margin-top: 12px;
+      gap: 8px;
+    }
+
+    .compact-plan-meta .tag {
+      padding: 7px 11px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fbfaf6;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.78rem;
+    }
+
+    .compact-plan-actions {
+      margin-top: 12px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .compact-plan-actions .btn-ghost,
+    .compact-plan-actions .btn-accent,
+    .compact-plan-actions .btn-primary,
+    .compact-plan-actions .btn-secondary {
+      min-height: 42px;
+      padding-inline: 15px;
+    }
+
+    .badge.activa,
+    .badge.cerrada,
+    .badge.archivada,
+    .badge.rechazada,
+    .badge.borrador,
+    .badge.borrador_pendiente_aprobacion,
+    .badge.cierre_pendiente {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .badge.activa { background: rgba(84, 183, 216, 0.18); color: #91e6ff; }
+    .badge.cerrada { background: rgba(34, 155, 112, 0.2); color: #bdf7dd; }
+    .badge.archivada { background: rgba(174, 179, 183, 0.14); color: #f0f0ec; }
+    .badge.rechazada { background: rgba(184, 75, 72, 0.22); color: #ffd1cf; }
+    .badge.borrador_pendiente_aprobacion,
+    .badge.cierre_pendiente { background: rgba(245, 154, 27, 0.22); color: #ffe0a6; }
+    .badge.borrador { background: rgba(255, 255, 255, 0.08); color: #fbfaf6; }
+
+    .plan-detail-wrap {
+      margin-top: 14px;
+      padding: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(16, 22, 25, 0.18);
+      border-radius: 18px;
+      gap: 14px;
+    }
+
+    .plan-detail-wrap label,
+    .plan-detail-wrap strong {
+      color: #fbfaf6;
+    }
+
+    .plan-inline-students {
+      max-height: 180px;
+    }
+
+    .plan-inline-field textarea {
+      min-height: 86px;
+    }
+
+    .activity-card {
+      padding: 12px;
+      border-radius: 18px;
+    }
+
+    .activity-inline-grid {
+      gap: 10px;
+    }
+
+    .obs-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .obs-alumno-card textarea {
+      min-height: 88px;
+    }
+
+    .plan-builder-shell textarea,
+    .planeaciones-shell-card textarea {
+      min-height: 84px;
+    }
+
+    @media (max-width: 1040px) {
+      .planeaciones-filter-bar {
+        grid-template-columns: 1fr;
+        width: 100%;
+      }
+      .planeaciones-shell-head {
+        align-items: stretch;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 14px; }
+      .plan-builder-shell,
+      .planeaciones-shell-card {
+        padding: 14px;
+        border-radius: 20px;
+      }
+      .compact-plan-summary {
+        grid-template-columns: 1fr;
+      }
+      .compact-plan-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .compact-plan-actions > * {
+        width: 100%;
+      }
+      .obs-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1463,14 +1780,14 @@
 
       <section id="panel-planeaciones" class="panel is-active">
         <div class="grid-2">
-          <article class="card" id="planBuilderCard">
+          <article class="card plan-builder-shell" id="planBuilderCard">
             <div class="accordion-head">
               <div>
                 <h2 id="planEditorTitle">Nueva planeación</h2>
                 <p class="subtle">Captura la fecha, elige uno o varios grupos y guarda a la vez alumnos y actividades.</p>
               </div>
               <div class="actions compact">
-                <button id="togglePlanBuilderBtn" class="btn-primary" type="button">➕ Nueva planeación</button>
+                <button id="togglePlanBuilderBtn" class="btn-primary" type="button">Nueva planeación</button>
               </div>
             </div>
             <div id="planBuilderBody" class="stack" hidden>
@@ -1534,7 +1851,7 @@
               <h2 id="planeacionesSectionTitle">Planeaciones abiertas</h2>
               <p id="planeacionesSectionCopy" class="subtle">Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.</p>
             </div>
-            <div class="actions">
+            <div class="actions planeaciones-filter-bar">
               <select id="filterSemana"></select>
               <select id="filterEstado">
                 <option value="">Todos los estados</option>
@@ -2032,7 +2349,7 @@
       if (!body || !btn) return;
       const expanded = isPlanBuilderExpanded();
       body.hidden = !expanded;
-      btn.textContent = expanded ? 'Ocultar nueva planeación' : '➕ Nueva planeación';
+      btn.textContent = expanded ? 'Ocultar formulario' : 'Nueva planeación';
       btn.className = expanded ? 'btn-secondary' : 'btn-primary';
     }
 
