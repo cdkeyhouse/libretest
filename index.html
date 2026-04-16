@@ -1149,10 +1149,27 @@
       overflow: auto;
       padding: 12px;
       border-radius: 16px;
-      border: 1px solid rgba(23, 51, 45, 0.08);
-      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #262220 !important;
+      color: var(--panel-text);
       display: grid;
       gap: 8px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+    .plan-inline-students,
+    .plan-inline-students * {
+      background-color: transparent;
+    }
+    .plan-inline-students .check-item,
+    .plan-inline-students .check-item span,
+    .plan-inline-students .check-item strong {
+      color: var(--panel-text) !important;
+    }
+    .plan-inline-students .mini {
+      color: rgba(245, 242, 234, 0.68) !important;
+    }
+    .plan-inline-students input[type="checkbox"] {
+      accent-color: var(--la-sky, #5BC4F5);
     }
     .detail-inline-feedback { min-height: 20px; }
     @media (max-width: 720px) {
@@ -1426,24 +1443,6 @@
 
     .plan-inline-students {
       max-height: 180px;
-      display: grid;
-      gap: 10px;
-      padding: 14px;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: #262220 !important;
-      color: var(--panel-text);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-    }
-
-    .plan-inline-students .check-item,
-    .plan-inline-students .check-item span,
-    .plan-inline-students .check-item strong {
-      color: var(--panel-text) !important;
-    }
-
-    .plan-inline-students .mini {
-      color: rgba(245, 242, 234, 0.68) !important;
     }
 
     .plan-inline-field textarea {
@@ -2724,7 +2723,9 @@
 
     function togglePlanExpanded(planId, forceValue) {
       const current = !!state.ui.expandedPlans[planId];
-      state.ui.expandedPlans[planId] = typeof forceValue === 'boolean' ? forceValue : !current;
+      const next = typeof forceValue === 'boolean' ? forceValue : !current;
+      state.ui.expandedPlans = {};
+      if (next) state.ui.expandedPlans[planId] = true;
       renderPlaneacionesList();
     }
 
@@ -2742,6 +2743,19 @@
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    }
+
+    function formatFechaHumana(value) {
+      const ymd = toYmdFrontend(value);
+      if (!ymd) return value ? escapeHtml(String(value)) : '';
+      const [year, month, day] = ymd.split('-').map(Number);
+      const date = new Date(year, (month || 1) - 1, day || 1);
+      if (Number.isNaN(date.getTime())) return ymd;
+      return date.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
     }
 
     function buildWeekRangeFromDate(dateValue) {
@@ -2789,8 +2803,14 @@
     function bindPlanInlineState(plan) {
       const planId = plan.planeacion_id;
       if (!state.ui.inlinePlans[planId]) {
+        const semana = getWeekById(plan.semana_id) || null;
         state.ui.inlinePlans[planId] = {
           frase: plan.frase_semana || '',
+          semana_id: plan.semana_id || '',
+          fecha_planeacion: toYmdFrontend((semana && semana.fecha_inicio) || ''),
+          grupo_id: plan.grupo_id || '',
+          materia_id: plan.materia_id || '',
+          facilitador_id: plan.facilitador_id || '',
           alumnos: (plan.alumnos || []).map((row) => row.alumno_id),
           activities: (plan.actividades || []).map((activity) => ({
             actividad_id: activity.actividad_id || '',
@@ -2807,6 +2827,11 @@
 
     function resetInlinePlanState(planId) {
       if (state.ui.inlinePlans[planId]) delete state.ui.inlinePlans[planId];
+    }
+
+    function resetInlinePlanAlumnos(planId) {
+      if (!state.ui.inlinePlans[planId]) return;
+      state.ui.inlinePlans[planId].alumnos = [];
     }
 
     function updateInlinePlanField(planId, field, value) {
@@ -3557,7 +3582,7 @@
         const disabled = editLocked && group.grupo_id !== state.planEditor.lockedGrupoId;
         const checked = editLocked ? group.grupo_id === state.planEditor.lockedGrupoId : checkedSet.has(group.grupo_id);
         return (
-          '<label class="check-item">' +
+          '<label class="check-item" style="background:transparent !important;color:inherit;">' +
             '<input type="checkbox" value="' + escapeHtml(group.grupo_id) + '"' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '') + '>' +
             '<span><strong>' + escapeHtml(group.nombre_grupo || group.grupo_id) + '</strong><br><span class="mini">' + escapeHtml(group.nivel || '') + '</span></span>' +
           '</label>'
@@ -3592,7 +3617,7 @@
               alumnos.map((alumno) => {
                 const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
                 return (
-                  '<label class="check-item">' +
+                  '<label class="check-item" style="background:transparent !important;color:inherit;">' +
                     '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + '>' +
                     '<span><strong>' + escapeHtml(label) + '</strong><br><span class="mini">' + escapeHtml(alumno.matricula || alumno.alumno_id) + '</span></span>' +
                   '</label>'
@@ -3837,12 +3862,14 @@
         const allowAlumnoObs = hasAdminPower || !weekClosed;
         const allowInlineEdit = hasAdminPower || ((['borrador', 'activa', 'rechazada'].includes(plan.estado)) && !weekClosed);
         const allowClose = ['activa', 'cierre_pendiente'].includes(plan.estado);
+        const facilitador = state.catalogos.facilitadores.find((item) => item.facilitador_id === plan.facilitador_id);
         const summaryTags = [
           `<span class="tag">${escapeHtml((grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) || '-')}</span>`,
           `<span class="tag">${escapeHtml((semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id) || '-')}</span>`,
+          hasAdminPower ? `<span class="tag">${escapeHtml((facilitador ? (facilitador.nombre_mostrado || facilitador.nombre_completo || facilitador.facilitador_id) : plan.facilitador_id) || '-')}</span>` : '',
           `<span class="tag">${escapeHtml(String(alumnos.length || 0))} alumnos</span>`,
           `<span class="tag">${escapeHtml(String((plan.actividades || []).length || 0))} actividades</span>`
-        ].join('');
+        ].filter(Boolean).join('');
         const actividades = (inlineState.activities || []).map((item, index) => {
           const material = normalizeMaterialStatus(item.material_en_carpeta);
           const realizada = normalizeRealizadaStatus(item.realizada);
@@ -3870,7 +3897,7 @@
           ? `<div class="obs-list">${obsGenerales.map((obs) => `
               <div class="obs-item">
                 <div>${escapeHtml(obs.texto || '')}</div>
-                <div class="mini">${escapeHtml(obs.fecha || obs.fecha_creacion || '')}</div>
+                <div class="mini">${escapeHtml(formatFechaHumana(obs.fecha || obs.fecha_creacion || ''))}</div>
               </div>`).join('')}</div>`
           : '<div class="mini">Todavía no hay observaciones generales.</div>';
         const obsAlumnoHtml = alumnosRows.length
@@ -3894,7 +3921,6 @@
         }
         if (plan.estado === 'borrador_pendiente_aprobacion' && hasAdminPower) {
           buttons.push(`<button class="btn-primary" type="button" onclick="approvePlan(this, '${escapeHtml(plan.planeacion_id)}')">Aprobar</button>`);
-          buttons.push(`<button class="btn-secondary" type="button" onclick="rejectPlan(this, '${escapeHtml(plan.planeacion_id)}')">Rechazar</button>`);
         }
         if (plan.estado === 'rechazada') {
           buttons.push(`<button class="btn-secondary" type="button" onclick="resubmitPlan(this, '${escapeHtml(plan.planeacion_id)}')">Reenviar aprobación</button>`);
@@ -3905,8 +3931,38 @@
         if (plan.estado === 'cerrada' && hasAdminPower) {
           buttons.push(`<button class="btn-ghost" type="button" onclick="planAction(this, '${escapeHtml(plan.planeacion_id)}', 'archivarPlaneacion')">Archivar</button>`);
         }
+        if (hasAdminPower) {
+          buttons.push(`<button class="btn-danger" type="button" onclick="deletePlan(this, '${escapeHtml(plan.planeacion_id)}')">Borrar</button>`);
+        }
+        const adminStructureBlock = hasAdminPower ? `
+          <div class="grid-4 plan-admin-grid">
+            <div>
+              <label>Fecha de referencia</label>
+              <input type="date" value="${escapeHtml(inlineState.fecha_planeacion || '')}" onchange="updateInlinePlanField('${escapeHtml(plan.planeacion_id)}', 'fecha_planeacion', this.value)">
+            </div>
+            <div>
+              <label>Grupo</label>
+              <select onchange="updateInlinePlanField('${escapeHtml(plan.planeacion_id)}', 'grupo_id', this.value); resetInlinePlanAlumnos('${escapeHtml(plan.planeacion_id)}'); renderPlaneacionesList();">
+                ${state.catalogos.grupos.map((row) => `<option value="${escapeHtml(row.grupo_id)}"${String(inlineState.grupo_id||'')===String(row.grupo_id)?' selected':''}>${escapeHtml(row.nombre_grupo || row.grupo_id)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Materia</label>
+              <select onchange="updateInlinePlanField('${escapeHtml(plan.planeacion_id)}', 'materia_id', this.value)">
+                ${state.catalogos.materias.map((row) => `<option value="${escapeHtml(row.materia_id)}"${String(inlineState.materia_id||'')===String(row.materia_id)?' selected':''}>${escapeHtml(row.nombre || row.materia_id)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Facilitador</label>
+              <select onchange="updateInlinePlanField('${escapeHtml(plan.planeacion_id)}', 'facilitador_id', this.value)">
+                ${state.catalogos.facilitadores.filter((row) => isTruthyValue(row.activo)).map((row) => `<option value="${escapeHtml(row.facilitador_id)}"${String(inlineState.facilitador_id||'')===String(row.facilitador_id)?' selected':''}>${escapeHtml(row.nombre_mostrado || row.nombre_completo || row.facilitador_id)}</option>`).join('')}
+              </select>
+            </div>
+          </div>` : '';
+        const activeGrupoId = hasAdminPower ? (inlineState.grupo_id || plan.grupo_id) : plan.grupo_id;
+        const studentOptions = state.catalogos.alumnos.filter((row) => row.grupo_id === activeGrupoId);
         return `
-          <article class="compact-plan-card">
+          <article class="compact-plan-card ${expanded ? 'is-open' : ''}">
             <div class="compact-plan-summary">
               <div>
                 <h3>${escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id)}</h3>
@@ -3917,14 +3973,15 @@
             </div>
             <div class="compact-plan-actions">${buttons.join('')}</div>
             <div class="plan-detail-wrap" ${expanded ? '' : 'hidden'}>
+              ${adminStructureBlock}
               <div class="plan-inline-field">
                 <label>Frase de la semana</label>
                 <textarea id="plan-inline-frase-${escapeHtml(plan.planeacion_id)}" onchange="updateInlinePlanField('${escapeHtml(plan.planeacion_id)}', 'frase', this.value)"${allowInlineEdit ? '' : ' disabled'}>${escapeHtml(inlineState.frase || '')}</textarea>
               </div>
               <div class="stack">
                 <div><strong>Alumnos</strong></div>
-                <div class="plan-inline-students">
-                  ${state.catalogos.alumnos.filter((row) => row.grupo_id === plan.grupo_id).map((row) => `<label class="check-item"><input type="checkbox" value="${escapeHtml(row.alumno_id)}" onchange="toggleInlinePlanAlumno('${escapeHtml(plan.planeacion_id)}', '${escapeHtml(row.alumno_id)}', this.checked)"${inlineState.alumnos.includes(row.alumno_id) ? ' checked' : ''}${allowInlineEdit ? '' : ' disabled'}><span><strong>${escapeHtml(row.nombre_mostrado || row.nombre_completo || row.alumno_id)}</strong><br><span class="mini">${escapeHtml(row.matricula || row.alumno_id)}</span></span></label>`).join('') || '<div class="mini">No hay alumnos disponibles para este grupo.</div>'}
+                <div class="plan-inline-students" style="background:#262220 !important;color:var(--panel-text) !important;">
+                  ${studentOptions.map((row) => `<label class="check-item" style="background:transparent !important;color:inherit;"><input type="checkbox" value="${escapeHtml(row.alumno_id)}" onchange="toggleInlinePlanAlumno('${escapeHtml(plan.planeacion_id)}', '${escapeHtml(row.alumno_id)}', this.checked)"${inlineState.alumnos.includes(row.alumno_id) ? ' checked' : ''}${allowInlineEdit ? '' : ' disabled'}><span><strong>${escapeHtml(row.nombre_mostrado || row.nombre_completo || row.alumno_id)}</strong><br><span class="mini">${escapeHtml(row.matricula || row.alumno_id)}</span></span></label>`).join('') || '<div class="mini">No hay alumnos disponibles para este grupo.</div>'}
                 </div>
               </div>
               <div class="stack">${actividades || '<span class="mini">Sin actividades capturadas.</span>'}</div>
@@ -3966,23 +4023,25 @@
     async function saveInlinePlan(button, planId) {
       const plan = getPlanById(planId);
       const inline = state.ui.inlinePlans[planId];
+      const hasAdminPower = canUseAdminShell();
       if (!plan || !inline) throw new Error('Planeación no encontrada.');
       if (!(inline.alumnos || []).length) throw new Error('Selecciona al menos un alumno.');
       await handleAction('guardarPlaneacionCompletaInline', async () => {
         await api('guardarPlaneacionCompleta', {
           planeacion_id: planId,
-          fecha_planeacion: toYmdFrontend((getWeekById(plan.semana_id) || {}).fecha_inicio || ''),
-          semana_id: plan.semana_id,
-          grupo_id: plan.grupo_id,
-          materia_id: plan.materia_id,
+          fecha_planeacion: hasAdminPower ? toYmdFrontend(inline.fecha_planeacion || '') : toYmdFrontend((getWeekById(plan.semana_id) || {}).fecha_inicio || ''),
+          semana_id: hasAdminPower ? '' : plan.semana_id,
+          grupo_id: hasAdminPower ? (inline.grupo_id || plan.grupo_id) : plan.grupo_id,
+          materia_id: hasAdminPower ? (inline.materia_id || plan.materia_id) : plan.materia_id,
+          facilitador_id: hasAdminPower ? (inline.facilitador_id || plan.facilitador_id) : plan.facilitador_id,
           frase_semana: String(inline.frase || '').trim(),
           alumnos_ids: inline.alumnos,
           actividades: (inline.activities || []).map((activity) => ({
             actividad_id: activity.actividad_id || '',
             texto: String(activity.texto || '').trim(),
             material_en_carpeta: activity.material_en_carpeta || 'no_requiere',
-            realizada: canUseAdminShell() ? (activity.realizada || '') : '',
-            comentario_cierre: canUseAdminShell() ? String(activity.comentario_cierre || '').trim() : '',
+            realizada: hasAdminPower ? (activity.realizada || '') : '',
+            comentario_cierre: hasAdminPower ? String(activity.comentario_cierre || '').trim() : '',
             last_known_updated_at: activity.last_known_updated_at || ''
           })),
           last_known_updated_at: plan.fecha_actualizacion || '',
@@ -4023,7 +4082,7 @@
             '</div>' +
             '<div>' + escapeHtml(alerta.descripcion || '') + '</div>' +
             (contexto ? '<div class="mini">' + escapeHtml(contexto) + '</div>' : '') +
-            (alerta.fecha_creacion ? '<div class="mini">Creada: ' + escapeHtml(alerta.fecha_creacion) + '</div>' : '') +
+            (alerta.fecha_creacion ? '<div class="mini">Creada: ' + escapeHtml(formatFechaHumana(alerta.fecha_creacion)) + '</div>' : '') +
           '</div>'
         );
       }).join('');
@@ -4380,16 +4439,8 @@
     async function editPlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
-      if (!canUseAdminShell()) {
-        togglePlanExpanded(planId, true);
-        setBanner('Planeación abierta en la misma tarjeta.', 'info', { button });
-        return;
-      }
-      loadPlanIntoEditor(plan);
-      state.ui.planBuilderExpanded = true;
-      activateTab('planeaciones');
-      renderPlanBuilderVisibility();
-      setBanner('Planeación cargada en el editor.', 'info', { button });
+      togglePlanExpanded(planId, true);
+      setBanner('Planeación abierta en la misma tarjeta.', 'info', { button });
     }
 
     async function approvePlan(button, planId) {
@@ -4426,6 +4477,21 @@
         renderAll();
         setBanner('Planeación reenviada a aprobación.', 'success');
       }, { button, key: buildActionKey('reenviarPlaneacionPendiente', [planId]) });
+    }
+
+    async function deletePlan(button, planId) {
+      if (!window.confirm('Esta acción borrará la planeación, alumnos ligados, actividades, observaciones y alertas relacionadas. ¿Deseas continuar?')) {
+        return;
+      }
+      await handleAction('borrarPlaneacion', async () => {
+        await api('borrarPlaneacion', { planeacion_id: planId, request_id: uid('DELPLAN') });
+        resetInlinePlanState(planId);
+        if (state.ui.expandedPlans[planId]) state.ui.expandedPlans = {};
+        await refreshPlaneaciones();
+        await refreshAlertas();
+        renderAll();
+        setBanner('Planeación eliminada.', 'success');
+      }, { button, key: buildActionKey('borrarPlaneacion', [planId]) });
     }
 
     async function confirmClosePlan(button, planId) {
@@ -4580,6 +4646,8 @@
     window.rejectPlan = rejectPlan;
     window.resubmitPlan = resubmitPlan;
     window.confirmClosePlan = confirmClosePlan;
+    window.deletePlan = deletePlan;
+    window.resetInlinePlanAlumnos = resetInlinePlanAlumnos;
     window.saveGeneralObservation = saveGeneralObservation;
     window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
     window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
