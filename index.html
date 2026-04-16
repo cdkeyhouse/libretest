@@ -3203,10 +3203,8 @@
 
     async function refreshAll() {
       ensureLoggedIn();
-      setBanner('Cargando catálogos y planeaciones...', 'info');
-      await refreshCatalogos();
-      await refreshPlaneaciones();
-      await refreshAlertas();
+      setBanner('Cargando...', 'info');
+      await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
       renderAll();
       if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
         setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
