@@ -1670,6 +1670,273 @@
       #statusBanner { font-size: 0.92rem; }
     }
 
+  
+
+    /* ===== V7 visual override: dark institutional LibreAprendiz ===== */
+    :root {
+      --la-cyan: #1FB6E5;
+      --la-sky: #5BC4F5;
+      --la-sun: #F5C024;
+      --la-orange: #F07B20;
+      --la-fuchsia: #E8196A;
+      --la-rose: #E97DB2;
+      --la-lime: #B8D832;
+      --la-mist: #9BA3A8;
+      --bg-deep: #1e1b18;
+      --bg-main: #272422;
+      --bg-card: #302c29;
+      --bg-card-soft: #36312d;
+      --bg-input: #242120;
+      --border-strong: rgba(255,255,255,0.10);
+      --border-soft: rgba(255,255,255,0.07);
+      --text-strong: #f5efe8;
+      --text-soft: #cdbfb1;
+      --text-dim: #a3968a;
+      --shadow-strong: 0 18px 44px rgba(0,0,0,0.32);
+      --surface: var(--bg-card);
+      --text: var(--text-strong);
+      --muted: var(--text-soft);
+      --brand: var(--la-cyan);
+      --brand-deep: var(--la-cyan);
+      --accent: var(--la-orange);
+      --sun: var(--la-sun);
+      --berry: var(--la-fuchsia);
+      --rose: var(--la-rose);
+      --sky: var(--la-sky);
+      --lime: var(--la-lime);
+      --mist: var(--la-mist);
+      --success: var(--la-lime);
+      --danger: var(--la-fuchsia);
+      --warning: var(--la-orange);
+      --shadow: var(--shadow-strong);
+    }
+
+    html, body {
+      background:
+        radial-gradient(circle at 0% 0%, rgba(31,182,229,0.14), transparent 26%),
+        radial-gradient(circle at 100% 0%, rgba(245,192,36,0.10), transparent 22%),
+        radial-gradient(circle at 100% 45%, rgba(184,216,50,0.08), transparent 20%),
+        linear-gradient(180deg, var(--bg-main) 0%, var(--bg-deep) 100%) !important;
+      color: var(--text-strong) !important;
+    }
+    body { padding: 20px; }
+    .page { max-width: 1320px; position: relative; }
+    .page::before {
+      content: "";
+      display: block;
+      height: 7px;
+      border-radius: 999px;
+      margin: 0 auto 18px;
+      background: linear-gradient(90deg,
+        var(--la-cyan) 0 12.5%,
+        var(--la-sky) 12.5% 25%,
+        var(--la-sun) 25% 37.5%,
+        var(--la-orange) 37.5% 50%,
+        var(--la-fuchsia) 50% 62.5%,
+        var(--la-rose) 62.5% 75%,
+        var(--la-lime) 75% 87.5%,
+        var(--la-mist) 87.5% 100%);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 10px 20px rgba(0,0,0,0.18);
+    }
+
+    .hero-card, .card, .admin-toolbar, .admin-panel, .module-card, .admin-placeholder,
+    .plan-card, .stat, .alert-item, .report-box, .group-block, .activity-editor, .activity-card,
+    .obs-item, .obs-alumno-card, .admin-kpi, #sessionCard {
+      background: linear-gradient(180deg, rgba(48,44,41,0.98), rgba(40,36,33,0.98)) !important;
+      border: 1px solid var(--border-strong) !important;
+      box-shadow: var(--shadow-strong) !important;
+      color: var(--text-strong) !important;
+      backdrop-filter: none !important;
+    }
+    .hero-card::after, #sessionCard::after { display:none !important; }
+    .hero, .top-grid { gap: 18px; }
+    .hero-card { padding: 24px; }
+    .brand-lockup {
+      grid-template-columns: 108px minmax(0,1fr);
+      gap: 20px;
+    }
+    .brand-mark {
+      background: #181614 !important;
+      border: 1px solid var(--border-strong) !important;
+      box-shadow: none !important;
+    }
+    .pill.brand {
+      background: rgba(31,182,229,0.14) !important;
+      color: var(--la-cyan) !important;
+      border: 1px solid rgba(31,182,229,0.22);
+    }
+    .brand-overline { color: var(--la-cyan) !important; }
+    h1, h2, h3, h4, strong, label, .stat-value, .admin-kpi-value, .alert-type, .action-toast, .status-banner {
+      color: var(--text-strong) !important;
+    }
+    h1 {
+      font-size: clamp(2.6rem, 5vw, 4rem);
+      max-width: none;
+      margin-bottom: 4px;
+    }
+    p, .subtle, .helper, .mini, .stat-label, .admin-kpi-label, .session-note, .module-card p,
+    .admin-placeholder p, .alert-status, .meta-grid, .code {
+      color: var(--text-soft) !important;
+    }
+    .hero-feature-grid { gap: 10px; }
+    .hero-feature, .hero-step {
+      background: #1b1917 !important;
+      border-color: var(--border-strong) !important;
+      box-shadow: none !important;
+      padding: 14px;
+    }
+    .hero-feature strong { font-size: 1rem; margin-bottom: 4px; }
+    .hero-feature p { font-size: 0.92rem; }
+
+    input, select, textarea {
+      background: var(--bg-input) !important;
+      color: var(--text-strong) !important;
+      border: 1px solid var(--border-strong) !important;
+      box-shadow: none !important;
+    }
+    input::placeholder, textarea::placeholder { color: var(--text-dim) !important; }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(31,182,229,0.55) !important;
+      box-shadow: 0 0 0 3px rgba(31,182,229,0.16) !important;
+    }
+    select option {
+      background: var(--bg-input);
+      color: var(--text-strong);
+    }
+
+    .status-banner, .session-note, .inline-note, .empty, .obs-item, .report-box {
+      background: #211d1b !important;
+      border-color: var(--border-soft) !important;
+      color: var(--text-soft) !important;
+    }
+    .status-banner.info { color: var(--la-cyan) !important; border-color: rgba(31,182,229,0.30) !important; }
+    .status-banner.success { color: var(--la-lime) !important; border-color: rgba(184,216,50,0.30) !important; }
+    .status-banner.error { color: #ff8fb3 !important; border-color: rgba(232,25,106,0.32) !important; }
+    .status-banner.warn { color: #ffc980 !important; border-color: rgba(240,123,32,0.32) !important; }
+
+    button {
+      box-shadow: none !important;
+      border: 1px solid transparent;
+      transition: transform 0.14s ease, opacity 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--la-cyan) !important; color: #171411 !important; font-weight: 800; }
+    .btn-secondary { background: var(--la-sky) !important; color: #171411 !important; }
+    .btn-accent { background: var(--la-sun) !important; color: #171411 !important; }
+    .btn-danger { background: var(--la-fuchsia) !important; color: #fff !important; }
+    .btn-ghost {
+      background: rgba(255,255,255,0.04) !important;
+      border-color: var(--border-strong) !important;
+      color: var(--text-strong) !important;
+    }
+    .tab-btn { background: rgba(255,255,255,0.05) !important; color: var(--text-soft) !important; }
+    .tab-btn.is-active,
+    .admin-nav-btn.is-active {
+      background: rgba(31,182,229,0.14) !important;
+      color: var(--la-cyan) !important;
+      border-color: rgba(31,182,229,0.24) !important;
+      box-shadow: inset 0 0 0 1px rgba(31,182,229,0.16) !important;
+    }
+    .admin-nav-btn,
+    .module-card,
+    .admin-placeholder,
+    .admin-kpi,
+    .alert-item,
+    .activity-editor,
+    .group-block,
+    .activity-card,
+    .obs-alumno-card,
+    .obs-item,
+    .plan-card,
+    .stat {
+      background: linear-gradient(180deg, rgba(48,44,41,0.98), rgba(40,36,33,0.98)) !important;
+    }
+    .module-card-count {
+      background: rgba(31,182,229,0.14) !important;
+      color: var(--la-cyan) !important;
+    }
+    .admin-action-chip {
+      background: rgba(232,25,106,0.12) !important;
+      color: #ff8fb3 !important;
+    }
+    .admin-note {
+      background: rgba(31,182,229,0.08) !important;
+      border-left-color: rgba(31,182,229,0.72) !important;
+      color: var(--text-soft) !important;
+    }
+
+    .tag, .pill, .badge {
+      border: 1px solid rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.06) !important;
+      color: var(--text-strong) !important;
+    }
+    .badge.borrador { background: rgba(155,163,168,0.16) !important; color: #d8dde0 !important; }
+    .badge.borrador_pendiente_aprobacion { background: rgba(240,123,32,0.18) !important; color: #ffc089 !important; }
+    .badge.rechazada { background: rgba(232,25,106,0.18) !important; color: #ff90bb !important; }
+    .badge.activa { background: rgba(184,216,50,0.18) !important; color: #ddf487 !important; }
+    .badge.cierre_pendiente { background: rgba(245,192,36,0.18) !important; color: #ffe08f !important; }
+    .badge.cerrada { background: rgba(91,196,245,0.18) !important; color: #b8e8ff !important; }
+    .badge.archivada { background: rgba(155,163,168,0.16) !important; color: #d0d5d9 !important; }
+
+    .checklist, .group-block, .activity-editor, .activity-card, .obs-alumno-card, .obs-item, .inline-note, .empty {
+      border-color: var(--border-strong) !important;
+    }
+    .checklist { background: #262220 !important; }
+    .plan-card { padding: 16px !important; }
+    .plan-top { margin-bottom: 10px; }
+    .meta-grid { margin-top: 8px; }
+    .actions, .inline-actions, .tabs, .tag-cloud { gap: 8px; }
+    .card { padding: 18px; }
+    .top-grid { align-items: start; }
+
+    body.auth-mode .hero,
+    body.auth-mode .top-grid {
+      max-width: 960px;
+      margin-inline: auto;
+    }
+    body.auth-mode #sessionCard {
+      background: linear-gradient(180deg, rgba(48,44,41,0.98), rgba(40,36,33,0.98)) !important;
+    }
+    body.auth-mode #sessionCard .card-head,
+    body.auth-mode #sessionCard .stack { gap: 16px; }
+
+    @media (max-width: 1024px) {
+      body { padding: 16px; }
+      .page { max-width: 100%; }
+      .hero,
+      .top-grid,
+      .admin-panel-grid,
+      .admin-panel-kpis,
+      .grid-4,
+      .grid-3,
+      .grid-2 { grid-template-columns: 1fr !important; }
+      .brand-lockup { grid-template-columns: 88px minmax(0,1fr); }
+      .brand-mark { width: 88px; height: 88px; }
+      h1 { font-size: clamp(2.2rem, 9vw, 3.1rem); }
+    }
+    @media (max-width: 720px) {
+      body { padding: 12px; }
+      .hero-card, .card, .admin-toolbar, .admin-panel { padding: 16px !important; border-radius: 20px !important; }
+      .card-head { flex-direction: column; align-items: stretch; }
+      .hero-feature-grid { grid-template-columns: 1fr !important; }
+      .actions { display: flex; flex-wrap: wrap; }
+      .actions > * { flex: 1 1 auto; min-width: 140px; }
+      .plan-top { flex-direction: column; }
+      .brand-copy p { font-size: 0.96rem; }
+      .brand-overline { font-size: 0.78rem; }
+      .activity-inline-grid { grid-template-columns: 1fr !important; }
+      input, select, textarea, button { font-size: 16px !important; }
+      .admin-nav { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 520px) {
+      .brand-lockup { grid-template-columns: 1fr; text-align: center; }
+      .brand-mark { margin: 0 auto; }
+      .pill.brand, .brand-overline { justify-self: center; }
+      .admin-nav { grid-template-columns: 1fr; }
+      .actions > * { width: 100%; }
+      .page::before { margin-bottom: 12px; }
+    }
+
   </style>
 </head>
 <body>
@@ -1683,24 +1950,22 @@
           <div class="brand-copy">
             <div class="pill brand">Libre Aprendiz</div>
             <div class="brand-overline">Espacio institucional de trabajo pedagógico</div>
-            <h1>Planeación académica semanal en una sola vista de trabajo.</h1>
-            <p>
-              Un espacio para registrar lo que cada grupo trabajó durante el ciclo, dar seguimiento interno y preparar un reporte académico claro para las familias.
-            </p>
+            <h1>Libre Aprendiz</h1>
+            <p>Planeación semanal en una sola vista.</p>
           </div>
         </div>
         <div class="hero-feature-grid">
           <div class="hero-feature">
-            <strong>Planeación unificada</strong>
-            <p>Crea semana, grupos, alumnos y actividades desde una sola hoja de trabajo.</p>
+            <strong>Planeación</strong>
+            <p>Crea y cierra planes semanales.</p>
           </div>
           <div class="hero-feature">
-            <strong>Observaciones internas</strong>
-            <p>Agrega notas generales o finales por alumno para administración sin mezclarlo con el reporte académico.</p>
+            <strong>Seguimiento</strong>
+            <p>Observaciones internas por alumno y grupo.</p>
           </div>
           <div class="hero-feature">
-            <strong>Cierre de semana</strong>
-            <p>Marca qué actividades sí se realizaron, documenta pendientes y deja la planeación lista para administración.</p>
+            <strong>Reportes</strong>
+            <p>Salida académica clara para familias.</p>
           </div>
         </div>
       </div>
