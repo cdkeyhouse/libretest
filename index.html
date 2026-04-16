@@ -1039,6 +1039,122 @@
     .activity-card .actions {
       margin-top: 12px;
     }
+
+    .accordion-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .accordion-body[hidden] { display:none !important; }
+    .compact-plan-card {
+      border-radius: 20px;
+      padding: 16px 18px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(247,244,236,0.86));
+      display: grid;
+      gap: 12px;
+    }
+    .compact-plan-summary {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 12px;
+      align-items: start;
+    }
+    .compact-plan-meta {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .compact-plan-actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .plan-detail-wrap {
+      margin-top: 8px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(23, 51, 45, 0.08);
+      display: grid;
+      gap: 14px;
+    }
+    .inline-feedback {
+      min-height: 18px;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+    .inline-feedback.success { color: var(--success); }
+    .inline-feedback.error { color: var(--danger); }
+    .inline-feedback.info { color: var(--brand-deep); }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 25, 28, 0.62);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 9998;
+    }
+    .modal-backdrop.is-open { display: flex; }
+    .modal-card {
+      width: min(640px, 100%);
+      background: rgba(21, 32, 36, 0.98);
+      color: #f4f7f5;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 28px 70px rgba(0,0,0,0.35);
+      padding: 22px;
+      display: grid;
+      gap: 14px;
+    }
+    .modal-card h3 { color: #fff; }
+    .modal-card p, .modal-card .helper, .modal-card .mini { color: rgba(244,247,245,0.78); }
+    .modal-card textarea, .modal-card select, .modal-card input {
+      background: rgba(255,255,255,0.95);
+      color: var(--text);
+    }
+    .plan-detail-wrap {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(23, 51, 45, 0.08);
+    }
+    .compact-plan-card {
+      border-radius: 22px;
+      padding: 16px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(247, 244, 236, 0.86));
+    }
+    .compact-plan-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .compact-plan-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .compact-plan-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .plan-inline-field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .plan-inline-students {
+      max-height: 220px;
+      overflow: auto;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: rgba(255,255,255,0.82);
+      display: grid;
+      gap: 8px;
+    }
+    .detail-inline-feedback { min-height: 20px; }
     @media (max-width: 720px) {
       .activity-inline-grid {
         grid-template-columns: 1fr;
@@ -1348,13 +1464,16 @@
       <section id="panel-planeaciones" class="panel is-active">
         <div class="grid-2">
           <article class="card" id="planBuilderCard">
-            <div class="card-head">
+            <div class="accordion-head">
               <div>
                 <h2 id="planEditorTitle">Nueva planeación</h2>
                 <p class="subtle">Captura la fecha, elige uno o varios grupos y guarda a la vez alumnos y actividades.</p>
               </div>
+              <div class="actions compact">
+                <button id="togglePlanBuilderBtn" class="btn-primary" type="button">➕ Nueva planeación</button>
+              </div>
             </div>
-            <div class="stack">
+            <div id="planBuilderBody" class="stack" hidden>
               <div class="grid-3">
                 <div>
                   <label for="planFecha">Fecha de referencia</label>
@@ -1403,6 +1522,7 @@
                 <button id="savePlanBtn" class="btn-primary" type="button">Guardar planeación</button>
                 <button id="resetPlanEditorBtn" class="btn-secondary" type="button">Limpiar editor</button>
               </div>
+              <div id="planBuilderFeedback" class="inline-feedback"></div>
             </div>
           </article>
 
@@ -1648,6 +1768,25 @@
     </section>
   </div>
 
+    <div id="closeWeekModal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="closeWeekModalTitle">
+        <div>
+          <h3 id="closeWeekModalTitle">Cerrar semana</h3>
+          <p class="subtle">Confirma el resultado de cada actividad y agrega una observación final de la semana si hace falta.</p>
+        </div>
+        <div>
+          <label for="closeWeekObsInput">Observación final de la semana (opcional)</label>
+          <textarea id="closeWeekObsInput" placeholder="Escribe una observación final para administración"></textarea>
+        </div>
+        <div id="closeWeekFeedback" class="inline-feedback"></div>
+        <div class="actions">
+          <button id="closeWeekConfirmBtn" class="btn-primary" type="button">Confirmar cierre</button>
+          <button id="closeWeekCancelBtn" class="btn-ghost" type="button">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+
   <script>
     const STORAGE_KEYS = {
       session: 'la_v8_session'
@@ -1687,7 +1826,13 @@
         activities: []
       },
       activeTab: 'planeaciones',
-      activeAdminModule: 'dashboard'
+      activeAdminModule: 'dashboard',
+      ui: {
+        planBuilderExpanded: false,
+        expandedPlans: {},
+        closeWeekPlanId: '',
+        inlinePlans: {}
+      }
     };
 
     const inFlightActions = new Map();
@@ -1751,6 +1896,132 @@
       clearLoadedData();
       clearLoginInputs();
       renderAll();
+    }
+
+    function setInlineFeedback(targetId, message, kind) {
+      const node = $(targetId);
+      if (!node) return;
+      node.className = 'inline-feedback ' + (kind || 'info');
+      node.textContent = message || '';
+    }
+
+    function clearInlineFeedback(targetId) {
+      const node = $(targetId);
+      if (!node) return;
+      node.className = 'inline-feedback';
+      node.textContent = '';
+    }
+
+    function isPlanBuilderExpanded() {
+      return !!state.ui.planBuilderExpanded || state.planEditor.mode === 'edit';
+    }
+
+    function togglePlanBuilder(forceValue) {
+      const next = typeof forceValue === 'boolean' ? forceValue : !isPlanBuilderExpanded();
+      state.ui.planBuilderExpanded = next;
+      renderPlanBuilderVisibility();
+    }
+
+    function togglePlanExpanded(planId, forceValue) {
+      const current = !!state.ui.expandedPlans[planId];
+      state.ui.expandedPlans[planId] = typeof forceValue === 'boolean' ? forceValue : !current;
+      renderPlaneacionesList();
+    }
+
+
+    // Alias — delegates to toYmdFrontend_ defined below (single implementation)
+    function toYmdFrontend(value) { return toYmdFrontend_(value); }
+
+    function buildWeekRangeFromDate(dateValue) {
+      const ymd = toYmdFrontend(dateValue);
+      if (!ymd) return null;
+      const [year, month, day] = ymd.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      if (Number.isNaN(date.getTime())) return null;
+      const weekday = date.getDay();
+      const offsetToMonday = weekday === 0 ? -6 : 1 - weekday;
+      const start = new Date(year, month - 1, day);
+      start.setDate(start.getDate() + offsetToMonday);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 4);
+      return {
+        fecha_inicio: toYmdFrontend(start),
+        fecha_fin: toYmdFrontend(end),
+        semana_id: 'SEM_' + toYmdFrontend(start).replace(/-/g, ''),
+        nombre_visible: 'Semana ' + toYmdFrontend(start) + ' al ' + toYmdFrontend(end),
+        cerrada_global: 'no',
+        draft: true
+      };
+    }
+
+    function getWeekByDateOrDraft(dateValue) {
+      return getWeekByDate(dateValue) || buildWeekRangeFromDate(dateValue);
+    }
+
+    function openCloseWeekModal(planId) {
+      state.ui.closeWeekPlanId = planId;
+      clearInlineFeedback('closeWeekFeedback');
+      $('closeWeekObsInput').value = '';
+      $('closeWeekModal').classList.add('is-open');
+      $('closeWeekModal').setAttribute('aria-hidden', 'false');
+    }
+
+    function closeCloseWeekModal() {
+      state.ui.closeWeekPlanId = '';
+      $('closeWeekModal').classList.remove('is-open');
+      $('closeWeekModal').setAttribute('aria-hidden', 'true');
+      $('closeWeekObsInput').value = '';
+      clearInlineFeedback('closeWeekFeedback');
+    }
+
+    function bindPlanInlineState(plan) {
+      const planId = plan.planeacion_id;
+      if (!state.ui.inlinePlans[planId]) {
+        state.ui.inlinePlans[planId] = {
+          frase: plan.frase_semana || '',
+          alumnos: (plan.alumnos || []).map((row) => row.alumno_id),
+          activities: (plan.actividades || []).map((activity) => ({
+            actividad_id: activity.actividad_id || '',
+            last_known_updated_at: activity.fecha_actualizacion || '',
+            texto: activity.texto || '',
+            material_en_carpeta: normalizeMaterialStatus(activity.material_en_carpeta),
+            realizada: normalizeRealizadaStatus(activity.realizada),
+            comentario_cierre: activity.comentario_cierre || ''
+          }))
+        };
+      }
+      return state.ui.inlinePlans[planId];
+    }
+
+    function resetInlinePlanState(planId) {
+      if (state.ui.inlinePlans[planId]) delete state.ui.inlinePlans[planId];
+    }
+
+    function updateInlinePlanField(planId, field, value) {
+      if (!state.ui.inlinePlans[planId]) return;
+      state.ui.inlinePlans[planId][field] = value;
+    }
+
+    function toggleInlinePlanAlumno(planId, alumnoId, checked) {
+      if (!state.ui.inlinePlans[planId]) return;
+      const current = new Set(state.ui.inlinePlans[planId].alumnos || []);
+      if (checked) current.add(alumnoId); else current.delete(alumnoId);
+      state.ui.inlinePlans[planId].alumnos = Array.from(current);
+    }
+
+    function updateInlineActivityField(planId, index, field, value) {
+      if (!state.ui.inlinePlans[planId] || !state.ui.inlinePlans[planId].activities[index]) return;
+      state.ui.inlinePlans[planId].activities[index][field] = value;
+    }
+
+    function renderPlanBuilderVisibility() {
+      const body = $('planBuilderBody');
+      const btn = $('togglePlanBuilderBtn');
+      if (!body || !btn) return;
+      const expanded = isPlanBuilderExpanded();
+      body.hidden = !expanded;
+      btn.textContent = expanded ? 'Ocultar nueva planeación' : '➕ Nueva planeación';
+      btn.className = expanded ? 'btn-secondary' : 'btn-primary';
     }
 
     function normalizeActionKeyPart(value) {
@@ -2314,14 +2585,42 @@
       return state.catalogos.semanas.find((item) => item.semana_id === semanaId) || null;
     }
 
+    function buildWeekRangeFromDateFrontend_(dateValue) {
+      const target = toYmdFrontend_(dateValue);
+      if (!target) return null;
+      const base = new Date(target + 'T12:00:00');
+      const day = base.getDay();
+      const mondayOffset = day === 0 ? -6 : (1 - day);
+      const fridayOffset = mondayOffset + 4;
+      const from = new Date(base);
+      from.setDate(base.getDate() + mondayOffset);
+      const to = new Date(base);
+      to.setDate(base.getDate() + fridayOffset);
+      return {
+        fecha_inicio: toYmdFrontend_(from),
+        fecha_fin: toYmdFrontend_(to)
+      };
+    }
+
     function getWeekByDate(dateValue) {
       const target = toYmdFrontend_(dateValue);
       if (!target) return null;
-      return getSortedSemanas().find((semana) => {
+      const existing = getSortedSemanas().find((semana) => {
         const start = toYmdFrontend_(semana.fecha_inicio);
         const end = toYmdFrontend_(semana.fecha_fin);
         return start && end && start <= target && target <= end;
-      }) || null;
+      });
+      if (existing) return existing;
+      const range = buildWeekRangeFromDateFrontend_(target);
+      if (!range) return null;
+      return {
+        semana_id: '',
+        fecha_inicio: range.fecha_inicio,
+        fecha_fin: range.fecha_fin,
+        nombre_visible: 'Semana ' + range.fecha_inicio + ' al ' + range.fecha_fin,
+        cerrada_global: 'no',
+        synthetic: true
+      };
     }
 
     function formatSemanaLabel(semana) {
@@ -2359,9 +2658,12 @@
 
     function resetPlanEditor() {
       state.planEditor = emptyPlanEditorState();
+      state.ui.planBuilderExpanded = false;
       $('planFecha').value = '';
       $('planFrase').value = '';
+      clearInlineFeedback('planBuilderFeedback');
       renderPlanEditor();
+      renderPlanBuilderVisibility();
       renderAlumnoFilterUi();
       if ($('planeacionesSectionTitle')) {
         $('planeacionesSectionTitle').textContent = canUseAdminShell() ? 'Planeaciones' : 'Planeaciones abiertas';
@@ -2420,12 +2722,12 @@
       const host = $('planSemanaResolved');
       const week = state.planEditor.mode === 'edit' && !canUseAdminShell()
         ? getWeekById(state.planEditor.lockedSemanaId)
-        : getWeekByDate($('planFecha').value);
+        : getWeekByDateOrDraft($('planFecha').value);
       host.textContent = week ? formatSemanaLabel(week) : 'Selecciona una fecha para resolver la semana.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
       if (week && String(week.cerrada_global || '').toLowerCase() === 'si' && state.planEditor.mode !== 'edit') {
-        host.textContent += '. Si la guarda un facilitador, quedará pendiente de aprobación.';
+        host.textContent += '. Se creará automáticamente si todavía no existe en el calendario.';
       }
     }
 
@@ -2534,6 +2836,7 @@
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
+      renderPlanBuilderVisibility();
     }
 
     function renderBaseSelects() {
@@ -2712,117 +3015,123 @@
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
         const hasAdminPower = role === 'admin' || role === 'directora';
+        const expanded = !!state.ui.expandedPlans[plan.planeacion_id];
         const alumnos = (plan.alumnos || []).map((pa) => pa.nombre_snapshot || pa.alumno_id);
         const alumnosRows = plan.alumnos || [];
         const obsGenerales = getPlanGeneralObservations(plan);
         const obsAlumnoFinalMap = getPlanAlumnoFinalMap(plan);
-        const allowStructureEdit = hasAdminPower || ((['borrador', 'activa'].includes(plan.estado) && !weekClosed) || plan.estado === 'rechazada');
+        const inlineState = bindPlanInlineState(plan);
         const allowGeneralObs = hasAdminPower || !weekClosed;
         const allowAlumnoObs = hasAdminPower || !weekClosed;
+        const allowInlineEdit = hasAdminPower || ((['borrador', 'activa', 'rechazada'].includes(plan.estado)) && !weekClosed);
         const allowClose = ['activa', 'cierre_pendiente'].includes(plan.estado);
-        const actividades = (plan.actividades || []).map((item) => {
+        const summaryTags = [
+          `<span class="tag">${escapeHtml((grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) || '-')}</span>`,
+          `<span class="tag">${escapeHtml((semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id) || '-')}</span>`,
+          `<span class="tag">${escapeHtml(String(alumnos.length || 0))} alumnos</span>`,
+          `<span class="tag">${escapeHtml(String((plan.actividades || []).length || 0))} actividades</span>`
+        ].join('');
+        const actividades = (inlineState.activities || []).map((item, index) => {
           const material = normalizeMaterialStatus(item.material_en_carpeta);
           const realizada = normalizeRealizadaStatus(item.realizada);
           const editableSeguimiento = hasAdminPower || (plan.estado === 'activa' && !weekClosed);
-          return (
-            '<div class="activity-card">' +
-              '<div><strong>' + escapeHtml(String(item.orden || '?') + '. ' + (item.texto || '')) + '</strong></div>' +
-              '<div class="activity-inline-grid">' +
-                '<div><label>Material</label><select id="activity-material-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
-                  '<option value="no_requiere"' + (material === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
-                  '<option value="listo"' + (material === 'listo' ? ' selected' : '') + '>Listo</option>' +
-                  '<option value="no_listo"' + (material === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
-                '</select></div>' +
-                '<div><label>¿Se realizó?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
-                  '<option value=""' + (!realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
-                  '<option value="no"' + (realizada === 'no' ? ' selected' : '') + '>No</option>' +
-                '</select></div>' +
-                '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
-              '</div>' +
-              (hasAdminPower
-                ? `<div class="actions"><button class="btn-ghost" type="button" onclick="saveActivityProgress(this, '${escapeHtml(item.actividad_id)}', '${escapeHtml(item.fecha_actualizacion || '')}')">Guardar actividad</button></div>`
-                : (editableSeguimiento ? '<div class="mini">Confirma si se realizó cada actividad y luego pulsa Cerrar semana.</div>' : '')) +
-            '</div>'
-          );
+          return `
+            <div class="activity-card">
+              <div><strong>${escapeHtml(String(index + 1) + '. ' + (item.texto || ''))}</strong></div>
+              <div class="activity-inline-grid">
+                <div><label>Material</label><select id="activity-material-${escapeHtml(item.actividad_id)}" onchange="updateInlineActivityField('${escapeHtml(plan.planeacion_id)}', ${index}, 'material_en_carpeta', this.value)"${editableSeguimiento ? '' : ' disabled'}>
+                  <option value="no_requiere"${material === 'no_requiere' ? ' selected' : ''}>No requiere</option>
+                  <option value="listo"${material === 'listo' ? ' selected' : ''}>Listo</option>
+                  <option value="no_listo"${material === 'no_listo' ? ' selected' : ''}>No listo</option>
+                </select></div>
+                <div><label>¿Se realizó?</label><select id="activity-realizada-${escapeHtml(item.actividad_id)}" onchange="updateInlineActivityField('${escapeHtml(plan.planeacion_id)}', ${index}, 'realizada', this.value)"${editableSeguimiento ? '' : ' disabled'}>
+                  <option value=""${!realizada ? ' selected' : ''}>Pendiente</option>
+                  <option value="si"${realizada === 'si' ? ' selected' : ''}>Sí</option>
+                  <option value="no"${realizada === 'no' ? ' selected' : ''}>No</option>
+                </select></div>
+                <div><label>Comentario</label><input id="activity-comment-${escapeHtml(item.actividad_id)}" type="text" value="${escapeHtml(item.comentario_cierre || '')}" onchange="updateInlineActivityField('${escapeHtml(plan.planeacion_id)}', ${index}, 'comentario_cierre', this.value)"${editableSeguimiento ? '' : ' disabled'}></div>
+              </div>
+              ${hasAdminPower ? `<div class="actions"><button class="btn-ghost" type="button" onclick="saveActivityProgress(this, '${escapeHtml(item.actividad_id)}', '${escapeHtml(item.last_known_updated_at || '')}')">Guardar actividad</button></div>` : (editableSeguimiento ? '<div class="mini">Completa estas respuestas y luego pulsa Cerrar semana.</div>' : '')}
+            </div>`;
         }).join('');
         const obsGeneralesHtml = obsGenerales.length
-          ? '<div class="obs-list">' + obsGenerales.map((obs) => (
-              '<div class="obs-item">' +
-                '<div>' + escapeHtml(obs.texto || '') + '</div>' +
-                '<div class="mini">' + escapeHtml(obs.fecha || obs.fecha_creacion || '') + '</div>' +
-              '</div>'
-            )).join('') + '</div>'
+          ? `<div class="obs-list">${obsGenerales.map((obs) => `
+              <div class="obs-item">
+                <div>${escapeHtml(obs.texto || '')}</div>
+                <div class="mini">${escapeHtml(obs.fecha || obs.fecha_creacion || '')}</div>
+              </div>`).join('')}</div>`
           : '<div class="mini">Todavía no hay observaciones generales.</div>';
         const obsAlumnoHtml = alumnosRows.length
-          ? '<div class="obs-grid">' + alumnosRows.map((alumnoRow) => {
+          ? `<div class="obs-grid">${alumnosRows.map((alumnoRow) => {
               const alumnoObs = obsAlumnoFinalMap[alumnoRow.alumno_id] || null;
               const alumnoNombre = alumnoRow.nombre_snapshot || alumnoRow.alumno_id;
-              return (
-                '<div class="obs-alumno-card">' +
-                  '<div><strong>' + escapeHtml(alumnoNombre) + '</strong></div>' +
-                  '<textarea id="obs-final-' + escapeHtml(plan.planeacion_id) + '-' + escapeHtml(alumnoRow.alumno_id) + '" placeholder="Observación final interna para administración"' + (allowAlumnoObs ? '' : ' disabled') + '>' + escapeHtml(alumnoObs ? (alumnoObs.nota || '') : '') + '</textarea>' +
-                  '<div class="actions compact">' +
-                    (allowAlumnoObs ? '<button class="btn-ghost" type="button" onclick="saveAlumnoFinalObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'' + escapeHtml(alumnoRow.alumno_id) + '\')">Guardar observación final</button>' : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
-                  '</div>' +
-                '</div>'
-              );
-            }).join('') + '</div>'
+              return `
+                <div class="obs-alumno-card">
+                  <div><strong>${escapeHtml(alumnoNombre)}</strong></div>
+                  <textarea id="obs-final-${escapeHtml(plan.planeacion_id)}-${escapeHtml(alumnoRow.alumno_id)}" placeholder="Observación final interna para administración"${allowAlumnoObs ? '' : ' disabled'}>${escapeHtml(alumnoObs ? (alumnoObs.nota || '') : '')}</textarea>
+                  <div class="actions compact">
+                    ${allowAlumnoObs ? `<button class="btn-ghost" type="button" onclick="saveAlumnoFinalObservation(this, '${escapeHtml(plan.planeacion_id)}', '${escapeHtml(alumnoRow.alumno_id)}')">Guardar observación final</button>` : '<span class="mini">Solo administración puede editar en semana cerrada.</span>'}
+                  </div>
+                </div>`;
+            }).join('')}</div>`
           : '<div class="mini">No hay alumnos ligados a esta planeación.</div>';
         const buttons = [];
+        buttons.push(`<button class="btn-ghost" type="button" onclick="togglePlanExpanded('${escapeHtml(plan.planeacion_id)}')">${expanded ? 'Ocultar detalle' : 'Abrir'}</button>`);
         if (plan.estado === 'borrador') {
-          buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
-        }
-        if (allowStructureEdit) {
-          buttons.push('<button class="btn-ghost" type="button" onclick="editPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Editar</button>');
+          buttons.push(`<button class="btn-primary" type="button" onclick="planAction(this, '${escapeHtml(plan.planeacion_id)}', 'activarPlaneacion')">Activar</button>`);
         }
         if (plan.estado === 'borrador_pendiente_aprobacion' && hasAdminPower) {
-          buttons.push('<button class="btn-primary" type="button" onclick="approvePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Aprobar</button>');
-          buttons.push('<button class="btn-secondary" type="button" onclick="rejectPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Rechazar</button>');
+          buttons.push(`<button class="btn-primary" type="button" onclick="approvePlan(this, '${escapeHtml(plan.planeacion_id)}')">Aprobar</button>`);
+          buttons.push(`<button class="btn-secondary" type="button" onclick="rejectPlan(this, '${escapeHtml(plan.planeacion_id)}')">Rechazar</button>`);
         }
         if (plan.estado === 'rechazada') {
-          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Reenviar aprobación</button>');
+          buttons.push(`<button class="btn-secondary" type="button" onclick="resubmitPlan(this, '${escapeHtml(plan.planeacion_id)}')">Reenviar aprobación</button>`);
         }
         if (allowClose) {
-          buttons.push('<button class="btn-accent" type="button" onclick="confirmClosePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Cerrar semana</button>');
+          buttons.push(`<button class="btn-accent" type="button" onclick="confirmClosePlan(this, '${escapeHtml(plan.planeacion_id)}')">Cerrar semana</button>`);
         }
         if (plan.estado === 'cerrada' && hasAdminPower) {
-          buttons.push('<button class="btn-ghost" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'archivarPlaneacion\')">Archivar</button>');
+          buttons.push(`<button class="btn-ghost" type="button" onclick="planAction(this, '${escapeHtml(plan.planeacion_id)}', 'archivarPlaneacion')">Archivar</button>`);
         }
-
-        return (
-          '<article class="plan-card">' +
-            '<div class="plan-top">' +
-              '<div>' +
-                '<h3>' + escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id) + '</h3>' +
-                '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
-                ' · ' + escapeHtml(semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id) + '</div>' +
-              '</div>' +
-              '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
-            '</div>' +
-            '<div class="meta-grid">' +
-              '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnos.length || 0)) + '</div>' +
-            '</div>' +
-            '<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
-            '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>' +
-            '<div class="stack">' +
-              '<div><strong>Observaciones generales</strong></div>' +
-              obsGeneralesHtml +
-              '<div class="actions compact">' +
-                '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
-                (allowGeneralObs ? '<button class="btn-ghost" type="button" onclick="saveGeneralObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Agregar observación general</button>' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
-              '</div>' +
-            '</div>' +
-            '<div class="stack">' +
-              '<div><strong>Observación final por alumno</strong></div>' +
-              obsAlumnoHtml +
-            '</div>' +
-            '<div class="actions" style="margin-top:14px;">' +
-              buttons.join('') +
-            '</div>' +
-          '</article>'
-        );
+        return `
+          <article class="compact-plan-card">
+            <div class="compact-plan-summary">
+              <div>
+                <h3>${escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id)}</h3>
+                <div class="subtle">${escapeHtml(plan.frase_semana || 'Sin frase de la semana')}</div>
+                <div class="compact-plan-meta">${summaryTags}</div>
+              </div>
+              <span class="badge ${escapeHtml(plan.estado)}">${escapeHtml(getPlanStatusLabel(plan.estado))}</span>
+            </div>
+            <div class="compact-plan-actions">${buttons.join('')}</div>
+            <div class="plan-detail-wrap" ${expanded ? '' : 'hidden'}>
+              <div class="plan-inline-field">
+                <label>Frase de la semana</label>
+                <textarea id="plan-inline-frase-${escapeHtml(plan.planeacion_id)}" onchange="updateInlinePlanField('${escapeHtml(plan.planeacion_id)}', 'frase', this.value)"${allowInlineEdit ? '' : ' disabled'}>${escapeHtml(inlineState.frase || '')}</textarea>
+              </div>
+              <div class="stack">
+                <div><strong>Alumnos</strong></div>
+                <div class="plan-inline-students">
+                  ${state.catalogos.alumnos.filter((row) => row.grupo_id === plan.grupo_id).map((row) => `<label class="check-item"><input type="checkbox" value="${escapeHtml(row.alumno_id)}" onchange="toggleInlinePlanAlumno('${escapeHtml(plan.planeacion_id)}', '${escapeHtml(row.alumno_id)}', this.checked)"${inlineState.alumnos.includes(row.alumno_id) ? ' checked' : ''}${allowInlineEdit ? '' : ' disabled'}><span><strong>${escapeHtml(row.nombre_mostrado || row.nombre_completo || row.alumno_id)}</strong><br><span class="mini">${escapeHtml(row.matricula || row.alumno_id)}</span></span></label>`).join('') || '<div class="mini">No hay alumnos disponibles para este grupo.</div>'}
+                </div>
+              </div>
+              <div class="stack">${actividades || '<span class="mini">Sin actividades capturadas.</span>'}</div>
+              ${allowInlineEdit ? `<div class="actions compact"><button class="btn-secondary" type="button" onclick="saveInlinePlan(this, '${escapeHtml(plan.planeacion_id)}')">Guardar cambios</button></div>` : ''}
+              <div id="plan-inline-feedback-${escapeHtml(plan.planeacion_id)}" class="inline-feedback detail-inline-feedback"></div>
+              <div class="stack">
+                <div><strong>Observaciones generales</strong></div>
+                ${obsGeneralesHtml}
+                <div class="actions compact">
+                  <textarea id="obs-general-${escapeHtml(plan.planeacion_id)}" placeholder="Agregar observación general para administración"${allowGeneralObs ? '' : ' disabled'}></textarea>
+                  ${allowGeneralObs ? `<button class="btn-ghost" type="button" onclick="saveGeneralObservation(this, '${escapeHtml(plan.planeacion_id)}')">Agregar observación general</button>` : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>'}
+                </div>
+              </div>
+              <div class="stack">
+                <div><strong>Observación final por alumno</strong></div>
+                ${obsAlumnoHtml}
+              </div>
+            </div>
+          </article>`;
       }).join('');
     }
 
@@ -2840,6 +3149,40 @@
         en_revision: 'En revisión',
         resuelta: 'Resuelta'
       })[String(status || '').trim()] || String(status || 'Sin estado');
+    }
+
+    async function saveInlinePlan(button, planId) {
+      const plan = getPlanById(planId);
+      const inline = state.ui.inlinePlans[planId];
+      if (!plan || !inline) throw new Error('Planeación no encontrada.');
+      if (!(inline.alumnos || []).length) throw new Error('Selecciona al menos un alumno.');
+      await handleAction('guardarPlaneacionCompletaInline', async () => {
+        await api('guardarPlaneacionCompleta', {
+          planeacion_id: planId,
+          fecha_planeacion: toYmdFrontend((getWeekById(plan.semana_id) || {}).fecha_inicio || ''),
+          semana_id: plan.semana_id,
+          grupo_id: plan.grupo_id,
+          materia_id: plan.materia_id,
+          frase_semana: String(inline.frase || '').trim(),
+          alumnos_ids: inline.alumnos,
+          actividades: (inline.activities || []).map((activity) => ({
+            actividad_id: activity.actividad_id || '',
+            texto: String(activity.texto || '').trim(),
+            material_en_carpeta: activity.material_en_carpeta || 'no_requiere',
+            realizada: canUseAdminShell() ? (activity.realizada || '') : '',
+            comentario_cierre: canUseAdminShell() ? String(activity.comentario_cierre || '').trim() : '',
+            last_known_updated_at: activity.last_known_updated_at || ''
+          })),
+          last_known_updated_at: plan.fecha_actualizacion || '',
+          last_known_activities_version: plan.actividades_version_actual || '',
+          request_id: uid('PLAINLINE')
+        });
+        resetInlinePlanState(planId);
+        await refreshPlaneaciones();
+        renderAll();
+        setInlineFeedback('plan-inline-feedback-' + planId, 'Cambios guardados.', 'success');
+        setBanner('Planeación actualizada.', 'success');
+      }, { button, key: buildActionKey('guardarPlaneacionCompletaInline', [planId]) });
     }
 
     function renderAlertas() {
@@ -2927,6 +3270,7 @@
       renderEvaluationDependencies();
       renderPlaneacionesList();
       renderAlertas();
+      renderPlanBuilderVisibility();
       syncRoleUi();
       activateTab(state.activeTab);
     }
@@ -2937,8 +3281,8 @@
       const editorMode = state.planEditor.mode;
       const semana = state.planEditor.mode === 'edit' && !hasAdminPower
         ? getWeekById(state.planEditor.lockedSemanaId)
-        : getWeekByDate($('planFecha').value);
-      if (!semana) throw new Error('Selecciona una fecha válida dentro de una semana registrada.');
+        : getWeekByDateOrDraft($('planFecha').value);
+      if (!semana) throw new Error('Selecciona una fecha válida para construir la semana.');
       if (!$('planMateria').value) throw new Error('Selecciona una materia.');
       const grupoIds = state.planEditor.mode === 'edit'
         ? (hasAdminPower ? getSelectedGroupIds() : [state.planEditor.lockedGrupoId])
@@ -2973,7 +3317,8 @@
       if (editorMode === 'edit') {
         responseData = await api('guardarPlaneacionCompleta', {
           planeacion_id: state.planEditor.planId,
-          semana_id: semana.semana_id,
+          fecha_planeacion: $('planFecha').value,
+          semana_id: semana.draft ? '' : semana.semana_id,
           grupo_id: grupoIds[0],
           materia_id: $('planMateria').value,
           frase_semana: $('planFrase').value.trim(),
@@ -2986,7 +3331,7 @@
       } else {
         responseData = await api('crearPlaneacion', {
           fecha_planeacion: $('planFecha').value,
-          semana_id: semana.semana_id,
+          semana_id: semana.draft ? '' : semana.semana_id,
           grupo_ids: grupoIds,
           materia_id: $('planMateria').value,
           frase_semana: $('planFrase').value.trim(),
@@ -3000,6 +3345,7 @@
       await refreshPlaneaciones();
       await refreshAlertas();
       renderAll();
+      setInlineFeedback('planBuilderFeedback', editorMode === 'edit' ? 'Planeación actualizada.' : 'Planeación guardada.', 'success');
       setBanner(
         responseData && responseData._meta && responseData._meta.message
           ? responseData._meta.message
@@ -3196,6 +3542,7 @@
         if (input) input.value = '';
         await refreshPlaneaciones();
         renderAll();
+        setInlineFeedback('plan-inline-feedback-' + planId, 'Observación general guardada.', 'success');
         setBanner('Observación general guardada.', 'success');
       }, { button, key: buildActionKey('crearObsSemana', [planId, texto.slice(0, 40)]) });
     }
@@ -3213,6 +3560,7 @@
         });
         await refreshPlaneaciones();
         renderAll();
+        setInlineFeedback('plan-inline-feedback-' + planId, 'Observación final por alumno guardada.', 'success');
         setBanner('Observación final por alumno guardada.', 'success');
       }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
     }
@@ -3220,8 +3568,15 @@
     async function editPlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
+      if (!canUseAdminShell()) {
+        togglePlanExpanded(planId, true);
+        setBanner('Planeación abierta en la misma tarjeta.', 'info', { button });
+        return;
+      }
       loadPlanIntoEditor(plan);
+      state.ui.planBuilderExpanded = true;
       activateTab('planeaciones');
+      renderPlanBuilderVisibility();
       setBanner('Planeación cargada en el editor.', 'info', { button });
     }
 
@@ -3264,28 +3619,38 @@
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
-      const obs = window.prompt('Observación final de la semana (opcional):', '') || '';
+      openCloseWeekModal(planId);
+      setBanner('Completa la observación final y confirma el cierre.', 'info', { button });
+    }
+
+    async function submitCloseWeek(button) {
+      const planId = state.ui.closeWeekPlanId;
+      const plan = getPlanById(planId);
+      if (!plan) throw new Error('Planeación no encontrada.');
+      const obs = $('closeWeekObsInput').value.trim();
       await handleAction('confirmarCierre', async () => {
-        const activityRows = Array.isArray(plan.actividades) ? plan.actividades : [];
-        if (!activityRows.length) {
-          throw new Error('No puedes cerrar una planeación sin actividades.');
-        }
+        const currentPlan = getPlanById(planId) || plan;
+        const inline = bindPlanInlineState(currentPlan);
+        const activityRows = Array.isArray(inline.activities) ? inline.activities : [];
+        if (!activityRows.length) throw new Error('No puedes cerrar una planeación sin actividades.');
+        activityRows.forEach((item, idx) => {
+          if (!['si', 'no'].includes(String(item.realizada || ''))) {
+            throw new Error('Debes confirmar si se realizó la actividad ' + String(idx + 1) + '.');
+          }
+          if (String(item.realizada || '') === 'no' && !String(item.comentario_cierre || '').trim()) {
+            throw new Error('La actividad ' + String(idx + 1) + ' necesita comentario porque no se realizó.');
+          }
+        });
+        await refreshPlaneaciones();
+        const freshPlan = getPlanById(planId) || currentPlan;
         for (const item of activityRows) {
-          const realizada = $('activity-realizada-' + item.actividad_id).value;
-          const material = $('activity-material-' + item.actividad_id).value;
-          const comentario = $('activity-comment-' + item.actividad_id).value.trim();
-          if (!['si', 'no'].includes(realizada)) {
-            throw new Error('Debes confirmar si se realizó la actividad ' + String(item.orden || '?') + '.');
-          }
-          if (realizada === 'no' && !comentario) {
-            throw new Error('La actividad ' + String(item.orden || '?') + ' necesita comentario porque no se realizó.');
-          }
+          const latestAct = (freshPlan.actividades || []).find((row) => row.actividad_id === item.actividad_id);
           await api('actualizarActividad', {
             actividad_id: item.actividad_id,
-            realizada,
-            material_en_carpeta: material,
-            comentario_cierre: comentario,
-            last_known_updated_at: item.fecha_actualizacion || '',
+            realizada: item.realizada,
+            material_en_carpeta: item.material_en_carpeta,
+            comentario_cierre: String(item.comentario_cierre || '').trim(),
+            last_known_updated_at: latestAct ? (latestAct.fecha_actualizacion || '') : '',
             request_id: uid('ACTCLOSE')
           });
         }
@@ -3294,6 +3659,8 @@
           obs_semana: obs,
           request_id: uid('CIE')
         });
+        closeCloseWeekModal();
+        resetInlinePlanState(planId);
         await refreshPlaneaciones();
         await refreshAlertas();
         renderAll();
@@ -3324,12 +3691,15 @@
         button: event.currentTarget,
         key: buildActionKey(state.planEditor.mode === 'edit' ? 'guardarPlaneacionCompleta' : 'crearPlaneacion', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
+      $('togglePlanBuilderBtn').addEventListener('click', () => togglePlanBuilder());
       $('resetPlanEditorBtn').addEventListener('click', () => resetPlanEditor());
       $('addActivityBtn').addEventListener('click', () => addEditorActivity());
       $('selectAllGroupsBtn').addEventListener('click', () => toggleAllGroups(true));
       $('clearAllGroupsBtn').addEventListener('click', () => toggleAllGroups(false));
       $('selectAllVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(true));
       $('clearVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(false));
+      $('closeWeekCancelBtn').addEventListener('click', () => closeCloseWeekModal());
+      $('closeWeekConfirmBtn').addEventListener('click', (event) => submitCloseWeek(event.currentTarget));
       $('saveObsBtn').addEventListener('click', (event) => handleAction('crearObsAlumno', saveObservation, {
         button: event.currentTarget,
         key: buildActionKey('crearObsAlumno', [$('obsPlan').value, $('obsAlumno').value, $('obsPeriodo').value, $('obsTipo').value, $('obsNota').value.trim().slice(0, 40)])
@@ -3406,7 +3776,13 @@
     window.removeEditorActivity = removeEditorActivity;
     window.usePlanForActivities = usePlanForActivities;
     window.usePlanForObservation = usePlanForObservation;
+    window.togglePlanExpanded = togglePlanExpanded;
+    window.updateInlinePlanField = updateInlinePlanField;
+    window.toggleInlinePlanAlumno = toggleInlinePlanAlumno;
+    window.updateInlineActivityField = updateInlineActivityField;
+    window.saveInlinePlan = saveInlinePlan;
 
+    $('closeWeekModal').addEventListener('click', (event) => { if (event.target === $('closeWeekModal')) closeCloseWeekModal(); });
     boot();
   </script>
 </body>
