@@ -2751,9 +2751,9 @@
       const workspaceSessionCopy = $('workspaceSessionCopy');
       const user = state.session && state.session.usuario ? state.session.usuario : null;
       if (!user) {
-        badge.textContent = 'Sin sesi�n';
+        badge.textContent = 'Sin sesión';
         badge.className = 'pill';
-        info.textContent = 'A�n no hay una sesi�n activa.';
+        info.textContent = 'Aún no hay una sesión activa.';
         if (workspaceSessionCopy) {
           workspaceSessionCopy.innerHTML = '<strong>Sin sesion</strong><span class="mini">Libre Aprendiz</span>';
         }
@@ -2767,7 +2767,7 @@
       badge.className = 'pill brand';
       info.innerHTML =
         '<strong>' + escapeHtml(user.nombre) + '</strong><br>' +
-        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' � ' +
+        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' · ' +
         escapeHtml(user.rol) + '</span>';
       if (workspaceSessionCopy) {
         workspaceSessionCopy.innerHTML =
@@ -3736,7 +3736,7 @@
       const tipo = String((alerta && alerta.tipo_alerta) || '').trim();
       const descripcion = String((alerta && alerta.descripcion) || '').trim();
       if (tipo === 'material_pendiente' && descripcion.indexOf('Material no confirmado en carpetas') === 0) {
-        const nombre = descripcion.split('�').slice(1).join('�').trim();
+        const nombre = descripcion.split('—').slice(1).join('—').trim();
         return nombre
           ? ('Falta confirmar el material en carpetas para ' + nombre)
           : 'Falta confirmar el material en carpetas.';
