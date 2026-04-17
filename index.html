@@ -664,6 +664,10 @@
       gap: 10px;
     }
 
+    .alert-item-actions {
+      margin-top: 10px;
+    }
+
     .alert-type {
       font-weight: 800;
       color: var(--text);
@@ -723,6 +727,21 @@
 
     .obs-final-actions {
       margin-top: 6px;
+    }
+
+    .plan-alert-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(240, 123, 32, 0.16);
+      border: 1px solid rgba(240, 123, 32, 0.26);
+      color: #ffd4a8;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-top: 10px;
     }
 
     .meta-grid {
@@ -3614,6 +3633,7 @@
           ? ['activa', 'cierre_pendiente'].includes(plan.estado)
           : plan.estado === 'activa';
         const isOpen = state.openPlanId === plan.planeacion_id;
+        const hasMaterialAlert = planHasOpenMaterialAlert(plan.planeacion_id);
         const alumnosCount = alumnos.length || 0;
         const actividadesCount = Array.isArray(plan.actividades) ? plan.actividades.length : 0;
         const actividades = (plan.actividades || []).map((item) => {
@@ -3695,6 +3715,7 @@
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
                 '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</div>' +
               '</div>' +
+              (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
               '<div class="actions" style="margin-top:14px;">' +
                 '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
               '</div>' +
@@ -3716,6 +3737,7 @@
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
               '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + '</div>' +
             '</div>' +
+            (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
             (allowStructureEdit
               ? renderOpenPlanStructureEditor(plan, allowStructureEdit)
               : ('<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
@@ -3780,6 +3802,33 @@
       return !/(obs|observacion|observación|nota|seguimiento)/.test(tipo);
     }
 
+    function isOpenMaterialAlert(alerta) {
+      const tipo = String((alerta && alerta.tipo_alerta) || '').trim();
+      const estado = String((alerta && alerta.estado) || '').trim();
+      return ['material_pendiente', 'material_inicio_semana_pendiente'].includes(tipo) && estado !== 'resuelta';
+    }
+
+    function planHasOpenMaterialAlert(planId) {
+      return state.alertas.some((alerta) => alerta.planeacion_id === planId && isOpenMaterialAlert(alerta));
+    }
+
+    function openPlanFromAlert(button, planId) {
+      activateTab('planeaciones');
+      if (state.openPlanId !== planId) {
+        state.openPlanId = planId;
+        const plan = getPlanById(planId);
+        state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
+      }
+      closePlanBuilder();
+      renderPlaneacionesList();
+      window.requestAnimationFrame(() => {
+        const card = $('plan-card-' + planId);
+        if (card && typeof card.scrollIntoView === 'function') {
+          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+
     function renderAlertas() {
       const host = $('alertsList');
       if (!host) return;
@@ -3808,6 +3857,7 @@
             '<div>' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
             (contexto ? '<div class="mini">' + escapeHtml(contexto) + '</div>' : '') +
             (alerta.fecha_creacion ? '<div class="mini">Creada: ' + escapeHtml(formatFechaHumana(alerta.fecha_creacion)) + '</div>' : '') +
+            (plan ? '<div class="actions alert-item-actions"><button class="btn-open-plan" type="button" onclick="openPlanFromAlert(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir planeación</button></div>' : '') +
           '</div>'
         );
       }).join('');
@@ -4138,6 +4188,7 @@
           draftActivity.comentario_cierre = comentario;
         }
         await refreshPlaneaciones();
+        await refreshAlertas();
         if (state.openPlanDraft && state.openPlanId && state.openPlanDraft.planId === state.openPlanId) {
           const freshPlan = getPlanById(state.openPlanId);
           if (freshPlan) {
@@ -4498,6 +4549,7 @@
     window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
     window.saveAllAlumnoFinalObservations = saveAllAlumnoFinalObservations;
     window.autoGrowObsFinal = autoGrowObsFinal;
+    window.openPlanFromAlert = openPlanFromAlert;
     window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
     window.updateOpenPlanDraftField = updateOpenPlanDraftField;
     window.toggleOpenPlanDraftAlumno = toggleOpenPlanDraftAlumno;
