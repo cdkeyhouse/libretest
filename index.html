@@ -3244,7 +3244,9 @@
         const allowStructureEdit = hasAdminPower || ((['borrador', 'activa'].includes(plan.estado) && !weekClosed) || plan.estado === 'rechazada');
         const allowGeneralObs = hasAdminPower || !weekClosed;
         const allowAlumnoObs = hasAdminPower || !weekClosed;
-        const allowClose = ['activa', 'cierre_pendiente'].includes(plan.estado);
+        const allowClose = hasAdminPower
+          ? ['activa', 'cierre_pendiente'].includes(plan.estado)
+          : plan.estado === 'activa';
         const isOpen = state.openPlanId === plan.planeacion_id;
         const alumnosCount = alumnos.length || 0;
         const actividadesCount = Array.isArray(plan.actividades) ? plan.actividades.length : 0;
@@ -3381,6 +3383,7 @@
       return ({
         planeacion_semana_cerrada_aprobacion: 'Aprobación pendiente',
         planeacion_rechazada: 'Planeación rechazada',
+        material_pendiente: 'Material pendiente',
         material_inicio_semana_pendiente: 'Material pendiente'
       })[String(tipo || '').trim()] || String(tipo || 'Alerta');
     }
