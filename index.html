@@ -602,6 +602,25 @@
       color: var(--la-cyan) !important;
     }
 
+    .workspace-session-bar {
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      border: 1px solid var(--border-strong);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .workspace-session-copy {
+      display: grid;
+      gap: 2px;
+    }
+
+    .workspace-session-copy strong {
+      color: var(--text-strong);
+    }
+
     .plan-card .badge {
       border-width: 1px;
       border-style: solid;
@@ -1490,6 +1509,10 @@
     <div id="statusBanner" class="status-banner info">Todo listo para comenzar la jornada.</div>
 
     <div id="workspaceSessionBar" class="actions workspace-session-bar" hidden>
+      <div id="workspaceSessionCopy" class="workspace-session-copy">
+        <strong>Sin sesion</strong>
+        <span class="mini">Libre Aprendiz</span>
+      </div>
       <button id="workspaceLogoutBtn" class="btn-ghost" type="button">Cerrar sesion</button>
     </div>
 
@@ -2648,10 +2671,14 @@
       const logoutBtn = $('logoutBtn');
       const workspaceLogoutBtn = $('workspaceLogoutBtn');
       const workspaceSessionBar = $('workspaceSessionBar');
+      const workspaceSessionCopy = $('workspaceSessionCopy');
       if (!state.session || !state.session.usuario) {
         badge.textContent = 'Sin sesión';
         badge.className = 'pill';
         info.textContent = 'Aún no hay una sesión activa.';
+        if (workspaceSessionCopy) {
+          workspaceSessionCopy.innerHTML = '<strong>Sin sesion</strong><span class="mini">Libre Aprendiz</span>';
+        }
         if (logoutBtn) logoutBtn.hidden = true;
         if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = true;
         if (workspaceSessionBar) workspaceSessionBar.hidden = true;
@@ -2665,6 +2692,14 @@
         '<span class="mini">' + escapeHtml(state.session.usuario.facilitador_id) + ' · ' +
         escapeHtml(state.session.usuario.rol) + '</span>';
       info.innerHTML = info.innerHTML.replace(/\u00C2\u00B7/g, '\u00B7');
+      if (workspaceSessionCopy) {
+        workspaceSessionCopy.innerHTML =
+          '<strong>' + escapeHtml(state.session.usuario.nombre) + '</strong>' +
+          '<span class="mini">' + escapeHtml(state.session.usuario.facilitador_id) + ' Â· ' +
+          escapeHtml(state.session.usuario.rol) + '</span>';
+        workspaceSessionCopy.innerHTML = workspaceSessionCopy.innerHTML.replace(/\u00C2\u00B7/g, '\u00B7');
+        workspaceSessionCopy.innerHTML = '<strong>' + escapeHtml(state.session.usuario.nombre) + '</strong><span class="mini">' + escapeHtml(state.session.usuario.facilitador_id) + ' | ' + escapeHtml(state.session.usuario.rol) + '</span>';
+      }
       if (logoutBtn) logoutBtn.hidden = false;
       if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = false;
       if (workspaceSessionBar) workspaceSessionBar.hidden = false;
@@ -2874,10 +2909,16 @@
     }
 
     function getSemanaHintText(semana) {
-      if (!semana) return 'Selecciona una fecha.';
-      if (String(semana.cerrada_global || '').toLowerCase() === 'si') return 'Semana cerrada.';
-      if (semana.draft) return 'Se creara al guardar.';
       return '';
+    }
+
+    function getWeekLabelForPlan(plan, semana) {
+      if (semana) return formatSemanaLabel(semana);
+      const weekId = String(plan && plan.semana_id || '').trim();
+      const match = weekId.match(/^SEM_(\d{4})(\d{2})(\d{2})$/);
+      if (!match) return weekId || '-';
+      const inferred = buildWeekRangeFromDate(match[1] + '-' + match[2] + '-' + match[3]);
+      return inferred ? formatSemanaLabel(inferred) : weekId;
     }
 
     function getPlanStatusLabel(status) {
@@ -2908,7 +2949,11 @@
       state.openPlanDraft = null;
       if (state.ui) state.ui.planBuilderExpanded = false;
       $('planFecha').value = '';
+      $('planMateria').value = '';
       $('planFrase').value = '';
+      if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
+      if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
+      if ($('planActivitiesList')) $('planActivitiesList').innerHTML = '';
       renderPlanEditor();
       renderPlanBuilderVisibility();
       renderAlumnoFilterUi();
@@ -2920,6 +2965,19 @@
           ? 'Consulta histórico, filtra y corrige cualquier planeación del sistema.'
           : 'Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
       }
+    }
+
+    function closePlanBuilder() {
+      state.planEditor = emptyPlanEditorState();
+      if (state.ui) state.ui.planBuilderExpanded = false;
+      if ($('planFecha')) $('planFecha').value = '';
+      if ($('planMateria')) $('planMateria').value = '';
+      if ($('planFrase')) $('planFrase').value = '';
+      if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
+      if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
+      if ($('planActivitiesList')) $('planActivitiesList').innerHTML = '';
+      renderPlanEditor();
+      renderPlanBuilderVisibility();
     }
 
     function loadPlanIntoEditor(plan) {
@@ -3341,8 +3399,17 @@
         const plan = getPlanById(planId);
         state.openPlanId = planId;
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
+        closePlanBuilder();
       }
       renderPlaneacionesList();
+      if (state.openPlanId) {
+        window.requestAnimationFrame(() => {
+          const card = $('plan-card-' + planId);
+          if (card && typeof card.scrollIntoView === 'function') {
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      }
       setBanner(state.openPlanId ? 'Planeación abierta.' : 'Planeación cerrada.', 'info', { button });
     }
 
@@ -3351,9 +3418,10 @@
       const draft = getOpenPlanDraft(plan);
       if (!draft) return '';
       const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
-      const weekText = week ? [formatSemanaLabel(week), getSemanaHintText(week)].filter(Boolean).join(' · ') : 'Selecciona una fecha.';
+      const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
       const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
       const selected = new Set(draft.alumnos_ids || []);
+      const showSeguimientoFields = String(plan.estado || '').trim() === 'activa';
       const activitiesHtml = (draft.activities || []).map((activity, index) => (
         '<div class="activity-editor">' +
           '<div class="activity-editor-top">' +
@@ -3367,12 +3435,19 @@
           '<label>Actividad</label>' +
           '<textarea onchange="updateOpenPlanDraftActivityField(' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
           '<div class="activity-inline-grid">' +
-            '<div><label>Material</label><select onchange="updateOpenPlanDraftActivityField(' + index + ', \'material_en_carpeta\', this.value)">' +
+            '<div><label>Material</label><select id="activity-material-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'material_en_carpeta\', this.value)">' +
               '<option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
               '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
               '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
             '</select></div>' +
-            '<div class="helper" style="grid-column: span 2;">El seguimiento de realizada / no realizada se captura al cerrar la semana.</div>' +
+            (showSeguimientoFields
+              ? '<div><label>¿Se realizó?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
+                  '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
+                  '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
+                '</select></div>' +
+                '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(activity.actividad_id) + '" type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>'
+              : '<div class="helper" style="grid-column: span 2;">El seguimiento de realizada / no realizada se captura al cerrar la semana.</div>') +
           '</div>' +
         '</div>'
       )).join('');
@@ -3435,6 +3510,7 @@
         const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
         const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
+        const weekLabel = getWeekLabelForPlan(plan, semana);
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
         const hasAdminPower = role === 'admin' || role === 'directora';
         const alumnos = (plan.alumnos || []).map((pa) => pa.nombre_snapshot || pa.alumno_id);
@@ -3519,12 +3595,12 @@
 
         if (!isOpen) {
           return (
-            '<article class="plan-card">' +
+            '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card">' +
               '<div class="plan-top">' +
                 '<div>' +
                   '<h3>' + escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
-                  ' · ' + escapeHtml(semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
                 '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
               '</div>' +
@@ -3540,12 +3616,12 @@
         }
 
         return (
-          '<article class="plan-card">' +
+          '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card">' +
             '<div class="plan-top">' +
               '<div>' +
                 '<h3>' + escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id) + '</h3>' +
                 '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
-                ' · ' + escapeHtml(semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id) + '</div>' +
+                ' · ' + escapeHtml(weekLabel) + '</div>' +
               '</div>' +
               '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
             '</div>' +
@@ -3761,8 +3837,7 @@
       }
 
       resetPlanEditor();
-      await refreshPlaneaciones();
-      await refreshAlertas();
+      await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
       renderAll();
       setBanner(
         responseData && responseData._meta && responseData._meta.message
@@ -3941,6 +4016,7 @@
           last_known_updated_at: lastKnownUpdatedAt,
           request_id: uid('ACTUPD')
         });
+        state.openPlanDraft = null;
         await refreshPlaneaciones();
         renderAll();
         setBanner('Actividad actualizada.', 'success');
@@ -4026,8 +4102,7 @@
         });
         state.openPlanId = planId;
         state.openPlanDraft = null;
-        await refreshPlaneaciones();
-        await refreshAlertas();
+        await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
         renderAll();
         setBanner('Planeación actualizada.', 'success');
       }, { button, key: buildActionKey('guardarPlaneacionCompletaInline', [planId, draft.fecha_planeacion || fallbackDate, alumnosIds.join(',')]) });
@@ -4074,15 +4149,22 @@
       if (!plan) throw new Error('Planeación no encontrada.');
       const obs = window.prompt('Observación final de la semana (opcional):', '') || '';
       await handleAction('confirmarCierre', async () => {
-        const activityRows = Array.isArray(plan.actividades) ? plan.actividades : [];
+        const currentPlan = getPlanById(planId) || plan;
+        const draft = getOpenPlanDraft(currentPlan);
+        const activityRows = Array.isArray(draft && draft.activities) && draft.activities.length
+          ? draft.activities
+          : (Array.isArray(currentPlan.actividades) ? currentPlan.actividades : []);
         if (!activityRows.length) {
           throw new Error('No puedes cerrar una planeación sin actividades.');
         }
         const actividades = [];
         for (const item of activityRows) {
-          const realizada = $('activity-realizada-' + item.actividad_id).value;
-          const material = $('activity-material-' + item.actividad_id).value;
-          const comentario = $('activity-comment-' + item.actividad_id).value.trim();
+          const realizadaNode = $('activity-realizada-' + item.actividad_id);
+          const materialNode = $('activity-material-' + item.actividad_id);
+          const comentarioNode = $('activity-comment-' + item.actividad_id);
+          const realizada = realizadaNode ? realizadaNode.value : normalizeRealizadaStatus(item.realizada);
+          const material = materialNode ? materialNode.value : normalizeMaterialStatus(item.material_en_carpeta);
+          const comentario = comentarioNode ? comentarioNode.value.trim() : String(item.comentario_cierre || '').trim();
           if (!['si', 'no'].includes(realizada)) {
             throw new Error('Debes confirmar si se realizó la actividad ' + String(item.orden || '?') + '.');
           }
@@ -4094,7 +4176,7 @@
             realizada,
             material_en_carpeta: material,
             comentario_cierre: comentario,
-            last_known_updated_at: item.fecha_actualizacion || ''
+            last_known_updated_at: item.last_known_updated_at || item.fecha_actualizacion || ''
           });
         }
         await api('confirmarCierre', {
@@ -4103,6 +4185,7 @@
           obs_semana: obs,
           request_id: uid('CIE')
         });
+        state.openPlanDraft = null;
         await refreshPlaneaciones();
         await refreshAlertas();
         renderAll();
