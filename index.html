@@ -1034,6 +1034,118 @@
       background: rgba(29, 182, 193, 0.06);
       color: var(--text);
     }
+    .admin-notification-toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .admin-notification-editor {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(39, 46, 51, 0.96), rgba(33, 38, 43, 0.96));
+    }
+    .admin-notification-editor[hidden] {
+      display: none !important;
+    }
+    .admin-notification-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .admin-notification-list {
+      display: grid;
+      gap: 14px;
+    }
+    .admin-notification-card {
+      border-radius: 22px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(48,44,41,0.98), rgba(40,36,33,0.98));
+      display: grid;
+      gap: 12px;
+    }
+    .admin-notification-card.is-high,
+    .institutional-notice-card.is-high {
+      box-shadow: inset 0 0 0 1px rgba(245, 192, 36, 0.18);
+      border-color: rgba(245, 192, 36, 0.28);
+    }
+    .admin-notification-top,
+    .institutional-notice-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .admin-notification-meta,
+    .institutional-notice-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .notice-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.06);
+      color: var(--text-strong);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .notice-chip.high {
+      background: rgba(245, 192, 36, 0.16);
+      color: #ffe08f;
+      border-color: rgba(245, 192, 36, 0.24);
+    }
+    .notice-chip.publicada {
+      background: rgba(91,196,245,0.16);
+      color: #b8e8ff;
+    }
+    .notice-chip.borrador {
+      background: rgba(155,163,168,0.16);
+      color: #d8dde0;
+    }
+    .notice-chip.cerrada {
+      background: rgba(231, 125, 35, 0.16);
+      color: #ffd1a1;
+    }
+    .notice-chip.archivada {
+      background: rgba(125,135,142,0.16);
+      color: #cfd5d9;
+    }
+    .notification-audience-checklist {
+      max-height: 220px;
+      overflow: auto;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255,255,255,0.04);
+      display: grid;
+      gap: 10px;
+    }
+    .notification-audience-checklist[hidden] {
+      display: none !important;
+    }
+    .institutional-notices-card[hidden] {
+      display: none !important;
+    }
+    .institutional-notice-card {
+      border-radius: 22px;
+      padding: 16px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(48,44,41,0.98), rgba(40,36,33,0.98));
+      display: grid;
+      gap: 10px;
+    }
+    .institutional-notice-message,
+    .admin-notification-message {
+      white-space: pre-wrap;
+      line-height: 1.55;
+    }
     .admin-planeaciones-shell {
       display: none;
     }
@@ -1827,18 +1939,63 @@
       </section>
 
       <section id="admin-panel-notificaciones" class="admin-panel">
-        <article class="admin-placeholder">
-          <div>
-            <h3>Notificaciones globales</h3>
-            <p>Este módulo servirá para publicar mensajes generales dirigidos a facilitadores, con control de vigencia, prioridad y visibilidad.</p>
+        <article class="admin-toolbar">
+          <div class="admin-toolbar-head">
+            <div>
+              <h3>Notificaciones globales</h3>
+              <p class="subtle">Publica avisos institucionales para facilitadores sin mezclarlo con alertas operativas ni observaciones.</p>
+            </div>
+            <div class="admin-notification-toolbar-actions">
+              <button id="adminNotificationNewBtn" class="btn-primary" type="button">Nueva notificación</button>
+              <button id="adminNotificationFilterActiveBtn" class="btn-ghost" type="button">Ver activas</button>
+              <button id="adminNotificationFilterDraftBtn" class="btn-ghost" type="button">Ver borradores</button>
+              <button id="adminNotificationFilterClosedBtn" class="btn-ghost" type="button">Ver cerradas</button>
+            </div>
           </div>
-          <div class="admin-action-list">
-            <span class="admin-action-chip">Nueva notificación</span>
-            <span class="admin-action-chip">Borrador / Publicada</span>
-            <span class="admin-action-chip">Fecha de inicio</span>
-            <span class="admin-action-chip">Fecha de cierre</span>
+          <div id="adminNotificationEditor" class="admin-notification-editor" hidden>
+            <div class="admin-notification-grid">
+              <div>
+                <label for="adminNotificationTitle">Título</label>
+                <input id="adminNotificationTitle" type="text" maxlength="150">
+              </div>
+              <div>
+                <label for="adminNotificationPriority">Prioridad</label>
+                <select id="adminNotificationPriority">
+                  <option value="normal">Normal</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label for="adminNotificationMessage">Mensaje</label>
+              <textarea id="adminNotificationMessage"></textarea>
+            </div>
+            <div class="admin-notification-grid">
+              <div>
+                <label for="adminNotificationStart">Fecha de inicio</label>
+                <input id="adminNotificationStart" type="date">
+              </div>
+              <div>
+                <label for="adminNotificationEnd">Fecha de cierre</label>
+                <input id="adminNotificationEnd" type="date">
+              </div>
+            </div>
+            <div>
+              <label for="adminNotificationAudience">Visible para</label>
+              <select id="adminNotificationAudience">
+                <option value="todos">Todos los facilitadores</option>
+                <option value="especificos">Facilitadores específicos</option>
+              </select>
+            </div>
+            <div id="adminNotificationAudienceList" class="notification-audience-checklist" hidden></div>
+            <div class="actions compact">
+              <button id="adminNotificationSaveDraftBtn" class="btn-secondary" type="button">Guardar borrador</button>
+              <button id="adminNotificationPublishBtn" class="btn-primary" type="button">Publicar</button>
+              <button id="adminNotificationCancelBtn" class="btn-ghost" type="button">Cancelar</button>
+            </div>
           </div>
-          <div class="admin-note">Cascarón listo: siguiente fase sería agregar editor, listado de notificaciones activas y vista para facilitadores.</div>
+          <div id="adminNotificationFeedback" class="inline-feedback"></div>
+          <div id="adminNotificationsList" class="admin-notification-list"></div>
         </article>
       </section>
 
@@ -1909,6 +2066,15 @@
 
     <section id="adminPlaneacionesShell" class="admin-planeaciones-shell">
     <section class="workspace">
+      <article id="institutionalNoticesCard" class="card institutional-notices-card" hidden>
+        <div class="card-head">
+          <div>
+            <h2>Avisos institucionales</h2>
+            <p class="subtle">Mensajes generales compartidos por administración para acompañar el trabajo semanal.</p>
+          </div>
+        </div>
+        <div id="institutionalNoticesList" class="admin-notification-list"></div>
+      </article>
       <div class="tabs">
         <button class="tab-btn is-active" data-tab="planeaciones" type="button">Planeaciones</button>
       </div>
@@ -2257,10 +2423,13 @@
       },
       planeaciones: [],
       alertas: [],
+      notificaciones: [],
       openPlanId: '',
       openPlanDraft: null,
       ui: {
-        planBuilderExpanded: false
+        planBuilderExpanded: false,
+        notificationEditorExpanded: false,
+        notificationFilter: 'activas'
       },
       planEditor: {
         mode: 'create',
@@ -2270,6 +2439,17 @@
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: []
+      },
+      notificationEditor: {
+        notificacion_id: '',
+        titulo: '',
+        mensaje: '',
+        prioridad: 'normal',
+        fecha_inicio: '',
+        fecha_cierre: '',
+        visible_para: 'todos',
+        facilitadores_ids: [],
+        estatus: 'borrador'
       },
       activeTab: 'planeaciones',
       activeAdminModule: 'dashboard'
@@ -2309,6 +2489,20 @@
       };
     }
 
+    function createEmptyNotificationEditorState() {
+      return {
+        notificacion_id: '',
+        titulo: '',
+        mensaje: '',
+        prioridad: 'normal',
+        fecha_inicio: '',
+        fecha_cierre: '',
+        visible_para: 'todos',
+        facilitadores_ids: [],
+        estatus: 'borrador'
+      };
+    }
+
     function resetReportResult() {
       const host = $('reportResult');
       if (host) {
@@ -2319,9 +2513,25 @@
     function clearLoadedData() {
       state.planeaciones = [];
       state.alertas = [];
+      state.notificaciones = [];
       state.catalogos = createEmptyCatalogos();
       state.openPlanId = '';
-      if (state.ui) state.ui.planBuilderExpanded = false;
+      if (state.ui) {
+        state.ui.planBuilderExpanded = false;
+        state.ui.notificationEditorExpanded = false;
+        state.ui.notificationFilter = 'activas';
+      }
+      state.notificationEditor = {
+        notificacion_id: '',
+        titulo: '',
+        mensaje: '',
+        prioridad: 'normal',
+        fecha_inicio: '',
+        fecha_cierre: '',
+        visible_para: 'todos',
+        facilitadores_ids: [],
+        estatus: 'borrador'
+      };
       state.activeTab = 'planeaciones';
       state.activeAdminModule = 'dashboard';
       resetReportResult();
@@ -2713,11 +2923,19 @@
       state.alertas = Array.isArray(data.rows) ? data.rows : [];
     }
 
+    async function refreshNotificaciones() {
+      ensureLoggedIn();
+      const limit = canUseAdminShell() ? 1000 : 200;
+      const data = await api('getNotificaciones', { limit });
+      state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
+    }
+
     async function refreshAll() {
       ensureLoggedIn();
       setBanner('Cargando catálogos y planeaciones...', 'info');
       try {
-        const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), { alert_limit: 20 }));
+        const notificationLimit = canUseAdminShell() ? 1000 : 200;
+        const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), { alert_limit: 20, notification_limit: notificationLimit }));
         state.catalogos = Object.assign(createEmptyCatalogos(), dashboard && dashboard.catalogos ? dashboard.catalogos : {});
         state.planeaciones = Array.isArray(dashboard && dashboard.planeaciones && dashboard.planeaciones.rows)
           ? dashboard.planeaciones.rows
@@ -2725,11 +2943,15 @@
         state.alertas = Array.isArray(dashboard && dashboard.alertas && dashboard.alertas.rows)
           ? dashboard.alertas.rows
           : [];
+        state.notificaciones = Array.isArray(dashboard && dashboard.notificaciones && dashboard.notificaciones.rows)
+          ? dashboard.notificaciones.rows
+          : [];
       } catch (_) {
         await Promise.all([
           refreshCatalogos(),
           refreshPlaneaciones(),
-          refreshAlertas()
+          refreshAlertas(),
+          refreshNotificaciones()
         ]);
       }
       renderAll();
@@ -2878,6 +3100,266 @@
       document.querySelectorAll('.admin-panel').forEach((panel) => {
         panel.classList.toggle('is-active', panel.id === 'admin-panel-' + state.activeAdminModule);
       });
+    }
+
+    function getTodayYmdLocal() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function getNotificationAudienceIds(notification) {
+      if (Array.isArray(notification && notification.facilitadores_ids_array)) {
+        return notification.facilitadores_ids_array.filter(Boolean);
+      }
+      const raw = String(notification && notification.facilitadores_ids || '').trim();
+      return raw ? raw.split(',').map((item) => String(item).trim()).filter(Boolean) : [];
+    }
+
+    function isNotificationActiveToday(notification) {
+      const status = String(notification && notification.estatus || '').trim();
+      if (status !== 'publicada') return false;
+      const today = getTodayYmdLocal();
+      const start = String(notification && notification.fecha_inicio || '').trim();
+      const end = String(notification && notification.fecha_cierre || '').trim();
+      if (start && today < start) return false;
+      if (end && today > end) return false;
+      return true;
+    }
+
+    function formatNotificationVigencia(notification) {
+      const start = String(notification && notification.fecha_inicio || '').trim();
+      const end = String(notification && notification.fecha_cierre || '').trim();
+      if (start && end) return formatFechaHumana(start) + ' al ' + formatFechaHumana(end);
+      if (start) return 'Desde ' + formatFechaHumana(start);
+      if (end) return 'Hasta ' + formatFechaHumana(end);
+      return 'Sin cierre definido';
+    }
+
+    function formatNotificationAudience(notification) {
+      const visiblePara = String(notification && notification.visible_para || 'todos').trim();
+      if (visiblePara !== 'especificos') return 'Todos los facilitadores';
+      const ids = getNotificationAudienceIds(notification);
+      const names = ids.map((id) => {
+        const row = (state.catalogos.facilitadores || []).find((item) => item.facilitador_id === id);
+        return row ? (row.nombre_mostrado || row.nombre_completo || row.facilitador_id) : id;
+      }).filter(Boolean);
+      return names.length ? names.join(', ') : 'Facilitadores específicos';
+    }
+
+    function setNotificationEditorExpanded(next) {
+      if (state.ui) state.ui.notificationEditorExpanded = !!next;
+    }
+
+    function resetNotificationEditor() {
+      state.notificationEditor = createEmptyNotificationEditorState();
+      setNotificationEditorExpanded(false);
+    }
+
+    function openNotificationEditor(notification) {
+      const source = notification || createEmptyNotificationEditorState();
+      state.notificationEditor = {
+        notificacion_id: source.notificacion_id || '',
+        titulo: source.titulo || '',
+        mensaje: source.mensaje || '',
+        prioridad: source.prioridad || 'normal',
+        fecha_inicio: source.fecha_inicio || '',
+        fecha_cierre: source.fecha_cierre || '',
+        visible_para: source.visible_para || 'todos',
+        facilitadores_ids: getNotificationAudienceIds(source),
+        estatus: source.estatus || 'borrador'
+      };
+      setNotificationEditorExpanded(true);
+      renderNotificationsAdmin();
+    }
+
+    function getFilteredAdminNotifications() {
+      const filter = (state.ui && state.ui.notificationFilter) || 'activas';
+      const rows = Array.isArray(state.notificaciones) ? state.notificaciones : [];
+      if (filter === 'borradores') {
+        return rows.filter((row) => String(row.estatus || '').trim() === 'borrador');
+      }
+      if (filter === 'cerradas') {
+        return rows.filter((row) => ['cerrada', 'archivada'].includes(String(row.estatus || '').trim()));
+      }
+      return rows.filter((row) => isNotificationActiveToday(row));
+    }
+
+    function renderNotificationAudienceChecklist() {
+      const host = $('adminNotificationAudienceList');
+      if (!host) return;
+      const show = String(state.notificationEditor.visible_para || 'todos') === 'especificos';
+      host.hidden = !show;
+      if (!show) {
+        host.innerHTML = '';
+        return;
+      }
+      const selected = new Set(state.notificationEditor.facilitadores_ids || []);
+      const facilitadores = (state.catalogos.facilitadores || []).filter((item) => isTruthyValue(item.activo));
+      host.innerHTML = facilitadores.map((row) => {
+        const label = row.nombre_mostrado || row.nombre_completo || row.facilitador_id;
+        return '<label class="check-item">' +
+          '<input type="checkbox" value="' + escapeHtml(row.facilitador_id) + '"' + (selected.has(row.facilitador_id) ? ' checked' : '') + ' onchange="toggleNotificationAudienceFacilitador(\'' + escapeHtml(row.facilitador_id) + '\', this.checked)">' +
+          '<span><strong>' + escapeHtml(label) + '</strong><br><span class="mini">' + escapeHtml(row.facilitador_id) + '</span></span>' +
+        '</label>';
+      }).join('') || '<div class="empty">No hay facilitadores activos disponibles.</div>';
+    }
+
+    function renderNotificationsAdmin() {
+      const panel = $('admin-panel-notificaciones');
+      if (!panel || !canUseAdminShell()) return;
+      const activeBtn = $('adminNotificationFilterActiveBtn');
+      const draftBtn = $('adminNotificationFilterDraftBtn');
+      const closedBtn = $('adminNotificationFilterClosedBtn');
+      const editor = $('adminNotificationEditor');
+      const title = $('adminNotificationTitle');
+      const message = $('adminNotificationMessage');
+      const priority = $('adminNotificationPriority');
+      const start = $('adminNotificationStart');
+      const end = $('adminNotificationEnd');
+      const audience = $('adminNotificationAudience');
+      const list = $('adminNotificationsList');
+      const feedback = $('adminNotificationFeedback');
+      if (editor) editor.hidden = !(state.ui && state.ui.notificationEditorExpanded);
+      if (title) title.value = state.notificationEditor.titulo || '';
+      if (message) message.value = state.notificationEditor.mensaje || '';
+      if (priority) priority.value = state.notificationEditor.prioridad || 'normal';
+      if (start) start.value = state.notificationEditor.fecha_inicio || '';
+      if (end) end.value = state.notificationEditor.fecha_cierre || '';
+      if (audience) audience.value = state.notificationEditor.visible_para || 'todos';
+      const filter = (state.ui && state.ui.notificationFilter) || 'activas';
+      if (activeBtn) activeBtn.classList.toggle('is-active', filter === 'activas');
+      if (draftBtn) draftBtn.classList.toggle('is-active', filter === 'borradores');
+      if (closedBtn) closedBtn.classList.toggle('is-active', filter === 'cerradas');
+      renderNotificationAudienceChecklist();
+      if (feedback) feedback.textContent = '';
+      if (!list) return;
+      const rows = getFilteredAdminNotifications();
+      if (!rows.length) {
+        list.innerHTML = '<div class="empty">Todavía no hay notificaciones en esta vista.</div>';
+        return;
+      }
+      list.innerHTML = rows.map((row) => {
+        const high = String(row.prioridad || '').trim() === 'alta';
+        const status = String(row.estatus || '').trim();
+        const canPublish = status === 'borrador';
+        const canDespublish = status === 'publicada';
+        const canClose = status === 'publicada';
+        const canArchive = status !== 'archivada';
+        return '<article class="admin-notification-card' + (high ? ' is-high' : '') + '">' +
+          '<div class="admin-notification-top">' +
+            '<div>' +
+              '<h3>' + escapeHtml(row.titulo || 'Sin título') + '</h3>' +
+              '<div class="admin-notification-message">' + escapeHtml(row.mensaje || '') + '</div>' +
+            '</div>' +
+            '<div class="admin-notification-meta">' +
+              '<span class="notice-chip ' + escapeHtml(status) + '">' + escapeHtml(status.charAt(0).toUpperCase() + status.slice(1)) + '</span>' +
+              '<span class="notice-chip' + (high ? ' high' : '') + '">' + escapeHtml(high ? 'Alta' : 'Normal') + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mini">Vigencia: ' + escapeHtml(formatNotificationVigencia(row)) + '</div>' +
+          '<div class="mini">Audiencia: ' + escapeHtml(formatNotificationAudience(row)) + '</div>' +
+          '<div class="mini">Última actualización: ' + escapeHtml(formatFechaHumana(row.fecha_actualizacion || row.fecha_creacion || '')) + '</div>' +
+          '<div class="actions compact">' +
+            '<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeHtml(row.notificacion_id) + '\')">Editar</button>' +
+            (canPublish ? '<button class="btn-primary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'publicarNotificacion\')">Publicar</button>' : '') +
+            (canDespublish ? '<button class="btn-secondary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'despublicarNotificacion\')">Despublicar</button>' : '') +
+            '<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>' +
+            (canClose ? '<button class="btn-accent" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'cerrarNotificacion\')">Cerrar</button>' : '') +
+            (canArchive ? '<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>' : '') +
+          '</div>' +
+        '</article>';
+      }).join('');
+    }
+
+    function renderInstitutionalNotices() {
+      const card = $('institutionalNoticesCard');
+      const host = $('institutionalNoticesList');
+      if (!card || !host) return;
+      const facilitatorMode = getCurrentRole() === 'facilitador';
+      const rows = facilitatorMode ? (state.notificaciones || []) : [];
+      card.hidden = !facilitatorMode || !rows.length;
+      if (card.hidden) {
+        host.innerHTML = '';
+        return;
+      }
+      host.innerHTML = rows.map((row) => {
+        const high = String(row.prioridad || '').trim() === 'alta';
+        return '<article class="institutional-notice-card' + (high ? ' is-high' : '') + '">' +
+          '<div class="institutional-notice-top">' +
+            '<div><h3>' + escapeHtml(row.titulo || 'Aviso institucional') + '</h3></div>' +
+            '<div class="institutional-notice-meta"><span class="notice-chip' + (high ? ' high' : '') + '">' + escapeHtml(high ? 'Alta' : 'Normal') + '</span></div>' +
+          '</div>' +
+          '<div class="institutional-notice-message">' + escapeHtml(row.mensaje || '') + '</div>' +
+          '<div class="mini">Vigencia: ' + escapeHtml(formatNotificationVigencia(row)) + '</div>' +
+        '</article>';
+      }).join('');
+    }
+
+    function setNotificationFilter(filter) {
+      if (state.ui) state.ui.notificationFilter = filter || 'activas';
+      renderNotificationsAdmin();
+    }
+
+    function updateNotificationEditorField(field, value) {
+      if (!state.notificationEditor) state.notificationEditor = createEmptyNotificationEditorState();
+      state.notificationEditor[field] = value;
+      if (field === 'visible_para') {
+        if (value !== 'especificos') state.notificationEditor.facilitadores_ids = [];
+        renderNotificationsAdmin();
+      }
+    }
+
+    function toggleNotificationAudienceFacilitador(facilitadorId, checked) {
+      const selected = new Set(state.notificationEditor.facilitadores_ids || []);
+      if (checked) selected.add(facilitadorId);
+      else selected.delete(facilitadorId);
+      state.notificationEditor.facilitadores_ids = Array.from(selected);
+    }
+
+    function editNotification(notificationId) {
+      const row = (state.notificaciones || []).find((item) => item.notificacion_id === notificationId);
+      if (!row) return;
+      openNotificationEditor(row);
+    }
+
+    function buildNotificationPayload(statusOverride) {
+      return {
+        notificacion_id: state.notificationEditor.notificacion_id || '',
+        titulo: String(state.notificationEditor.titulo || '').trim(),
+        mensaje: String(state.notificationEditor.mensaje || '').trim(),
+        prioridad: state.notificationEditor.prioridad || 'normal',
+        fecha_inicio: state.notificationEditor.fecha_inicio || '',
+        fecha_cierre: state.notificationEditor.fecha_cierre || '',
+        visible_para: state.notificationEditor.visible_para || 'todos',
+        facilitadores_ids: state.notificationEditor.visible_para === 'especificos' ? (state.notificationEditor.facilitadores_ids || []) : [],
+        estatus: statusOverride || state.notificationEditor.estatus || 'borrador',
+        request_id: uid('NOTI')
+      };
+    }
+
+    async function saveNotificationEditor(button, targetStatus) {
+      ensureLoggedIn();
+      await handleAction(targetStatus === 'publicada' ? 'publicarNotificacion' : 'guardarNotificacion', async () => {
+        await api('guardarNotificacion', buildNotificationPayload(targetStatus || 'borrador'));
+        resetNotificationEditor();
+        await refreshAll();
+        setBanner(targetStatus === 'publicada' ? 'Notificación publicada.' : 'Borrador guardado.', 'success');
+      }, { button, key: buildActionKey('guardarNotificacion', [state.notificationEditor.notificacion_id || 'new', targetStatus || 'borrador']) });
+    }
+
+    async function notificationAction(button, notificationId, action) {
+      ensureLoggedIn();
+      await handleAction(action, async () => {
+        await api(action, { notificacion_id: notificationId, request_id: uid('NOTIA') });
+        if (state.notificationEditor.notificacion_id === notificationId) {
+          resetNotificationEditor();
+        }
+        await refreshAll();
+        setBanner('Notificación actualizada.', 'success');
+      }, { button, key: buildActionKey(action, [notificationId]) });
     }
 
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
@@ -3948,6 +4430,8 @@
       renderSession();
       renderStats();
       renderAdminShell();
+      renderNotificationsAdmin();
+      renderInstitutionalNotices();
       renderPeriodSelects();
       renderBaseSelects();
       renderObsAlumnoSelect();
@@ -4582,6 +5066,22 @@
         renderAll();
         setBanner('Planeaciones filtradas.', 'info');
       }, { button: event.currentTarget }));
+      if ($('adminNotificationNewBtn')) $('adminNotificationNewBtn').addEventListener('click', () => openNotificationEditor());
+      if ($('adminNotificationFilterActiveBtn')) $('adminNotificationFilterActiveBtn').addEventListener('click', () => setNotificationFilter('activas'));
+      if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').addEventListener('click', () => setNotificationFilter('borradores'));
+      if ($('adminNotificationFilterClosedBtn')) $('adminNotificationFilterClosedBtn').addEventListener('click', () => setNotificationFilter('cerradas'));
+      if ($('adminNotificationTitle')) $('adminNotificationTitle').addEventListener('input', (event) => updateNotificationEditorField('titulo', event.currentTarget.value));
+      if ($('adminNotificationMessage')) $('adminNotificationMessage').addEventListener('input', (event) => updateNotificationEditorField('mensaje', event.currentTarget.value));
+      if ($('adminNotificationPriority')) $('adminNotificationPriority').addEventListener('change', (event) => updateNotificationEditorField('prioridad', event.currentTarget.value));
+      if ($('adminNotificationStart')) $('adminNotificationStart').addEventListener('change', (event) => updateNotificationEditorField('fecha_inicio', event.currentTarget.value));
+      if ($('adminNotificationEnd')) $('adminNotificationEnd').addEventListener('change', (event) => updateNotificationEditorField('fecha_cierre', event.currentTarget.value));
+      if ($('adminNotificationAudience')) $('adminNotificationAudience').addEventListener('change', (event) => updateNotificationEditorField('visible_para', event.currentTarget.value));
+      if ($('adminNotificationSaveDraftBtn')) $('adminNotificationSaveDraftBtn').addEventListener('click', (event) => saveNotificationEditor(event.currentTarget, 'borrador'));
+      if ($('adminNotificationPublishBtn')) $('adminNotificationPublishBtn').addEventListener('click', (event) => saveNotificationEditor(event.currentTarget, 'publicada'));
+      if ($('adminNotificationCancelBtn')) $('adminNotificationCancelBtn').addEventListener('click', () => {
+        resetNotificationEditor();
+        renderNotificationsAdmin();
+      });
       $('notaAlcance').addEventListener('change', syncNotePeriodoState);
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
@@ -4620,6 +5120,9 @@
     window.saveAllAlumnoFinalObservations = saveAllAlumnoFinalObservations;
     window.autoGrowObsFinal = autoGrowObsFinal;
     window.openPlanFromAlert = openPlanFromAlert;
+    window.editNotification = editNotification;
+    window.notificationAction = notificationAction;
+    window.toggleNotificationAudienceFacilitador = toggleNotificationAudienceFacilitador;
     window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
     window.updateOpenPlanDraftField = updateOpenPlanDraftField;
     window.toggleOpenPlanDraftAlumno = toggleOpenPlanDraftAlumno;
