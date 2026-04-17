@@ -2774,6 +2774,19 @@
       return year + '-' + month + '-' + day;
     }
 
+    function formatFechaHumana(value) {
+      const ymd = toYmdFrontend_(value);
+      if (!ymd) return value ? String(value) : '';
+      const [year, month, day] = ymd.split('-').map(Number);
+      const date = new Date(year, (month || 1) - 1, day || 1);
+      if (Number.isNaN(date.getTime())) return ymd;
+      return date.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
     function getSortedSemanas() {
       return [...state.catalogos.semanas].sort((a, b) => toYmdFrontend_(a.fecha_inicio).localeCompare(toYmdFrontend_(b.fecha_inicio)));
     }
