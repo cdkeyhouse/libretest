@@ -1599,7 +1599,7 @@
             <div class="pill brand">Libre Aprendiz</div>
             <div class="brand-overline">Espacio institucional de trabajo pedagógico</div>
             <h1>Planeación académica semanal en una sola vista de trabajo.</h1>
-            <p>
+            <p hidden>
               Un espacio para registrar lo que cada grupo trabajó durante el ciclo, dar seguimiento interno y preparar un reporte académico claro para las familias.
             </p>
           </div>
@@ -1635,10 +1635,10 @@
       <article id="sessionCard" class="card">
         <div class="card-head">
           <div>
-            <h2>Bienvenida</h2>
-            <p class="subtle">Ingresa con tu facilitador ID y tu PIN para abrir tu espacio de trabajo en Libre Aprendiz.</p>
+            <h2 hidden>Bienvenida</h2>
+            <p class="subtle" hidden>Ingresa con tu facilitador ID y tu PIN para abrir tu espacio de trabajo en Libre Aprendiz.</p>
           </div>
-          <div id="sessionBadge" class="pill">Sin sesión</div>
+          <div id="sessionBadge" class="pill" hidden>Sin sesión</div>
         </div>
         <div class="stack">
           <div class="grid-2">
@@ -1654,9 +1654,9 @@
           <div class="actions">
             <button id="loginBtn" class="btn-primary" type="button">Iniciar sesión</button>
             <button id="logoutBtn" class="btn-ghost" type="button">Cerrar sesión</button>
-            <button id="pingBtn" class="btn-secondary" type="button">Verificar conexión</button>
+            <button id="pingBtn" class="btn-secondary" type="button" hidden>Verificar conexión</button>
           </div>
-          <div id="sessionInfo" class="subtle">Aún no hay una sesión activa.</div>
+          <div id="sessionInfo" class="subtle" hidden>Aún no hay una sesión activa.</div>
           <div class="session-note">Tu acceso define qué módulos, acciones y reportes puedes usar dentro del sistema.</div>
         </div>
       </article>
@@ -4490,7 +4490,40 @@
       setBanner('Planeación cargada en observaciones.', 'info', { button });
     }
 
+    function bindHiddenPingShortcut() {
+      const logo = $('brandLogo');
+      const pingBtn = $('pingBtn');
+      if (!logo || !pingBtn) return;
+      let holdTimer = null;
+      let fired = false;
+      const clearHold = () => {
+        if (holdTimer) {
+          clearTimeout(holdTimer);
+          holdTimer = null;
+        }
+      };
+      const startHold = () => {
+        clearHold();
+        fired = false;
+        holdTimer = setTimeout(() => {
+          fired = true;
+          handleAction('ping', pingBackend, { button: pingBtn });
+        }, 1800);
+      };
+      const endHold = () => {
+        clearHold();
+      };
+      logo.addEventListener('pointerdown', startHold);
+      logo.addEventListener('pointerup', endHold);
+      logo.addEventListener('pointerleave', endHold);
+      logo.addEventListener('pointercancel', endHold);
+      logo.addEventListener('contextmenu', (event) => {
+        if (fired) event.preventDefault();
+      });
+    }
+
     function bindEvents() {
+      bindHiddenPingShortcut();
       $('pingBtn').addEventListener('click', (event) => handleAction('ping', pingBackend, { button: event.currentTarget }));
       $('loginBtn').addEventListener('click', (event) => handleAction('login', login, {
         button: event.currentTarget,
