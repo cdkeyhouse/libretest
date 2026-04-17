@@ -787,6 +787,7 @@
         height: 38px;
         border-radius: 14px;
       }
+    }
     @media (max-width: 520px) {
       .stats { grid-template-columns: 1fr; }
       body.auth-mode .brand-mark {
@@ -1713,11 +1714,11 @@
           <article class="card plan-builder-shell" id="planBuilderCard">
             <div class="accordion-head">
               <div>
-                <h2 id="planEditorTitle">Nueva planeación</h2>
-                <p class="subtle">Captura la fecha, elige uno o varios grupos y guarda a la vez alumnos y actividades.</p>
+                <h2 id="planEditorTitle">Plan</h2>
+                <p class="subtle">Crea un plan semanal rapido.</p>
               </div>
               <div class="actions compact">
-                <button id="togglePlanBuilderBtn" class="btn-primary" type="button">+ Nuevo</button>
+                <button id="togglePlanBuilderBtn" class="btn-primary" type="button">Crear nueva planeacion</button>
               </div>
             </div>
             <div id="planBuilderBody" class="stack" hidden>
@@ -1735,9 +1736,9 @@
                   <select id="planMateria"></select>
                 </div>
               </div>
-              <div hidden>
+              <div>
                 <label for="planFrase">Frase de la semana</label>
-                <textarea id="planFraseLegacyHidden" placeholder="Idea o enfoque pedagogico de la semana"></textarea>
+                <textarea id="planFrase" placeholder="Idea o enfoque pedagogico de la semana"></textarea>
               </div>
               <div>
                 <label>Grupos</label>
@@ -1748,12 +1749,8 @@
                 <div id="planGruposChecklist" class="checklist checklist-groups"></div>
               </div>
               <div>
-                <label for="planFrase">Frase de la semana</label>
-                <textarea id="planFrase" placeholder="Idea o enfoque pedagógico de la semana"></textarea>
-              </div>
-              <div>
                 <label>Alumnos</label>
-                <div class="actions compact">
+                <div class="actions compact" hidden>
                   <button id="selectAllVisibleAlumnosBtn" class="btn-ghost" type="button">Seleccionar visibles</button>
                   <button id="clearVisibleAlumnosBtn" class="btn-ghost" type="button">Quitar visibles</button>
                 </div>
@@ -2153,18 +2150,9 @@
       const heroTitle = document.querySelector('.brand-copy h1');
       const heroParagraph = document.querySelector('.brand-copy p');
       const sessionIntro = document.querySelector('#sessionCard .card-head .subtle');
-      const planFrase = $('planFrase');
-      const planGrupos = $('planGruposChecklist');
       if (heroTitle) heroTitle.textContent = 'Libre Aprendiz';
       if (heroParagraph) heroParagraph.textContent = 'Planeacion semanal en una sola vista.';
       if (sessionIntro) sessionIntro.textContent = 'Ingresa con tu facilitador ID y tu PIN.';
-      if (planFrase && planGrupos) {
-        const fraseBlock = planFrase.closest('div');
-        const gruposBlock = planGrupos.closest('div');
-        if (fraseBlock && gruposBlock && fraseBlock !== gruposBlock && fraseBlock.nextElementSibling !== gruposBlock) {
-          gruposBlock.parentNode.insertBefore(fraseBlock, gruposBlock);
-        }
-      }
     }
 
     function normalizeActionKeyPart(value) {
@@ -2991,8 +2979,7 @@
       const isEdit = state.planEditor.mode === 'edit';
       const hasAdminPower = canUseAdminShell();
       $('planEditorTitle').textContent = isEdit ? 'Editar planeacion' : 'Plan';
-      $('planEditorTitle').textContent = isEdit ? 'Editar planeación' : 'Nueva planeación';
-      $('savePlanBtn').textContent = isEdit ? 'Guardar cambios' : 'Guardar planeación';
+      $('savePlanBtn').textContent = isEdit ? 'Guardar cambios' : 'Guardar planeacion';
       $('planFecha').disabled = isEdit && !hasAdminPower;
       $('planMateria').disabled = isEdit && !hasAdminPower;
       renderPlanWeekResolved();
@@ -3000,7 +2987,6 @@
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
       renderPlanBuilderVisibility();
-      $('planEditorTitle').textContent = isEdit ? 'Editar planeacion' : 'Plan';
     }
 
     function renderBaseSelects() {
@@ -3835,8 +3821,8 @@
       $('addActivityBtn').addEventListener('click', () => addEditorActivity());
       $('selectAllGroupsBtn').addEventListener('click', () => toggleAllGroups(true));
       $('clearAllGroupsBtn').addEventListener('click', () => toggleAllGroups(false));
-      $('selectAllVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(true));
-      $('clearVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(false));
+      if ($('selectAllVisibleAlumnosBtn')) $('selectAllVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(true));
+      if ($('clearVisibleAlumnosBtn')) $('clearVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(false));
       $('saveObsBtn').addEventListener('click', (event) => handleAction('crearObsAlumno', saveObservation, {
         button: event.currentTarget,
         key: buildActionKey('crearObsAlumno', [$('obsPlan').value, $('obsAlumno').value, $('obsPeriodo').value, $('obsTipo').value, $('obsNota').value.trim().slice(0, 40)])
