@@ -1176,6 +1176,13 @@
 
     body { padding: 20px; }
     .page { max-width: 1320px; position: relative; }
+    .workspace-session-bar {
+      justify-content: flex-end;
+      margin-bottom: 16px;
+    }
+    body.auth-mode #workspaceSessionBar {
+      display: none !important;
+    }
     .page::before {
       content: "";
       display: block;
@@ -1456,6 +1463,10 @@
 
     <div id="statusBanner" class="status-banner info">Todo listo para comenzar la jornada.</div>
 
+    <div id="workspaceSessionBar" class="actions workspace-session-bar" hidden>
+      <button id="workspaceLogoutBtn" class="btn-ghost" type="button">Cerrar sesion</button>
+    </div>
+
     <section class="top-grid">
       <article id="sessionCard" class="card">
         <div class="card-head">
@@ -1521,7 +1532,7 @@
         <div class="card-head">
           <div>
             <h2>Alertas internas</h2>
-            <p class="subtle">Aquí aparecen avisos de aprobación, material pendiente y mensajes internos relevantes para tu sesión.</p>
+            <p class="subtle">Aquí aparecen alertas operativas como material pendiente y avisos del sistema. No se usan para observaciones.</p>
           </div>
         </div>
         <div id="alertsList" class="alert-list">
@@ -1543,6 +1554,7 @@
           <button class="admin-nav-btn is-active" type="button" data-admin-module="dashboard">Dashboard</button>
           <button class="admin-nav-btn" type="button" data-admin-module="planeaciones">Planeaciones</button>
           <button class="admin-nav-btn" type="button" data-admin-module="alumnos">Alumnos</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="notificaciones">Notificaciones</button>
           <button class="admin-nav-btn" type="button" data-admin-module="reporte-ciclo">Reporte de ciclo</button>
           <button class="admin-nav-btn" type="button" data-admin-module="facilitadores">Facilitadores</button>
           <button class="admin-nav-btn" type="button" data-admin-module="materias">Materias</button>
@@ -1597,6 +1609,18 @@
           <article class="module-card">
             <div class="module-card-top">
               <div>
+                <h3>Notificaciones globales</h3>
+                <p>Espacio para crear avisos visibles para facilitadores sin mezclarlo con alertas operativas ni observaciones.</p>
+              </div>
+              <div class="module-card-count">Global</div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" type="button" data-admin-module-launch="notificaciones">Abrir notificaciones</button>
+            </div>
+          </article>
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
                 <h3>Reporte de ciclo</h3>
                 <p>Prepara la salida académica para familias con las actividades registradas en el ciclo.</p>
               </div>
@@ -1635,6 +1659,22 @@
             <span class="admin-action-chip">Archivar / Reactivar</span>
           </div>
           <div class="admin-note">Siguiente fase: construir buscador, filtros por grupo/estatus y acceso rápido al historial y reporte de ciclo.</div>
+        </article>
+      </section>
+
+      <section id="admin-panel-notificaciones" class="admin-panel">
+        <article class="admin-placeholder">
+          <div>
+            <h3>Notificaciones globales</h3>
+            <p>Este módulo servirá para publicar mensajes generales dirigidos a facilitadores, con control de vigencia, prioridad y visibilidad.</p>
+          </div>
+          <div class="admin-action-list">
+            <span class="admin-action-chip">Nueva notificación</span>
+            <span class="admin-action-chip">Borrador / Publicada</span>
+            <span class="admin-action-chip">Fecha de inicio</span>
+            <span class="admin-action-chip">Fecha de cierre</span>
+          </div>
+          <div class="admin-note">Cascarón listo: siguiente fase sería agregar editor, listado de notificaciones activas y vista para facilitadores.</div>
         </article>
       </section>
 
@@ -2568,7 +2608,7 @@
         if ($('filterAlumnoSearch')) $('filterAlumnoSearch').value = '';
         if ($('filterAlumnoId')) $('filterAlumnoId').value = '';
       }
-      if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'reporte-ciclo', 'facilitadores', 'materias', 'configuracion'].includes(state.activeAdminModule)) {
+      if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias', 'configuracion'].includes(state.activeAdminModule)) {
         state.activeAdminModule = 'dashboard';
       }
       if (facilitatorMode && state.activeTab !== 'planeaciones') {
@@ -2583,11 +2623,15 @@
       const badge = $('sessionBadge');
       const info = $('sessionInfo');
       const logoutBtn = $('logoutBtn');
+      const workspaceLogoutBtn = $('workspaceLogoutBtn');
+      const workspaceSessionBar = $('workspaceSessionBar');
       if (!state.session || !state.session.usuario) {
         badge.textContent = 'Sin sesión';
         badge.className = 'pill';
         info.textContent = 'Aún no hay una sesión activa.';
         if (logoutBtn) logoutBtn.hidden = true;
+        if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = true;
+        if (workspaceSessionBar) workspaceSessionBar.hidden = true;
         syncRoleUi();
         return;
       }
@@ -2599,6 +2643,8 @@
         escapeHtml(state.session.usuario.rol) + '</span>';
       info.innerHTML = info.innerHTML.replace(/\u00C2\u00B7/g, '\u00B7');
       if (logoutBtn) logoutBtn.hidden = false;
+      if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = false;
+      if (workspaceSessionBar) workspaceSessionBar.hidden = false;
       syncRoleUi();
     }
 
@@ -2871,16 +2917,18 @@
 
     function renderPlanWeekResolved() {
       const host = $('planSemanaResolved');
-      const week = state.planEditor.mode === 'edit' && !canUseAdminShell()
-        ? getWeekById(state.planEditor.lockedSemanaId)
-        : getWeekByDateOrDraft($('planFecha').value);
+      const fallbackDate = state.planEditor.mode === 'edit'
+        ? toYmdFrontend_((getWeekById(state.planEditor.lockedSemanaId) || {}).fecha_inicio || '')
+        : '';
+      const resolvedDate = $('planFecha').value || fallbackDate;
+      const week = getWeekByDateOrDraft(resolvedDate);
       host.textContent = week ? formatSemanaLabel(week) : 'Selecciona una fecha para resolver la semana.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
-      if (week && week.draft && String(week.cerrada_global || '').toLowerCase() !== 'si' && state.planEditor.mode !== 'edit') {
+      if (week && week.draft && String(week.cerrada_global || '').toLowerCase() !== 'si') {
         host.textContent += '. Si no existe, se creara automaticamente.';
       }
-      if (week && String(week.cerrada_global || '').toLowerCase() === 'si' && state.planEditor.mode !== 'edit') {
+      if (week && String(week.cerrada_global || '').toLowerCase() === 'si') {
         host.textContent += '. Si la guarda un facilitador, quedará pendiente de aprobación.';
       }
     }
@@ -2978,9 +3026,11 @@
     function renderPlanEditor() {
       const isEdit = state.planEditor.mode === 'edit';
       const hasAdminPower = canUseAdminShell();
+      const currentPlan = isEdit ? getPlanById(state.planEditor.planId) : null;
+      const canEditDate = !isEdit || hasAdminPower || (currentPlan && ['borrador', 'activa', 'rechazada'].includes(String(currentPlan.estado || '').trim()));
       $('planEditorTitle').textContent = isEdit ? 'Editar planeacion' : 'Plan';
       $('savePlanBtn').textContent = isEdit ? 'Guardar cambios' : 'Guardar planeacion';
-      $('planFecha').disabled = isEdit && !hasAdminPower;
+      $('planFecha').disabled = !canEditDate;
       $('planMateria').disabled = isEdit && !hasAdminPower;
       renderPlanWeekResolved();
       renderPlanGroupChecklist();
@@ -3215,7 +3265,7 @@
           ? '<div class="obs-list">' + obsGenerales.map((obs) => (
               '<div class="obs-item">' +
                 '<div>' + escapeHtml(obs.texto || '') + '</div>' +
-                '<div class="mini">' + escapeHtml(obs.fecha || obs.fecha_creacion || '') + '</div>' +
+                '<div class="mini">' + escapeHtml(formatFechaHumana(obs.fecha || obs.fecha_creacion || '')) + '</div>' +
               '</div>'
             )).join('') + '</div>'
           : '<div class="mini">Todavía no hay observaciones generales.</div>';
@@ -3330,15 +3380,21 @@
       })[String(status || '').trim()] || String(status || 'Sin estado');
     }
 
+    function isOperationalAlert(alerta) {
+      const tipo = String(alerta && alerta.tipo_alerta || '').trim().toLowerCase();
+      return !/(obs|observacion|observación|nota|seguimiento)/.test(tipo);
+    }
+
     function renderAlertas() {
       const host = $('alertsList');
       if (!host) return;
-      if (!state.alertas.length) {
+      const visibleAlertas = state.alertas.filter(isOperationalAlert);
+      if (!visibleAlertas.length) {
         host.innerHTML = '<div class="empty">Todavía no hay alertas visibles para esta sesión.</div>';
         return;
       }
 
-      host.innerHTML = state.alertas.map((alerta) => {
+      host.innerHTML = visibleAlertas.map((alerta) => {
         const plan = state.planeaciones.find((item) => item.planeacion_id === alerta.planeacion_id);
         const grupo = plan ? state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id) : null;
         const materia = plan ? state.catalogos.materias.find((item) => item.materia_id === plan.materia_id) : null;
@@ -3356,7 +3412,7 @@
             '</div>' +
             '<div>' + escapeHtml(alerta.descripcion || '') + '</div>' +
             (contexto ? '<div class="mini">' + escapeHtml(contexto) + '</div>' : '') +
-            (alerta.fecha_creacion ? '<div class="mini">Creada: ' + escapeHtml(alerta.fecha_creacion) + '</div>' : '') +
+            (alerta.fecha_creacion ? '<div class="mini">Creada: ' + escapeHtml(formatFechaHumana(alerta.fecha_creacion)) + '</div>' : '') +
           '</div>'
         );
       }).join('');
@@ -3425,9 +3481,11 @@
       ensureLoggedIn();
       const hasAdminPower = canUseAdminShell();
       const editorMode = state.planEditor.mode;
-      const semana = state.planEditor.mode === 'edit' && !hasAdminPower
-        ? getWeekById(state.planEditor.lockedSemanaId)
-        : getWeekByDateOrDraft($('planFecha').value);
+      const fallbackDate = editorMode === 'edit'
+        ? toYmdFrontend_((getWeekById(state.planEditor.lockedSemanaId) || {}).fecha_inicio || '')
+        : '';
+      const fechaPlaneacion = $('planFecha').value || fallbackDate;
+      const semana = getWeekByDateOrDraft(fechaPlaneacion);
       if (!semana) throw new Error('Selecciona una fecha valida para construir la semana.');
       if (!$('planMateria').value) throw new Error('Selecciona una materia.');
       const grupoIds = state.planEditor.mode === 'edit'
@@ -3463,7 +3521,7 @@
       if (editorMode === 'edit') {
         responseData = await api('guardarPlaneacionCompleta', {
           planeacion_id: state.planEditor.planId,
-          fecha_planeacion: $('planFecha').value,
+          fecha_planeacion: fechaPlaneacion,
           semana_id: semana.draft ? '' : semana.semana_id,
           grupo_id: grupoIds[0],
           materia_id: $('planMateria').value,
@@ -3476,7 +3534,7 @@
         });
       } else {
         responseData = await api('crearPlaneacion', {
-          fecha_planeacion: $('planFecha').value,
+          fecha_planeacion: fechaPlaneacion,
           semana_id: semana.draft ? '' : semana.semana_id,
           grupo_ids: grupoIds,
           materia_id: $('planMateria').value,
@@ -3811,6 +3869,7 @@
         key: buildActionKey('login', [$('facilitadorId').value])
       }));
       $('logoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
+      $('workspaceLogoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
       $('savePlanBtn').addEventListener('click', (event) => handleAction(state.planEditor.mode === 'edit' ? 'guardarPlaneacionCompleta' : 'crearPlaneacion', savePlanEditor, {
         button: event.currentTarget,
