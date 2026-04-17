@@ -583,6 +583,32 @@
       margin-bottom: 12px;
     }
 
+    .plan-open-editor {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .plan-open-students {
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .btn-open-plan {
+      background: rgba(31,182,229,0.14) !important;
+      border: 1px solid rgba(31,182,229,0.24) !important;
+      color: var(--la-cyan) !important;
+    }
+
+    .plan-card .badge {
+      border-width: 1px;
+      border-style: solid;
+      border-color: rgba(255,255,255,0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
     .badge {
       font-size: 0.82rem;
       font-weight: 800;
@@ -1782,17 +1808,13 @@
               </div>
               <div>
                 <label>Grupos</label>
-                <div class="actions compact">
-                  <button id="selectAllGroupsBtn" class="btn-ghost" type="button">Seleccionar todos</button>
-                  <button id="clearAllGroupsBtn" class="btn-ghost" type="button">Limpiar</button>
-                </div>
                 <div id="planGruposChecklist" class="checklist checklist-groups"></div>
               </div>
               <div>
                 <label>Alumnos</label>
-                <div class="actions compact" hidden>
-                  <button id="selectAllVisibleAlumnosBtn" class="btn-ghost" type="button">Seleccionar visibles</button>
-                  <button id="clearVisibleAlumnosBtn" class="btn-ghost" type="button">Quitar visibles</button>
+                <div class="actions compact">
+                  <button id="selectAllVisibleAlumnosBtn" class="btn-ghost" type="button">Seleccionar todos</button>
+                  <button id="clearVisibleAlumnosBtn" class="btn-ghost" type="button">Limpiar</button>
                 </div>
                 <div id="planAlumnosChecklist" class="checklist"></div>
               </div>
@@ -2085,6 +2107,7 @@
       planeaciones: [],
       alertas: [],
       openPlanId: '',
+      openPlanDraft: null,
       ui: {
         planBuilderExpanded: false
       },
@@ -2830,15 +2853,31 @@
       return getWeekByDate(dateValue) || buildWeekRangeFromDate(dateValue);
     }
 
+    function formatFechaCorta(value) {
+      const ymd = toYmdFrontend_(value);
+      if (!ymd) return '';
+      const date = new Date(ymd + 'T12:00:00');
+      if (isNaN(date.getTime())) return ymd;
+      return date.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }).replace('.', '');
+    }
+
     function formatSemanaLabel(semana) {
       if (!semana) return 'Semana sin resolver';
       const start = toYmdFrontend_(semana.fecha_inicio);
       const end = toYmdFrontend_(semana.fecha_fin);
-      return [
-        semana.nombre_visible || semana.semana_id,
-        start && end ? (start + ' a ' + end) : '',
-        String(semana.cerrada_global || '').toLowerCase() === 'si' ? 'cerrada' : 'abierta'
-      ].filter(Boolean).join(' · ');
+      if (!start || !end) return semana.nombre_visible || semana.semana_id || 'Semana sin resolver';
+      return formatFechaCorta(start) + ' - ' + formatFechaCorta(end);
+    }
+
+    function getSemanaHintText(semana) {
+      if (!semana) return 'Selecciona una fecha.';
+      if (String(semana.cerrada_global || '').toLowerCase() === 'si') return 'Semana cerrada.';
+      if (semana.draft) return 'Se creara al guardar.';
+      return '';
     }
 
     function getPlanStatusLabel(status) {
@@ -2866,6 +2905,7 @@
     function resetPlanEditor() {
       state.planEditor = emptyPlanEditorState();
       state.openPlanId = '';
+      state.openPlanDraft = null;
       if (state.ui) state.ui.planBuilderExpanded = false;
       $('planFecha').value = '';
       $('planFrase').value = '';
@@ -2885,6 +2925,7 @@
     function loadPlanIntoEditor(plan) {
       const semana = getWeekById(plan.semana_id);
       state.openPlanId = plan.planeacion_id;
+      state.openPlanDraft = null;
       if (state.ui) state.ui.planBuilderExpanded = true;
       state.planEditor = {
         mode: 'edit',
@@ -2913,6 +2954,88 @@
       });
     }
 
+    function buildOpenPlanDraft(plan) {
+      const semana = getWeekById(plan.semana_id);
+      return {
+        planId: plan.planeacion_id,
+        fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
+        frase_semana: plan.frase_semana || '',
+        alumnos_ids: (plan.alumnos || []).map((row) => row.alumno_id),
+        activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
+          key: actividad.actividad_id || uid('ACTOPEN'),
+          actividad_id: actividad.actividad_id || '',
+          texto: actividad.texto || '',
+          material_en_carpeta: normalizeMaterialStatus(actividad.material_en_carpeta),
+          realizada: normalizeRealizadaStatus(actividad.realizada),
+          comentario_cierre: actividad.comentario_cierre || '',
+          last_known_updated_at: actividad.fecha_actualizacion || ''
+        })) : [createEmptyActivityDraft()],
+        lastKnownUpdatedAt: plan.fecha_actualizacion || '',
+        lastKnownActivitiesVersion: plan.actividades_version_actual || ''
+      };
+    }
+
+    function getOpenPlanDraft(plan) {
+      if (!plan) return null;
+      if (!state.openPlanDraft || state.openPlanDraft.planId !== plan.planeacion_id) {
+        state.openPlanDraft = buildOpenPlanDraft(plan);
+      }
+      return state.openPlanDraft;
+    }
+
+    function updateOpenPlanDraftField(field, value, rerender) {
+      if (!state.openPlanDraft) return;
+      state.openPlanDraft[field] = value;
+      if (rerender) renderPlaneacionesList();
+    }
+
+    function toggleOpenPlanDraftAlumno(alumnoId, checked) {
+      if (!state.openPlanDraft) return;
+      const current = new Set(state.openPlanDraft.alumnos_ids || []);
+      if (checked) current.add(alumnoId); else current.delete(alumnoId);
+      state.openPlanDraft.alumnos_ids = Array.from(current);
+    }
+
+    function updateOpenPlanDraftActivityField(index, field, value) {
+      if (!state.openPlanDraft || !state.openPlanDraft.activities[index]) return;
+      state.openPlanDraft.activities[index][field] = value;
+    }
+
+    function addOpenPlanDraftActivity() {
+      if (!state.openPlanDraft) return;
+      state.openPlanDraft.activities.push(createEmptyActivityDraft());
+      renderPlaneacionesList();
+    }
+
+    function removeOpenPlanDraftActivity(index) {
+      if (!state.openPlanDraft || state.openPlanDraft.activities.length <= 1) return;
+      state.openPlanDraft.activities.splice(index, 1);
+      renderPlaneacionesList();
+    }
+
+    function moveOpenPlanDraftActivity(index, direction) {
+      if (!state.openPlanDraft) return;
+      const target = index + direction;
+      if (target < 0 || target >= state.openPlanDraft.activities.length) return;
+      const copy = [...state.openPlanDraft.activities];
+      const temp = copy[index];
+      copy[index] = copy[target];
+      copy[target] = temp;
+      state.openPlanDraft.activities = copy;
+      renderPlaneacionesList();
+    }
+
+    function toggleAllOpenPlanDraftAlumnos(checked) {
+      if (!state.openPlanDraft || !state.openPlanId) return;
+      const plan = getPlanById(state.openPlanId);
+      if (!plan) return;
+      const alumnosGrupo = state.catalogos.alumnos
+        .filter((alumno) => alumno.grupo_id === plan.grupo_id)
+        .map((alumno) => alumno.alumno_id);
+      state.openPlanDraft.alumnos_ids = checked ? alumnosGrupo : [];
+      renderPlaneacionesList();
+    }
+
     function formatPlanShort(plan) {
       const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
       const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
@@ -2935,15 +3058,12 @@
         : '';
       const resolvedDate = $('planFecha').value || fallbackDate;
       const week = getWeekByDateOrDraft(resolvedDate);
-      host.textContent = week ? formatSemanaLabel(week) : 'Selecciona una fecha para resolver la semana.';
+      const hint = week ? getSemanaHintText(week) : '';
+      host.textContent = week
+        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' · ')
+        : 'Selecciona una fecha.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
-      if (week && week.draft && String(week.cerrada_global || '').toLowerCase() !== 'si') {
-        host.textContent += '. Si no existe, se creara automaticamente.';
-      }
-      if (week && String(week.cerrada_global || '').toLowerCase() === 'si') {
-        host.textContent += '. Si la guarda un facilitador, quedará pendiente de aprobación.';
-      }
     }
 
     function renderPlanGroupChecklist() {
@@ -3214,9 +3334,89 @@
     }
 
     function togglePlanOpen(button, planId) {
-      state.openPlanId = state.openPlanId === planId ? '' : planId;
+      if (state.openPlanId === planId) {
+        state.openPlanId = '';
+        state.openPlanDraft = null;
+      } else {
+        const plan = getPlanById(planId);
+        state.openPlanId = planId;
+        state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
+      }
       renderPlaneacionesList();
       setBanner(state.openPlanId ? 'Planeación abierta.' : 'Planeación cerrada.', 'info', { button });
+    }
+
+    function renderOpenPlanStructureEditor(plan, allowStructureEdit) {
+      if (!allowStructureEdit) return '';
+      const draft = getOpenPlanDraft(plan);
+      if (!draft) return '';
+      const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
+      const weekText = week ? [formatSemanaLabel(week), getSemanaHintText(week)].filter(Boolean).join(' · ') : 'Selecciona una fecha.';
+      const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
+      const selected = new Set(draft.alumnos_ids || []);
+      const activitiesHtml = (draft.activities || []).map((activity, index) => (
+        '<div class="activity-editor">' +
+          '<div class="activity-editor-top">' +
+            '<strong>Actividad ' + (index + 1) + '</strong>' +
+            '<div class="actions compact">' +
+              '<button class="btn-ghost" type="button" onclick="moveOpenPlanDraftActivity(' + index + ', -1)">Subir</button>' +
+              '<button class="btn-ghost" type="button" onclick="moveOpenPlanDraftActivity(' + index + ', 1)">Bajar</button>' +
+              '<button class="btn-ghost" type="button" onclick="removeOpenPlanDraftActivity(' + index + ')">Quitar</button>' +
+            '</div>' +
+          '</div>' +
+          '<label>Actividad</label>' +
+          '<textarea onchange="updateOpenPlanDraftActivityField(' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
+          '<div class="activity-inline-grid">' +
+            '<div><label>Material</label><select onchange="updateOpenPlanDraftActivityField(' + index + ', \'material_en_carpeta\', this.value)">' +
+              '<option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
+              '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
+              '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
+            '</select></div>' +
+            '<div class="helper" style="grid-column: span 2;">El seguimiento de realizada / no realizada se captura al cerrar la semana.</div>' +
+          '</div>' +
+        '</div>'
+      )).join('');
+
+      return (
+        '<div class="plan-open-editor">' +
+          '<div class="grid-3">' +
+            '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"></div>' +
+            '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
+            '<div><label>Materia</label><div class="inline-note">' + escapeHtml((state.catalogos.materias.find((item) => item.materia_id === plan.materia_id) || {}).nombre || plan.materia_id) + '</div></div>' +
+          '</div>' +
+          '<div class="plan-inline-field">' +
+            '<label>Frase de la semana</label>' +
+            '<textarea onchange="updateOpenPlanDraftField(\'frase_semana\', this.value)">' + escapeHtml(draft.frase_semana || '') + '</textarea>' +
+          '</div>' +
+          '<div>' +
+            '<div class="card-head inline-head">' +
+              '<div><label>Alumnos</label><p class="subtle">Selecciona en un solo lugar a quiénes aplica esta planeación.</p></div>' +
+              '<div class="actions compact">' +
+                '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
+                '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(false)">Limpiar</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="group-block plan-open-students">' +
+              (alumnosGrupo.map((alumno) => (
+                '<label class="check-item">' +
+                  '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeHtml(alumno.alumno_id) + '\', this.checked)">' +
+                  '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong><br><span class="mini">' + escapeHtml(alumno.matricula || alumno.alumno_id) + '</span></span>' +
+                '</label>'
+              )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
+            '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="card-head inline-head">' +
+              '<div><label>Actividades</label><p class="subtle">Edita aquí mismo el texto y el material requerido.</p></div>' +
+              '<button class="btn-accent" type="button" onclick="addOpenPlanDraftActivity()">Agregar actividad</button>' +
+            '</div>' +
+            '<div class="stack">' + activitiesHtml + '</div>' +
+          '</div>' +
+          '<div class="actions">' +
+            '<button class="btn-primary" type="button" onclick="saveOpenPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Guardar cambios</button>' +
+          '</div>' +
+        '</div>'
+      );
     }
 
     function renderPlaneacionesList() {
@@ -3303,9 +3503,6 @@
         if (plan.estado === 'borrador') {
           buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
         }
-        if (allowStructureEdit) {
-          buttons.push('<button class="btn-ghost" type="button" onclick="editPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Editar</button>');
-        }
         if (plan.estado === 'borrador_pendiente_aprobacion' && hasAdminPower) {
           buttons.push('<button class="btn-primary" type="button" onclick="approvePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Aprobar</button>');
           buttons.push('<button class="btn-secondary" type="button" onclick="rejectPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Rechazar</button>');
@@ -3336,7 +3533,7 @@
                 '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</div>' +
               '</div>' +
               '<div class="actions" style="margin-top:14px;">' +
-                '<button class="btn-ghost" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
+                '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
               '</div>' +
             '</article>'
           );
@@ -3356,8 +3553,10 @@
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
               '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + '</div>' +
             '</div>' +
-            '<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
-            '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>' +
+            (allowStructureEdit
+              ? renderOpenPlanStructureEditor(plan, allowStructureEdit)
+              : ('<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
+                '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>')) +
             '<div class="stack">' +
               '<div><strong>Observaciones generales</strong></div>' +
               obsGeneralesHtml +
@@ -3371,7 +3570,7 @@
               obsAlumnoHtml +
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
-              '<button class="btn-ghost" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Ocultar</button>' +
+              '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Ocultar</button>' +
               buttons.join('') +
             '</div>' +
           '</article>'
@@ -3790,6 +3989,50 @@
       setBanner('Planeación cargada en el editor.', 'info', { button });
     }
 
+    async function saveOpenPlan(button, planId) {
+      const plan = getPlanById(planId);
+      const draft = getOpenPlanDraft(plan);
+      if (!plan || !draft) throw new Error('Planeación no encontrada.');
+      const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
+      const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
+      if (!semana) throw new Error('Selecciona una fecha válida.');
+      const alumnosIds = Array.from(new Set(draft.alumnos_ids || []));
+      if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
+      const actividades = (draft.activities || [])
+        .map((activity) => ({
+          actividad_id: activity.actividad_id || '',
+          texto: String(activity.texto || '').trim(),
+          material_en_carpeta: activity.material_en_carpeta || 'no_requiere',
+          realizada: activity.realizada || '',
+          comentario_cierre: String(activity.comentario_cierre || '').trim(),
+          last_known_updated_at: activity.last_known_updated_at || ''
+        }))
+        .filter((activity) => activity.texto);
+      if (!actividades.length) throw new Error('Captura al menos una actividad.');
+
+      await handleAction('guardarPlaneacionCompletaInline', async () => {
+        await api('guardarPlaneacionCompleta', {
+          planeacion_id: planId,
+          fecha_planeacion: draft.fecha_planeacion || fallbackDate,
+          semana_id: semana.draft ? '' : semana.semana_id,
+          grupo_id: plan.grupo_id,
+          materia_id: plan.materia_id,
+          frase_semana: String(draft.frase_semana || '').trim(),
+          alumnos_ids: alumnosIds,
+          actividades,
+          last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
+          last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
+          request_id: uid('PLAOPEN')
+        });
+        state.openPlanId = planId;
+        state.openPlanDraft = null;
+        await refreshPlaneaciones();
+        await refreshAlertas();
+        renderAll();
+        setBanner('Planeación actualizada.', 'success');
+      }, { button, key: buildActionKey('guardarPlaneacionCompletaInline', [planId, draft.fecha_planeacion || fallbackDate, alumnosIds.join(',')]) });
+    }
+
     async function approvePlan(button, planId) {
       await handleAction('aprobarPlaneacionPendiente', async () => {
         await api('aprobarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('APP') });
@@ -3894,8 +4137,8 @@
       $('togglePlanBuilderBtn').addEventListener('click', () => togglePlanBuilder());
       $('resetPlanEditorBtn').addEventListener('click', () => resetPlanEditor());
       $('addActivityBtn').addEventListener('click', () => addEditorActivity());
-      $('selectAllGroupsBtn').addEventListener('click', () => toggleAllGroups(true));
-      $('clearAllGroupsBtn').addEventListener('click', () => toggleAllGroups(false));
+      if ($('selectAllGroupsBtn')) $('selectAllGroupsBtn').addEventListener('click', () => toggleAllGroups(true));
+      if ($('clearAllGroupsBtn')) $('clearAllGroupsBtn').addEventListener('click', () => toggleAllGroups(false));
       if ($('selectAllVisibleAlumnosBtn')) $('selectAllVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(true));
       if ($('clearVisibleAlumnosBtn')) $('clearVisibleAlumnosBtn').addEventListener('click', () => toggleAllVisibleAlumnos(false));
       $('saveObsBtn').addEventListener('click', (event) => handleAction('crearObsAlumno', saveObservation, {
@@ -3967,9 +4210,17 @@
     window.rejectPlan = rejectPlan;
     window.resubmitPlan = resubmitPlan;
     window.confirmClosePlan = confirmClosePlan;
+    window.saveOpenPlan = saveOpenPlan;
     window.saveGeneralObservation = saveGeneralObservation;
     window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
     window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
+    window.updateOpenPlanDraftField = updateOpenPlanDraftField;
+    window.toggleOpenPlanDraftAlumno = toggleOpenPlanDraftAlumno;
+    window.updateOpenPlanDraftActivityField = updateOpenPlanDraftActivityField;
+    window.addOpenPlanDraftActivity = addOpenPlanDraftActivity;
+    window.removeOpenPlanDraftActivity = removeOpenPlanDraftActivity;
+    window.moveOpenPlanDraftActivity = moveOpenPlanDraftActivity;
+    window.toggleAllOpenPlanDraftAlumnos = toggleAllOpenPlanDraftAlumnos;
     window.updateEditorActivityField = updateEditorActivityField;
     window.moveEditorActivity = moveEditorActivity;
     window.removeEditorActivity = removeEditorActivity;
