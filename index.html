@@ -787,8 +787,6 @@
         height: 38px;
         border-radius: 14px;
       }
-    }
-
     @media (max-width: 520px) {
       .stats { grid-template-columns: 1fr; }
       body.auth-mode .brand-mark {
@@ -1274,10 +1272,22 @@
       color: var(--text-soft) !important;
     }
 
+    .action-toast {
+      background: #211d1b !important;
+      border-color: var(--border-soft) !important;
+      color: var(--text-strong) !important;
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32) !important;
+      backdrop-filter: blur(8px);
+    }
+
     .status-banner.info { color: var(--la-cyan) !important; border-color: rgba(31,182,229,0.30) !important; }
     .status-banner.success { color: var(--la-lime) !important; border-color: rgba(184,216,50,0.30) !important; }
     .status-banner.error { color: #ff8fb3 !important; border-color: rgba(232,25,106,0.32) !important; }
     .status-banner.warn { color: #ffc980 !important; border-color: rgba(240,123,32,0.32) !important; }
+    .action-toast.info { color: var(--la-cyan) !important; border-color: rgba(31,182,229,0.30) !important; }
+    .action-toast.success { color: var(--la-lime) !important; border-color: rgba(184,216,50,0.30) !important; }
+    .action-toast.error { color: #ff8fb3 !important; border-color: rgba(232,25,106,0.32) !important; }
+    .action-toast.warn { color: #ffc980 !important; border-color: rgba(240,123,32,0.32) !important; }
 
     button {
       box-shadow: none !important;
@@ -1725,6 +1735,10 @@
                   <select id="planMateria"></select>
                 </div>
               </div>
+              <div hidden>
+                <label for="planFrase">Frase de la semana</label>
+                <textarea id="planFraseLegacyHidden" placeholder="Idea o enfoque pedagogico de la semana"></textarea>
+              </div>
               <div>
                 <label>Grupos</label>
                 <div class="actions compact">
@@ -2139,9 +2153,18 @@
       const heroTitle = document.querySelector('.brand-copy h1');
       const heroParagraph = document.querySelector('.brand-copy p');
       const sessionIntro = document.querySelector('#sessionCard .card-head .subtle');
+      const planFrase = $('planFrase');
+      const planGrupos = $('planGruposChecklist');
       if (heroTitle) heroTitle.textContent = 'Libre Aprendiz';
       if (heroParagraph) heroParagraph.textContent = 'Planeacion semanal en una sola vista.';
       if (sessionIntro) sessionIntro.textContent = 'Ingresa con tu facilitador ID y tu PIN.';
+      if (planFrase && planGrupos) {
+        const fraseBlock = planFrase.closest('div');
+        const gruposBlock = planGrupos.closest('div');
+        if (fraseBlock && gruposBlock && fraseBlock !== gruposBlock && fraseBlock.nextElementSibling !== gruposBlock) {
+          gruposBlock.parentNode.insertBefore(fraseBlock, gruposBlock);
+        }
+      }
     }
 
     function normalizeActionKeyPart(value) {
@@ -2725,6 +2748,27 @@
       return state.catalogos.semanas.find((item) => item.semana_id === semanaId) || null;
     }
 
+    function buildWeekRangeFromDate(dateValue) {
+      const target = toYmdFrontend_(dateValue);
+      if (!target) return null;
+      const base = new Date(target + 'T12:00:00');
+      const day = base.getDay();
+      const mondayOffset = day === 0 ? -6 : (1 - day);
+      const fridayOffset = mondayOffset + 4;
+      const from = new Date(base);
+      from.setDate(base.getDate() + mondayOffset);
+      const to = new Date(base);
+      to.setDate(base.getDate() + fridayOffset);
+      return {
+        semana_id: '',
+        fecha_inicio: toYmdFrontend_(from),
+        fecha_fin: toYmdFrontend_(to),
+        nombre_visible: 'Semana ' + toYmdFrontend_(from) + ' al ' + toYmdFrontend_(to),
+        cerrada_global: 'no',
+        draft: true
+      };
+    }
+
     function getWeekByDate(dateValue) {
       const target = toYmdFrontend_(dateValue);
       if (!target) return null;
@@ -2733,6 +2777,10 @@
         const end = toYmdFrontend_(semana.fecha_fin);
         return start && end && start <= target && target <= end;
       }) || null;
+    }
+
+    function getWeekByDateOrDraft(dateValue) {
+      return getWeekByDate(dateValue) || buildWeekRangeFromDate(dateValue);
     }
 
     function formatSemanaLabel(semana) {
@@ -2837,10 +2885,13 @@
       const host = $('planSemanaResolved');
       const week = state.planEditor.mode === 'edit' && !canUseAdminShell()
         ? getWeekById(state.planEditor.lockedSemanaId)
-        : getWeekByDate($('planFecha').value);
+        : getWeekByDateOrDraft($('planFecha').value);
       host.textContent = week ? formatSemanaLabel(week) : 'Selecciona una fecha para resolver la semana.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
+      if (week && week.draft && String(week.cerrada_global || '').toLowerCase() !== 'si' && state.planEditor.mode !== 'edit') {
+        host.textContent += '. Si no existe, se creara automaticamente.';
+      }
       if (week && String(week.cerrada_global || '').toLowerCase() === 'si' && state.planEditor.mode !== 'edit') {
         host.textContent += '. Si la guarda un facilitador, quedará pendiente de aprobación.';
       }
@@ -2883,14 +2934,10 @@
         const group = state.catalogos.grupos.find((row) => row.grupo_id === groupId);
         const alumnos = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === groupId);
         return (
-          '<div class="group-block">' +
-            '<div class="group-block-head">' +
-              '<div><strong>' + escapeHtml(group ? (group.nombre_grupo || group.grupo_id) : groupId) + '</strong></div>' +
-              '<div class="actions compact">' +
-                '<button class="btn-ghost" type="button" onclick="togglePlanAlumnosByGroup(\'' + escapeHtml(groupId) + '\', true)">Todos</button>' +
-                '<button class="btn-ghost" type="button" onclick="togglePlanAlumnosByGroup(\'' + escapeHtml(groupId) + '\', false)">Ninguno</button>' +
+            '<div class="group-block">' +
+              '<div class="group-block-head">' +
+                '<div><strong>' + escapeHtml(group ? (group.nombre_grupo || group.grupo_id) : groupId) + '</strong></div>' +
               '</div>' +
-            '</div>' +
             '<div class="checklist">' +
               alumnos.map((alumno) => {
                 const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
@@ -3394,8 +3441,8 @@
       const editorMode = state.planEditor.mode;
       const semana = state.planEditor.mode === 'edit' && !hasAdminPower
         ? getWeekById(state.planEditor.lockedSemanaId)
-        : getWeekByDate($('planFecha').value);
-      if (!semana) throw new Error('Selecciona una fecha válida dentro de una semana registrada.');
+        : getWeekByDateOrDraft($('planFecha').value);
+      if (!semana) throw new Error('Selecciona una fecha valida para construir la semana.');
       if (!$('planMateria').value) throw new Error('Selecciona una materia.');
       const grupoIds = state.planEditor.mode === 'edit'
         ? (hasAdminPower ? getSelectedGroupIds() : [state.planEditor.lockedGrupoId])
@@ -3430,7 +3477,8 @@
       if (editorMode === 'edit') {
         responseData = await api('guardarPlaneacionCompleta', {
           planeacion_id: state.planEditor.planId,
-          semana_id: semana.semana_id,
+          fecha_planeacion: $('planFecha').value,
+          semana_id: semana.draft ? '' : semana.semana_id,
           grupo_id: grupoIds[0],
           materia_id: $('planMateria').value,
           frase_semana: $('planFrase').value.trim(),
@@ -3443,7 +3491,7 @@
       } else {
         responseData = await api('crearPlaneacion', {
           fecha_planeacion: $('planFecha').value,
-          semana_id: semana.semana_id,
+          semana_id: semana.draft ? '' : semana.semana_id,
           grupo_ids: grupoIds,
           materia_id: $('planMateria').value,
           frase_semana: $('planFrase').value.trim(),
