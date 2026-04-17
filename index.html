@@ -693,17 +693,36 @@
 
     .obs-grid {
       display: grid;
-      gap: 12px;
+      gap: 10px;
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .obs-alumno-card {
-      padding: 12px;
-      border-radius: 16px;
+      padding: 10px 12px;
+      border-radius: 14px;
       border: 1px solid rgba(23, 51, 45, 0.08);
       background: rgba(255, 255, 255, 0.7);
       display: grid;
-      gap: 8px;
+      gap: 6px;
+      align-content: start;
+    }
+
+    .obs-alumno-card strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .obs-final-input {
+      min-height: 54px;
+      height: 54px;
+      padding: 10px 12px;
+      line-height: 1.4;
+      resize: none;
+      overflow: hidden;
+    }
+
+    .obs-final-actions {
+      margin-top: 6px;
     }
 
     .meta-grid {
@@ -3218,6 +3237,9 @@
           '</label>'
         );
       }).join('');
+      window.requestAnimationFrame(() => {
+        document.querySelectorAll('.obs-final-input').forEach((textarea) => autoGrowObsFinal(textarea));
+      });
     }
 
     function renderPlanAlumnosChecklist() {
@@ -3635,10 +3657,7 @@
               return (
                 '<div class="obs-alumno-card">' +
                   '<div><strong>' + escapeHtml(alumnoNombre) + '</strong></div>' +
-                  '<textarea id="obs-final-' + escapeHtml(plan.planeacion_id) + '-' + escapeHtml(alumnoRow.alumno_id) + '" placeholder="Observación final interna para administración"' + (allowAlumnoObs ? '' : ' disabled') + '>' + escapeHtml(alumnoObs ? (alumnoObs.nota || '') : '') + '</textarea>' +
-                  '<div class="actions compact">' +
-                    (allowAlumnoObs ? '<button class="btn-ghost" type="button" onclick="saveAlumnoFinalObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'' + escapeHtml(alumnoRow.alumno_id) + '\')">Guardar observación final</button>' : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
-                  '</div>' +
+                  '<textarea class="obs-final-input" id="obs-final-' + escapeHtml(plan.planeacion_id) + '-' + escapeHtml(alumnoRow.alumno_id) + '" oninput="autoGrowObsFinal(this)"' + (allowAlumnoObs ? '' : ' disabled') + '>' + escapeHtml(alumnoObs ? (alumnoObs.nota || '') : '') + '</textarea>' +
                 '</div>'
               );
             }).join('') + '</div>'
@@ -3712,6 +3731,11 @@
             '<div class="stack">' +
               '<div><strong>Observación final por alumno</strong></div>' +
               obsAlumnoHtml +
+              '<div class="actions obs-final-actions">' +
+                (allowAlumnoObs
+                  ? '<button class="btn-ghost" type="button" onclick="saveAllAlumnoFinalObservations(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Guardar observaciones finales</button>'
+                  : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
+              '</div>' +
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Ocultar</button>' +
@@ -4164,6 +4188,43 @@
       }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
     }
 
+    function autoGrowObsFinal(textarea) {
+      if (!textarea) return;
+      textarea.style.height = '54px';
+      textarea.style.height = Math.max(54, textarea.scrollHeight) + 'px';
+    }
+
+    async function saveAllAlumnoFinalObservations(button, planId) {
+      const plan = getPlanById(planId);
+      if (!plan) throw new Error('Planeación no encontrada.');
+      const alumnosRows = Array.isArray(plan.alumnos) ? plan.alumnos : [];
+      const payloads = alumnosRows.map((alumnoRow) => {
+        const alumnoId = alumnoRow.alumno_id;
+        const input = $('obs-final-' + planId + '-' + alumnoId);
+        const nota = input ? input.value.trim() : '';
+        return { alumnoId, nota };
+      }).filter((row) => row.nota);
+      if (!payloads.length) throw new Error('Escribe al menos una observación final.');
+
+      await handleAction('guardarObsAlumnoFinalLote', async () => {
+        for (const row of payloads) {
+          await api('guardarObsAlumnoFinal', {
+            planeacion_id: planId,
+            alumno_id: row.alumnoId,
+            nota: row.nota,
+            request_id: uid('OAFL')
+          });
+        }
+        await refreshPlaneaciones();
+        renderAll();
+        payloads.forEach((row) => {
+          const input = $('obs-final-' + planId + '-' + row.alumnoId);
+          if (input) autoGrowObsFinal(input);
+        });
+        setBanner('Observaciones finales guardadas.', 'success');
+      }, { button, key: buildActionKey('guardarObsAlumnoFinalLote', [planId, payloads.map((row) => row.alumnoId + ':' + row.nota.slice(0, 20)).join('|')]) });
+    }
+
     async function editPlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
@@ -4321,11 +4382,11 @@
           obs_semana: obs,
           request_id: uid('CIE')
         });
-        closeClosePlanModal();
         state.openPlanDraft = null;
         await refreshPlaneaciones();
         await refreshAlertas();
         renderAll();
+        closeClosePlanModal();
         setBanner('Cierre confirmado.', 'success');
       }, { button, key: buildActionKey('confirmarCierre', [planId]) });
     }
@@ -4435,6 +4496,8 @@
     window.saveOpenPlan = saveOpenPlan;
     window.saveGeneralObservation = saveGeneralObservation;
     window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
+    window.saveAllAlumnoFinalObservations = saveAllAlumnoFinalObservations;
+    window.autoGrowObsFinal = autoGrowObsFinal;
     window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
     window.updateOpenPlanDraftField = updateOpenPlanDraftField;
     window.toggleOpenPlanDraftAlumno = toggleOpenPlanDraftAlumno;
