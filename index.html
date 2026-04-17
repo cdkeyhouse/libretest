@@ -1570,7 +1570,7 @@
       </div>
     </section>
 
-    <div id="statusBanner" class="status-banner info">Todo listo para comenzar la jornada.</div>
+    <div id="statusBanner" class="status-banner info">Cada semana abre una nueva oportunidad para acompañar, observar y hacer crecer el aprendizaje.</div>
 
     <div id="workspaceSessionBar" class="actions workspace-session-bar" hidden>
       <div id="workspaceSessionCopy" class="workspace-session-copy">
@@ -3482,7 +3482,6 @@
           }
         });
       }
-      setBanner(state.openPlanId ? 'Planeación abierta.' : 'Planeación cerrada.', 'info', { button });
     }
 
     function renderOpenPlanStructureEditor(plan, allowStructureEdit) {
@@ -4079,8 +4078,17 @@
         await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
         await refreshPlaneaciones();
         await refreshAlertas();
+        if (action === 'activarPlaneacion' && state.openPlanId === planId) {
+          state.openPlanId = '';
+          state.openPlanDraft = null;
+        }
         renderAll();
-        setBanner('Acción completada: ' + action, 'success');
+        setBanner(
+          action === 'activarPlaneacion'
+            ? 'La planeación ya está activa y lista para trabajarse.'
+            : ('Acción completada: ' + action),
+          'success'
+        );
       }, { button, key: buildActionKey(action, [planId]) });
     }
 
