@@ -744,6 +744,12 @@
       margin-top: 10px;
     }
 
+    .plan-alert-history {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: rgba(245, 242, 234, 0.72);
+    }
+
     .meta-grid {
       display: grid;
       gap: 6px;
@@ -1090,18 +1096,25 @@
     .activity-editor {
       border: 1px solid rgba(31, 58, 55, 0.1);
       border-radius: 22px;
-      padding: 16px;
+      padding: 12px 14px;
       background: rgba(255, 255, 255, 0.9);
     }
     .activity-editor textarea {
-      min-height: 96px;
+      min-height: 74px;
     }
     .activity-editor-top {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
+    }
+    .activity-editor-top strong {
+      font-size: 1rem;
+      margin: 0;
+    }
+    .activity-editor-top .actions.compact {
+      margin: 0;
     }
     .activity-inline-grid {
       display: grid;
@@ -3304,7 +3317,7 @@
         const seguimientoHtml = showSeguimientoFields
           ? '<div class="activity-inline-grid">' +
               '<div><label>Material</label><select onchange="updateEditorActivityField(' + index + ', \'material_en_carpeta\', this.value)"><option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option><option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option><option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option></select></div>' +
-              '<div><label>¿Se realizó?</label><select onchange="updateEditorActivityField(' + index + ', \'realizada\', this.value)"><option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option><option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option><option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option></select></div>' +
+              '<div><label>¿Se realizó esta actividad?</label><select onchange="updateEditorActivityField(' + index + ', \'realizada\', this.value)"><option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option><option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option><option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option></select></div>' +
               '<div><label>Comentario</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateEditorActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>' +
             '</div>'
           : '<div class="activity-inline-grid">' +
@@ -3551,7 +3564,7 @@
               '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
             '</select></div>' +
             (showSeguimientoFields
-              ? '<div><label>¿Se realizó?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
+              ? '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
                   '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
                   '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
@@ -3634,6 +3647,10 @@
           : plan.estado === 'activa';
         const isOpen = state.openPlanId === plan.planeacion_id;
         const hasMaterialAlert = planHasOpenMaterialAlert(plan.planeacion_id);
+        const latestResolvedMaterialAlert = hasAdminPower ? getLatestResolvedMaterialAlertForPlan(plan.planeacion_id) : null;
+        const materialHistoryHtml = latestResolvedMaterialAlert
+          ? '<div class="plan-alert-history">Historico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</div>'
+          : '';
         const alumnosCount = alumnos.length || 0;
         const actividadesCount = Array.isArray(plan.actividades) ? plan.actividades.length : 0;
         const actividades = (plan.actividades || []).map((item) => {
@@ -3649,7 +3666,7 @@
                   '<option value="listo"' + (material === 'listo' ? ' selected' : '') + '>Listo</option>' +
                   '<option value="no_listo"' + (material === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
                 '</select></div>' +
-                '<div><label>¿Se realizó?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
+                '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
                   '<option value=""' + (!realizada ? ' selected' : '') + '>Pendiente</option>' +
                   '<option value="si"' + (realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (realizada === 'no' ? ' selected' : '') + '>No</option>' +
@@ -3716,6 +3733,7 @@
                 '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</div>' +
               '</div>' +
               (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
+              materialHistoryHtml +
               '<div class="actions" style="margin-top:14px;">' +
                 '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
               '</div>' +
@@ -3738,6 +3756,7 @@
               '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + '</div>' +
             '</div>' +
             (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
+            materialHistoryHtml +
             (allowStructureEdit
               ? renderOpenPlanStructureEditor(plan, allowStructureEdit)
               : ('<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
@@ -3808,8 +3827,24 @@
       return ['material_pendiente', 'material_inicio_semana_pendiente'].includes(tipo) && estado !== 'resuelta';
     }
 
+    function isResolvedMaterialAlert(alerta) {
+      const tipo = String((alerta && alerta.tipo_alerta) || '').trim();
+      const estado = String((alerta && alerta.estado) || '').trim();
+      return ['material_pendiente', 'material_inicio_semana_pendiente'].includes(tipo) && estado === 'resuelta';
+    }
+
     function planHasOpenMaterialAlert(planId) {
       return state.alertas.some((alerta) => alerta.planeacion_id === planId && isOpenMaterialAlert(alerta));
+    }
+
+    function getLatestResolvedMaterialAlertForPlan(planId) {
+      return state.alertas
+        .filter((alerta) => alerta.planeacion_id === planId && isResolvedMaterialAlert(alerta))
+        .sort((a, b) => {
+          const aDate = new Date(a.fecha_resolucion || a.fecha_actualizacion || a.fecha_creacion || 0).getTime();
+          const bDate = new Date(b.fecha_resolucion || b.fecha_actualizacion || b.fecha_creacion || 0).getTime();
+          return bDate - aDate;
+        })[0] || null;
     }
 
     function openPlanFromAlert(button, planId) {
@@ -3832,7 +3867,9 @@
     function renderAlertas() {
       const host = $('alertsList');
       if (!host) return;
-      const visibleAlertas = state.alertas.filter(isOperationalAlert);
+      const visibleAlertas = state.alertas.filter((alerta) => {
+        return isOperationalAlert(alerta) && String((alerta && alerta.estado) || '').trim() !== 'resuelta';
+      });
       if (!visibleAlertas.length) {
         host.innerHTML = '<div class="empty">Todavía no hay alertas visibles para esta sesión.</div>';
         return;
