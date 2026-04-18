@@ -1041,6 +1041,14 @@
       justify-content: flex-end;
       align-items: center;
     }
+    .admin-notification-head-copy {
+      max-width: 52ch;
+    }
+    .admin-notification-head-copy h3 {
+      margin-bottom: 8px;
+      font-size: 1.95rem;
+      letter-spacing: -0.03em;
+    }
     .admin-notification-toolbar-actions .btn-ghost.is-active {
       background: rgba(91, 196, 245, 0.14) !important;
       color: var(--la-sky) !important;
@@ -1066,7 +1074,7 @@
     .admin-notification-editor {
       display: grid;
       gap: 16px;
-      padding: 20px;
+      padding: 18px 20px 20px;
       border-radius: 22px;
       border: 1px solid rgba(255, 255, 255, 0.08);
       background: linear-gradient(180deg, rgba(53, 46, 43, 0.96), rgba(43, 38, 36, 0.98));
@@ -1079,6 +1087,33 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
+    }
+    .admin-notification-editor-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.95fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .admin-notification-editor-main,
+    .admin-notification-editor-side {
+      display: grid;
+      gap: 14px;
+    }
+    .admin-notification-inline-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .admin-notification-editor-side select,
+    .admin-notification-editor-side input,
+    .admin-notification-editor-main input,
+    .admin-notification-editor-main textarea {
+      background: rgba(29, 26, 24, 0.92) !important;
+      border-color: rgba(255,255,255,0.08) !important;
+      box-shadow: none !important;
+    }
+    .admin-notification-editor-main textarea {
+      min-height: 126px;
     }
     .admin-notification-list {
       display: grid;
@@ -1226,6 +1261,10 @@
       justify-content: flex-end;
       align-items: center;
     }
+    .admin-notification-editor-actions {
+      justify-content: flex-end;
+      padding-top: 4px;
+    }
     .admin-notification-actions > button {
       min-height: 40px;
       padding: 10px 16px;
@@ -1348,6 +1387,9 @@
       margin-top: 12px;
     }
     @media (max-width: 720px) {
+      .admin-notification-head-copy {
+        max-width: none;
+      }
       .activity-inline-grid {
         grid-template-columns: 1fr;
       }
@@ -1357,7 +1399,11 @@
         flex-direction: column;
         align-items: stretch;
       }
+      .admin-notification-editor-layout,
       .admin-notification-grid {
+        grid-template-columns: 1fr;
+      }
+      .admin-notification-inline-grid {
         grid-template-columns: 1fr;
       }
       .admin-notification-list-header {
@@ -2060,7 +2106,7 @@
       <section id="admin-panel-notificaciones" class="admin-panel">
         <article class="admin-toolbar">
           <div class="admin-toolbar-head">
-            <div>
+            <div class="admin-notification-head-copy">
               <h3>Notificaciones globales</h3>
               <p class="subtle">Este módulo sirve para publicar mensajes generales dirigidos a facilitadores, con control de vigencia, prioridad y audiencia.</p>
             </div>
@@ -2075,45 +2121,49 @@
             <div class="admin-notification-section-head">
               <h4 id="adminNotificationEditorTitle">Nueva notificación</h4>
             </div>
-            <div class="admin-notification-grid">
-              <div>
-                <label for="adminNotificationTitle">Título</label>
-                <input id="adminNotificationTitle" type="text" maxlength="150" placeholder="Título">
+            <div class="admin-notification-editor-layout">
+              <div class="admin-notification-editor-main">
+                <div>
+                  <label for="adminNotificationTitle">Título</label>
+                  <input id="adminNotificationTitle" type="text" maxlength="150" placeholder="Título">
+                </div>
+                <div>
+                  <label for="adminNotificationMessage">Mensaje</label>
+                  <textarea id="adminNotificationMessage" placeholder="Ingresa el mensaje que será visible para los facilitadores."></textarea>
+                </div>
               </div>
-              <div>
-                <label for="adminNotificationPriority">Prioridad</label>
-                <select id="adminNotificationPriority">
-                  <option value="normal">Normal</option>
-                  <option value="alta">Alta</option>
-                </select>
+              <div class="admin-notification-editor-side">
+                <div class="admin-notification-inline-grid">
+                  <div>
+                    <label for="adminNotificationPriority">Prioridad</label>
+                    <select id="adminNotificationPriority">
+                      <option value="normal">Normal</option>
+                      <option value="alta">Alta</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="adminNotificationStart">Fecha de inicio</label>
+                    <input id="adminNotificationStart" type="date">
+                  </div>
+                  <div>
+                    <label for="adminNotificationEnd">Fecha de cierre</label>
+                    <input id="adminNotificationEnd" type="date">
+                  </div>
+                </div>
+                <div>
+                  <label for="adminNotificationAudience">Dirigido a</label>
+                  <select id="adminNotificationAudience">
+                    <option value="todos">Todos los facilitadores</option>
+                    <option value="especificos">Facilitadores específicos</option>
+                  </select>
+                </div>
+                <div id="adminNotificationAudienceList" class="notification-audience-checklist" hidden></div>
+                <div class="actions compact admin-notification-editor-actions">
+                  <button id="adminNotificationSaveDraftBtn" class="btn-secondary" type="button">Guardar borrador</button>
+                  <button id="adminNotificationPublishBtn" class="btn-primary" type="button">Publicar</button>
+                  <button id="adminNotificationCancelBtn" class="btn-ghost" type="button">Cancelar</button>
+                </div>
               </div>
-            </div>
-            <div>
-              <label for="adminNotificationMessage">Mensaje</label>
-              <textarea id="adminNotificationMessage" placeholder="Ingresa el mensaje que será visible para los facilitadores."></textarea>
-            </div>
-            <div class="admin-notification-grid">
-              <div>
-                <label for="adminNotificationStart">Fecha de inicio</label>
-                <input id="adminNotificationStart" type="date">
-              </div>
-              <div>
-                <label for="adminNotificationEnd">Fecha de cierre</label>
-                <input id="adminNotificationEnd" type="date">
-              </div>
-            </div>
-            <div>
-              <label for="adminNotificationAudience">Visible para</label>
-              <select id="adminNotificationAudience">
-                <option value="todos">Todos los facilitadores</option>
-                <option value="especificos">Facilitadores específicos</option>
-              </select>
-            </div>
-            <div id="adminNotificationAudienceList" class="notification-audience-checklist" hidden></div>
-            <div class="actions compact">
-              <button id="adminNotificationSaveDraftBtn" class="btn-secondary" type="button">Guardar borrador</button>
-              <button id="adminNotificationPublishBtn" class="btn-primary" type="button">Publicar</button>
-              <button id="adminNotificationCancelBtn" class="btn-ghost" type="button">Cancelar</button>
             </div>
           </div>
           <div id="adminNotificationFeedback" class="inline-feedback"></div>
