@@ -2169,6 +2169,7 @@
             </div>
             <div class="admin-notification-toolbar-actions">
               <button id="adminNotificationFilterActiveBtn" class="btn-ghost" type="button">Ver activas</button>
+              <button id="adminNotificationFilterScheduledBtn" class="btn-ghost" type="button">Ver programadas</button>
               <button id="adminNotificationFilterDraftBtn" class="btn-ghost" type="button">Ver borradores / archivadas</button>
               <button id="adminNotificationFilterClosedBtn" class="btn-ghost" type="button">Ver cerradas</button>
               <button id="adminNotificationNewBtn" class="btn-primary" type="button">Nueva notificación</button>
@@ -3428,6 +3429,14 @@
     function getFilteredAdminNotifications() {
       const filter = (state.ui && state.ui.notificationFilter) || 'activas';
       const rows = Array.isArray(state.notificaciones) ? state.notificaciones : [];
+      if (filter === 'programadas') {
+        const today = getTodayYmdLocal();
+        return rows.filter((row) => {
+          const status = String(row && row.estatus || '').trim();
+          const start = toYmdFrontend_(row && row.fecha_inicio || '');
+          return status === 'publicada' && !!start && start > today;
+        });
+      }
       if (filter === 'borradores') {
         return rows.filter((row) => ['borrador', 'archivada'].includes(String(row.estatus || '').trim()));
       }
@@ -3439,6 +3448,7 @@
 
     function getNotificationFilterTitle() {
       const filter = (state.ui && state.ui.notificationFilter) || 'activas';
+      if (filter === 'programadas') return 'Notificaciones programadas';
       if (filter === 'borradores') return 'Borradores y archivadas';
       if (filter === 'cerradas') return 'Notificaciones cerradas';
       return 'Notificaciones activas';
@@ -3508,6 +3518,7 @@
       const panel = $('admin-panel-notificaciones');
       if (!panel || !canUseAdminShell()) return;
       const activeBtn = $('adminNotificationFilterActiveBtn');
+      const scheduledBtn = $('adminNotificationFilterScheduledBtn');
       const draftBtn = $('adminNotificationFilterDraftBtn');
       const closedBtn = $('adminNotificationFilterClosedBtn');
       const editor = $('adminNotificationEditor');
@@ -3532,6 +3543,7 @@
       if (listTitle) listTitle.textContent = getNotificationFilterTitle();
       const filter = (state.ui && state.ui.notificationFilter) || 'activas';
       if (activeBtn) activeBtn.classList.toggle('is-active', filter === 'activas');
+      if (scheduledBtn) scheduledBtn.classList.toggle('is-active', filter === 'programadas');
       if (draftBtn) draftBtn.classList.toggle('is-active', filter === 'borradores');
       if (closedBtn) closedBtn.classList.toggle('is-active', filter === 'cerradas');
       renderNotificationAudienceChecklist();
@@ -5405,7 +5417,8 @@
       }, { button: event.currentTarget }));
       if ($('adminNotificationNewBtn')) $('adminNotificationNewBtn').addEventListener('click', () => openNotificationEditor());
       if ($('adminNotificationFilterActiveBtn')) $('adminNotificationFilterActiveBtn').addEventListener('click', () => setNotificationFilter('activas'));
-      if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').addEventListener('click', () => setNotificationFilter('borradores'));
+if ($('adminNotificationFilterScheduledBtn')) $('adminNotificationFilterScheduledBtn').addEventListener('click', () => setNotificationFilter('programadas'));
+if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').addEventListener('click', () => setNotificationFilter('borradores'));
       if ($('adminNotificationFilterClosedBtn')) $('adminNotificationFilterClosedBtn').addEventListener('click', () => setNotificationFilter('cerradas'));
       if ($('adminNotificationTitle')) $('adminNotificationTitle').addEventListener('input', (event) => updateNotificationEditorField('titulo', event.currentTarget.value));
       if ($('adminNotificationMessage')) $('adminNotificationMessage').addEventListener('input', (event) => updateNotificationEditorField('mensaje', event.currentTarget.value));
