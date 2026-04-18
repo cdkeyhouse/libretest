@@ -2809,18 +2809,26 @@
       return [action].concat((parts || []).map(normalizeActionKeyPart)).join(':');
     }
 
-    function setButtonBusy(button, busy) {
+    function setButtonBusy(button, busy, busyText = 'Procesando...') {
       if (!button) return;
       if (busy) {
         if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
+        if (!button.dataset.originalWidth) button.dataset.originalWidth = String(button.offsetWidth || 0);
         button.disabled = true;
-        button.textContent = 'Procesando...';
+        if (button.offsetWidth) {
+          button.style.width = button.offsetWidth + 'px';
+        }
+        button.textContent = busyText;
         return;
       }
       button.disabled = false;
       if (button.dataset.originalText) {
         button.textContent = button.dataset.originalText;
         delete button.dataset.originalText;
+      }
+      button.style.width = '';
+      if (button.dataset.originalWidth) {
+        delete button.dataset.originalWidth;
       }
     }
 
@@ -3455,6 +3463,15 @@
       return 'Notificación actualizada.';
     }
 
+    function getNotificationBusyText(action) {
+      if (action === 'publicarNotificacion') return 'Publicando...';
+      if (action === 'despublicarNotificacion') return 'Guardando...';
+      if (action === 'cerrarNotificacion') return 'Cerrando...';
+      if (action === 'archivarNotificacion') return 'Archivando...';
+      if (action === 'duplicarNotificacion') return 'Duplicando...';
+      return 'Guardando...';
+    }
+
     function renderNotificationAudienceChecklist() {
       const host = $('adminNotificationAudienceList');
       if (!host) return;
@@ -3649,7 +3666,11 @@
             : (isEditing ? 'Cambios del borrador guardados.' : 'Borrador guardado. Puedes verlo en Ver borradores / archivadas.'),
           'success'
         );
-      }, { button, key: buildActionKey('guardarNotificacion', [state.notificationEditor.notificacion_id || 'new', targetStatus || 'borrador']) });
+      }, {
+        button,
+        busyText: targetStatus === 'publicada' ? 'Publicando...' : 'Guardando...',
+        key: buildActionKey('guardarNotificacion', [state.notificationEditor.notificacion_id || 'new', targetStatus || 'borrador'])
+      });
     }
 
     async function notificationAction(button, notificationId, action) {
@@ -3662,7 +3683,7 @@
         if (state.ui) state.ui.notificationFilter = 'activas';
         await refreshAll();
         setBanner(getNotificationActionMessage(action), 'success');
-      }, { button, key: buildActionKey(action, [notificationId]) });
+      }, { button, busyText: getNotificationBusyText(action), key: buildActionKey(action, [notificationId]) });
     }
 
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
@@ -4941,6 +4962,7 @@
     async function handleAction(label, fn, options = {}) {
       const actionKey = options.key || label;
       const button = options.button || null;
+      const busyText = options.busyText || 'Procesando...';
       const feedbackAnchor = captureFeedbackAnchor(button);
       if (inFlightActions.has(actionKey)) {
         setBanner('Ya hay una solicitud en curso para esta acción.', 'info', { anchor: feedbackAnchor });
@@ -4951,7 +4973,7 @@
         pushFeedbackAnchor(feedbackAnchor);
         try {
           clearActionToast();
-          setButtonBusy(button, true);
+          setButtonBusy(button, true, busyText);
           await fn();
         } catch (err) {
           if (err && err.code === 'INVALID_SESSION') {
@@ -4963,7 +4985,7 @@
         } finally {
           popFeedbackAnchor();
           inFlightActions.delete(actionKey);
-          setButtonBusy(button, false);
+          setButtonBusy(button, false, busyText);
         }
       })();
 
