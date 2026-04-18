@@ -3478,7 +3478,8 @@
       ui: {
         planBuilderExpanded: false,
         notificationEditorExpanded: false,
-        notificationFilter: 'activas'
+        notificationFilter: 'activas',
+        planeacionesMateriaFilter: ''
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -3573,6 +3574,7 @@
         state.ui.planBuilderExpanded = false;
         state.ui.notificationEditorExpanded = false;
         state.ui.notificationFilter = 'activas';
+        state.ui.planeacionesMateriaFilter = '';
       }
       state.notificationEditor = {
         notificacion_id: '',
@@ -4126,6 +4128,10 @@
       $('statMaterias').textContent = String(state.catalogos.materias.length || 0);
     }
 
+    function clearPlaneacionesMateriaFilter() {
+      if (state.ui) state.ui.planeacionesMateriaFilter = '';
+    }
+
     function activateAdminModule(moduleName) {
       if (!canUseAdminShell()) return;
       const nextModule = moduleName || 'dashboard';
@@ -4140,6 +4146,9 @@
         closeFacilitadorEditor();
         closeFacilitadorPin();
         closeFacilitadorAsignacionEditor();
+      }
+      if (nextModule !== 'planeaciones') {
+        clearPlaneacionesMateriaFilter();
       }
       if (nextModule === 'notificaciones' && state.ui) {
         state.ui.notificationFilter = 'activas';
@@ -4528,6 +4537,7 @@
     async function saveNotificationEditor(button, targetStatus) {
       ensureLoggedIn();
       const wantsPublish = targetStatus === 'publicada';
+      const isEditing = !!(state.notificationEditor && state.notificationEditor.notificacion_id);
       await handleAction(wantsPublish ? 'publicarNotificacion' : 'guardarNotificacion', async () => {
         if (wantsPublish) {
           const saveStatus = state.notificationEditor.notificacion_id
@@ -4546,7 +4556,6 @@
         if (state.ui) state.ui.notificationFilter = 'activas';
         resetNotificationEditor();
         await refreshAll();
-        return;
         setBanner(
           targetStatus === 'publicada'
             ? (isEditing ? 'Notificación actualizada y publicada.' : 'Notificación publicada.')
@@ -6341,12 +6350,15 @@
       renderAll();
       if ($('filterFacilitador')) $('filterFacilitador').value = String(facilitadorId || '').trim();
       if ($('filterGrupo') && grupoId !== undefined) $('filterGrupo').value = String(grupoId || '').trim();
-      if ($('planMateria') && materiaId !== undefined) {
-        // no-op intencional, solo mantenemos consistencia visual del editor
-      }
+      if (state.ui) state.ui.planeacionesMateriaFilter = materiaId !== undefined ? String(materiaId || '').trim() : '';
       await refreshPlaneaciones();
       renderAll();
-      setBanner('Planeaciones filtradas por facilitador.', 'info');
+      setBanner(
+        state.ui && state.ui.planeacionesMateriaFilter
+          ? 'Planeaciones filtradas por asignación del facilitador.'
+          : 'Planeaciones filtradas por facilitador.',
+        'info'
+      );
     }
 
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
@@ -6969,8 +6981,12 @@
     function getVisiblePlaneaciones() {
       const role = state.session && state.session.usuario ? state.session.usuario.rol : '';
       let rows = [...state.planeaciones];
+      const materiaFilter = String((state.ui && state.ui.planeacionesMateriaFilter) || '').trim();
       if (role === 'facilitador') {
         rows = rows.filter((plan) => !['cerrada', 'archivada', 'cierre_pendiente'].includes(plan.estado));
+      }
+      if (materiaFilter) {
+        rows = rows.filter((plan) => String(plan.materia_id || '').trim() === materiaFilter);
       }
       return rows;
     }
@@ -8135,6 +8151,7 @@
       $('clearAlumnoFilterBtn').addEventListener('click', clearAlumnoFilter);
       $('filterPlaneacionesBtn').addEventListener('click', (event) => handleAction('filtrar planeaciones', async () => {
         syncAlumnoFilterFromInput();
+        clearPlaneacionesMateriaFilter();
         await refreshPlaneaciones();
         renderAll();
         setBanner('Planeaciones filtradas.', 'info');
