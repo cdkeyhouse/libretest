@@ -3066,6 +3066,8 @@
         historialOpen: false,
         historialAlumnoId: '',
         archivedShadow: {},
+        remoteHistoryByAlumno: {},
+        remoteHistoryLoadedByAlumno: {},
         historyByAlumno: {},
         notesByAlumno: {},
         mockRows: []
@@ -4360,9 +4362,16 @@
     function getAlumnoHistorial(alumnoId) {
       const alumno = getAlumnoById(alumnoId);
       const seeded = seedAlumnoHistory(alumno);
+      const remoteLoaded = !!(state.alumnosUi.remoteHistoryLoadedByAlumno && state.alumnosUi.remoteHistoryLoadedByAlumno[String(alumnoId || '').trim()]);
+      const remoteRows = Array.isArray(state.alumnosUi.remoteHistoryByAlumno[String(alumnoId || '').trim()])
+        ? state.alumnosUi.remoteHistoryByAlumno[String(alumnoId || '').trim()]
+        : [];
       const localRows = Array.isArray(state.alumnosUi.historyByAlumno[String(alumnoId || '').trim()])
         ? state.alumnosUi.historyByAlumno[String(alumnoId || '').trim()]
         : [];
+      if (remoteLoaded && remoteRows.length) {
+        return remoteRows.slice().sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
+      }
       return seeded
         .concat(localRows)
         .sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
@@ -4430,6 +4439,35 @@
       state.alumnosUi.historialAlumnoId = '';
     }
 
+    function invalidateAlumnoHistorialCache(alumnoId) {
+      const id = String(alumnoId || '').trim();
+      if (!id || !state.alumnosUi) return;
+      delete state.alumnosUi.remoteHistoryByAlumno[id];
+      delete state.alumnosUi.remoteHistoryLoadedByAlumno[id];
+    }
+
+    async function loadAlumnoHistorialRemoto(alumnoId) {
+      const id = String(alumnoId || '').trim();
+      if (!id || !canUseAdminShell()) return;
+      try {
+        const response = await api('getHistorialAlumno', { alumno_id: id });
+        const remoteRows = Array.isArray(response && response.historial) ? response.historial : [];
+        state.alumnosUi.remoteHistoryByAlumno[id] = remoteRows.map((row, index) => ({
+          entry_id: String(row.entry_id || ('remote-' + id + '-' + index)),
+          tipo: String(row.tipo || 'evento'),
+          titulo: String(row.titulo || 'Movimiento'),
+          detalle: String(row.detalle || ''),
+          fecha: row.fecha || ''
+        }));
+        state.alumnosUi.remoteHistoryLoadedByAlumno[id] = true;
+      } catch (error) {
+        console.warn('No se pudo cargar historial remoto de alumno:', error);
+      }
+      if (state.alumnosUi.historialOpen && state.alumnosUi.historialAlumnoId === id) {
+        renderAlumnoHistorial();
+      }
+    }
+
     function syncAdminAlumnosModule() {
       if (!canUseAdminShell()) return;
       if (state.activeAdminModule !== 'alumnos') {
@@ -4492,6 +4530,7 @@
             editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agregó un nuevo alumno al catálogo.',
             new Date().toISOString()
           );
+          invalidateAlumnoHistorialCache(savedId);
         }
         closeAlumnoEditor();
         await refreshAll();
@@ -4553,6 +4592,7 @@
           });
         }
         pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
+        invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         await refreshAll();
         renderAll();
@@ -4587,7 +4627,8 @@
           nombre_completo: alumno.nombre_completo,
           nombre_mostrado: alumno.nombre_mostrado || alumno.nombre_completo,
           grupo_id: cambio.nuevo_grupo_id,
-          estatus: alumno.estatus || 'activo'
+          estatus: alumno.estatus || 'activo',
+          motivo: String(cambio.motivo || '').trim()
         });
         pushAlumnoHistory(
           alumno.alumno_id,
@@ -4596,6 +4637,7 @@
           'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' · ' + String(cambio.motivo || '').trim() : ''),
           new Date().toISOString()
         );
+        invalidateAlumnoHistorialCache(alumno.alumno_id);
         closeCambioGrupo();
         await refreshAll();
         renderAll();
@@ -4623,6 +4665,7 @@
           archivado_at: new Date().toISOString()
         });
         pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiró del listado activo del catálogo.', new Date().toISOString());
+        invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
         await refreshAll();
@@ -4658,6 +4701,7 @@
       closeAlumnoEditor();
       closeCambioGrupo();
       renderAdminAlumnosModule();
+      loadAlumnoHistorialRemoto(alumno.alumno_id);
     }
 
     function renderAlumnoEditor() {
