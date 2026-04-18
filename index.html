@@ -7179,7 +7179,9 @@
           '</div>',
           '<div class="admin-materias-inline-actions">',
             (canManage ? '<button class="btn-ghost" type="button" onclick="openMateriaEditor(\'edit\', \'' + escapeHtml(materia.materia_id) + '\')">Editar materia</button>' : ''),
-            (canManage ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\')">' + escapeHtml(materia.estatus === 'activa' ? 'Desactivar' : 'Activar') + '</button>' : ''),
+            (canManage && materia.estatus === 'activa' ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\')">Desactivar</button>' : ''),
+            (canManage && materia.estatus === 'inactiva' ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\')">Activar</button>' : ''),
+            (canManage && materia.estatus === 'archivada' ? '<button class="btn-secondary" type="button" onclick="reactivateMateria(this, \'' + escapeHtml(materia.materia_id) + '\')">Reactivar</button>' : ''),
             (canManage && materia.estatus !== 'archivada' ? '<button class="btn-accent" type="button" onclick="archiveMateria(this, \'' + escapeHtml(materia.materia_id) + '\')">Archivar</button>' : ''),
             (canManage && materiaHasVariants(materia) && materia.estatus !== 'archivada' ? '<button class="btn-primary" type="button" onclick="openSubmateriaEditor(\'new\', \'' + escapeHtml(materia.materia_id) + '\')">Agregar submateria</button>' : ''),
           '</div>',
@@ -7208,7 +7210,11 @@
               '<button class="btn-ghost" type="button" onclick="openSubmateriaEditor(\'edit\', \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Editar</button>',
               '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\', \'up\')">↑</button>',
               '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\', \'down\')">↓</button>',
-              '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">' + escapeHtml(row.estatus === 'activa' ? 'Desactivar' : 'Activar') + '</button>'
+              (row.estatus === 'activa'
+                ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Desactivar</button>'
+                : (row.estatus === 'inactiva'
+                  ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Activar</button>'
+                  : '<button class="btn-secondary" type="button" onclick="reactivateSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Reactivar</button>'))
             ];
             if (row.estatus !== 'archivada') {
               actions.push('<button class="btn-accent" type="button" onclick="archiveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Archivar</button>');
@@ -7398,6 +7404,7 @@
     async function toggleMateriaStatus(button, materiaId) {
       const row = getMateriaBaseRows().find((item) => item.materia_id === String(materiaId || '').trim());
       if (!row) throw new Error('Materia no encontrada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acción de reactivar para una materia archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleMateriaStatus', async () => {
         await api('guardarMateria', {
@@ -7412,6 +7419,25 @@
         button,
         key: buildActionKey('toggleMateriaStatus', [materiaId, nextStatus]),
         busyText: nextStatus === 'activa' ? 'Activando...' : 'Desactivando...'
+      });
+    }
+
+    async function reactivateMateria(button, materiaId) {
+      const row = getMateriaBaseRows().find((item) => item.materia_id === String(materiaId || '').trim());
+      if (!row) throw new Error('Materia no encontrada.');
+      await handleAction('reactivateMateria', async () => {
+        await api('guardarMateria', {
+          materia_id: row.materia_id,
+          estatus: 'activa',
+          request_id: uid('MATREA')
+        });
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('Materia reactivada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('reactivateMateria', [materiaId]),
+        busyText: 'Reactivando...'
       });
     }
 
@@ -7452,6 +7478,7 @@
     async function toggleSubmateriaStatus(button, materiaId, submateriaId) {
       const row = getSubmateriasForMateria(materiaId).find((item) => item.submateria_id === String(submateriaId || '').trim());
       if (!row) throw new Error('Submateria no encontrada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acción de reactivar para una submateria archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleSubmateriaStatus', async () => {
         await api('guardarSubmateria', {
@@ -7468,6 +7495,27 @@
         button,
         key: buildActionKey('toggleSubmateriaStatus', [submateriaId, nextStatus]),
         busyText: nextStatus === 'activa' ? 'Activando...' : 'Desactivando...'
+      });
+    }
+
+    async function reactivateSubmateria(button, materiaId, submateriaId) {
+      const row = getSubmateriasForMateria(materiaId).find((item) => item.submateria_id === String(submateriaId || '').trim());
+      if (!row) throw new Error('Submateria no encontrada.');
+      await handleAction('reactivateSubmateria', async () => {
+        await api('guardarSubmateria', {
+          materia_id: materiaId,
+          submateria_id: submateriaId,
+          estatus: 'activa',
+          request_id: uid('SUBREA')
+        });
+        await refreshAll({ silent: true });
+        state.materiasUi.selectedMateriaId = materiaId;
+        renderAll();
+        setBanner('Submateria reactivada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('reactivateSubmateria', [materiaId, submateriaId]),
+        busyText: 'Reactivando...'
       });
     }
 
@@ -9399,9 +9447,11 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.closeSubmateriaEditor = closeSubmateriaEditor;
     window.saveSubmateriaEditor = saveSubmateriaEditor;
     window.archiveMateria = archiveMateria;
+    window.reactivateMateria = reactivateMateria;
     window.toggleMateriaStatus = toggleMateriaStatus;
     window.moveMateria = moveMateria;
     window.archiveSubmateria = archiveSubmateria;
+    window.reactivateSubmateria = reactivateSubmateria;
     window.toggleSubmateriaStatus = toggleSubmateriaStatus;
     window.moveSubmateria = moveSubmateria;
     window.openAlumnoEditor = openAlumnoEditor;
