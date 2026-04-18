@@ -1609,7 +1609,7 @@
     .admin-alumnos-list-header,
     .admin-alumnos-row {
       display: grid;
-      grid-template-columns: 0.88fr 1.28fr 0.88fr 0.7fr 0.78fr 0.92fr 1fr;
+      grid-template-columns: 0.76fr 1.34fr 0.8fr 0.72fr 0.8fr 0.86fr 1fr;
       gap: 10px;
       align-items: center;
       padding: 10px 12px;
@@ -1623,7 +1623,7 @@
     }
     .admin-alumnos-row {
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      min-height: 64px;
+      min-height: 58px;
     }
     .admin-alumnos-row:last-child {
       border-bottom: 0;
@@ -1750,7 +1750,7 @@
     }
     .admin-alumnos-actions {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 6px;
       justify-content: flex-start;
     }
@@ -5691,7 +5691,7 @@
           }
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
-            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button><div class="mini">' + escapeHtml(row.alumno_id) + '</div></div>' +
+            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
             '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
