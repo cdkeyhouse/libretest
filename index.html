@@ -3272,15 +3272,6 @@
         button.disabled = true;
         if (button.offsetWidth) {
           button.style.width = button.offsetWidth + 'px';
-          if (editing && previousStatus !== nextStatus) {
-            const statusMeta = {
-              pausa: ['pausa', 'Alumno en pausa', 'Se pausó temporalmente al alumno dentro del catálogo.'],
-              inactivo: ['inactivo', 'Alumno inactivo', 'Se marcó al alumno como inactivo.'],
-              egresado: ['egresado', 'Alumno egresado', 'Se actualizó al alumno como egresado.'],
-              activo: ['reactivado', 'Alumno reactivado', 'Se devolvió al alumno al catálogo activo.']
-            }[nextStatus];
-            if (statusMeta) pushAlumnoHistory(savedId, statusMeta[0], statusMeta[1], statusMeta[2], new Date().toISOString());
-          }
         }
         button.textContent = busyText;
         return;
