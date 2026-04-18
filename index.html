@@ -2341,6 +2341,166 @@
       }
     }
 
+    /* Compacto de planeaciones: misma linea visual, menos altura */
+    #panel-planeaciones > .grid-2:first-child {
+      grid-template-columns: 1fr;
+    }
+
+    .plan-builder-shell,
+    .planeaciones-shell-card {
+      padding: 14px 16px;
+    }
+
+    .plan-builder-shell .accordion-head {
+      min-height: 0;
+    }
+
+    .plan-builder-shell #planBuilderBody {
+      margin-top: 12px;
+      padding-top: 12px;
+      gap: 10px;
+    }
+
+    .plan-builder-shell textarea,
+    .planeaciones-shell-card textarea,
+    .plan-open-editor textarea {
+      min-height: 84px;
+    }
+
+    #planFrase,
+    .plan-inline-field textarea {
+      min-height: 74px;
+    }
+
+    .planeaciones-shell-card .card-head {
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    #planeacionesSectionCopy {
+      margin-top: 2px;
+      max-width: 42ch;
+    }
+
+    .planeaciones-filter-bar {
+      gap: 8px;
+    }
+
+    .planeaciones-filter-bar select,
+    .planeaciones-filter-bar input {
+      min-height: 48px;
+      padding: 10px 12px;
+    }
+
+    .planeaciones-filter-bar button {
+      min-height: 48px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+
+    .plan-card {
+      padding: 14px;
+      border-radius: 18px;
+    }
+
+    .plan-top {
+      margin-bottom: 8px;
+    }
+
+    .meta-grid {
+      margin-top: 6px;
+      gap: 4px;
+      font-size: 0.88rem;
+    }
+
+    .plan-open-editor {
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 10px;
+    }
+
+    .plan-open-editor .grid-3 {
+      gap: 10px;
+    }
+
+    .plan-inline-field label,
+    .plan-open-editor label {
+      margin-bottom: 4px;
+    }
+
+    .inline-head {
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .group-block {
+      padding: 12px;
+      border-radius: 18px;
+    }
+
+    .group-block-head {
+      margin-bottom: 8px;
+    }
+
+    .plan-open-students,
+    .plan-builder-shell .checklist {
+      max-height: 184px;
+      padding: 10px;
+      gap: 8px;
+    }
+
+    .plan-open-students .check-item,
+    .plan-builder-shell .check-item {
+      gap: 8px;
+    }
+
+    .activity-editor,
+    .activity-card {
+      padding: 10px 12px;
+      border-radius: 18px;
+    }
+
+    .activity-editor textarea {
+      min-height: 64px;
+    }
+
+    .activity-editor-top,
+    .group-block-head {
+      margin-bottom: 6px;
+    }
+
+    .activity-inline-grid {
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .obs-list,
+    .obs-grid {
+      gap: 8px;
+    }
+
+    .obs-item,
+    .obs-alumno-card {
+      padding: 9px 11px;
+      border-radius: 14px;
+      gap: 4px;
+    }
+
+    .obs-final-input {
+      min-height: 46px;
+      height: 46px;
+      padding: 8px 10px;
+    }
+
+    .plan-open-save-actions {
+      margin-top: 2px;
+      margin-bottom: 10px;
+    }
+
+    #panel-planeaciones .stack {
+      gap: 10px;
+    }
+
     /* ===== Restored institutional dark theme ===== */
     :root {
       --la-cyan: #1FB6E5;
