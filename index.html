@@ -1313,6 +1313,309 @@
       box-shadow: none !important;
     }
     .admin-notification-message.mini { display: none; }
+    .admin-alumnos-module {
+      display: grid;
+      gap: 16px;
+    }
+    .admin-alumnos-head {
+      align-items: end;
+      gap: 20px;
+    }
+    .admin-alumnos-head-copy {
+      display: grid;
+      gap: 6px;
+      max-width: 600px;
+    }
+    .admin-alumnos-head-copy h3 {
+      margin: 0;
+      font-size: 1.82rem;
+      letter-spacing: -0.03em;
+    }
+    .admin-alumnos-head-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .admin-alumnos-search {
+      min-width: 280px;
+      display: grid;
+      gap: 5px;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .admin-alumnos-search input,
+    .admin-alumnos-group-filter select,
+    .admin-alumnos-editor-grid input,
+    .admin-alumnos-editor-grid select,
+    .admin-alumnos-editor-grid textarea,
+    .admin-alumnos-mini-grid select,
+    .admin-alumnos-mini-grid textarea {
+      min-height: 46px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(21, 26, 34, 0.92);
+      color: var(--text-strong);
+      padding: 11px 14px;
+      box-shadow: none;
+    }
+    .admin-alumnos-search input::placeholder,
+    .admin-alumnos-editor-grid input::placeholder,
+    .admin-alumnos-editor-grid textarea::placeholder,
+    .admin-alumnos-mini-grid textarea::placeholder {
+      color: rgba(214, 222, 232, 0.46);
+    }
+    .admin-alumnos-editor-grid textarea,
+    .admin-alumnos-mini-grid textarea {
+      min-height: 108px;
+      resize: vertical;
+    }
+    .admin-alumnos-filterbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .admin-alumnos-filterchips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-alumnos-filterchips .btn-ghost.is-active {
+      border-color: rgba(67, 189, 241, 0.3);
+      color: var(--cyan);
+      background: rgba(31, 79, 108, 0.28);
+    }
+    .admin-alumnos-group-filter {
+      display: grid;
+      gap: 6px;
+      color: var(--text-soft);
+      font-size: 0.84rem;
+      font-weight: 700;
+      min-width: 220px;
+    }
+    .admin-alumnos-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.72fr) minmax(300px, 0.92fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .admin-alumnos-main,
+    .admin-alumnos-panel {
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(27, 33, 43, 0.98), rgba(20, 25, 33, 0.98));
+      box-shadow: 0 18px 36px rgba(0,0,0,0.15);
+    }
+    .admin-alumnos-main {
+      padding: 12px 14px 16px;
+    }
+    .admin-alumnos-side {
+      display: grid;
+      gap: 14px;
+      position: sticky;
+      top: 16px;
+    }
+    .admin-alumnos-panel {
+      padding: 14px;
+    }
+    .admin-alumnos-panel[hidden] {
+      display: none !important;
+    }
+    .admin-alumnos-panel-head,
+    .admin-alumnos-section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+    .admin-alumnos-section-head h4,
+    .admin-alumnos-panel-head h4 {
+      margin: 0;
+      font-size: 1.22rem;
+    }
+    .admin-alumnos-list {
+      min-height: 200px;
+    }
+    .admin-alumnos-table {
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+      background: rgba(19, 25, 34, 0.88);
+    }
+    .admin-alumnos-list-header,
+    .admin-alumnos-row {
+      display: grid;
+      grid-template-columns: 0.88fr 1.28fr 0.88fr 0.7fr 0.78fr 0.92fr 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+    }
+    .admin-alumnos-list-header {
+      color: #a9c7e6;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .admin-alumnos-row {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      min-height: 64px;
+    }
+    .admin-alumnos-row:last-child {
+      border-bottom: 0;
+    }
+    .admin-alumnos-title {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+    .admin-alumnos-title strong {
+      font-size: 0.97rem;
+      line-height: 1.24;
+      color: var(--text-strong);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .admin-alumnos-cell {
+      min-width: 0;
+    }
+    .admin-alumnos-cell .mini,
+    .admin-alumnos-title .mini {
+      font-size: 0.79rem;
+      line-height: 1.35;
+      color: var(--text-soft);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .admin-alumnos-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-strong);
+    }
+    .admin-alumnos-badge.is-active {
+      background: linear-gradient(180deg, rgba(14, 164, 145, 0.95), rgba(10, 127, 114, 0.95));
+      color: #e9fffb;
+      border-color: rgba(58, 209, 188, 0.32);
+    }
+    .admin-alumnos-badge.is-archived {
+      background: rgba(137, 146, 158, 0.15);
+      color: #d1d8df;
+      border-color: rgba(196, 204, 214, 0.16);
+    }
+    .admin-alumnos-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-start;
+    }
+    .admin-alumnos-actions > button {
+      min-height: 28px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: none !important;
+    }
+    .admin-alumnos-editor-grid,
+    .admin-alumnos-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .admin-alumnos-field-full {
+      grid-column: 1 / -1;
+    }
+    .admin-alumnos-panel .field {
+      display: grid;
+      gap: 6px;
+      color: var(--text-soft);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+    .admin-alumnos-panel-actions {
+      justify-content: flex-end;
+      margin-top: 12px;
+      margin-bottom: 0;
+    }
+    .admin-alumnos-readonly {
+      min-height: 46px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 11px 13px;
+      display: grid;
+      gap: 4px;
+    }
+    .admin-alumnos-readonly span {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+    }
+    .admin-alumnos-readonly strong {
+      font-size: 0.95rem;
+      color: var(--text-strong);
+    }
+    .admin-alumnos-history {
+      display: grid;
+      gap: 10px;
+      max-height: 420px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .admin-alumnos-history-item {
+      position: relative;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 12px 14px 12px 18px;
+      display: grid;
+      gap: 4px;
+    }
+    .admin-alumnos-history-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 3px;
+      border-radius: 999px;
+      background: rgba(67, 189, 241, 0.7);
+    }
+    .admin-alumnos-history-item strong {
+      color: var(--text-strong);
+      font-size: 0.95rem;
+    }
+    .admin-alumnos-history-foot {
+      margin-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 12px;
+    }
+    .admin-alumnos-empty {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      border-radius: 22px;
+      border: 1px dashed rgba(255,255,255,0.12);
+      color: var(--text-soft);
+      background: rgba(255,255,255,0.02);
+    }
     .admin-planeaciones-shell {
       display: none;
     }
@@ -1375,7 +1678,7 @@
     .activity-editor {
       border: 1px solid rgba(31, 58, 55, 0.1);
       border-radius: 22px;
-      padding: 12px 14px;
+      padding: 11px 13px;
       background: rgba(255, 255, 255, 0.9);
     }
     .activity-editor textarea {
@@ -1416,6 +1719,63 @@
     @media (max-width: 720px) {
       .admin-notification-head-copy {
         max-width: none;
+      }
+      .admin-alumnos-head,
+      .admin-alumnos-filterbar,
+      .admin-alumnos-section-head,
+      .admin-alumnos-panel-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .admin-alumnos-head-actions {
+        margin-left: 0;
+        width: 100%;
+      }
+      .admin-alumnos-search,
+      .admin-alumnos-group-filter {
+        min-width: 0;
+        width: 100%;
+      }
+      .admin-alumnos-head-actions > #adminAlumnoNewBtn {
+        width: 100%;
+      }
+      .admin-alumnos-layout,
+      .admin-alumnos-editor-grid,
+      .admin-alumnos-mini-grid {
+        grid-template-columns: 1fr;
+      }
+      .admin-alumnos-side {
+        position: static;
+      }
+      .admin-alumnos-list-header {
+        display: none;
+      }
+      .admin-alumnos-table {
+        padding: 0;
+        border: none;
+        background: none;
+        box-shadow: none;
+      }
+      .admin-alumnos-row {
+        grid-template-columns: 1fr;
+        padding: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(33, 38, 47, 0.98), rgba(25, 30, 38, 0.98));
+        margin-bottom: 8px;
+      }
+      .admin-alumnos-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+      .admin-alumnos-actions > button {
+        width: 100%;
+      }
+      .admin-alumnos-cell .mini,
+      .admin-alumnos-title .mini,
+      .admin-alumnos-title strong {
+        white-space: normal;
       }
       .activity-inline-grid {
         grid-template-columns: 1fr;
@@ -2632,6 +2992,46 @@
       session: 'la_v8_session'
     };
 
+    function createEmptyAlumnoEditorState() {
+      return {
+        alumno_id: '',
+        matricula: '',
+        nombres: '',
+        apellidos: '',
+        grupo_id: '',
+        estatus: 'activo',
+        notas_internas: ''
+      };
+    }
+
+    function createEmptyAlumnoCambioState() {
+      return {
+        alumno_id: '',
+        nuevo_grupo_id: '',
+        motivo: ''
+      };
+    }
+
+    function createEmptyAlumnosUiState() {
+      return {
+        search: '',
+        filter: 'activos',
+        grupo: '',
+        editorOpen: false,
+        editorMode: 'new',
+        selectedAlumnoId: '',
+        editor: createEmptyAlumnoEditorState(),
+        cambioGrupoOpen: false,
+        cambioGrupo: createEmptyAlumnoCambioState(),
+        historialOpen: false,
+        historialAlumnoId: '',
+        archivedShadow: {},
+        historyByAlumno: {},
+        notesByAlumno: {},
+        mockRows: []
+      };
+    }
+
     const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzF61zDQkF15kTFBQykHx-J2XAY1TFcqI_Gze_UtVZhD80DTlbkMEYTBIdQ-_HIqlSf/exec';
     const BRAND_LOGO = 'data:image/png;base64,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';
     const DEFAULT_PERIODS = '';
@@ -2664,6 +3064,7 @@
         notificationEditorExpanded: false,
         notificationFilter: 'activas'
       },
+      alumnosUi: createEmptyAlumnosUiState(),
       planEditor: {
         mode: 'create',
         planId: '',
@@ -2765,6 +3166,7 @@
         facilitadores_ids: [],
         estatus: 'borrador'
       };
+      state.alumnosUi = createEmptyAlumnosUiState();
       state.activeTab = 'planeaciones';
       state.activeAdminModule = 'dashboard';
       resetReportResult();
@@ -3307,12 +3709,16 @@
       if (nextModule !== 'notificaciones' && state.ui && state.ui.notificationEditorExpanded) {
         resetNotificationEditor();
       }
+      if (nextModule !== 'alumnos') {
+        syncAdminAlumnosModule();
+      }
       if (nextModule === 'notificaciones' && state.ui) {
         state.ui.notificationFilter = 'activas';
       }
       state.activeAdminModule = nextModule;
       renderAdminShell();
       renderNotificationsAdmin();
+      renderAdminAlumnosModule();
       syncRoleUi();
     }
 
@@ -3608,6 +4014,19 @@
         '</article>';
       }).join('') +
       '</div>';
+      const headerCells = host.querySelectorAll('.admin-alumnos-list-header > div');
+      const headerLabels = [
+        'Matr\u00edcula',
+        'Alumno',
+        'Grupo actual',
+        'Estado',
+        'Alta',
+        '\u00daltima actualizaci\u00f3n',
+        'Acciones'
+      ];
+      headerCells.forEach((cell, index) => {
+        cell.textContent = headerLabels[index] || '';
+      });
     }
 
     function renderInstitutionalNotices() {
@@ -3708,6 +4127,686 @@
         await refreshAll();
         return;
       }, { button, busyText: button ? button.textContent : getNotificationBusyText(action), key: buildActionKey(action, [notificationId]) });
+    }
+
+    function splitAlumnoNombreCompleto(fullName) {
+      const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return { nombres: '', apellidos: '' };
+      if (parts.length === 1) return { nombres: parts[0], apellidos: '' };
+      if (parts.length === 2) return { nombres: parts[0], apellidos: parts[1] };
+      return {
+        nombres: parts.slice(0, parts.length - 2).join(' '),
+        apellidos: parts.slice(-2).join(' ')
+      };
+    }
+
+    function composeAlumnoNombreCompleto(nombres, apellidos) {
+      return [String(nombres || '').trim(), String(apellidos || '').trim()].filter(Boolean).join(' ').trim();
+    }
+
+    function composeAlumnoNombreMostrado(nombres, apellidos, fullName) {
+      const firstSurname = String(apellidos || '').trim().split(/\s+/).filter(Boolean)[0] || '';
+      return [String(nombres || '').trim(), firstSurname].filter(Boolean).join(' ').trim() || String(fullName || '').trim();
+    }
+
+    function getGrupoNombre(grupoId) {
+      if (!grupoId) return 'Sin grupo';
+      const row = (state.catalogos.grupos || []).find((item) => String(item.grupo_id || '').trim() === String(grupoId || '').trim());
+      return row ? (row.nombre_grupo || row.grupo_id) : grupoId;
+    }
+
+    function getAlumnoStatusVisual(row) {
+      const status = String(row && row.estatus || '').trim().toLowerCase();
+      if (row && row.__archived) return 'archivado';
+      return status === 'activo' ? 'activo' : 'archivado';
+    }
+
+    function getAlumnoAdminNotes(alumnoId, fallback) {
+      const notes = state.alumnosUi && state.alumnosUi.notesByAlumno ? state.alumnosUi.notesByAlumno : {};
+      if (Object.prototype.hasOwnProperty.call(notes, alumnoId)) return notes[alumnoId] || '';
+      return String(fallback || '').trim();
+    }
+
+    function normalizeAlumnoRowForAdmin(row, source) {
+      const normalized = Object.assign({}, row || {});
+      normalized.alumno_id = String(normalized.alumno_id || '').trim();
+      normalized.matricula = String(normalized.matricula || '').trim();
+      normalized.nombre_completo = String(normalized.nombre_completo || '').trim();
+      normalized.nombre_mostrado = String(normalized.nombre_mostrado || '').trim();
+      normalized.grupo_id = String(normalized.grupo_id || '').trim();
+      normalized.estatus = String(normalized.estatus || 'activo').trim().toLowerCase();
+      normalized.fecha_alta = toYmdFrontend_(normalized.fecha_alta || '');
+      normalized.fecha_baja = toYmdFrontend_(normalized.fecha_baja || '');
+      normalized.archivado_at = normalized.archivado_at || '';
+      normalized.archivado_por = normalized.archivado_por || '';
+      normalized.notas_internas = getAlumnoAdminNotes(normalized.alumno_id, normalized.notas_internas || '');
+      normalized.__source = source || normalized.__source || 'catalogo';
+      normalized.__archived = !!normalized.__archived;
+      return normalized;
+    }
+
+    function buildAlumnoSourceRows() {
+      const catalogRows = Array.isArray(state.catalogos.alumnos) ? state.catalogos.alumnos : [];
+      const shadowRows = Object.values((state.alumnosUi && state.alumnosUi.archivedShadow) || {});
+      const mockRows = Array.isArray(state.alumnosUi && state.alumnosUi.mockRows) ? state.alumnosUi.mockRows : [];
+      const byId = new Map();
+      catalogRows.forEach((row) => {
+        const normalized = normalizeAlumnoRowForAdmin(row, 'catalogo');
+        if (normalized.alumno_id) byId.set(normalized.alumno_id, normalized);
+      });
+      shadowRows.forEach((row) => {
+        const normalized = normalizeAlumnoRowForAdmin(Object.assign({}, row, { __archived: true }), 'shadow');
+        if (normalized.alumno_id) byId.set(normalized.alumno_id, normalized);
+      });
+      mockRows.forEach((row) => {
+        const normalized = normalizeAlumnoRowForAdmin(row, 'mock');
+        if (normalized.alumno_id && !byId.has(normalized.alumno_id)) byId.set(normalized.alumno_id, normalized);
+      });
+      return Array.from(byId.values());
+    }
+
+    function getAlumnoById(alumnoId) {
+      const id = String(alumnoId || '').trim();
+      return buildAlumnoSourceRows().find((row) => row.alumno_id === id) || null;
+    }
+
+    function pushAlumnoHistory(alumnoId, tipo, titulo, detalle, fecha) {
+      const id = String(alumnoId || '').trim();
+      if (!id) return;
+      if (!state.alumnosUi.historyByAlumno[id]) state.alumnosUi.historyByAlumno[id] = [];
+      state.alumnosUi.historyByAlumno[id].unshift({
+        entry_id: uid('ALUH'),
+        tipo: tipo || 'evento',
+        titulo: titulo || 'Movimiento',
+        detalle: detalle || '',
+        fecha: fecha || new Date().toISOString()
+      });
+      state.alumnosUi.historyByAlumno[id] = state.alumnosUi.historyByAlumno[id].slice(0, 24);
+    }
+
+    function seedAlumnoHistory(alumno) {
+      const rows = [];
+      if (!alumno) return rows;
+      if (alumno.fecha_alta) {
+        rows.push({
+          entry_id: 'seed-alta-' + alumno.alumno_id,
+          tipo: 'alta',
+          titulo: 'Alta de alumno',
+          detalle: 'Registro inicial del alumno en el catálogo.',
+          fecha: alumno.fecha_alta
+        });
+      }
+      if (alumno.__archived && (alumno.archivado_at || alumno.fecha_baja)) {
+        rows.push({
+          entry_id: 'seed-archivado-' + alumno.alumno_id,
+          tipo: 'archivado',
+          titulo: 'Alumno archivado',
+          detalle: 'Se marcó como archivado dentro del catálogo escolar.',
+          fecha: alumno.archivado_at || alumno.fecha_baja
+        });
+      }
+      return rows;
+    }
+
+    function getAlumnoHistorial(alumnoId) {
+      const alumno = getAlumnoById(alumnoId);
+      const seeded = seedAlumnoHistory(alumno);
+      const localRows = Array.isArray(state.alumnosUi.historyByAlumno[String(alumnoId || '').trim()])
+        ? state.alumnosUi.historyByAlumno[String(alumnoId || '').trim()]
+        : [];
+      return seeded
+        .concat(localRows)
+        .sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
+    }
+
+    function getFilteredAlumnos() {
+      const rows = buildAlumnoSourceRows();
+      const filter = String(state.alumnosUi.filter || 'activos').trim();
+      const groupFilter = String(state.alumnosUi.grupo || '').trim();
+      const query = String(state.alumnosUi.search || '').trim().toLowerCase();
+      return rows
+        .filter((row) => {
+          const visualStatus = getAlumnoStatusVisual(row);
+          if (filter === 'activos' && visualStatus !== 'activo') return false;
+          if (filter === 'archivados' && visualStatus !== 'archivado') return false;
+          if (groupFilter && String(row.grupo_id || '').trim() !== groupFilter) return false;
+          if (!query) return true;
+          const haystack = [row.matricula, row.alumno_id, row.nombre_completo, row.nombre_mostrado].join(' ').toLowerCase();
+          return haystack.includes(query);
+        })
+        .sort((a, b) => {
+          const visualA = getAlumnoStatusVisual(a) === 'activo' ? 0 : 1;
+          const visualB = getAlumnoStatusVisual(b) === 'activo' ? 0 : 1;
+          if (visualA !== visualB) return visualA - visualB;
+          return String(a.nombre_completo || a.nombre_mostrado || a.alumno_id).localeCompare(String(b.nombre_completo || b.nombre_mostrado || b.alumno_id), 'es');
+        });
+    }
+
+    function getVisibleAlumnos() {
+      return getFilteredAlumnos();
+    }
+
+    function getAlumnoListTitle() {
+      const filter = String(state.alumnosUi.filter || 'activos').trim();
+      if (filter === 'todos') return 'Todos los alumnos';
+      if (filter === 'archivados') return 'Alumnos archivados';
+      return 'Alumnos activos';
+    }
+
+    function formatAlumnoUpdatedLabel(alumno) {
+      const historial = getAlumnoHistorial(alumno.alumno_id);
+      const latest = historial.length ? historial[0].fecha : (alumno.archivado_at || alumno.fecha_alta || '');
+      if (!latest) return 'Sin registro';
+      return getNotificationRelativeUpdateLabel(latest);
+    }
+
+    function closeAlumnoEditor() {
+      state.alumnosUi.editorOpen = false;
+      state.alumnosUi.editorMode = 'new';
+      state.alumnosUi.selectedAlumnoId = '';
+      state.alumnosUi.editor = createEmptyAlumnoEditorState();
+    }
+
+    function closeCambioGrupo() {
+      state.alumnosUi.cambioGrupoOpen = false;
+      state.alumnosUi.cambioGrupo = createEmptyAlumnoCambioState();
+    }
+
+    function closeAlumnoHistorial() {
+      state.alumnosUi.historialOpen = false;
+      state.alumnosUi.historialAlumnoId = '';
+    }
+
+    function syncAdminAlumnosModule() {
+      if (!canUseAdminShell()) return;
+      if (state.activeAdminModule !== 'alumnos') {
+        closeAlumnoEditor();
+        closeCambioGrupo();
+        closeAlumnoHistorial();
+      }
+    }
+
+    function openAlumnoEditor(mode, alumnoId) {
+      const alumno = mode === 'edit' ? getAlumnoById(alumnoId) : null;
+      const split = splitAlumnoNombreCompleto(alumno ? alumno.nombre_completo : '');
+      state.alumnosUi.editorMode = mode === 'edit' ? 'edit' : 'new';
+      state.alumnosUi.selectedAlumnoId = alumno ? alumno.alumno_id : '';
+      state.alumnosUi.editor = alumno ? {
+        alumno_id: alumno.alumno_id,
+        matricula: alumno.matricula || '',
+        nombres: split.nombres || alumno.nombre_mostrado || '',
+        apellidos: split.apellidos || '',
+        grupo_id: alumno.grupo_id || '',
+        estatus: alumno.estatus || 'activo',
+        notas_internas: getAlumnoAdminNotes(alumno.alumno_id, alumno.notas_internas || '')
+      } : createEmptyAlumnoEditorState();
+      state.alumnosUi.editorOpen = true;
+      closeCambioGrupo();
+      closeAlumnoHistorial();
+      renderAdminAlumnosModule();
+    }
+
+    async function saveAlumnoEditor(button) {
+      ensureLoggedIn();
+      const editor = state.alumnosUi.editor || createEmptyAlumnoEditorState();
+      const fullName = composeAlumnoNombreCompleto(editor.nombres, editor.apellidos);
+      if (!String(editor.matricula || '').trim()) throw new Error('Captura la matrícula del alumno.');
+      if (!fullName) throw new Error('Captura el nombre del alumno.');
+      if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
+      const editing = state.alumnosUi.editorMode === 'edit';
+      const existingId = editing ? state.alumnosUi.selectedAlumnoId : '';
+      await handleAction('guardarAlumno', async () => {
+        const payload = {
+          alumno_id: existingId,
+          matricula: String(editor.matricula || '').trim(),
+          nombre_completo: fullName,
+          nombre_mostrado: composeAlumnoNombreMostrado(editor.nombres, editor.apellidos, fullName),
+          grupo_id: String(editor.grupo_id || '').trim(),
+          estatus: String(editor.estatus || 'activo').trim()
+        };
+        const response = await api('guardarAlumno', payload);
+        const savedId = (response && response.alumno_id) || existingId || '';
+        if (savedId) {
+          state.alumnosUi.notesByAlumno[savedId] = String(editor.notas_internas || '').trim();
+          pushAlumnoHistory(
+            savedId,
+            editing ? 'edicion' : 'alta',
+            editing ? 'Ficha actualizada' : 'Alta de alumno',
+            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agregó un nuevo alumno al catálogo.',
+            new Date().toISOString()
+          );
+        }
+        closeAlumnoEditor();
+        await refreshAll();
+        renderAll();
+        setBanner(editing ? 'Ficha actualizada.' : 'Alumno creado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarAlumno', [existingId || editor.matricula, editor.grupo_id])
+      });
+    }
+
+    function openCambioGrupo(alumnoId) {
+      const alumno = getAlumnoById(alumnoId);
+      if (!alumno) return;
+      state.alumnosUi.cambioGrupoOpen = true;
+      state.alumnosUi.cambioGrupo = {
+        alumno_id: alumno.alumno_id,
+        nuevo_grupo_id: '',
+        motivo: ''
+      };
+      closeAlumnoEditor();
+      closeAlumnoHistorial();
+      renderAdminAlumnosModule();
+    }
+
+    async function confirmCambioGrupo(button) {
+      ensureLoggedIn();
+      const cambio = state.alumnosUi.cambioGrupo || createEmptyAlumnoCambioState();
+      const alumno = getAlumnoById(cambio.alumno_id);
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      if (!String(cambio.nuevo_grupo_id || '').trim()) throw new Error('Selecciona el nuevo grupo.');
+      if (String(cambio.nuevo_grupo_id || '').trim() === String(alumno.grupo_id || '').trim()) {
+        throw new Error('Selecciona un grupo diferente al actual.');
+      }
+      await handleAction('guardarAlumno:cambioGrupo', async () => {
+        await api('guardarAlumno', {
+          alumno_id: alumno.alumno_id,
+          matricula: alumno.matricula,
+          nombre_completo: alumno.nombre_completo,
+          nombre_mostrado: alumno.nombre_mostrado || alumno.nombre_completo,
+          grupo_id: cambio.nuevo_grupo_id,
+          estatus: alumno.estatus || 'activo'
+        });
+        pushAlumnoHistory(
+          alumno.alumno_id,
+          'grupo',
+          'Cambio de grupo',
+          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' · ' + String(cambio.motivo || '').trim() : ''),
+          new Date().toISOString()
+        );
+        closeCambioGrupo();
+        await refreshAll();
+        renderAll();
+        setBanner('Grupo actualizado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarAlumno:cambioGrupo', [alumno.alumno_id, cambio.nuevo_grupo_id])
+      });
+    }
+
+    async function archiveAlumno(alumnoId, button) {
+      ensureLoggedIn();
+      const alumno = getAlumnoById(alumnoId);
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      if (!confirm('El alumno pasará a archivados y saldrá de las vistas activas.')) return;
+      await handleAction('archivarAlumno', async () => {
+        await api('archivarAlumno', { alumno_id: alumno.alumno_id });
+        state.alumnosUi.archivedShadow[alumno.alumno_id] = Object.assign({}, alumno, {
+          estatus: 'baja',
+          __archived: true,
+          fecha_baja: getTodayYmdLocal(),
+          archivado_at: new Date().toISOString()
+        });
+        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiró del listado activo del catálogo.', new Date().toISOString());
+        if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
+        closeCambioGrupo();
+        await refreshAll();
+        renderAll();
+        setBanner('Alumno archivado.', 'success');
+      }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]) });
+    }
+
+    async function reactivateAlumno(alumnoId, button) {
+      ensureLoggedIn();
+      const alumno = getAlumnoById(alumnoId);
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      if (!String(alumno.grupo_id || '').trim()) {
+        openCambioGrupo(alumnoId);
+        setBanner('Selecciona primero un grupo para reactivar al alumno.', 'info');
+        return;
+      }
+      if (!confirm('El alumno volverá al catálogo activo.')) return;
+      await handleAction('reactivarAlumno', async () => {
+        await api('guardarAlumno', {
+          alumno_id: alumno.alumno_id,
+          matricula: alumno.matricula,
+          nombre_completo: alumno.nombre_completo,
+          nombre_mostrado: alumno.nombre_mostrado || alumno.nombre_completo,
+          grupo_id: alumno.grupo_id,
+          estatus: 'activo'
+        });
+        delete state.alumnosUi.archivedShadow[alumno.alumno_id];
+        pushAlumnoHistory(alumno.alumno_id, 'reactivado', 'Alumno reactivado', 'Se devolvió al catálogo activo.', new Date().toISOString());
+        await refreshAll();
+        renderAll();
+        setBanner('Alumno reactivado.', 'success');
+      }, { button, key: buildActionKey('reactivarAlumno', [alumno.alumno_id]) });
+    }
+
+    function openAlumnoHistorial(alumnoId) {
+      const alumno = getAlumnoById(alumnoId);
+      if (!alumno) return;
+      state.alumnosUi.historialOpen = true;
+      state.alumnosUi.historialAlumnoId = alumno.alumno_id;
+      closeAlumnoEditor();
+      closeCambioGrupo();
+      renderAdminAlumnosModule();
+    }
+
+    function renderAlumnoEditor() {
+      const editorHost = $('adminAlumnoEditor');
+      if (!editorHost) return;
+      editorHost.hidden = !state.alumnosUi.editorOpen;
+      if (editorHost.hidden) return;
+      if ($('adminAlumnoEditorTitle')) $('adminAlumnoEditorTitle').textContent = state.alumnosUi.editorMode === 'edit' ? 'Editar ficha' : 'Nuevo alumno';
+      if ($('adminAlumnoMatricula')) $('adminAlumnoMatricula').value = state.alumnosUi.editor.matricula || '';
+      if ($('adminAlumnoNombres')) $('adminAlumnoNombres').value = state.alumnosUi.editor.nombres || '';
+      if ($('adminAlumnoApellidos')) $('adminAlumnoApellidos').value = state.alumnosUi.editor.apellidos || '';
+      if ($('adminAlumnoStatus')) $('adminAlumnoStatus').value = state.alumnosUi.editor.estatus || 'activo';
+      if ($('adminAlumnoNotas')) $('adminAlumnoNotas').value = state.alumnosUi.editor.notas_internas || '';
+      fillSelect($('adminAlumnoGrupo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => row.nombre_grupo || row.grupo_id, 'Selecciona grupo');
+      if ($('adminAlumnoGrupo')) $('adminAlumnoGrupo').value = state.alumnosUi.editor.grupo_id || '';
+    }
+
+    function renderAlumnoCambioGrupo() {
+      const panel = $('adminAlumnoCambioGrupo');
+      if (!panel) return;
+      panel.hidden = !state.alumnosUi.cambioGrupoOpen;
+      if (panel.hidden) return;
+      const alumno = getAlumnoById(state.alumnosUi.cambioGrupo.alumno_id);
+      if ($('adminAlumnoCambioMatricula')) $('adminAlumnoCambioMatricula').textContent = alumno ? (alumno.matricula || alumno.alumno_id) : '-';
+      if ($('adminAlumnoCambioNombre')) $('adminAlumnoCambioNombre').textContent = alumno ? (alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) : '-';
+      if ($('adminAlumnoCambioGrupoActual')) $('adminAlumnoCambioGrupoActual').textContent = alumno ? getGrupoNombre(alumno.grupo_id) : '-';
+      fillSelect($('adminAlumnoCambioGrupoNuevo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => row.nombre_grupo || row.grupo_id, 'Selecciona grupo');
+      if ($('adminAlumnoCambioGrupoNuevo')) $('adminAlumnoCambioGrupoNuevo').value = state.alumnosUi.cambioGrupo.nuevo_grupo_id || '';
+      if ($('adminAlumnoCambioMotivo')) $('adminAlumnoCambioMotivo').value = state.alumnosUi.cambioGrupo.motivo || '';
+    }
+
+    function renderAlumnoHistorial() {
+      const panel = $('adminAlumnoHistorial');
+      const host = $('adminAlumnoHistorialList');
+      if (!panel || !host) return;
+      panel.hidden = !state.alumnosUi.historialOpen;
+      if (panel.hidden) return;
+      const alumno = getAlumnoById(state.alumnosUi.historialAlumnoId);
+      if ($('adminAlumnoHistorialLabel')) {
+        $('adminAlumnoHistorialLabel').textContent = alumno
+          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ' + (alumno.matricula || alumno.alumno_id))
+          : 'Seguimiento del alumno.';
+      }
+      const rows = getAlumnoHistorial(state.alumnosUi.historialAlumnoId);
+      if (!rows.length) {
+        host.innerHTML = '<div class="admin-alumnos-empty">Todavía no hay movimientos registrados para este alumno.</div>';
+        return;
+      }
+      host.innerHTML = rows.map((row) => {
+        const ymd = toYmdFrontend_(row.fecha || '');
+        return '<article class="admin-alumnos-history-item">' +
+          '<strong>' + escapeHtml(row.titulo || 'Movimiento') + '</strong>' +
+          '<div class="mini">' + escapeHtml(row.detalle || '') + '</div>' +
+          '<div class="mini">' + escapeHtml(ymd ? formatFechaHumana(ymd) : 'Sin fecha') + '</div>' +
+        '</article>';
+      }).join('');
+    }
+
+    function renderAdminAlumnosList() {
+      const host = $('adminAlumnosList');
+      if (!host) return;
+      const rows = getVisibleAlumnos();
+      if ($('adminAlumnosListTitle')) $('adminAlumnosListTitle').textContent = getAlumnoListTitle();
+      if ($('adminAlumnosListMeta')) $('adminAlumnosListMeta').textContent = rows.length ? (rows.length + ' alumno(s) visibles en esta vista.') : 'No hay resultados con los filtros actuales.';
+      if (!rows.length) {
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay alumnos para mostrar.</strong><br><span class="subtle">Ajusta los filtros o crea un nuevo registro.</span></div></div>';
+        return;
+      }
+      host.innerHTML = '<div class="admin-alumnos-table">' +
+        '<div class="admin-alumnos-list-header">' +
+          '<div>Matrícula</div>' +
+          '<div>Alumno</div>' +
+          '<div>Grupo actual</div>' +
+          '<div>Estado</div>' +
+          '<div>Alta</div>' +
+          '<div>Última actualización</div>' +
+          '<div>Acciones</div>' +
+        '</div>' +
+        rows.map((row) => {
+          const visualStatus = getAlumnoStatusVisual(row);
+          const actions = [];
+          if (visualStatus === 'activo') {
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
+            actions.push('<button class="btn-secondary" type="button" onclick="openCambioGrupo(\'' + escapeHtml(row.alumno_id) + '\')">Cambiar grupo</button>');
+            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Archivar</button>');
+          } else {
+            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Reactivar</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">Ver historial</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
+          }
+          return '<article class="admin-alumnos-row">' +
+            '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
+            '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</strong><div class="mini">' + escapeHtml(row.alumno_id) + '</div></div>' +
+            '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
+            '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + (visualStatus === 'activo' ? 'is-active' : 'is-archived') + '">' + escapeHtml(visualStatus === 'activo' ? 'Activo' : 'Archivado') + '</span></div>' +
+            '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
+            '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(formatAlumnoUpdatedLabel(row)) + '</div></div>' +
+            '<div class="admin-alumnos-actions">' + actions.join('') + '</div>' +
+          '</article>';
+        }).join('') +
+      '</div>';
+    }
+
+    function getAdminAlumnosModuleTemplate() {
+      return [
+        '<article class="admin-toolbar admin-alumnos-module">',
+          '<div class="admin-toolbar-head admin-alumnos-head">',
+            '<div class="admin-alumnos-head-copy">',
+              '<h3>Catálogo de alumnos</h3>',
+              '<p class="subtle">Administra altas, edición, cambios de grupo y estatus del catálogo escolar.</p>',
+            '</div>',
+            '<div class="admin-alumnos-head-actions">',
+              '<label class="admin-alumnos-search" for="adminAlumnosSearch">',
+                '<span>Buscar</span>',
+                '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matrícula o nombre">',
+              '</label>',
+              '<button id="adminAlumnoNewBtn" class="btn-primary" type="button">Nuevo alumno</button>',
+            '</div>',
+          '</div>',
+          '<div class="admin-alumnos-filterbar">',
+            '<div class="admin-alumnos-filterchips">',
+              '<button id="adminAlumnosFilterAllBtn" class="btn-ghost" type="button">Todos</button>',
+              '<button id="adminAlumnosFilterActiveBtn" class="btn-ghost" type="button">Activos</button>',
+              '<button id="adminAlumnosFilterArchivedBtn" class="btn-ghost" type="button">Archivados</button>',
+            '</div>',
+            '<label class="admin-alumnos-group-filter" for="adminAlumnosGroupFilter">',
+              '<span>Grupo</span>',
+              '<select id="adminAlumnosGroupFilter"></select>',
+            '</label>',
+          '</div>',
+          '<div class="admin-alumnos-layout">',
+            '<section class="admin-alumnos-main">',
+              '<div class="admin-alumnos-section-head">',
+                '<div>',
+                  '<h4 id="adminAlumnosListTitle">Alumnos activos</h4>',
+                  '<div id="adminAlumnosListMeta" class="subtle">Listado del catálogo escolar.</div>',
+                '</div>',
+              '</div>',
+              '<div id="adminAlumnosList" class="admin-alumnos-list"></div>',
+            '</section>',
+            '<aside class="admin-alumnos-side">',
+              '<section id="adminAlumnoEditor" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4 id="adminAlumnoEditorTitle">Nuevo alumno</h4>',
+                    '<div class="subtle">Completa la ficha principal del alumno.</div>',
+                  '</div>',
+                '</div>',
+                '<div class="admin-alumnos-editor-grid">',
+                  '<label class="field">',
+                    '<span>Matrícula</span>',
+                    '<input id="adminAlumnoMatricula" type="text" maxlength="50" placeholder="Ej. A-1024">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Grupo actual</span>',
+                    '<select id="adminAlumnoGrupo"></select>',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Nombre(s)</span>',
+                    '<input id="adminAlumnoNombres" type="text" maxlength="100" placeholder="Nombre(s)">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Apellidos</span>',
+                    '<input id="adminAlumnoApellidos" type="text" maxlength="100" placeholder="Apellidos">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Estatus</span>',
+                    '<select id="adminAlumnoStatus">',
+                      '<option value="activo">Activo</option>',
+                      '<option value="pausa">Pausa</option>',
+                      '<option value="inactivo">Inactivo</option>',
+                      '<option value="egresado">Egresado</option>',
+                    '</select>',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Observación administrativa</span>',
+                    '<textarea id="adminAlumnoNotas" rows="4" placeholder="Notas internas para administración"></textarea>',
+                  '</label>',
+                '</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminAlumnoCancelBtn" class="btn-ghost" type="button">Cancelar</button>',
+                  '<button id="adminAlumnoSaveBtn" class="btn-primary" type="button">Guardar</button>',
+                '</div>',
+              '</section>',
+              '<section id="adminAlumnoCambioGrupo" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4>Cambiar grupo</h4>',
+                    '<div class="subtle">Actualiza el grupo del alumno con un motivo opcional.</div>',
+                  '</div>',
+                '</div>',
+                '<div class="admin-alumnos-mini-grid">',
+                  '<div class="admin-alumnos-readonly">',
+                    '<span>Matrícula</span>',
+                    '<strong id="adminAlumnoCambioMatricula">-</strong>',
+                  '</div>',
+                  '<div class="admin-alumnos-readonly">',
+                    '<span>Alumno</span>',
+                    '<strong id="adminAlumnoCambioNombre">-</strong>',
+                  '</div>',
+                  '<div class="admin-alumnos-readonly">',
+                    '<span>Grupo actual</span>',
+                    '<strong id="adminAlumnoCambioGrupoActual">-</strong>',
+                  '</div>',
+                  '<label class="field">',
+                    '<span>Nuevo grupo</span>',
+                    '<select id="adminAlumnoCambioGrupoNuevo"></select>',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Motivo opcional</span>',
+                    '<textarea id="adminAlumnoCambioMotivo" rows="3" placeholder="Motivo del cambio"></textarea>',
+                  '</label>',
+                '</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminAlumnoCambioCancelBtn" class="btn-ghost" type="button">Cancelar</button>',
+                  '<button id="adminAlumnoCambioConfirmBtn" class="btn-primary" type="button">Confirmar cambio</button>',
+                '</div>',
+              '</section>',
+              '<section id="adminAlumnoHistorial" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4>Historial del alumno</h4>',
+                    '<div id="adminAlumnoHistorialLabel" class="subtle">Seguimiento del alumno.</div>',
+                  '</div>',
+                '</div>',
+                '<div id="adminAlumnoHistorialList" class="admin-alumnos-history"></div>',
+                '<div class="admin-alumnos-history-foot subtle">Espacio preparado para acceso futuro al reporte de ciclo.</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminAlumnoHistorialCloseBtn" class="btn-ghost" type="button">Cerrar</button>',
+                '</div>',
+              '</section>',
+            '</aside>',
+          '</div>',
+        '</article>'
+      ].join('');
+    }
+
+    function renderAdminAlumnosModule() {
+      const panel = $('admin-panel-alumnos');
+      if (!panel || !canUseAdminShell()) return;
+      if (panel.dataset.ready !== '1') {
+        panel.innerHTML = getAdminAlumnosModuleTemplate();
+        panel.dataset.ready = '1';
+        bindAdminAlumnosEvents();
+      }
+      syncAdminAlumnosModule();
+      const filter = String(state.alumnosUi.filter || 'activos').trim();
+      if ($('adminAlumnosSearch')) $('adminAlumnosSearch').value = state.alumnosUi.search || '';
+      fillSelect($('adminAlumnosGroupFilter'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => row.nombre_grupo || row.grupo_id, 'Todos los grupos');
+      if ($('adminAlumnosGroupFilter')) $('adminAlumnosGroupFilter').value = state.alumnosUi.grupo || '';
+      if ($('adminAlumnosFilterAllBtn')) $('adminAlumnosFilterAllBtn').classList.toggle('is-active', filter === 'todos');
+      if ($('adminAlumnosFilterActiveBtn')) $('adminAlumnosFilterActiveBtn').classList.toggle('is-active', filter === 'activos');
+      if ($('adminAlumnosFilterArchivedBtn')) $('adminAlumnosFilterArchivedBtn').classList.toggle('is-active', filter === 'archivados');
+      const headTitle = panel.querySelector('.admin-alumnos-head-copy h3');
+      if (headTitle) headTitle.textContent = 'Cat\u00e1logo de alumnos';
+      const headSubtitle = panel.querySelector('.admin-alumnos-head-copy .subtle');
+      if (headSubtitle) headSubtitle.textContent = 'Administra altas, edici\u00f3n, cambios de grupo y estatus del cat\u00e1logo escolar.';
+      if ($('adminAlumnosSearch')) $('adminAlumnosSearch').placeholder = 'Buscar por matr\u00edcula o nombre';
+      const matriculaLabel = $('adminAlumnoMatricula') ? $('adminAlumnoMatricula').closest('label').querySelector('span') : null;
+      if (matriculaLabel) matriculaLabel.textContent = 'Matr\u00edcula';
+      const notasLabel = $('adminAlumnoNotas') ? $('adminAlumnoNotas').closest('label').querySelector('span') : null;
+      if (notasLabel) notasLabel.textContent = 'Observaci\u00f3n administrativa';
+      if ($('adminAlumnoNotas')) $('adminAlumnoNotas').placeholder = 'Notas internas para administraci\u00f3n';
+      const cambioMatriculaLabel = $('adminAlumnoCambioMatricula') ? $('adminAlumnoCambioMatricula').closest('.admin-alumnos-readonly').querySelector('span') : null;
+      if (cambioMatriculaLabel) cambioMatriculaLabel.textContent = 'Matr\u00edcula';
+      renderAdminAlumnosList();
+      renderAlumnoEditor();
+      renderAlumnoCambioGrupo();
+      renderAlumnoHistorial();
+    }
+
+    function bindAdminAlumnosEvents() {
+      if ($('adminAlumnosSearch')) $('adminAlumnosSearch').addEventListener('input', (event) => {
+        state.alumnosUi.search = event.currentTarget.value;
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnosGroupFilter')) $('adminAlumnosGroupFilter').addEventListener('change', (event) => {
+        state.alumnosUi.grupo = event.currentTarget.value;
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnosFilterAllBtn')) $('adminAlumnosFilterAllBtn').addEventListener('click', () => {
+        state.alumnosUi.filter = 'todos';
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnosFilterActiveBtn')) $('adminAlumnosFilterActiveBtn').addEventListener('click', () => {
+        state.alumnosUi.filter = 'activos';
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnosFilterArchivedBtn')) $('adminAlumnosFilterArchivedBtn').addEventListener('click', () => {
+        state.alumnosUi.filter = 'archivados';
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnoNewBtn')) $('adminAlumnoNewBtn').addEventListener('click', () => openAlumnoEditor('new'));
+      if ($('adminAlumnoMatricula')) $('adminAlumnoMatricula').addEventListener('input', (event) => { state.alumnosUi.editor.matricula = event.currentTarget.value; });
+      if ($('adminAlumnoNombres')) $('adminAlumnoNombres').addEventListener('input', (event) => { state.alumnosUi.editor.nombres = event.currentTarget.value; });
+      if ($('adminAlumnoApellidos')) $('adminAlumnoApellidos').addEventListener('input', (event) => { state.alumnosUi.editor.apellidos = event.currentTarget.value; });
+      if ($('adminAlumnoGrupo')) $('adminAlumnoGrupo').addEventListener('change', (event) => { state.alumnosUi.editor.grupo_id = event.currentTarget.value; });
+      if ($('adminAlumnoStatus')) $('adminAlumnoStatus').addEventListener('change', (event) => { state.alumnosUi.editor.estatus = event.currentTarget.value; });
+      if ($('adminAlumnoNotas')) $('adminAlumnoNotas').addEventListener('input', (event) => { state.alumnosUi.editor.notas_internas = event.currentTarget.value; });
+      if ($('adminAlumnoCancelBtn')) $('adminAlumnoCancelBtn').addEventListener('click', () => {
+        closeAlumnoEditor();
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnoSaveBtn')) $('adminAlumnoSaveBtn').addEventListener('click', (event) => saveAlumnoEditor(event.currentTarget));
+      if ($('adminAlumnoCambioGrupoNuevo')) $('adminAlumnoCambioGrupoNuevo').addEventListener('change', (event) => { state.alumnosUi.cambioGrupo.nuevo_grupo_id = event.currentTarget.value; });
+      if ($('adminAlumnoCambioMotivo')) $('adminAlumnoCambioMotivo').addEventListener('input', (event) => { state.alumnosUi.cambioGrupo.motivo = event.currentTarget.value; });
+      if ($('adminAlumnoCambioCancelBtn')) $('adminAlumnoCambioCancelBtn').addEventListener('click', () => {
+        closeCambioGrupo();
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnoCambioConfirmBtn')) $('adminAlumnoCambioConfirmBtn').addEventListener('click', (event) => confirmCambioGrupo(event.currentTarget));
+      if ($('adminAlumnoHistorialCloseBtn')) $('adminAlumnoHistorialCloseBtn').addEventListener('click', () => {
+        closeAlumnoHistorial();
+        renderAdminAlumnosModule();
+      });
     }
 
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
@@ -4779,6 +5878,7 @@
       renderStats();
       renderAdminShell();
       renderNotificationsAdmin();
+      renderAdminAlumnosModule();
       renderInstitutionalNotices();
       renderPeriodSelects();
       renderBaseSelects();
@@ -5432,6 +6532,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
         resetNotificationEditor();
         renderNotificationsAdmin();
       });
+      bindAdminAlumnosEvents();
       $('notaAlcance').addEventListener('change', syncNotePeriodoState);
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
@@ -5473,6 +6574,16 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.editNotification = editNotification;
     window.notificationAction = notificationAction;
     window.toggleNotificationAudienceFacilitador = toggleNotificationAudienceFacilitador;
+    window.openAlumnoEditor = openAlumnoEditor;
+    window.closeAlumnoEditor = closeAlumnoEditor;
+    window.saveAlumnoEditor = saveAlumnoEditor;
+    window.openCambioGrupo = openCambioGrupo;
+    window.closeCambioGrupo = closeCambioGrupo;
+    window.confirmCambioGrupo = confirmCambioGrupo;
+    window.archiveAlumno = archiveAlumno;
+    window.reactivateAlumno = reactivateAlumno;
+    window.openAlumnoHistorial = openAlumnoHistorial;
+    window.closeAlumnoHistorial = closeAlumnoHistorial;
     window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
     window.updateOpenPlanDraftField = updateOpenPlanDraftField;
     window.toggleOpenPlanDraftAlumno = toggleOpenPlanDraftAlumno;
