@@ -3068,6 +3068,7 @@
         archivedShadow: {},
         remoteHistoryByAlumno: {},
         remoteHistoryLoadedByAlumno: {},
+        remoteHistoryFailedByAlumno: {},
         historyByAlumno: {},
         notesByAlumno: {},
         mockRows: []
@@ -4369,7 +4370,7 @@
       const localRows = Array.isArray(state.alumnosUi.historyByAlumno[String(alumnoId || '').trim()])
         ? state.alumnosUi.historyByAlumno[String(alumnoId || '').trim()]
         : [];
-      if (remoteLoaded && remoteRows.length) {
+      if (remoteLoaded) {
         return remoteRows.slice().sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
       }
       return seeded
@@ -4385,7 +4386,10 @@
       return rows
         .filter((row) => {
           const visualStatus = getAlumnoStatusVisual(row);
-          if (filter === 'activos' && visualStatus === 'archivado') return false;
+          if (filter === 'activos' && visualStatus !== 'activo') return false;
+          if (filter === 'pausa' && visualStatus !== 'pausa') return false;
+          if (filter === 'inactivos' && visualStatus !== 'inactivo') return false;
+          if (filter === 'egresados' && visualStatus !== 'egresado') return false;
           if (filter === 'archivados' && visualStatus !== 'archivado') return false;
           if (groupFilter && String(row.grupo_id || '').trim() !== groupFilter) return false;
           if (!query) return true;
@@ -4411,8 +4415,11 @@
     function getAlumnoListTitle() {
       const filter = String(state.alumnosUi.filter || 'activos').trim();
       if (filter === 'todos') return 'Todos los alumnos';
+      if (filter === 'pausa') return 'Alumnos en pausa';
+      if (filter === 'inactivos') return 'Alumnos inactivos';
+      if (filter === 'egresados') return 'Alumnos egresados';
       if (filter === 'archivados') return 'Alumnos archivados';
-      return 'Alumnos del catálogo';
+      return 'Alumnos activos';
     }
 
     function formatAlumnoUpdatedLabel(alumno) {
@@ -4444,6 +4451,7 @@
       if (!id || !state.alumnosUi) return;
       delete state.alumnosUi.remoteHistoryByAlumno[id];
       delete state.alumnosUi.remoteHistoryLoadedByAlumno[id];
+      delete state.alumnosUi.remoteHistoryFailedByAlumno[id];
     }
 
     async function loadAlumnoHistorialRemoto(alumnoId) {
@@ -4460,7 +4468,9 @@
           fecha: row.fecha || ''
         }));
         state.alumnosUi.remoteHistoryLoadedByAlumno[id] = true;
+        state.alumnosUi.remoteHistoryFailedByAlumno[id] = false;
       } catch (error) {
+        state.alumnosUi.remoteHistoryFailedByAlumno[id] = true;
         console.warn('No se pudo cargar historial remoto de alumno:', error);
       }
       if (state.alumnosUi.historialOpen && state.alumnosUi.historialAlumnoId === id) {
@@ -4739,11 +4749,24 @@
       if (!panel || !host) return;
       panel.hidden = !state.alumnosUi.historialOpen;
       if (panel.hidden) return;
+      const alumnoId = String(state.alumnosUi.historialAlumnoId || '').trim();
       const alumno = getAlumnoById(state.alumnosUi.historialAlumnoId);
+      const remoteLoaded = !!(state.alumnosUi.remoteHistoryLoadedByAlumno && state.alumnosUi.remoteHistoryLoadedByAlumno[alumnoId]);
+      const remoteFailed = !!(state.alumnosUi.remoteHistoryFailedByAlumno && state.alumnosUi.remoteHistoryFailedByAlumno[alumnoId]);
       if ($('adminAlumnoHistorialLabel')) {
         $('adminAlumnoHistorialLabel').textContent = alumno
           ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ' + (alumno.matricula || alumno.alumno_id))
           : 'Seguimiento del alumno.';
+      }
+      const historyFoot = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('.admin-alumnos-history-foot') : null;
+      if (historyFoot) {
+        if (remoteLoaded) {
+          historyFoot.textContent = 'Historial cargado desde backend.';
+        } else if (remoteFailed) {
+          historyFoot.textContent = 'Mostrando respaldo local porque el historial remoto no estuvo disponible.';
+        } else {
+          historyFoot.textContent = 'Cargando historial desde backend...';
+        }
       }
       const rows = getAlumnoHistorial(state.alumnosUi.historialAlumnoId);
       if (!rows.length) {
@@ -4832,6 +4855,9 @@
             '<div class="admin-alumnos-filterchips">',
               '<button id="adminAlumnosFilterAllBtn" class="btn-ghost" type="button">Todos</button>',
               '<button id="adminAlumnosFilterActiveBtn" class="btn-ghost" type="button">Activos</button>',
+              '<button id="adminAlumnosFilterPauseBtn" class="btn-ghost" type="button">Pausa</button>',
+              '<button id="adminAlumnosFilterInactiveBtn" class="btn-ghost" type="button">Inactivos</button>',
+              '<button id="adminAlumnosFilterGraduatedBtn" class="btn-ghost" type="button">Egresados</button>',
               '<button id="adminAlumnosFilterArchivedBtn" class="btn-ghost" type="button">Archivados</button>',
             '</div>',
             '<label class="admin-alumnos-group-filter" for="adminAlumnosGroupFilter">',
@@ -4961,6 +4987,9 @@
       if ($('adminAlumnosGroupFilter')) $('adminAlumnosGroupFilter').value = state.alumnosUi.grupo || '';
       if ($('adminAlumnosFilterAllBtn')) $('adminAlumnosFilterAllBtn').classList.toggle('is-active', filter === 'todos');
       if ($('adminAlumnosFilterActiveBtn')) $('adminAlumnosFilterActiveBtn').classList.toggle('is-active', filter === 'activos');
+      if ($('adminAlumnosFilterPauseBtn')) $('adminAlumnosFilterPauseBtn').classList.toggle('is-active', filter === 'pausa');
+      if ($('adminAlumnosFilterInactiveBtn')) $('adminAlumnosFilterInactiveBtn').classList.toggle('is-active', filter === 'inactivos');
+      if ($('adminAlumnosFilterGraduatedBtn')) $('adminAlumnosFilterGraduatedBtn').classList.toggle('is-active', filter === 'egresados');
       if ($('adminAlumnosFilterArchivedBtn')) $('adminAlumnosFilterArchivedBtn').classList.toggle('is-active', filter === 'archivados');
       const headTitle = panel.querySelector('.admin-alumnos-head-copy h3');
       if (headTitle) headTitle.textContent = 'Cat\u00e1logo de alumnos';
@@ -4970,7 +4999,7 @@
       const historyTitle = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('h4') : null;
       if (historyTitle) historyTitle.textContent = 'Historial administrativo reciente';
       const historyFoot = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('.admin-alumnos-history-foot') : null;
-      if (historyFoot) historyFoot.textContent = 'Muestra eventos base y movimientos recientes registrados en esta sesi\u00f3n administrativa.';
+      if (historyFoot) historyFoot.textContent = 'El historial se mostrar\u00e1 desde backend cuando est\u00e9 disponible.';
       const matriculaLabel = $('adminAlumnoMatricula') ? $('adminAlumnoMatricula').closest('label').querySelector('span') : null;
       if (matriculaLabel) matriculaLabel.textContent = 'Matr\u00edcula';
       const notasLabel = $('adminAlumnoNotas') ? $('adminAlumnoNotas').closest('label').querySelector('span') : null;
@@ -4999,6 +5028,18 @@
       });
       if ($('adminAlumnosFilterActiveBtn')) $('adminAlumnosFilterActiveBtn').addEventListener('click', () => {
         state.alumnosUi.filter = 'activos';
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnosFilterPauseBtn')) $('adminAlumnosFilterPauseBtn').addEventListener('click', () => {
+        state.alumnosUi.filter = 'pausa';
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnosFilterInactiveBtn')) $('adminAlumnosFilterInactiveBtn').addEventListener('click', () => {
+        state.alumnosUi.filter = 'inactivos';
+        renderAdminAlumnosModule();
+      });
+      if ($('adminAlumnosFilterGraduatedBtn')) $('adminAlumnosFilterGraduatedBtn').addEventListener('click', () => {
+        state.alumnosUi.filter = 'egresados';
         renderAdminAlumnosModule();
       });
       if ($('adminAlumnosFilterArchivedBtn')) $('adminAlumnosFilterArchivedBtn').addEventListener('click', () => {
