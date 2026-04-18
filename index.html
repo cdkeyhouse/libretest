@@ -1488,9 +1488,12 @@
       align-items: end;
       gap: 10px;
       flex-wrap: wrap;
+      flex: 1 1 540px;
+      justify-content: flex-end;
     }
     .admin-alumnos-search {
       min-width: 280px;
+      flex: 1 1 340px;
       display: grid;
       gap: 5px;
       color: var(--text-soft);
@@ -1511,6 +1514,11 @@
       color: var(--text-strong);
       padding: 11px 14px;
       box-shadow: none;
+    }
+    .admin-alumnos-head-actions > #adminFacilitadorNewBtn {
+      min-width: 220px;
+      min-height: 46px;
+      flex: 0 0 220px;
     }
     .admin-alumnos-search input::placeholder,
     .admin-alumnos-editor-grid input::placeholder,
@@ -1623,7 +1631,7 @@
     .admin-facilitadores-list-header,
     .admin-facilitadores-row {
       display: grid;
-      grid-template-columns: 0.72fr 1.18fr 0.6fr 0.68fr 0.78fr 0.98fr 0.78fr 0.96fr;
+      grid-template-columns: 0.72fr 1.24fr 0.64fr 0.76fr 0.82fr 1.12fr 0.96fr;
       gap: 10px;
       align-items: center;
       padding: 10px 12px;
@@ -1637,10 +1645,21 @@
     }
     .admin-facilitadores-row {
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      min-height: 64px;
+      min-height: 60px;
+    }
+    .admin-facilitadores-row .admin-alumnos-actions {
+      justify-content: flex-start;
     }
     .admin-facilitadores-row:last-child {
       border-bottom: 0;
+    }
+    .admin-facilitadores-row .admin-alumnos-cell.is-pulse .mini {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      line-height: 1.25;
     }
     .admin-alumnos-title {
       display: grid;
@@ -1846,26 +1865,35 @@
     }
     .admin-facilitadores-kpis {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
       gap: 10px;
     }
     .admin-facilitadores-kpi {
       border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.08);
       background: rgba(255,255,255,0.03);
-      padding: 12px;
+      padding: 10px 8px;
       display: grid;
-      gap: 4px;
+      gap: 3px;
+      min-width: 0;
+      align-content: start;
+      justify-items: center;
+      text-align: center;
     }
     .admin-facilitadores-kpi strong {
       font-size: 1.1rem;
       color: var(--text-strong);
+      line-height: 1;
     }
     .admin-facilitadores-kpi span {
-      font-size: 0.75rem;
+      font-size: 0.68rem;
+      line-height: 1.2;
       color: var(--text-soft);
       text-transform: uppercase;
       letter-spacing: 0.03em;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-wrap: balance;
     }
     .admin-facilitadores-assignment-list,
     .admin-facilitadores-matrix {
@@ -1914,6 +1942,19 @@
       flex-wrap: wrap;
       gap: 8px;
     }
+    .admin-facilitadores-module .admin-alumnos-head-actions {
+      align-items: center;
+    }
+    .admin-facilitadores-module .admin-alumnos-search {
+      align-self: center;
+      gap: 0;
+    }
+    .admin-facilitadores-module .admin-alumnos-search span {
+      display: none;
+    }
+    .admin-facilitadores-module .admin-alumnos-empty {
+      min-height: 168px;
+    }
     .admin-facilitadores-meta-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1947,8 +1988,8 @@
     }
     .admin-facilitadores-matrix-cell,
     .admin-facilitadores-matrix-label {
-      padding: 10px 12px;
-      min-height: 52px;
+      padding: 8px 10px;
+      min-height: 46px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2119,8 +2160,10 @@
         min-width: 0;
         width: 100%;
       }
-      .admin-alumnos-head-actions > #adminAlumnoNewBtn {
+      .admin-alumnos-head-actions > #adminAlumnoNewBtn,
+      .admin-alumnos-head-actions > #adminFacilitadorNewBtn {
         width: 100%;
+        flex: 1 1 auto;
       }
       .admin-alumnos-layout,
       .admin-alumnos-editor-grid,
@@ -6065,25 +6108,15 @@
             '<div>Estado</div>',
             '<div>Asignaciones</div>',
             '<div>Pulso</div>',
-            '<div>Última actividad</div>',
             '<div>Acciones</div>',
           '</div>',
           rows.map((row) => {
             const visualStatus = getFacilitadorVisualStatus(row);
             const asignaciones = getFacilitadorAsignaciones(row.facilitador_id).filter((item) => item.activa);
             const pulseText = buildFacilitadorPulseSummary(row.facilitador_id);
-            const actions = [];
-            actions.push('<button class="btn-ghost" type="button" onclick="openFacilitadorPanel(\'' + escapeHtml(row.facilitador_id) + '\')">Ver panel</button>');
-            if (visualStatus === 'archivado') {
-              if (canManageFacilitadoresCatalog()) actions.push('<button class="btn-primary" type="button" onclick="reactivateFacilitador(this, \'' + escapeHtml(row.facilitador_id) + '\')">Reactivar</button>');
-            } else if (visualStatus === 'inactivo') {
-              if (canManageFacilitadoresCatalog()) actions.push('<button class="btn-primary" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeHtml(row.facilitador_id) + '\', true)">Activar</button>');
-            } else {
-              if (canManageFacilitadoresCatalog()) actions.push('<button class="btn-ghost" type="button" onclick="openFacilitadorEditor(\'edit\', \'' + escapeHtml(row.facilitador_id) + '\')">Editar</button>');
-            }
-            if (canManageFacilitadoresCatalog() && visualStatus !== 'archivado' && actions.length < 3) {
-              actions.push('<button class="btn-secondary" type="button" onclick="openFacilitadorPin(\'' + escapeHtml(row.facilitador_id) + '\')">Resetear PIN</button>');
-            }
+            const actions = [
+              '<button class="btn-ghost" type="button" onclick="openFacilitadorPanel(\'' + escapeHtml(row.facilitador_id) + '\')">Ver panel</button>'
+            ];
             return [
               '<article class="admin-facilitadores-row">',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.facilitador_id) + '</div></div>',
@@ -6091,8 +6124,7 @@
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((row.rol || 'facilitador').replace('directora', 'directora')) + '</div></div>',
                 '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(String(asignaciones.length)) + ' activa(s)</div></div>',
-                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(pulseText) + '</div></div>',
-                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getFacilitadorUpdatedLabel(row)) + '</div></div>',
+                '<div class="admin-alumnos-cell is-pulse"><div class="mini">' + escapeHtml(pulseText) + '</div></div>',
                 '<div class="admin-alumnos-actions">' + actions.join('') + '</div>',
               '</article>'
             ].join('');
