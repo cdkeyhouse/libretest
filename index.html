@@ -3499,10 +3499,21 @@
         rows.map((row) => {
         const high = String(row.prioridad || '').trim() === 'alta';
         const status = String(row.estatus || '').trim();
-        const canPublish = status === 'borrador';
-        const canDespublish = status === 'publicada';
-        const canClose = status === 'publicada';
-        const canArchive = status !== 'archivada';
+        const actions = [];
+        if (status === 'borrador') {
+          actions.push('<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeHtml(row.notificacion_id) + '\')">Editar</button>');
+          actions.push('<button class="btn-primary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'publicarNotificacion\')">Publicar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>');
+        } else if (status === 'publicada') {
+          actions.push('<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeHtml(row.notificacion_id) + '\')">Editar</button>');
+          actions.push('<button class="btn-secondary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'despublicarNotificacion\')">Despublicar</button>');
+          actions.push('<button class="btn-accent" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'cerrarNotificacion\')">Cerrar</button>');
+        } else if (status === 'cerrada') {
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>');
+        } else if (status === 'archivada') {
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>');
+        }
         return '<article class="admin-notification-row' + (high ? ' is-high' : '') + '">' +
           '<div class="admin-notification-title">' +
             '<strong>' + escapeHtml(row.titulo || 'Sin título') + '</strong>' +
@@ -3524,12 +3535,7 @@
             '<div class="mini">' + escapeHtml(getNotificationRelativeUpdateLabel(row.fecha_actualizacion || row.fecha_creacion || '')) + '</div>' +
           '</div>' +
           '<div class="admin-notification-actions">' +
-            '<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeHtml(row.notificacion_id) + '\')">Editar</button>' +
-            (canPublish ? '<button class="btn-primary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'publicarNotificacion\')">Publicar</button>' : '') +
-            (canDespublish ? '<button class="btn-secondary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'despublicarNotificacion\')">Despublicar</button>' : '') +
-            '<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>' +
-            (canClose ? '<button class="btn-accent" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'cerrarNotificacion\')">Cerrar</button>' : '') +
-            (canArchive ? '<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>' : '') +
+            actions.join('') +
           '</div>' +
         '</article>';
       }).join('') +
