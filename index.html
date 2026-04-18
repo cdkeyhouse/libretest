@@ -1122,43 +1122,45 @@
     .admin-notification-list-table {
       display: grid;
       gap: 0;
-      border-radius: 22px;
-      padding: 0 14px 8px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: linear-gradient(180deg, rgba(45, 40, 38, 0.98), rgba(39, 35, 33, 0.98));
+      border-radius: 18px;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,0.09);
+      background: linear-gradient(180deg, rgba(33, 38, 47, 0.98), rgba(25, 30, 38, 0.98));
       overflow: hidden;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.22);
     }
     .admin-notification-list-header,
     .admin-notification-row {
       display: grid;
-      grid-template-columns: minmax(240px, 1.9fr) minmax(110px, 0.7fr) minmax(140px, 0.9fr) minmax(105px, 0.7fr) minmax(150px, 0.95fr) minmax(120px, 0.7fr) minmax(260px, 1.25fr);
-      gap: 12px;
+      grid-template-columns: minmax(260px, 1.9fr) minmax(110px, 0.72fr) minmax(170px, 1fr) minmax(110px, 0.7fr) minmax(140px, 0.9fr) minmax(140px, 0.9fr) minmax(280px, 1.3fr);
+      gap: 10px;
       align-items: center;
     }
     .admin-notification-list-header {
-      padding: 14px 12px 12px;
+      padding: 12px 16px;
       border-bottom: 1px solid rgba(255,255,255,0.08);
-      color: var(--text-dim);
-      font-size: 0.8rem;
+      color: #9da8b7;
+      font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.01em;
+      background: rgba(11, 15, 22, 0.28);
     }
     .admin-notification-row {
       border-radius: 0;
-      padding: 14px 12px;
+      padding: 10px 16px;
       border: 0;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
       background: transparent;
-      gap: 12px;
+      gap: 10px;
     }
     .admin-notification-row:last-child {
       border-bottom: 0;
     }
     .admin-notification-row.is-high,
     .institutional-notice-card.is-high {
-      box-shadow: inset 4px 0 0 rgba(233, 125, 178, 0.58);
+      box-shadow: inset 3px 0 0 rgba(233, 125, 178, 0.52);
       border-color: transparent;
-      background: linear-gradient(90deg, rgba(88, 45, 64, 0.22), rgba(0,0,0,0));
+      background: linear-gradient(90deg, rgba(68, 42, 58, 0.18), rgba(0,0,0,0));
     }
     .admin-notification-top,
     .institutional-notice-top {
@@ -1176,22 +1178,27 @@
     .notice-chip {
       display: inline-flex;
       align-items: center;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.08);
+      justify-content: center;
+      min-height: 30px;
+      padding: 4px 12px;
+      border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.1);
       background: rgba(255,255,255,0.06);
       color: var(--text-strong);
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
     }
     .notice-chip.high {
-      background: rgba(233, 125, 178, 0.18);
-      color: #ffd1e7;
-      border-color: rgba(233, 125, 178, 0.28);
+      background: linear-gradient(180deg, rgba(151, 66, 108, 0.95), rgba(117, 47, 86, 0.95));
+      color: #ffe3f0;
+      border-color: rgba(233, 125, 178, 0.34);
     }
     .notice-chip.publicada {
-      background: rgba(91,196,245,0.16);
-      color: #b8e8ff;
+      background: linear-gradient(180deg, rgba(14, 164, 145, 0.95), rgba(10, 127, 114, 0.95));
+      color: #e9fffb;
+      border-color: rgba(58, 209, 188, 0.32);
     }
     .notice-chip.borrador {
       background: rgba(155,163,168,0.16);
@@ -1236,41 +1243,44 @@
     }
     .admin-notification-title {
       display: grid;
-      gap: 6px;
+      gap: 0;
       min-width: 0;
     }
     .admin-notification-title strong {
       color: var(--text-strong);
       font-size: 0.98rem;
-      line-height: 1.3;
+      line-height: 1.25;
+      font-weight: 800;
     }
     .admin-notification-cell {
       display: grid;
-      gap: 6px;
+      gap: 4px;
       min-width: 0;
     }
     .admin-notification-meta-stack {
       display: grid;
-      gap: 8px;
+      gap: 4px;
       justify-items: start;
     }
     .admin-notification-actions {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      flex-wrap: nowrap;
+      gap: 6px;
       justify-content: flex-end;
       align-items: center;
+      overflow-x: auto;
     }
     .admin-notification-editor-actions {
       justify-content: flex-end;
       padding-top: 4px;
     }
     .admin-notification-actions > button {
-      min-height: 40px;
-      padding: 10px 16px;
-      border-radius: 16px;
-      font-size: 0.94rem;
-      font-weight: 800;
+      min-height: 34px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      white-space: nowrap;
     }
     .admin-notification-actions .btn-ghost,
     .admin-notification-actions .btn-secondary,
@@ -1278,14 +1288,7 @@
     .admin-notification-actions .btn-primary {
       box-shadow: none !important;
     }
-    .admin-notification-message.mini {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      line-height: 1.45;
-      max-width: 40ch;
-    }
+    .admin-notification-message.mini { display: none; }
     .admin-planeaciones-shell {
       display: none;
     }
