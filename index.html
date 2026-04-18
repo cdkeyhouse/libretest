@@ -4327,6 +4327,13 @@
       state.openPlanDraft = null;
     }
 
+    function resetPlaneacionesTransientUi() {
+      closeOpenPlan();
+      closePlanBuilder();
+      renderPlanBuilderVisibility();
+      renderPlaneacionesList();
+    }
+
     function clearPlaneacionesMateriaFilter() {
       if (state.ui) state.ui.planeacionesMateriaFilter = '';
     }
@@ -4347,8 +4354,7 @@
         closeFacilitadorAsignacionEditor();
       }
       if (nextModule !== 'planeaciones') {
-        closeOpenPlan();
-        closePlanBuilder();
+        resetPlaneacionesTransientUi();
         clearPlaneacionesMateriaFilter();
       }
       if (nextModule === 'notificaciones' && state.ui) {
@@ -7658,8 +7664,7 @@
         tabName = 'planeaciones';
       }
       if (tabName !== 'planeaciones') {
-        closeOpenPlan();
-        closePlanBuilder();
+        resetPlaneacionesTransientUi();
       }
       state.activeTab = tabName;
       document.querySelectorAll('.tab-btn').forEach((btn) => {
