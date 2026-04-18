@@ -1512,6 +1512,21 @@
       color: #e9fffb;
       border-color: rgba(58, 209, 188, 0.32);
     }
+    .admin-alumnos-badge.is-paused {
+      background: linear-gradient(180deg, rgba(173, 88, 135, 0.92), rgba(131, 59, 101, 0.92));
+      color: #fff2fa;
+      border-color: rgba(222, 120, 176, 0.24);
+    }
+    .admin-alumnos-badge.is-inactive {
+      background: linear-gradient(180deg, rgba(197, 151, 74, 0.88), rgba(151, 111, 26, 0.88));
+      color: #fff6dd;
+      border-color: rgba(232, 194, 95, 0.22);
+    }
+    .admin-alumnos-badge.is-graduated {
+      background: linear-gradient(180deg, rgba(67, 114, 214, 0.88), rgba(44, 83, 170, 0.88));
+      color: #edf5ff;
+      border-color: rgba(116, 158, 241, 0.22);
+    }
     .admin-alumnos-badge.is-archived {
       background: rgba(137, 146, 158, 0.15);
       color: #d1d8df;
@@ -3232,6 +3247,15 @@
         button.disabled = true;
         if (button.offsetWidth) {
           button.style.width = button.offsetWidth + 'px';
+          if (editing && previousStatus !== nextStatus) {
+            const statusMeta = {
+              pausa: ['pausa', 'Alumno en pausa', 'Se pausó temporalmente al alumno dentro del catálogo.'],
+              inactivo: ['inactivo', 'Alumno inactivo', 'Se marcó al alumno como inactivo.'],
+              egresado: ['egresado', 'Alumno egresado', 'Se actualizó al alumno como egresado.'],
+              activo: ['reactivado', 'Alumno reactivado', 'Se devolvió al alumno al catálogo activo.']
+            }[nextStatus];
+            if (statusMeta) pushAlumnoHistory(savedId, statusMeta[0], statusMeta[1], statusMeta[2], new Date().toISOString());
+          }
         }
         button.textContent = busyText;
         return;
@@ -4097,8 +4121,22 @@
 
     async function saveNotificationEditor(button, targetStatus) {
       ensureLoggedIn();
-      await handleAction(targetStatus === 'publicada' ? 'publicarNotificacion' : 'guardarNotificacion', async () => {
-        await api('guardarNotificacion', buildNotificationPayload(targetStatus || 'borrador'));
+      const wantsPublish = targetStatus === 'publicada';
+      await handleAction(wantsPublish ? 'publicarNotificacion' : 'guardarNotificacion', async () => {
+        if (wantsPublish) {
+          const saveStatus = state.notificationEditor.notificacion_id
+            ? (state.notificationEditor.estatus || 'borrador')
+            : 'borrador';
+          const saved = await api('guardarNotificacion', buildNotificationPayload(saveStatus));
+          const notificationId = (saved && saved.notificacion_id) || state.notificationEditor.notificacion_id || '';
+          if (!notificationId) throw new Error('No se pudo preparar la notificación para publicar.');
+          await api('publicarNotificacion', {
+            notificacion_id: notificationId,
+            request_id: uid('NOTIP')
+          });
+        } else {
+          await api('guardarNotificacion', buildNotificationPayload(targetStatus || 'borrador'));
+        }
         if (state.ui) state.ui.notificationFilter = 'activas';
         resetNotificationEditor();
         await refreshAll();
@@ -4158,7 +4196,35 @@
     function getAlumnoStatusVisual(row) {
       const status = String(row && row.estatus || '').trim().toLowerCase();
       if (row && row.__archived) return 'archivado';
-      return status === 'activo' ? 'activo' : 'archivado';
+      if (status === 'pausa') return 'pausa';
+      if (status === 'inactivo') return 'inactivo';
+      if (status === 'egresado') return 'egresado';
+      if (status === 'baja') return 'archivado';
+      return 'activo';
+    }
+
+    function getAlumnoStatusLabel(status) {
+      if (status === 'pausa') return 'Pausa';
+      if (status === 'inactivo') return 'Inactivo';
+      if (status === 'egresado') return 'Egresado';
+      if (status === 'archivado') return 'Archivado';
+      return 'Activo';
+    }
+
+    function getAlumnoStatusBadgeClass(status) {
+      if (status === 'pausa') return 'is-paused';
+      if (status === 'inactivo') return 'is-inactive';
+      if (status === 'egresado') return 'is-graduated';
+      if (status === 'archivado') return 'is-archived';
+      return 'is-active';
+    }
+
+    function getAlumnoStatusSortWeight(status) {
+      if (status === 'activo') return 0;
+      if (status === 'pausa') return 1;
+      if (status === 'inactivo') return 2;
+      if (status === 'egresado') return 3;
+      return 4;
     }
 
     function getAlumnoAdminNotes(alumnoId, fallback) {
@@ -4245,6 +4311,34 @@
           fecha: alumno.archivado_at || alumno.fecha_baja
         });
       }
+      const visualStatus = getAlumnoStatusVisual(alumno);
+      if (visualStatus === 'pausa') {
+        rows.push({
+          entry_id: 'seed-pausa-' + alumno.alumno_id,
+          tipo: 'pausa',
+          titulo: 'Alumno en pausa',
+          detalle: 'El alumno quedó en pausa dentro del catálogo.',
+          fecha: alumno.fecha_baja || alumno.fecha_alta || ''
+        });
+      }
+      if (visualStatus === 'inactivo') {
+        rows.push({
+          entry_id: 'seed-inactivo-' + alumno.alumno_id,
+          tipo: 'inactivo',
+          titulo: 'Alumno inactivo',
+          detalle: 'El alumno quedó marcado como inactivo en el catálogo.',
+          fecha: alumno.fecha_baja || alumno.fecha_alta || ''
+        });
+      }
+      if (visualStatus === 'egresado') {
+        rows.push({
+          entry_id: 'seed-egresado-' + alumno.alumno_id,
+          tipo: 'egresado',
+          titulo: 'Alumno egresado',
+          detalle: 'El alumno quedó registrado como egresado.',
+          fecha: alumno.fecha_baja || alumno.fecha_alta || ''
+        });
+      }
       return rows;
     }
 
@@ -4267,7 +4361,7 @@
       return rows
         .filter((row) => {
           const visualStatus = getAlumnoStatusVisual(row);
-          if (filter === 'activos' && visualStatus !== 'activo') return false;
+          if (filter === 'activos' && visualStatus === 'archivado') return false;
           if (filter === 'archivados' && visualStatus !== 'archivado') return false;
           if (groupFilter && String(row.grupo_id || '').trim() !== groupFilter) return false;
           if (!query) return true;
@@ -4275,8 +4369,8 @@
           return haystack.includes(query);
         })
         .sort((a, b) => {
-          const visualA = getAlumnoStatusVisual(a) === 'activo' ? 0 : 1;
-          const visualB = getAlumnoStatusVisual(b) === 'activo' ? 0 : 1;
+          const visualA = getAlumnoStatusSortWeight(getAlumnoStatusVisual(a));
+          const visualB = getAlumnoStatusSortWeight(getAlumnoStatusVisual(b));
           if (visualA !== visualB) return visualA - visualB;
           return String(a.nombre_completo || a.nombre_mostrado || a.alumno_id).localeCompare(String(b.nombre_completo || b.nombre_mostrado || b.alumno_id), 'es');
         });
@@ -4290,7 +4384,7 @@
       const filter = String(state.alumnosUi.filter || 'activos').trim();
       if (filter === 'todos') return 'Todos los alumnos';
       if (filter === 'archivados') return 'Alumnos archivados';
-      return 'Alumnos activos';
+      return 'Alumnos del catálogo';
     }
 
     function formatAlumnoUpdatedLabel(alumno) {
@@ -4355,6 +4449,10 @@
       if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
       const editing = state.alumnosUi.editorMode === 'edit';
       const existingId = editing ? state.alumnosUi.selectedAlumnoId : '';
+      const existingAlumno = editing ? getAlumnoById(existingId) : null;
+      const previousStatus = existingAlumno ? getAlumnoStatusVisual(existingAlumno) : 'activo';
+      const nextStatus = getAlumnoStatusVisual({ estatus: String(editor.estatus || 'activo').trim() });
+      if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasará a pausa y seguirá visible dentro del catálogo administrativo.')) return;
       await handleAction('guardarAlumno', async () => {
         const payload = {
           alumno_id: existingId,
@@ -4400,6 +4498,60 @@
       renderAdminAlumnosModule();
     }
 
+    async function updateAlumnoStatus(alumnoId, nextStatus, button, options) {
+      ensureLoggedIn();
+      const alumno = getAlumnoById(alumnoId);
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      const currentStatus = getAlumnoStatusVisual(alumno);
+      const targetStatus = String(nextStatus || '').trim().toLowerCase();
+      const meta = Object.assign({
+        confirmText: '',
+        actionKey: 'guardarAlumno:estatus',
+        historyType: targetStatus || 'estado',
+        historyTitle: 'Estado actualizado',
+        historyDetail: 'Se actualizó el estatus del alumno.',
+        successMessage: 'Estatus actualizado.'
+      }, options || {});
+      if (meta.confirmText && !confirm(meta.confirmText)) return;
+      await handleAction(meta.actionKey, async () => {
+        await api('guardarAlumno', {
+          alumno_id: alumno.alumno_id,
+          matricula: alumno.matricula,
+          nombre_completo: alumno.nombre_completo,
+          nombre_mostrado: alumno.nombre_mostrado || alumno.nombre_completo,
+          grupo_id: alumno.grupo_id,
+          estatus: targetStatus
+        });
+        if (currentStatus === 'archivado' && targetStatus !== 'baja') {
+          delete state.alumnosUi.archivedShadow[alumno.alumno_id];
+        }
+        if (targetStatus === 'baja') {
+          state.alumnosUi.archivedShadow[alumno.alumno_id] = Object.assign({}, alumno, {
+            estatus: 'baja',
+            __archived: true,
+            fecha_baja: getTodayYmdLocal(),
+            archivado_at: new Date().toISOString()
+          });
+        }
+        pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
+        if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
+        await refreshAll();
+        renderAll();
+        setBanner(meta.successMessage, 'success');
+      }, { button, key: buildActionKey(meta.actionKey, [alumno.alumno_id, targetStatus]) });
+    }
+
+    function pauseAlumno(alumnoId, button) {
+      return updateAlumnoStatus(alumnoId, 'pausa', button, {
+        confirmText: 'El alumno quedará en pausa y seguirá visible dentro del catálogo administrativo.',
+        actionKey: 'guardarAlumno:pausa',
+        historyType: 'pausa',
+        historyTitle: 'Alumno en pausa',
+        historyDetail: 'Se pausó temporalmente al alumno dentro del catálogo.',
+        successMessage: 'Alumno en pausa.'
+      });
+    }
+
     async function confirmCambioGrupo(button) {
       ensureLoggedIn();
       const cambio = state.alumnosUi.cambioGrupo || createEmptyAlumnoCambioState();
@@ -4438,6 +4590,9 @@
     async function archiveAlumno(alumnoId, button) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
+      if (alumno && getAlumnoStatusVisual(alumno) === 'activo') {
+        throw new Error('Primero pausa o cambia el estatus del alumno antes de archivarlo.');
+      }
       if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
       if (!confirm('El alumno pasará a archivados y saldrá de las vistas activas.')) return;
       await handleAction('archivarAlumno', async () => {
@@ -4466,6 +4621,14 @@
         setBanner('Selecciona primero un grupo para reactivar al alumno.', 'info');
         return;
       }
+      return updateAlumnoStatus(alumnoId, 'activo', button, {
+        confirmText: 'El alumno volverá al catálogo activo.',
+        actionKey: 'reactivarAlumno',
+        historyType: 'reactivado',
+        historyTitle: 'Alumno reactivado',
+        historyDetail: 'Se devolvió al alumno al catálogo activo.',
+        successMessage: 'Alumno reactivado.'
+      });
       if (!confirm('El alumno volverá al catálogo activo.')) return;
       await handleAction('reactivarAlumno', async () => {
         await api('guardarAlumno', {
@@ -4576,17 +4739,24 @@
           if (visualStatus === 'activo') {
             actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
             actions.push('<button class="btn-secondary" type="button" onclick="openCambioGrupo(\'' + escapeHtml(row.alumno_id) + '\')">Cambiar grupo</button>');
+            actions.push('<button class="btn-accent" type="button" onclick="pauseAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Pausar</button>');
+          } else if (visualStatus === 'pausa' || visualStatus === 'inactivo') {
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
+            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Reactivar</button>');
+            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Archivar</button>');
+          } else if (visualStatus === 'egresado') {
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">Ver historial</button>');
             actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Archivar</button>');
           } else {
             actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Reactivar</button>');
             actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">Ver historial</button>');
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
           }
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
-            '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</strong><div class="mini">' + escapeHtml(row.alumno_id) + '</div></div>' +
+            '<div class="admin-alumnos-title"><button class="btn-link subtle" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button><div class="mini">' + escapeHtml(row.alumno_id) + '</div></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
-            '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + (visualStatus === 'activo' ? 'is-active' : 'is-archived') + '">' + escapeHtml(visualStatus === 'activo' ? 'Activo' : 'Archivado') + '</span></div>' +
+            '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(formatAlumnoUpdatedLabel(row)) + '</div></div>' +
             '<div class="admin-alumnos-actions">' + actions.join('') + '</div>' +
@@ -6580,6 +6750,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.openCambioGrupo = openCambioGrupo;
     window.closeCambioGrupo = closeCambioGrupo;
     window.confirmCambioGrupo = confirmCambioGrupo;
+    window.pauseAlumno = pauseAlumno;
     window.archiveAlumno = archiveAlumno;
     window.reactivateAlumno = reactivateAlumno;
     window.openAlumnoHistorial = openAlumnoHistorial;
