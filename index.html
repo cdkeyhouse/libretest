@@ -676,10 +676,11 @@
 
     .alert-item-top {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       gap: 12px;
       min-width: 0;
+      flex-wrap: wrap;
     }
 
     .alert-type {
@@ -737,6 +738,7 @@
       display: flex;
       align-items: center;
       justify-content: flex-end;
+      padding-left: 12px;
     }
 
     .alert-open-btn {
@@ -3759,7 +3761,10 @@
       if (adminShell) adminShell.style.display = adminMode ? 'grid' : 'none';
       if (adminPlaneacionesShell) adminPlaneacionesShell.classList.toggle('is-active', !adminMode || state.activeAdminModule === 'planeaciones');
       if (summaryCard) summaryCard.hidden = facilitatorMode || (adminMode && state.activeAdminModule !== 'dashboard');
-      if (alertsCard) alertsCard.hidden = adminMode && state.activeAdminModule !== 'dashboard';
+      if (alertsCard) {
+        const hasVisibleAlerts = getVisibleOperationalAlerts().length > 0;
+        alertsCard.hidden = (adminMode && state.activeAdminModule !== 'dashboard') || !hasVisibleAlerts;
+      }
       if (seguimientoTabBtn) seguimientoTabBtn.hidden = facilitatorMode;
       if (seguimientoPanel) seguimientoPanel.hidden = facilitatorMode;
       if (reportTabBtn) reportTabBtn.hidden = !canViewReportes;
@@ -6134,6 +6139,12 @@
         })[0] || null;
     }
 
+    function getVisibleOperationalAlerts() {
+      return state.alertas.filter((alerta) => {
+        return isOperationalAlert(alerta) && String((alerta && alerta.estado) || '').trim() !== 'resuelta';
+      });
+    }
+
     function openPlanFromAlert(button, planId) {
       if (canUseAdminShell()) {
         activateAdminModule('planeaciones');
@@ -6169,10 +6180,13 @@
 
     function renderAlertas() {
       const host = $('alertsList');
+      const card = $('alertsCard');
       if (!host) return;
-      const visibleAlertas = state.alertas.filter((alerta) => {
-        return isOperationalAlert(alerta) && String((alerta && alerta.estado) || '').trim() !== 'resuelta';
-      });
+      const visibleAlertas = getVisibleOperationalAlerts();
+      if (card) {
+        const adminMode = canUseAdminShell();
+        card.hidden = (adminMode && state.activeAdminModule !== 'dashboard') || !visibleAlertas.length;
+      }
       if (!visibleAlertas.length) {
         host.innerHTML = '<div class="empty">Todavía no hay alertas visibles para esta sesión.</div>';
         return;
