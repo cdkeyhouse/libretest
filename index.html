@@ -809,12 +809,12 @@
     .plan-alert-chip {
       display: inline-flex;
       align-items: center;
-      padding: 7px 12px;
+      padding: 6px 10px;
       border-radius: 999px;
       background: rgba(240, 123, 32, 0.16);
       border: 1px solid rgba(240, 123, 32, 0.26);
       color: #ffd4a8;
-      font-size: 0.8rem;
+      font-size: 0.76rem;
       font-weight: 800;
       letter-spacing: 0.03em;
       text-transform: uppercase;
@@ -823,11 +823,11 @@
 
     .plan-alert-bar {
       margin-top: 10px;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 8px;
+      flex-wrap: nowrap;
     }
 
     .plan-alert-bar .plan-alert-chip {
@@ -835,9 +835,9 @@
     }
 
     .plan-alert-action {
-      min-height: 38px;
-      padding: 9px 14px !important;
-      font-size: 0.92rem;
+      min-height: 34px;
+      padding: 7px 12px !important;
+      font-size: 0.84rem;
       white-space: nowrap;
     }
 
@@ -964,6 +964,9 @@
       }
       .plan-top {
         flex-direction: column;
+      }
+      .plan-alert-bar {
+        flex-wrap: wrap;
       }
       .alert-item {
         grid-template-columns: 1fr;
@@ -1583,6 +1586,28 @@
     .admin-alumnos-row:last-child {
       border-bottom: 0;
     }
+    .admin-facilitadores-list-header,
+    .admin-facilitadores-row {
+      display: grid;
+      grid-template-columns: 0.72fr 1.18fr 0.6fr 0.68fr 0.78fr 0.98fr 0.78fr 0.96fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+    }
+    .admin-facilitadores-list-header {
+      color: #a9c7e6;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .admin-facilitadores-row {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      min-height: 64px;
+    }
+    .admin-facilitadores-row:last-child {
+      border-bottom: 0;
+    }
     .admin-alumnos-title {
       display: grid;
       gap: 4px;
@@ -1769,6 +1794,177 @@
       color: var(--text-soft);
       background: rgba(255,255,255,0.02);
     }
+    .admin-facilitadores-summary {
+      display: grid;
+      gap: 14px;
+    }
+    .admin-facilitadores-identity {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .admin-facilitadores-identity strong {
+      display: block;
+      color: var(--text-strong);
+      font-size: 1.05rem;
+      margin-bottom: 4px;
+    }
+    .admin-facilitadores-kpis {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .admin-facilitadores-kpi {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 12px;
+      display: grid;
+      gap: 4px;
+    }
+    .admin-facilitadores-kpi strong {
+      font-size: 1.1rem;
+      color: var(--text-strong);
+    }
+    .admin-facilitadores-kpi span {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .admin-facilitadores-assignment-list,
+    .admin-facilitadores-matrix {
+      display: grid;
+      gap: 8px;
+    }
+    .admin-facilitadores-assignment-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 10px 12px;
+    }
+    .admin-facilitadores-assignment-copy {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+    .admin-facilitadores-assignment-copy strong {
+      color: var(--text-strong);
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .admin-facilitadores-assignment-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+    .admin-facilitadores-assignment-actions > button,
+    .admin-facilitadores-inline-actions > button {
+      min-height: 28px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      box-shadow: none !important;
+    }
+    .admin-facilitadores-inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-facilitadores-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .admin-facilitadores-matrix-table {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: auto;
+      background: rgba(19, 25, 34, 0.88);
+    }
+    .admin-facilitadores-matrix-header,
+    .admin-facilitadores-matrix-row {
+      display: grid;
+      grid-template-columns: 1.25fr repeat(6, minmax(72px, 1fr));
+      gap: 0;
+      min-width: 640px;
+    }
+    .admin-facilitadores-matrix-header {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      color: #a9c7e6;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .admin-facilitadores-matrix-row {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .admin-facilitadores-matrix-row:last-child {
+      border-bottom: 0;
+    }
+    .admin-facilitadores-matrix-cell,
+    .admin-facilitadores-matrix-label {
+      padding: 10px 12px;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .admin-facilitadores-matrix-label {
+      justify-content: flex-start;
+      text-align: left;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      color: var(--text-strong);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .facilitador-matrix-state {
+      min-width: 34px;
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.7rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .facilitador-matrix-state.is-ok {
+      background: rgba(18, 156, 129, 0.18);
+      color: #dffff8;
+      border-color: rgba(82, 222, 197, 0.22);
+    }
+    .facilitador-matrix-state.is-alert {
+      background: rgba(220, 116, 53, 0.2);
+      color: #ffe4d2;
+      border-color: rgba(255, 164, 112, 0.22);
+    }
+    .facilitador-matrix-state.is-pending {
+      background: rgba(232, 193, 77, 0.2);
+      color: #fff4cb;
+      border-color: rgba(245, 216, 124, 0.22);
+    }
+    .facilitador-matrix-state.is-closed {
+      background: rgba(81, 108, 176, 0.22);
+      color: #edf4ff;
+      border-color: rgba(127, 155, 229, 0.24);
+    }
+    .facilitador-matrix-state.is-missing {
+      background: rgba(137, 146, 158, 0.15);
+      color: #d1d8df;
+      border-color: rgba(196, 204, 214, 0.16);
+    }
     .admin-planeaciones-shell {
       display: none;
     }
@@ -1897,10 +2093,17 @@
       .admin-alumnos-mini-grid {
         grid-template-columns: 1fr;
       }
+      .admin-facilitadores-kpis,
+      .admin-facilitadores-meta-grid {
+        grid-template-columns: 1fr 1fr;
+      }
       .admin-alumnos-side {
         position: static;
       }
       .admin-alumnos-list-header {
+        display: none;
+      }
+      .admin-facilitadores-list-header {
         display: none;
       }
       .admin-alumnos-table {
@@ -1917,10 +2120,25 @@
         background: linear-gradient(180deg, rgba(33, 38, 47, 0.98), rgba(25, 30, 38, 0.98));
         margin-bottom: 8px;
       }
+      .admin-facilitadores-row {
+        grid-template-columns: 1fr;
+        padding: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(33, 38, 47, 0.98), rgba(25, 30, 38, 0.98));
+        margin-bottom: 8px;
+      }
       .admin-alumnos-actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         width: 100%;
+      }
+      .admin-facilitadores-assignment-item {
+        grid-template-columns: 1fr;
+      }
+      .admin-facilitadores-assignment-actions,
+      .admin-facilitadores-inline-actions {
+        justify-content: flex-start;
       }
       .admin-alumnos-actions > button {
         width: 100%;
@@ -2533,7 +2751,6 @@
         <div class="card-head">
           <div>
             <h2>Alertas internas</h2>
-            <p class="subtle">Aquí verás avisos importantes del trabajo diario, como material pendiente o recordatorios del sistema.</p>
           </div>
         </div>
         <div id="alertsList" class="alert-list">
@@ -3189,6 +3406,46 @@
       };
     }
 
+    function createEmptyFacilitadorEditorState() {
+      return {
+        facilitador_id: '',
+        nombre_completo: '',
+        nombre_mostrado: '',
+        rol: 'facilitador',
+        color_ui: '',
+        activo: true,
+        pin_plano: ''
+      };
+    }
+
+    function createEmptyFacilitadorAsignacionState() {
+      return {
+        asignacion_id: '',
+        facilitador_id: '',
+        grupo_id: '',
+        materia_id: '',
+        activa: true,
+        fecha_inicio: '',
+        fecha_fin: ''
+      };
+    }
+
+    function createEmptyFacilitadoresUiState() {
+      return {
+        search: '',
+        filter: 'activos',
+        selectedFacilitadorId: '',
+        panelMode: 'detail',
+        editorOpen: false,
+        editorMode: 'new',
+        editor: createEmptyFacilitadorEditorState(),
+        pinOpen: false,
+        pinValue: '',
+        asignacionOpen: false,
+        asignacion: createEmptyFacilitadorAsignacionState()
+      };
+    }
+
     const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzF61zDQkF15kTFBQykHx-J2XAY1TFcqI_Gze_UtVZhD80DTlbkMEYTBIdQ-_HIqlSf/exec';
     const BRAND_LOGO = 'data:image/png;base64,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';
     const DEFAULT_PERIODS = '';
@@ -3201,6 +3458,8 @@
       catalogos: {
         alumnos: [],
         facilitadores: [],
+        facilitadores_admin: [],
+        facilitador_asignaciones: [],
         grupos: [],
         niveles: [],
         materias: [],
@@ -3222,6 +3481,7 @@
         notificationFilter: 'activas'
       },
       alumnosUi: createEmptyAlumnosUiState(),
+      facilitadoresUi: createEmptyFacilitadoresUiState(),
       planEditor: {
         mode: 'create',
         planId: '',
@@ -3268,6 +3528,8 @@
       return {
         alumnos: [],
         facilitadores: [],
+        facilitadores_admin: [],
+        facilitador_asignaciones: [],
         grupos: [],
         niveles: [],
         materias: [],
@@ -3324,6 +3586,7 @@
         estatus: 'borrador'
       };
       state.alumnosUi = createEmptyAlumnosUiState();
+      state.facilitadoresUi = createEmptyFacilitadoresUiState();
       state.activeTab = 'planeaciones';
       state.activeAdminModule = 'dashboard';
       resetReportResult();
@@ -3873,6 +4136,11 @@
         state.alumnosUi.filter = 'activos';
         syncAdminAlumnosModule();
       }
+      if (nextModule !== 'facilitadores') {
+        closeFacilitadorEditor();
+        closeFacilitadorPin();
+        closeFacilitadorAsignacionEditor();
+      }
       if (nextModule === 'notificaciones' && state.ui) {
         state.ui.notificationFilter = 'activas';
       }
@@ -3880,6 +4148,7 @@
       renderAdminShell();
       renderNotificationsAdmin();
       renderAdminAlumnosModule();
+      renderAdminFacilitadoresModule();
       syncRoleUi();
     }
 
@@ -5192,6 +5461,894 @@
       });
     }
 
+    function canManageFacilitadoresCatalog() {
+      return getCurrentRole() === 'admin';
+    }
+
+    function getAdminFacilitadoresCatalog() {
+      const rows = Array.isArray(state.catalogos.facilitadores_admin) && state.catalogos.facilitadores_admin.length
+        ? state.catalogos.facilitadores_admin
+        : (state.catalogos.facilitadores || []);
+      return rows.map((row) => ({
+        facilitador_id: String(row.facilitador_id || '').trim(),
+        nombre_completo: String(row.nombre_completo || '').trim(),
+        nombre_mostrado: String(row.nombre_mostrado || '').trim(),
+        color_ui: String(row.color_ui || '').trim(),
+        activo: isTruthyValue(row.activo),
+        rol: String(row.rol || 'facilitador').trim(),
+        fecha_alta: toYmdFrontend_(row.fecha_alta || ''),
+        fecha_baja: toYmdFrontend_(row.fecha_baja || ''),
+        archivado_at: String(row.archivado_at || '').trim(),
+        archivado_por: String(row.archivado_por || '').trim()
+      }));
+    }
+
+    function getFacilitadorById(facilitadorId) {
+      const id = String(facilitadorId || '').trim();
+      return getAdminFacilitadoresCatalog().find((row) => row.facilitador_id === id) || null;
+    }
+
+    function getFacilitadorVisualStatus(row) {
+      if (!row) return 'inactivo';
+      if (String(row.archivado_at || '').trim()) return 'archivado';
+      return row.activo ? 'activo' : 'inactivo';
+    }
+
+    function getFacilitadorStatusLabel(status) {
+      if (status === 'archivado') return 'Archivado';
+      if (status === 'inactivo') return 'Inactivo';
+      return 'Activo';
+    }
+
+    function getFacilitadorStatusBadgeClass(status) {
+      if (status === 'archivado') return 'is-archived';
+      if (status === 'inactivo') return 'is-inactive';
+      return 'is-active';
+    }
+
+    function getFacilitadorStatusSortWeight(status) {
+      if (status === 'activo') return 0;
+      if (status === 'inactivo') return 1;
+      return 2;
+    }
+
+    function getFacilitadorAsignaciones(facilitadorId, options = {}) {
+      const includeArchived = !!options.includeArchived;
+      return (Array.isArray(state.catalogos.facilitador_asignaciones) ? state.catalogos.facilitador_asignaciones : [])
+        .filter((row) => String(row.facilitador_id || '').trim() === String(facilitadorId || '').trim())
+        .filter((row) => includeArchived || !String(row.archivado_at || '').trim())
+        .map((row) => ({
+          asignacion_id: String(row.asignacion_id || '').trim(),
+          facilitador_id: String(row.facilitador_id || '').trim(),
+          grupo_id: String(row.grupo_id || '').trim(),
+          materia_id: String(row.materia_id || '').trim(),
+          activa: isTruthyValue(row.activa),
+          fecha_inicio: toYmdFrontend_(row.fecha_inicio || ''),
+          fecha_fin: toYmdFrontend_(row.fecha_fin || ''),
+          fecha_creacion: row.fecha_creacion || '',
+          fecha_actualizacion: row.fecha_actualizacion || '',
+          archivado_at: String(row.archivado_at || '').trim(),
+          archivado_por: String(row.archivado_por || '').trim()
+        }))
+        .sort((a, b) => {
+          const materiaA = ((state.catalogos.materias || []).find((item) => item.materia_id === a.materia_id) || {}).nombre || a.materia_id;
+          const materiaB = ((state.catalogos.materias || []).find((item) => item.materia_id === b.materia_id) || {}).nombre || b.materia_id;
+          const labelA = getGrupoNombre(a.grupo_id) + ' ' + materiaA;
+          const labelB = getGrupoNombre(b.grupo_id) + ' ' + materiaB;
+          return String(labelA || '').localeCompare(String(labelB || ''), 'es');
+        });
+    }
+
+    function getFacilitadorSearchText(row) {
+      return [
+        row.facilitador_id,
+        row.nombre_completo,
+        row.nombre_mostrado,
+        row.rol
+      ].join(' ').toLowerCase();
+    }
+
+    function getFilteredFacilitadores() {
+      const filter = String(state.facilitadoresUi.filter || 'activos').trim();
+      const query = String(state.facilitadoresUi.search || '').trim().toLowerCase();
+      return getAdminFacilitadoresCatalog()
+        .filter((row) => {
+          const visualStatus = getFacilitadorVisualStatus(row);
+          if (filter === 'activos' && visualStatus !== 'activo') return false;
+          if (filter === 'inactivos' && visualStatus !== 'inactivo') return false;
+          if (filter === 'archivados' && visualStatus !== 'archivado') return false;
+          if (!query) return true;
+          return getFacilitadorSearchText(row).includes(query);
+        })
+        .sort((a, b) => {
+          const weightDiff = getFacilitadorStatusSortWeight(getFacilitadorVisualStatus(a)) - getFacilitadorStatusSortWeight(getFacilitadorVisualStatus(b));
+          if (weightDiff) return weightDiff;
+          return String(a.nombre_mostrado || a.nombre_completo || a.facilitador_id).localeCompare(String(b.nombre_mostrado || b.nombre_completo || b.facilitador_id), 'es');
+        });
+    }
+
+    function getVisibleFacilitadores() {
+      return getFilteredFacilitadores();
+    }
+
+    function getFacilitadorListTitle() {
+      const filter = String(state.facilitadoresUi.filter || 'activos').trim();
+      if (filter === 'todos') return 'Todos los facilitadores';
+      if (filter === 'inactivos') return 'Facilitadores inactivos';
+      if (filter === 'archivados') return 'Facilitadores archivados';
+      return 'Facilitadores activos';
+    }
+
+    function getFacilitadorRecentWeeks() {
+      const rows = Array.isArray(state.catalogos.semanas) ? state.catalogos.semanas : [];
+      return rows
+        .slice()
+        .sort((a, b) => String(a.fecha_inicio || '').localeCompare(String(b.fecha_inicio || '')))
+        .slice(-6);
+    }
+
+    function isAssignmentActiveForSemana(asignacion, semana) {
+      if (!asignacion || !semana) return false;
+      if (String(asignacion.archivado_at || '').trim()) return false;
+      if (!asignacion.activa) return false;
+      const weekStart = toYmdFrontend_(semana.fecha_inicio || '');
+      const weekEnd = toYmdFrontend_(semana.fecha_fin || '');
+      const start = toYmdFrontend_(asignacion.fecha_inicio || '');
+      const end = toYmdFrontend_(asignacion.fecha_fin || '');
+      if (start && weekEnd && weekEnd < start) return false;
+      if (end && weekStart && weekStart > end) return false;
+      return true;
+    }
+
+    function getFacilitadorPlanForCell(facilitadorId, asignacion, semanaId) {
+      const matches = (state.planeaciones || []).filter((plan) => {
+        return String(plan.facilitador_id || '').trim() === String(facilitadorId || '').trim() &&
+          String(plan.grupo_id || '').trim() === String(asignacion.grupo_id || '').trim() &&
+          String(plan.materia_id || '').trim() === String(asignacion.materia_id || '').trim() &&
+          String(plan.semana_id || '').trim() === String(semanaId || '').trim();
+      });
+      if (!matches.length) return null;
+      return matches.sort((a, b) => String(b.fecha_actualizacion || b.fecha_creacion || '').localeCompare(String(a.fecha_actualizacion || a.fecha_creacion || '')))[0] || null;
+    }
+
+    function getFacilitadorPlanAlertCount(planId) {
+      return (state.alertas || []).filter((alerta) => {
+        return String(alerta.planeacion_id || '').trim() === String(planId || '').trim() &&
+          String(alerta.estado || '').trim() !== 'resuelta';
+      }).length;
+    }
+
+    function getFacilitadorMatrixCellState(facilitadorId, asignacion, semana) {
+      if (!isAssignmentActiveForSemana(asignacion, semana)) {
+        return { code: 'na', label: '—', title: 'Sin asignación activa en esta semana' };
+      }
+      const plan = getFacilitadorPlanForCell(facilitadorId, asignacion, semana.semana_id);
+      if (!plan) {
+        return { code: 'missing', label: 'Falta', title: 'No existe una planeación registrada para esta asignación en la semana.' };
+      }
+      if (getFacilitadorPlanAlertCount(plan.planeacion_id)) {
+        return { code: 'alert', label: 'Alerta', title: 'La planeación tiene alertas abiertas.' };
+      }
+      const status = String(plan.estado || '').trim();
+      if (status === 'cierre_pendiente') {
+        return { code: 'pending', label: 'Cierre', title: 'La planeación quedó en cierre pendiente.' };
+      }
+      if (status === 'cerrada' || status === 'archivada') {
+        return { code: 'closed', label: 'Cerrada', title: 'La planeación ya cerró su ciclo operativo.' };
+      }
+      return { code: 'ok', label: 'Lista', title: 'La planeación está registrada y operativa.' };
+    }
+
+    function buildFacilitadorPulse(facilitadorId) {
+      const asignaciones = getFacilitadorAsignaciones(facilitadorId).filter((row) => row.activa);
+      const semanas = getFacilitadorRecentWeeks();
+      let esperadas = 0;
+      let entregadas = 0;
+      let faltantes = 0;
+      let cierresPendientes = 0;
+      asignaciones.forEach((asignacion) => {
+        semanas.forEach((semana) => {
+          const stateCell = getFacilitadorMatrixCellState(facilitadorId, asignacion, semana);
+          if (stateCell.code === 'na') return;
+          esperadas += 1;
+          if (stateCell.code === 'missing') faltantes += 1;
+          else entregadas += 1;
+          if (stateCell.code === 'pending') cierresPendientes += 1;
+        });
+      });
+      const planesIds = new Set((state.planeaciones || [])
+        .filter((plan) => String(plan.facilitador_id || '').trim() === String(facilitadorId || '').trim())
+        .map((plan) => plan.planeacion_id));
+      const alertasAbiertas = (state.alertas || []).filter((alerta) => planesIds.has(alerta.planeacion_id) && String(alerta.estado || '').trim() !== 'resuelta').length;
+      return { esperadas, entregadas, faltantes, cierresPendientes, alertasAbiertas };
+    }
+
+    function getFacilitadorUpdatedLabel(facilitador) {
+      if (!facilitador) return 'Sin registro';
+      const latestPlan = (state.planeaciones || [])
+        .filter((plan) => String(plan.facilitador_id || '').trim() === String(facilitador.facilitador_id || '').trim())
+        .sort((a, b) => String(b.fecha_actualizacion || b.fecha_creacion || '').localeCompare(String(a.fecha_actualizacion || a.fecha_creacion || '')))[0];
+      const latestValue = latestPlan
+        ? (latestPlan.fecha_actualizacion || latestPlan.fecha_creacion || '')
+        : (facilitador.archivado_at || facilitador.fecha_baja || facilitador.fecha_alta || '');
+      return latestValue ? getNotificationRelativeUpdateLabel(latestValue) : 'Sin registro';
+    }
+
+    function buildFacilitadorPulseSummary(facilitadorId) {
+      const pulse = buildFacilitadorPulse(facilitadorId);
+      const parts = [];
+      if (pulse.faltantes) parts.push(pulse.faltantes + ' faltante(s)');
+      if (pulse.cierresPendientes) parts.push(pulse.cierresPendientes + ' cierre(s)');
+      if (pulse.alertasAbiertas) parts.push(pulse.alertasAbiertas + ' alerta(s)');
+      return parts.join(' · ') || 'Sin pendientes críticos';
+    }
+
+    function closeFacilitadorEditor() {
+      state.facilitadoresUi.editorOpen = false;
+      state.facilitadoresUi.editorMode = 'new';
+      state.facilitadoresUi.editor = createEmptyFacilitadorEditorState();
+    }
+
+    function closeFacilitadorPin() {
+      state.facilitadoresUi.pinOpen = false;
+      state.facilitadoresUi.pinValue = '';
+    }
+
+    function closeFacilitadorAsignacionEditor() {
+      state.facilitadoresUi.asignacionOpen = false;
+      state.facilitadoresUi.asignacion = createEmptyFacilitadorAsignacionState();
+    }
+
+    function syncAdminFacilitadoresModule() {
+      const visible = getVisibleFacilitadores();
+      const selected = String(state.facilitadoresUi.selectedFacilitadorId || '').trim();
+      if (selected && visible.some((row) => row.facilitador_id === selected)) return;
+      state.facilitadoresUi.selectedFacilitadorId = visible.length ? visible[0].facilitador_id : '';
+      if (!visible.length) {
+        closeFacilitadorEditor();
+        closeFacilitadorPin();
+        closeFacilitadorAsignacionEditor();
+      }
+    }
+
+    function getAdminFacilitadoresModuleTemplate() {
+      return [
+        '<article class="admin-toolbar admin-alumnos-module admin-facilitadores-module">',
+          '<div class="admin-toolbar-head admin-alumnos-head">',
+            '<div class="admin-alumnos-head-copy">',
+              '<h3>Facilitadores</h3>',
+              '<p class="subtle">Administra accesos, asignaciones y pulso semanal del equipo académico.</p>',
+            '</div>',
+            '<div class="admin-alumnos-head-actions">',
+              '<label class="admin-alumnos-search" for="adminFacilitadoresSearch">',
+                '<span>Buscar</span>',
+                '<input id="adminFacilitadoresSearch" type="search" placeholder="Buscar por ID o nombre">',
+              '</label>',
+              '<button id="adminFacilitadorNewBtn" class="btn-primary" type="button">Nuevo facilitador</button>',
+            '</div>',
+          '</div>',
+          '<div class="admin-alumnos-filterbar">',
+            '<div class="admin-alumnos-filterchips">',
+              '<button id="adminFacilitadoresFilterAllBtn" class="btn-ghost" type="button">Todos</button>',
+              '<button id="adminFacilitadoresFilterActiveBtn" class="btn-ghost" type="button">Activos</button>',
+              '<button id="adminFacilitadoresFilterInactiveBtn" class="btn-ghost" type="button">Inactivos</button>',
+              '<button id="adminFacilitadoresFilterArchivedBtn" class="btn-ghost" type="button">Archivados</button>',
+            '</div>',
+          '</div>',
+          '<div class="admin-alumnos-layout">',
+            '<section class="admin-alumnos-main">',
+              '<div class="admin-alumnos-section-head">',
+                '<div>',
+                  '<h4 id="adminFacilitadoresListTitle">Facilitadores activos</h4>',
+                  '<div id="adminFacilitadoresListMeta" class="subtle">Pulso semanal, asignaciones y accesos operativos.</div>',
+                '</div>',
+              '</div>',
+              '<div id="adminFacilitadoresList" class="admin-alumnos-list"></div>',
+            '</section>',
+            '<aside class="admin-alumnos-side">',
+              '<section id="adminFacilitadorDetailPanel" class="admin-alumnos-panel"></section>',
+              '<section id="adminFacilitadorEditorPanel" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4 id="adminFacilitadorEditorTitle">Nuevo facilitador</h4>',
+                    '<div class="subtle">Configura identidad operativa y acceso del facilitador.</div>',
+                  '</div>',
+                '</div>',
+                '<div class="admin-alumnos-editor-grid">',
+                  '<label class="field">',
+                    '<span>Facilitador ID</span>',
+                    '<input id="adminFacilitadorIdInput" type="text" maxlength="50" placeholder="Ej. FAC-009">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Rol</span>',
+                    '<select id="adminFacilitadorRolInput">',
+                      '<option value="facilitador">Facilitador</option>',
+                      '<option value="directora">Directora</option>',
+                      '<option value="admin">Admin</option>',
+                    '</select>',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Nombre completo</span>',
+                    '<input id="adminFacilitadorNombreCompletoInput" type="text" maxlength="150" placeholder="Nombre completo">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Nombre mostrado</span>',
+                    '<input id="adminFacilitadorNombreMostradoInput" type="text" maxlength="100" placeholder="Nombre corto visible">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Color UI</span>',
+                    '<input id="adminFacilitadorColorInput" type="text" maxlength="30" placeholder="Ej. cyan o #41c9ff">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Estatus</span>',
+                    '<select id="adminFacilitadorActivoInput">',
+                      '<option value="si">Activo</option>',
+                      '<option value="no">Inactivo</option>',
+                    '</select>',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>PIN temporal</span>',
+                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar · requerido al crear">',
+                  '</label>',
+                '</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminFacilitadorCancelBtn" class="btn-ghost" type="button">Cancelar</button>',
+                  '<button id="adminFacilitadorSaveBtn" class="btn-primary" type="button">Guardar</button>',
+                '</div>',
+              '</section>',
+            '</aside>',
+          '</div>',
+        '</article>'
+      ].join('');
+    }
+
+    function renderAdminFacilitadoresModule() {
+      const panel = $('admin-panel-facilitadores');
+      if (!panel || !canUseAdminShell()) return;
+      if (panel.dataset.ready !== '1') {
+        panel.innerHTML = getAdminFacilitadoresModuleTemplate();
+        panel.dataset.ready = '1';
+        bindAdminFacilitadoresEvents();
+      }
+      syncAdminFacilitadoresModule();
+      if ($('adminFacilitadoresSearch')) $('adminFacilitadoresSearch').value = state.facilitadoresUi.search || '';
+      if ($('adminFacilitadorNewBtn')) $('adminFacilitadorNewBtn').hidden = !canManageFacilitadoresCatalog();
+      if ($('adminFacilitadoresFilterAllBtn')) $('adminFacilitadoresFilterAllBtn').classList.toggle('is-active', state.facilitadoresUi.filter === 'todos');
+      if ($('adminFacilitadoresFilterActiveBtn')) $('adminFacilitadoresFilterActiveBtn').classList.toggle('is-active', state.facilitadoresUi.filter === 'activos');
+      if ($('adminFacilitadoresFilterInactiveBtn')) $('adminFacilitadoresFilterInactiveBtn').classList.toggle('is-active', state.facilitadoresUi.filter === 'inactivos');
+      if ($('adminFacilitadoresFilterArchivedBtn')) $('adminFacilitadoresFilterArchivedBtn').classList.toggle('is-active', state.facilitadoresUi.filter === 'archivados');
+      renderAdminFacilitadoresList();
+      renderFacilitadorDetailPanel();
+      renderFacilitadorEditorPanel();
+      if (state.facilitadoresUi.asignacionOpen) {
+        fillSelect($('adminFacilitadorAsignacionGrupo'), state.catalogos.grupos || [], (item) => item.grupo_id, (item) => item.nombre_grupo || item.grupo_id, 'Selecciona grupo');
+        fillSelect($('adminFacilitadorAsignacionMateria'), state.catalogos.materias || [], (item) => item.materia_id, (item) => item.nombre || item.materia_id, 'Selecciona materia');
+        if ($('adminFacilitadorAsignacionGrupo')) $('adminFacilitadorAsignacionGrupo').value = state.facilitadoresUi.asignacion.grupo_id || '';
+        if ($('adminFacilitadorAsignacionMateria')) $('adminFacilitadorAsignacionMateria').value = state.facilitadoresUi.asignacion.materia_id || '';
+        if ($('adminFacilitadorAsignacionInicio')) $('adminFacilitadorAsignacionInicio').value = state.facilitadoresUi.asignacion.fecha_inicio || '';
+        if ($('adminFacilitadorAsignacionFin')) $('adminFacilitadorAsignacionFin').value = state.facilitadoresUi.asignacion.fecha_fin || '';
+      }
+    }
+
+    function renderAdminFacilitadoresList() {
+      const host = $('adminFacilitadoresList');
+      if (!host) return;
+      const rows = getVisibleFacilitadores();
+      if ($('adminFacilitadoresListTitle')) $('adminFacilitadoresListTitle').textContent = getFacilitadorListTitle();
+      if ($('adminFacilitadoresListMeta')) $('adminFacilitadoresListMeta').textContent = rows.length + ' facilitador(es) visibles en esta vista.';
+      if (!rows.length) {
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay facilitadores para mostrar.</strong><div class="subtle">Ajusta el filtro o crea un nuevo facilitador para empezar.</div></div></div>';
+        return;
+      }
+      host.innerHTML = [
+        '<div class="admin-alumnos-table">',
+          '<div class="admin-facilitadores-list-header">',
+            '<div>ID</div>',
+            '<div>Facilitador</div>',
+            '<div>Rol</div>',
+            '<div>Estado</div>',
+            '<div>Asignaciones</div>',
+            '<div>Pulso</div>',
+            '<div>Última actividad</div>',
+            '<div>Acciones</div>',
+          '</div>',
+          rows.map((row) => {
+            const visualStatus = getFacilitadorVisualStatus(row);
+            const asignaciones = getFacilitadorAsignaciones(row.facilitador_id).filter((item) => item.activa);
+            const pulseText = buildFacilitadorPulseSummary(row.facilitador_id);
+            const actions = [];
+            actions.push('<button class="btn-ghost" type="button" onclick="openFacilitadorPanel(\'' + escapeHtml(row.facilitador_id) + '\')">Ver panel</button>');
+            if (visualStatus === 'archivado') {
+              if (canManageFacilitadoresCatalog()) actions.push('<button class="btn-primary" type="button" onclick="reactivateFacilitador(this, \'' + escapeHtml(row.facilitador_id) + '\')">Reactivar</button>');
+            } else if (visualStatus === 'inactivo') {
+              if (canManageFacilitadoresCatalog()) actions.push('<button class="btn-primary" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeHtml(row.facilitador_id) + '\', true)">Activar</button>');
+            } else {
+              if (canManageFacilitadoresCatalog()) actions.push('<button class="btn-ghost" type="button" onclick="openFacilitadorEditor(\'edit\', \'' + escapeHtml(row.facilitador_id) + '\')">Editar</button>');
+            }
+            if (canManageFacilitadoresCatalog() && visualStatus !== 'archivado' && actions.length < 3) {
+              actions.push('<button class="btn-secondary" type="button" onclick="openFacilitadorPin(\'' + escapeHtml(row.facilitador_id) + '\')">Resetear PIN</button>');
+            }
+            return [
+              '<article class="admin-facilitadores-row">',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.facilitador_id) + '</div></div>',
+                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || row.facilitador_id) + '</strong><div class="mini">' + escapeHtml(row.nombre_completo || 'Sin nombre') + '</div></div>',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((row.rol || 'facilitador').replace('directora', 'directora')) + '</div></div>',
+                '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span></div>',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(String(asignaciones.length)) + ' activa(s)</div></div>',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(pulseText) + '</div></div>',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getFacilitadorUpdatedLabel(row)) + '</div></div>',
+                '<div class="admin-alumnos-actions">' + actions.join('') + '</div>',
+              '</article>'
+            ].join('');
+          }).join(''),
+        '</div>'
+      ].join('');
+    }
+
+    function renderFacilitadorDetailPanel() {
+      const host = $('adminFacilitadorDetailPanel');
+      if (!host) return;
+      const facilitador = getFacilitadorById(state.facilitadoresUi.selectedFacilitadorId);
+      if (!facilitador) {
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">Aquí aparecerán sus asignaciones, pulso semanal y accesos rápidos.</div></div></div>';
+        return;
+      }
+      const visualStatus = getFacilitadorVisualStatus(facilitador);
+      const pulse = buildFacilitadorPulse(facilitador.facilitador_id);
+      const asignaciones = getFacilitadorAsignaciones(facilitador.facilitador_id);
+      const canManage = canManageFacilitadoresCatalog();
+      const pinOpen = !!state.facilitadoresUi.pinOpen;
+      const asignacionOpen = !!state.facilitadoresUi.asignacionOpen;
+      host.hidden = false;
+      host.innerHTML = [
+        '<div class="admin-facilitadores-summary">',
+          '<div class="admin-facilitadores-identity">',
+            '<div>',
+              '<strong>' + escapeHtml(facilitador.nombre_mostrado || facilitador.nombre_completo || facilitador.facilitador_id) + '</strong>',
+              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' · ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
+            '</div>',
+            '<span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span>',
+          '</div>',
+          '<div class="admin-facilitadores-inline-actions">',
+            (canManage ? '<button class="btn-ghost" type="button" onclick="openFacilitadorEditor(\'edit\', \'' + escapeHtml(facilitador.facilitador_id) + '\')">Editar ficha</button>' : ''),
+            '<button class="btn-secondary" type="button" onclick="openFacilitadorPlaneaciones(\'' + escapeHtml(facilitador.facilitador_id) + '\')">Ver planeaciones</button>',
+            (canManage ? '<button class="btn-ghost" type="button" onclick="openFacilitadorPin(\'' + escapeHtml(facilitador.facilitador_id) + '\')">Resetear PIN</button>' : ''),
+            (canManage && visualStatus === 'activo' ? '<button class="btn-ghost" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeHtml(facilitador.facilitador_id) + '\', false)">Desactivar</button>' : ''),
+            (canManage && visualStatus === 'inactivo' ? '<button class="btn-primary" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeHtml(facilitador.facilitador_id) + '\', true)">Activar</button>' : ''),
+            (canManage && visualStatus === 'archivado' ? '<button class="btn-primary" type="button" onclick="reactivateFacilitador(this, \'' + escapeHtml(facilitador.facilitador_id) + '\')">Reactivar</button>' : ''),
+            (canManage && visualStatus !== 'archivado' ? '<button class="btn-accent" type="button" onclick="archiveFacilitador(this, \'' + escapeHtml(facilitador.facilitador_id) + '\')">Archivar</button>' : ''),
+          '</div>',
+          '<div class="admin-facilitadores-meta-grid">',
+            '<div class="admin-alumnos-readonly"><span>Alta</span><strong>' + escapeHtml(facilitador.fecha_alta ? formatFechaHumana(facilitador.fecha_alta) : 'Sin fecha') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Última actividad</span><strong>' + escapeHtml(getFacilitadorUpdatedLabel(facilitador)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Asignaciones activas</span><strong>' + escapeHtml(String(asignaciones.filter((item) => item.activa && !item.archivado_at).length)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Estado operativo</span><strong>' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</strong></div>',
+          '</div>',
+          '<div class="admin-facilitadores-kpis">',
+            '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.esperadas)) + '</strong><span>Esperadas</span></div>',
+            '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.entregadas)) + '</strong><span>Entregadas</span></div>',
+            '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.faltantes)) + '</strong><span>Faltantes</span></div>',
+            '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.cierresPendientes)) + '</strong><span>Cierres</span></div>',
+            '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.alertasAbiertas)) + '</strong><span>Alertas</span></div>',
+          '</div>',
+          (pinOpen && canManage ? renderFacilitadorPinBlock() : ''),
+          '<div class="admin-alumnos-section-head"><div><h4>Asignaciones</h4><div class="subtle">Relación grupo + materia que se espera de este facilitador.</div></div>' +
+            '<div class="actions compact">' + (canUseAdminShell() ? '<button class="btn-primary" type="button" onclick="openFacilitadorAsignacionEditor(\'new\')">Nueva asignación</button>' : '') + '</div></div>',
+          '<div class="admin-facilitadores-assignment-list">' + renderFacilitadorAssignmentsList(facilitador.facilitador_id) + '</div>',
+          (asignacionOpen ? renderFacilitadorAsignacionEditor() : ''),
+          '<div class="admin-alumnos-section-head"><div><h4>Pulso semanal</h4><div class="subtle">Semanas recientes cruzadas con asignaciones activas y planeaciones existentes.</div></div></div>',
+          renderFacilitadorMatrix(facilitador.facilitador_id),
+        '</div>'
+      ].join('');
+    }
+
+    function renderFacilitadorAssignmentsList(facilitadorId) {
+      const rows = getFacilitadorAsignaciones(facilitadorId);
+      if (!rows.length) {
+        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin asignaciones activas.</strong><div class="subtle">Agrega grupo y materia para medir faltantes con confianza.</div></div></div>';
+      }
+      return rows.map((row) => {
+        const materia = (state.catalogos.materias || []).find((item) => item.materia_id === row.materia_id);
+        const periodo = [
+          row.fecha_inicio ? ('Desde ' + formatFechaHumana(row.fecha_inicio)) : '',
+          row.fecha_fin ? ('Hasta ' + formatFechaHumana(row.fecha_fin)) : ''
+        ].filter(Boolean).join(' · ') || 'Sin vigencia cerrada';
+        return [
+          '<article class="admin-facilitadores-assignment-item">',
+            '<div class="admin-facilitadores-assignment-copy">',
+              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
+              '<div class="mini">' + escapeHtml(periodo) + '</div>',
+            '</div>',
+            '<div class="admin-facilitadores-assignment-actions">',
+              '<button class="btn-ghost" type="button" onclick="openFacilitadorAsignacionEditor(\'edit\', \'' + escapeHtml(row.asignacion_id) + '\')">Editar</button>',
+              '<button class="btn-secondary" type="button" onclick="openFacilitadorPlaneaciones(\'' + escapeHtml(state.facilitadoresUi.selectedFacilitadorId) + '\', \'' + escapeHtml(row.grupo_id) + '\', \'' + escapeHtml(row.materia_id) + '\')">Ver</button>',
+              '<button class="btn-accent" type="button" onclick="archiveFacilitadorAsignacion(this, \'' + escapeHtml(row.asignacion_id) + '\')">Quitar</button>',
+            '</div>',
+          '</article>'
+        ].join('');
+      }).join('');
+    }
+
+    function renderFacilitadorPinBlock() {
+      const current = getFacilitadorById(state.facilitadoresUi.selectedFacilitadorId);
+      return [
+        '<section class="admin-alumnos-panel">',
+          '<div class="admin-alumnos-panel-head"><div><h4>Resetear PIN</h4><div class="subtle">Genera un PIN temporal y cierra sesiones activas del facilitador.</div></div></div>',
+          '<div class="admin-alumnos-editor-grid">',
+            '<label class="field admin-alumnos-field-full">',
+              '<span>Nuevo PIN</span>',
+              '<input id="adminFacilitadorResetPinInput" type="password" maxlength="20" placeholder="Nuevo PIN temporal para ' + escapeHtml((current && current.nombre_mostrado) || '') + '">',
+            '</label>',
+          '</div>',
+          '<div class="actions compact admin-alumnos-panel-actions">',
+            '<button class="btn-ghost" type="button" onclick="closeFacilitadorPinPanel()">Cancelar</button>',
+            '<button class="btn-primary" type="button" onclick="saveFacilitadorPin(this)">Guardar PIN</button>',
+          '</div>',
+        '</section>'
+      ].join('');
+    }
+
+    function renderFacilitadorAsignacionEditor() {
+      const asign = state.facilitadoresUi.asignacion || createEmptyFacilitadorAsignacionState();
+      return [
+        '<section class="admin-alumnos-panel">',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignación' : 'Nueva asignación') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
+          '<div class="admin-alumnos-mini-grid">',
+            '<label class="field">',
+              '<span>Grupo</span>',
+              '<select id="adminFacilitadorAsignacionGrupo"></select>',
+            '</label>',
+            '<label class="field">',
+              '<span>Materia</span>',
+              '<select id="adminFacilitadorAsignacionMateria"></select>',
+            '</label>',
+            '<label class="field">',
+              '<span>Fecha de inicio</span>',
+              '<input id="adminFacilitadorAsignacionInicio" type="date">',
+            '</label>',
+            '<label class="field">',
+              '<span>Fecha de fin</span>',
+              '<input id="adminFacilitadorAsignacionFin" type="date">',
+            '</label>',
+          '</div>',
+          '<div class="actions compact admin-alumnos-panel-actions">',
+            '<button class="btn-ghost" type="button" onclick="closeFacilitadorAsignacionPanel()">Cancelar</button>',
+            '<button class="btn-primary" type="button" onclick="saveFacilitadorAsignacion(this)">Guardar asignación</button>',
+          '</div>',
+        '</section>'
+      ].join('');
+    }
+
+    function renderFacilitadorMatrix(facilitadorId) {
+      const semanas = getFacilitadorRecentWeeks();
+      const asignaciones = getFacilitadorAsignaciones(facilitadorId).filter((row) => row.activa);
+      if (!semanas.length || !asignaciones.length) {
+        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todavía.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignación activa.</div></div></div>';
+      }
+      return [
+        '<div class="admin-facilitadores-matrix-table">',
+          '<div class="admin-facilitadores-matrix-header">',
+            '<div class="admin-facilitadores-matrix-label">Asignación</div>',
+            semanas.map((semana) => '<div class="admin-facilitadores-matrix-cell">' + escapeHtml(formatSemanaLabel(semana)) + '</div>').join(''),
+          '</div>',
+          asignaciones.map((asignacion) => {
+            const materia = (state.catalogos.materias || []).find((item) => item.materia_id === asignacion.materia_id);
+            return [
+              '<div class="admin-facilitadores-matrix-row">',
+                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
+                semanas.map((semana) => {
+                  const cell = getFacilitadorMatrixCellState(facilitadorId, asignacion, semana);
+                  const css = cell.code === 'ok' ? 'is-ok' :
+                    cell.code === 'alert' ? 'is-alert' :
+                    cell.code === 'pending' ? 'is-pending' :
+                    cell.code === 'closed' ? 'is-closed' :
+                    'is-missing';
+                  return '<div class="admin-facilitadores-matrix-cell"><span class="facilitador-matrix-state ' + css + '" title="' + escapeHtml(cell.title) + '">' + escapeHtml(cell.label) + '</span></div>';
+                }).join(''),
+              '</div>'
+            ].join('');
+          }).join(''),
+        '</div>'
+      ].join('');
+    }
+
+    function renderFacilitadorEditorPanel() {
+      const panel = $('adminFacilitadorEditorPanel');
+      if (!panel) return;
+      panel.hidden = !state.facilitadoresUi.editorOpen;
+      if (panel.hidden) return;
+      const mode = state.facilitadoresUi.editorMode || 'new';
+      const editor = state.facilitadoresUi.editor || createEmptyFacilitadorEditorState();
+      if ($('adminFacilitadorEditorTitle')) $('adminFacilitadorEditorTitle').textContent = mode === 'edit' ? 'Editar facilitador' : 'Nuevo facilitador';
+      if ($('adminFacilitadorIdInput')) {
+        $('adminFacilitadorIdInput').value = editor.facilitador_id || '';
+        $('adminFacilitadorIdInput').disabled = mode === 'edit';
+      }
+      if ($('adminFacilitadorNombreCompletoInput')) $('adminFacilitadorNombreCompletoInput').value = editor.nombre_completo || '';
+      if ($('adminFacilitadorNombreMostradoInput')) $('adminFacilitadorNombreMostradoInput').value = editor.nombre_mostrado || '';
+      if ($('adminFacilitadorRolInput')) $('adminFacilitadorRolInput').value = editor.rol || 'facilitador';
+      if ($('adminFacilitadorColorInput')) $('adminFacilitadorColorInput').value = editor.color_ui || '';
+      if ($('adminFacilitadorActivoInput')) $('adminFacilitadorActivoInput').value = editor.activo ? 'si' : 'no';
+      if ($('adminFacilitadorPinInput')) $('adminFacilitadorPinInput').value = editor.pin_plano || '';
+    }
+
+    function bindAdminFacilitadoresEvents() {
+      if ($('adminFacilitadoresSearch')) $('adminFacilitadoresSearch').addEventListener('input', (event) => {
+        state.facilitadoresUi.search = event.currentTarget.value;
+        renderAdminFacilitadoresModule();
+      });
+      if ($('adminFacilitadoresFilterAllBtn')) $('adminFacilitadoresFilterAllBtn').addEventListener('click', () => {
+        state.facilitadoresUi.filter = 'todos';
+        renderAdminFacilitadoresModule();
+      });
+      if ($('adminFacilitadoresFilterActiveBtn')) $('adminFacilitadoresFilterActiveBtn').addEventListener('click', () => {
+        state.facilitadoresUi.filter = 'activos';
+        renderAdminFacilitadoresModule();
+      });
+      if ($('adminFacilitadoresFilterInactiveBtn')) $('adminFacilitadoresFilterInactiveBtn').addEventListener('click', () => {
+        state.facilitadoresUi.filter = 'inactivos';
+        renderAdminFacilitadoresModule();
+      });
+      if ($('adminFacilitadoresFilterArchivedBtn')) $('adminFacilitadoresFilterArchivedBtn').addEventListener('click', () => {
+        state.facilitadoresUi.filter = 'archivados';
+        renderAdminFacilitadoresModule();
+      });
+      if ($('adminFacilitadorNewBtn')) $('adminFacilitadorNewBtn').addEventListener('click', () => openFacilitadorEditor('new'));
+      if ($('adminFacilitadorCancelBtn')) $('adminFacilitadorCancelBtn').addEventListener('click', () => {
+        closeFacilitadorEditor();
+        renderAdminFacilitadoresModule();
+      });
+      if ($('adminFacilitadorSaveBtn')) $('adminFacilitadorSaveBtn').addEventListener('click', (event) => saveFacilitadorEditor(event.currentTarget));
+    }
+
+    function openFacilitadorPanel(facilitadorId) {
+      state.facilitadoresUi.selectedFacilitadorId = String(facilitadorId || '').trim();
+      state.facilitadoresUi.panelMode = 'detail';
+      closeFacilitadorEditor();
+      renderAdminFacilitadoresModule();
+    }
+
+    function openFacilitadorEditor(mode, facilitadorId) {
+      const nextMode = mode === 'edit' ? 'edit' : 'new';
+      const facilitador = nextMode === 'edit' ? getFacilitadorById(facilitadorId) : null;
+      state.facilitadoresUi.editorMode = nextMode;
+      state.facilitadoresUi.editorOpen = true;
+      state.facilitadoresUi.selectedFacilitadorId = facilitador ? facilitador.facilitador_id : state.facilitadoresUi.selectedFacilitadorId;
+      state.facilitadoresUi.editor = facilitador ? {
+        facilitador_id: facilitador.facilitador_id,
+        nombre_completo: facilitador.nombre_completo || '',
+        nombre_mostrado: facilitador.nombre_mostrado || '',
+        rol: facilitador.rol || 'facilitador',
+        color_ui: facilitador.color_ui || '',
+        activo: facilitador.activo,
+        pin_plano: ''
+      } : createEmptyFacilitadorEditorState();
+      renderAdminFacilitadoresModule();
+    }
+
+    async function saveFacilitadorEditor(button) {
+      if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede editar facilitadores.');
+      const mode = state.facilitadoresUi.editorMode || 'new';
+      const payload = {
+        facilitador_id: $('adminFacilitadorIdInput') ? $('adminFacilitadorIdInput').value.trim() : '',
+        nombre_completo: $('adminFacilitadorNombreCompletoInput') ? $('adminFacilitadorNombreCompletoInput').value.trim() : '',
+        nombre_mostrado: $('adminFacilitadorNombreMostradoInput') ? $('adminFacilitadorNombreMostradoInput').value.trim() : '',
+        rol: $('adminFacilitadorRolInput') ? $('adminFacilitadorRolInput').value : 'facilitador',
+        color_ui: $('adminFacilitadorColorInput') ? $('adminFacilitadorColorInput').value.trim() : '',
+        activo: $('adminFacilitadorActivoInput') ? $('adminFacilitadorActivoInput').value === 'si' : true,
+        request_id: uid('FACED')
+      };
+      const pinPlano = $('adminFacilitadorPinInput') ? $('adminFacilitadorPinInput').value.trim() : '';
+      if (!payload.facilitador_id) throw new Error('Captura el Facilitador ID.');
+      if (!payload.nombre_completo) throw new Error('Captura el nombre completo.');
+      if (!payload.nombre_mostrado) throw new Error('Captura el nombre mostrado.');
+      if (mode === 'new' && !pinPlano) throw new Error('Captura un PIN temporal para el nuevo facilitador.');
+      if (pinPlano) payload.pin_plano = pinPlano;
+      await handleAction('guardarFacilitador', async () => {
+        const data = await api('guardarFacilitador', payload);
+        closeFacilitadorEditor();
+        state.facilitadoresUi.selectedFacilitadorId = data.facilitador_id || payload.facilitador_id;
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner(mode === 'new' ? 'Facilitador creado.' : 'Ficha del facilitador actualizada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarFacilitador', [payload.facilitador_id, mode]),
+        busyText: mode === 'new' ? 'Creando...' : 'Guardando...'
+      });
+    }
+
+    function openFacilitadorPin(facilitadorId) {
+      state.facilitadoresUi.selectedFacilitadorId = String(facilitadorId || '').trim();
+      state.facilitadoresUi.pinOpen = true;
+      state.facilitadoresUi.pinValue = '';
+      renderAdminFacilitadoresModule();
+    }
+
+    function closeFacilitadorPinPanel() {
+      closeFacilitadorPin();
+      renderAdminFacilitadoresModule();
+    }
+
+    async function saveFacilitadorPin(button) {
+      if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede resetear PIN.');
+      const facilitadorId = String(state.facilitadoresUi.selectedFacilitadorId || '').trim();
+      const pinPlano = $('adminFacilitadorResetPinInput') ? $('adminFacilitadorResetPinInput').value.trim() : '';
+      if (!facilitadorId) throw new Error('Selecciona un facilitador.');
+      if (!pinPlano) throw new Error('Captura un nuevo PIN.');
+      await handleAction('resetearPinFacilitador', async () => {
+        await api('guardarFacilitador', {
+          facilitador_id: facilitadorId,
+          pin_plano: pinPlano,
+          request_id: uid('FACPIN')
+        });
+        closeFacilitadorPin();
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('PIN restablecido para el facilitador.', 'success');
+      }, {
+        button,
+        key: buildActionKey('resetearPinFacilitador', [facilitadorId]),
+        busyText: 'Guardando...'
+      });
+    }
+
+    async function toggleFacilitadorActivo(button, facilitadorId, nextActive) {
+      if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede cambiar el estatus operativo del facilitador.');
+      const row = getFacilitadorById(facilitadorId);
+      if (!row) throw new Error('Facilitador no encontrado.');
+      await handleAction('toggleFacilitadorActivo', async () => {
+        await api('guardarFacilitador', {
+          facilitador_id: row.facilitador_id,
+          activo: !!nextActive,
+          request_id: uid('FACTOG')
+        });
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner(nextActive ? 'Facilitador activado.' : 'Facilitador desactivado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('toggleFacilitadorActivo', [facilitadorId, nextActive ? 'si' : 'no']),
+        busyText: nextActive ? 'Activando...' : 'Desactivando...'
+      });
+    }
+
+    async function archiveFacilitador(button, facilitadorId) {
+      if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede archivar facilitadores.');
+      const row = getFacilitadorById(facilitadorId);
+      if (!row) throw new Error('Facilitador no encontrado.');
+      if (!confirm('Esto archivará al facilitador y cerrará sus accesos operativos.')) return;
+      await handleAction('archivarFacilitador', async () => {
+        await api('archivarFacilitador', {
+          facilitador_id: row.facilitador_id,
+          request_id: uid('FACARC')
+        });
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('Facilitador archivado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('archivarFacilitador', [facilitadorId]),
+        busyText: 'Archivando...'
+      });
+    }
+
+    async function reactivateFacilitador(button, facilitadorId) {
+      if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede reactivar facilitadores.');
+      const row = getFacilitadorById(facilitadorId);
+      if (!row) throw new Error('Facilitador no encontrado.');
+      await handleAction('reactivarFacilitador', async () => {
+        await api('reactivarFacilitador', {
+          facilitador_id: row.facilitador_id,
+          request_id: uid('FACREA')
+        });
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('Facilitador reactivado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('reactivarFacilitador', [facilitadorId]),
+        busyText: 'Reactivando...'
+      });
+    }
+
+    function openFacilitadorAsignacionEditor(mode, asignacionId) {
+      const facilitadorId = String(state.facilitadoresUi.selectedFacilitadorId || '').trim();
+      if (!facilitadorId) return;
+      const current = mode === 'edit'
+        ? getFacilitadorAsignaciones(facilitadorId, { includeArchived: true }).find((row) => row.asignacion_id === String(asignacionId || '').trim())
+        : null;
+      state.facilitadoresUi.asignacionOpen = true;
+      state.facilitadoresUi.asignacion = current ? {
+        asignacion_id: current.asignacion_id,
+        facilitador_id: current.facilitador_id,
+        grupo_id: current.grupo_id,
+        materia_id: current.materia_id,
+        activa: current.activa,
+        fecha_inicio: current.fecha_inicio || '',
+        fecha_fin: current.fecha_fin || ''
+      } : {
+        asignacion_id: '',
+        facilitador_id: facilitadorId,
+        grupo_id: '',
+        materia_id: '',
+        activa: true,
+        fecha_inicio: '',
+        fecha_fin: ''
+      };
+      renderAdminFacilitadoresModule();
+      fillSelect($('adminFacilitadorAsignacionGrupo'), state.catalogos.grupos || [], (item) => item.grupo_id, (item) => item.nombre_grupo || item.grupo_id, 'Selecciona grupo');
+      fillSelect($('adminFacilitadorAsignacionMateria'), state.catalogos.materias || [], (item) => item.materia_id, (item) => item.nombre || item.materia_id, 'Selecciona materia');
+      if ($('adminFacilitadorAsignacionGrupo')) $('adminFacilitadorAsignacionGrupo').value = state.facilitadoresUi.asignacion.grupo_id || '';
+      if ($('adminFacilitadorAsignacionMateria')) $('adminFacilitadorAsignacionMateria').value = state.facilitadoresUi.asignacion.materia_id || '';
+      if ($('adminFacilitadorAsignacionInicio')) $('adminFacilitadorAsignacionInicio').value = state.facilitadoresUi.asignacion.fecha_inicio || '';
+      if ($('adminFacilitadorAsignacionFin')) $('adminFacilitadorAsignacionFin').value = state.facilitadoresUi.asignacion.fecha_fin || '';
+    }
+
+    function closeFacilitadorAsignacionPanel() {
+      closeFacilitadorAsignacionEditor();
+      renderAdminFacilitadoresModule();
+    }
+
+    async function saveFacilitadorAsignacion(button) {
+      const facilitadorId = String(state.facilitadoresUi.selectedFacilitadorId || '').trim();
+      if (!facilitadorId) throw new Error('Selecciona un facilitador.');
+      const payload = {
+        asignacion_id: state.facilitadoresUi.asignacion.asignacion_id || '',
+        facilitador_id: facilitadorId,
+        grupo_id: $('adminFacilitadorAsignacionGrupo') ? $('adminFacilitadorAsignacionGrupo').value : '',
+        materia_id: $('adminFacilitadorAsignacionMateria') ? $('adminFacilitadorAsignacionMateria').value : '',
+        fecha_inicio: $('adminFacilitadorAsignacionInicio') ? $('adminFacilitadorAsignacionInicio').value : '',
+        fecha_fin: $('adminFacilitadorAsignacionFin') ? $('adminFacilitadorAsignacionFin').value : '',
+        activa: true,
+        request_id: uid('FAS')
+      };
+      if (!payload.grupo_id) throw new Error('Selecciona un grupo.');
+      if (!payload.materia_id) throw new Error('Selecciona una materia.');
+      await handleAction('guardarFacilitadorAsignacion', async () => {
+        await api('guardarFacilitadorAsignacion', payload);
+        closeFacilitadorAsignacionEditor();
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('Asignación guardada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarFacilitadorAsignacion', [facilitadorId, payload.grupo_id, payload.materia_id, payload.asignacion_id || 'new']),
+        busyText: 'Guardando...'
+      });
+    }
+
+    async function archiveFacilitadorAsignacion(button, asignacionId) {
+      if (!confirm('Esta asignación dejará de contar para el pulso semanal del facilitador.')) return;
+      await handleAction('archivarFacilitadorAsignacion', async () => {
+        await api('archivarFacilitadorAsignacion', {
+          asignacion_id: asignacionId,
+          request_id: uid('FASARC')
+        });
+        closeFacilitadorAsignacionEditor();
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('Asignación retirada del pulso semanal.', 'success');
+      }, {
+        button,
+        key: buildActionKey('archivarFacilitadorAsignacion', [asignacionId]),
+        busyText: 'Quitando...'
+      });
+    }
+
+    async function openFacilitadorPlaneaciones(facilitadorId, grupoId, materiaId) {
+      activateAdminModule('planeaciones');
+      renderAll();
+      if ($('filterFacilitador')) $('filterFacilitador').value = String(facilitadorId || '').trim();
+      if ($('filterGrupo') && grupoId !== undefined) $('filterGrupo').value = String(grupoId || '').trim();
+      if ($('planMateria') && materiaId !== undefined) {
+        // no-op intencional, solo mantenemos consistencia visual del editor
+      }
+      await refreshPlaneaciones();
+      renderAll();
+      setBanner('Planeaciones filtradas por facilitador.', 'info');
+    }
+
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
       const current = select.value;
       const options = ['<option value="">' + escapeHtml(placeholder) + '</option>'];
@@ -6300,6 +7457,7 @@
       renderAdminShell();
       renderNotificationsAdmin();
       renderAdminAlumnosModule();
+      renderAdminFacilitadoresModule();
       renderInstitutionalNotices();
       renderPeriodSelects();
       renderBaseSelects();
@@ -7041,6 +8199,19 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.editNotification = editNotification;
     window.notificationAction = notificationAction;
     window.toggleNotificationAudienceFacilitador = toggleNotificationAudienceFacilitador;
+    window.openFacilitadorPanel = openFacilitadorPanel;
+    window.openFacilitadorEditor = openFacilitadorEditor;
+    window.openFacilitadorPin = openFacilitadorPin;
+    window.closeFacilitadorPinPanel = closeFacilitadorPinPanel;
+    window.saveFacilitadorPin = saveFacilitadorPin;
+    window.toggleFacilitadorActivo = toggleFacilitadorActivo;
+    window.archiveFacilitador = archiveFacilitador;
+    window.reactivateFacilitador = reactivateFacilitador;
+    window.openFacilitadorAsignacionEditor = openFacilitadorAsignacionEditor;
+    window.closeFacilitadorAsignacionPanel = closeFacilitadorAsignacionPanel;
+    window.saveFacilitadorAsignacion = saveFacilitadorAsignacion;
+    window.archiveFacilitadorAsignacion = archiveFacilitadorAsignacion;
+    window.openFacilitadorPlaneaciones = openFacilitadorPlaneaciones;
     window.openAlumnoEditor = openAlumnoEditor;
     window.closeAlumnoEditor = closeAlumnoEditor;
     window.saveAlumnoEditor = saveAlumnoEditor;
