@@ -2040,6 +2040,165 @@
       color: #d1d8df;
       border-color: rgba(196, 204, 214, 0.16);
     }
+    .admin-materias-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+      gap: 10px;
+    }
+    .admin-materias-kpi {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 10px 9px;
+      display: grid;
+      gap: 4px;
+      align-content: start;
+    }
+    .admin-materias-kpi strong {
+      color: var(--text-strong);
+      font-size: 1.02rem;
+      line-height: 1;
+    }
+    .admin-materias-kpi span {
+      color: var(--text-soft);
+      font-size: 0.7rem;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .admin-materias-list-header,
+    .admin-materias-row {
+      display: grid;
+      grid-template-columns: 0.5fr 1.28fr 0.92fr 0.72fr 0.78fr 1.02fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+    }
+    .admin-materias-list-header {
+      color: #a9c7e6;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .admin-materias-row {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      min-height: 60px;
+      cursor: pointer;
+    }
+    .admin-materias-row:last-child {
+      border-bottom: 0;
+    }
+    .admin-materias-row.is-selected {
+      background: linear-gradient(180deg, rgba(33, 52, 70, 0.46), rgba(24, 33, 44, 0.3));
+    }
+    .admin-materias-row .admin-alumnos-actions {
+      justify-content: flex-start;
+    }
+    .admin-materias-order {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      min-height: 28px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-strong);
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+    .admin-materias-detail {
+      display: grid;
+      gap: 14px;
+    }
+    .admin-materias-identity {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .admin-materias-identity strong {
+      display: block;
+      color: var(--text-strong);
+      font-size: 1.05rem;
+      margin-bottom: 4px;
+    }
+    .admin-materias-inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-materias-inline-actions > button,
+    .admin-materias-variant-actions > button {
+      min-height: 28px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      box-shadow: none !important;
+    }
+    .admin-materias-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .admin-materias-variants {
+      display: grid;
+      gap: 8px;
+    }
+    .admin-materias-variant-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 9px 11px;
+    }
+    .admin-materias-variant-copy {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+    .admin-materias-variant-copy strong {
+      color: var(--text-strong);
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .admin-materias-variant-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+    .admin-materias-structure {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .admin-materias-module .admin-alumnos-head-actions {
+      align-items: center;
+    }
+    .admin-materias-module .admin-alumnos-search {
+      align-self: center;
+      gap: 0;
+    }
+    .admin-materias-module .admin-alumnos-search span {
+      display: none;
+    }
+    .admin-materias-module .admin-alumnos-head-actions > #adminMateriaNewBtn {
+      min-width: 188px;
+      min-height: 46px;
+      flex: 0 0 188px;
+    }
+    .admin-materias-module .admin-alumnos-empty {
+      min-height: 168px;
+    }
     .admin-planeaciones-shell {
       display: none;
     }
@@ -2171,7 +2330,8 @@
         grid-template-columns: 1fr;
       }
       .admin-facilitadores-kpis,
-      .admin-facilitadores-meta-grid {
+      .admin-facilitadores-meta-grid,
+      .admin-materias-meta-grid {
         grid-template-columns: 1fr 1fr;
       }
       .admin-alumnos-side {
@@ -2181,6 +2341,9 @@
         display: none;
       }
       .admin-facilitadores-list-header {
+        display: none;
+      }
+      .admin-materias-list-header {
         display: none;
       }
       .admin-alumnos-table {
@@ -2205,6 +2368,14 @@
         background: linear-gradient(180deg, rgba(33, 38, 47, 0.98), rgba(25, 30, 38, 0.98));
         margin-bottom: 8px;
       }
+      .admin-materias-row {
+        grid-template-columns: 1fr;
+        padding: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(33, 38, 47, 0.98), rgba(25, 30, 38, 0.98));
+        margin-bottom: 8px;
+      }
       .admin-alumnos-actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2213,8 +2384,13 @@
       .admin-facilitadores-assignment-item {
         grid-template-columns: 1fr;
       }
+      .admin-materias-variant-item {
+        grid-template-columns: 1fr;
+      }
       .admin-facilitadores-assignment-actions,
-      .admin-facilitadores-inline-actions {
+      .admin-facilitadores-inline-actions,
+      .admin-materias-inline-actions,
+      .admin-materias-variant-actions {
         justify-content: flex-start;
       }
       .admin-alumnos-actions > button {
@@ -3683,6 +3859,38 @@
       };
     }
 
+    function createEmptyMateriaEditorState() {
+      return {
+        materia_id: '',
+        nombre: '',
+        admite_submaterias: false,
+        estatus: 'activa'
+      };
+    }
+
+    function createEmptySubmateriaEditorState() {
+      return {
+        submateria_id: '',
+        materia_id: '',
+        nombre: '',
+        estatus: 'activa'
+      };
+    }
+
+    function createEmptyMateriasUiState() {
+      return {
+        search: '',
+        filter: 'activas',
+        selectedMateriaId: '',
+        editorOpen: false,
+        editorMode: 'new',
+        editor: createEmptyMateriaEditorState(),
+        subEditorOpen: false,
+        subEditorMode: 'new',
+        subEditor: createEmptySubmateriaEditorState()
+      };
+    }
+
     const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzF61zDQkF15kTFBQykHx-J2XAY1TFcqI_Gze_UtVZhD80DTlbkMEYTBIdQ-_HIqlSf/exec';
     const BRAND_LOGO = 'data:image/png;base64,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';
     const DEFAULT_PERIODS = '';
@@ -3700,7 +3908,9 @@
         grupos: [],
         niveles: [],
         materias: [],
+        materias_admin: [],
         submaterias: [],
+        submaterias_admin: [],
         habilidades: [],
         talleres: [],
         refuerzos: [],
@@ -3720,6 +3930,7 @@
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
+      materiasUi: createEmptyMateriasUiState(),
       planEditor: {
         mode: 'create',
         planId: '',
@@ -3771,7 +3982,9 @@
         grupos: [],
         niveles: [],
         materias: [],
+        materias_admin: [],
         submaterias: [],
+        submaterias_admin: [],
         habilidades: [],
         talleres: [],
         refuerzos: [],
@@ -4396,6 +4609,10 @@
         closeFacilitadorPin();
         closeFacilitadorAsignacionEditor();
       }
+      if (nextModule !== 'materias') {
+        closeMateriaEditor();
+        closeSubmateriaEditor();
+      }
       if (nextModule !== 'planeaciones') {
         resetPlaneacionesTransientUi();
         clearPlaneacionesMateriaFilter();
@@ -4408,6 +4625,7 @@
       renderNotificationsAdmin();
       renderAdminAlumnosModule();
       renderAdminFacilitadoresModule();
+      renderAdminMateriasModule();
       syncRoleUi();
     }
 
@@ -6354,6 +6572,24 @@
       state.facilitadoresUi.panelMode = 'detail';
       closeFacilitadorEditor();
       renderAdminFacilitadoresModule();
+      focusAdminFacilitadorPanel('adminFacilitadorDetailPanel');
+    }
+
+    function focusAdminFacilitadorPanel(panelId, fieldId) {
+      window.requestAnimationFrame(() => {
+        const panel = $(panelId);
+        if (!panel || panel.hidden || typeof panel.scrollIntoView !== 'function') return;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(() => {
+          const firstField = fieldId ? $(fieldId) : null;
+          if (firstField && typeof firstField.focus === 'function') {
+            firstField.focus({ preventScroll: true });
+            if (typeof firstField.select === 'function' && !firstField.disabled) {
+              firstField.select();
+            }
+          }
+        }, 180);
+      });
     }
 
     function openFacilitadorEditor(mode, facilitadorId) {
@@ -6372,6 +6608,10 @@
         pin_plano: ''
       } : createEmptyFacilitadorEditorState();
       renderAdminFacilitadoresModule();
+      focusAdminFacilitadorPanel(
+        'adminFacilitadorEditorPanel',
+        nextMode === 'edit' ? 'adminFacilitadorNombreCompletoInput' : 'adminFacilitadorIdInput'
+      );
     }
 
     async function saveFacilitadorEditor(button) {
@@ -6411,6 +6651,7 @@
       state.facilitadoresUi.pinOpen = true;
       state.facilitadoresUi.pinValue = '';
       renderAdminFacilitadoresModule();
+      focusAdminFacilitadorPanel('adminFacilitadorDetailPanel', 'adminFacilitadorResetPinInput');
     }
 
     function closeFacilitadorPinPanel() {
@@ -6531,6 +6772,7 @@
       if ($('adminFacilitadorAsignacionMateria')) $('adminFacilitadorAsignacionMateria').value = state.facilitadoresUi.asignacion.materia_id || '';
       if ($('adminFacilitadorAsignacionInicio')) $('adminFacilitadorAsignacionInicio').value = state.facilitadoresUi.asignacion.fecha_inicio || '';
       if ($('adminFacilitadorAsignacionFin')) $('adminFacilitadorAsignacionFin').value = state.facilitadoresUi.asignacion.fecha_fin || '';
+      focusAdminFacilitadorPanel('adminFacilitadorDetailPanel', 'adminFacilitadorAsignacionGrupo');
     }
 
     function closeFacilitadorAsignacionPanel() {
@@ -6598,6 +6840,682 @@
           : 'Planeaciones filtradas por facilitador.',
         'info'
       );
+    }
+
+    function getAdminMateriasCatalog() {
+      const rows = Array.isArray(state.catalogos.materias_admin) && state.catalogos.materias_admin.length
+        ? state.catalogos.materias_admin
+        : (state.catalogos.materias || []);
+      return rows.map((row) => {
+        const archived = String(row.archivado_at || '').trim();
+        const rawStatus = String(row.estatus || '').trim().toLowerCase();
+        const status = archived
+          ? 'archivada'
+          : (rawStatus === 'inactiva'
+            ? 'inactiva'
+            : ((row.activo === false || row.activo === 'no' || row.activo === 'false') ? 'inactiva' : 'activa'));
+        return {
+          materia_id: String(row.materia_id || '').trim(),
+          nombre: String(row.nombre || '').trim(),
+          tipo: String(row.tipo || '').trim(),
+          activo: status === 'activa',
+          admite_submaterias: isTruthyValue(row.admite_submaterias),
+          estatus: status,
+          orden_visual: Number(row.orden_visual || 0),
+          fecha_actualizacion: String(row.fecha_actualizacion || '').trim(),
+          archivado_at: archived,
+          archivado_por: String(row.archivado_por || '').trim()
+        };
+      }).sort((a, b) => {
+        const orderDiff = Number(a.orden_visual || 0) - Number(b.orden_visual || 0);
+        if (orderDiff) return orderDiff;
+        return String(a.nombre || a.materia_id).localeCompare(String(b.nombre || b.materia_id), 'es');
+      });
+    }
+
+    function getAdminSubmateriasCatalog() {
+      const rows = Array.isArray(state.catalogos.submaterias_admin) && state.catalogos.submaterias_admin.length
+        ? state.catalogos.submaterias_admin
+        : (state.catalogos.submaterias || []);
+      return rows.map((row) => {
+        const archived = String(row.archivado_at || '').trim();
+        const rawStatus = String(row.estatus || '').trim().toLowerCase();
+        const status = archived ? 'archivada' : (rawStatus === 'inactiva' ? 'inactiva' : 'activa');
+        return {
+          submateria_id: String(row.submateria_id || '').trim(),
+          materia_id: String(row.materia_id || '').trim(),
+          nombre: String(row.nombre || '').trim(),
+          estatus: status,
+          orden: Number(row.orden || 0),
+          fecha_actualizacion: String(row.fecha_actualizacion || '').trim(),
+          archivado_at: archived,
+          archivado_por: String(row.archivado_por || '').trim()
+        };
+      }).sort((a, b) => {
+        if (String(a.materia_id || '') !== String(b.materia_id || '')) {
+          return String(a.materia_id || '').localeCompare(String(b.materia_id || ''), 'es');
+        }
+        const orderDiff = Number(a.orden || 0) - Number(b.orden || 0);
+        if (orderDiff) return orderDiff;
+        return String(a.nombre || a.submateria_id).localeCompare(String(b.nombre || b.submateria_id), 'es');
+      });
+    }
+
+    function getMateriaBaseRows() {
+      return getAdminMateriasCatalog();
+    }
+
+    function getSubmateriasForMateria(materiaId) {
+      const id = String(materiaId || '').trim();
+      return getAdminSubmateriasCatalog().filter((row) => row.materia_id === id);
+    }
+
+    function getSelectedMateria() {
+      const selectedId = String(state.materiasUi.selectedMateriaId || '').trim();
+      return getMateriaBaseRows().find((row) => row.materia_id === selectedId) || null;
+    }
+
+    function getMateriaSearchText(row) {
+      const variants = getSubmateriasForMateria(row.materia_id).map((item) => item.nombre + ' ' + item.submateria_id).join(' ');
+      return [
+        row.materia_id,
+        row.nombre,
+        row.tipo,
+        variants
+      ].join(' ').toLowerCase();
+    }
+
+    function materiaHasVariants(row) {
+      return !!(row && (row.admite_submaterias || getSubmateriasForMateria(row.materia_id).length));
+    }
+
+    function getFilteredMaterias() {
+      const filter = String(state.materiasUi.filter || 'activas').trim();
+      const query = String(state.materiasUi.search || '').trim().toLowerCase();
+      return getMateriaBaseRows().filter((row) => {
+        if (filter === 'activas' && row.estatus !== 'activa') return false;
+        if (filter === 'archivadas' && row.estatus !== 'archivada') return false;
+        if (filter === 'con_submaterias' && !materiaHasVariants(row)) return false;
+        if (!query) return true;
+        return getMateriaSearchText(row).includes(query);
+      });
+    }
+
+    function getVisibleMaterias() {
+      return getFilteredMaterias();
+    }
+
+    function getMateriaStatusLabel(status) {
+      if (status === 'archivada') return 'Archivada';
+      if (status === 'inactiva') return 'Inactiva';
+      return 'Activa';
+    }
+
+    function getMateriaStatusBadgeClass(status) {
+      if (status === 'archivada') return 'is-archived';
+      if (status === 'inactiva') return 'is-inactive';
+      return 'is-active';
+    }
+
+    function getMateriaStructureLabel(row) {
+      return materiaHasVariants(row) ? 'Con variantes' : 'Simple';
+    }
+
+    function getMateriasKpis() {
+      const rows = getMateriaBaseRows();
+      return {
+        total: rows.length,
+        activas: rows.filter((row) => row.estatus === 'activa').length,
+        conSubmaterias: rows.filter((row) => materiaHasVariants(row)).length,
+        archivadas: rows.filter((row) => row.estatus === 'archivada').length
+      };
+    }
+
+    function closeMateriaEditor() {
+      state.materiasUi.editorOpen = false;
+      state.materiasUi.editorMode = 'new';
+      state.materiasUi.editor = createEmptyMateriaEditorState();
+    }
+
+    function closeSubmateriaEditor() {
+      state.materiasUi.subEditorOpen = false;
+      state.materiasUi.subEditorMode = 'new';
+      state.materiasUi.subEditor = createEmptySubmateriaEditorState();
+    }
+
+    function syncAdminMateriasModule() {
+      const visible = getVisibleMaterias();
+      const selected = String(state.materiasUi.selectedMateriaId || '').trim();
+      if (selected && visible.some((row) => row.materia_id === selected)) return;
+      state.materiasUi.selectedMateriaId = visible.length ? visible[0].materia_id : '';
+      if (!visible.length) {
+        closeMateriaEditor();
+        closeSubmateriaEditor();
+      }
+    }
+
+    function getAdminMateriasModuleTemplate() {
+      return [
+        '<article class="admin-toolbar admin-alumnos-module admin-materias-module">',
+          '<div class="admin-toolbar-head admin-alumnos-head">',
+            '<div class="admin-alumnos-head-copy">',
+              '<h3>Materias</h3>',
+              '<p class="subtle">Administra el catálogo base y sus variantes operativas.</p>',
+            '</div>',
+            '<div class="admin-alumnos-head-actions">',
+              '<label class="admin-alumnos-search" for="adminMateriasSearch">',
+                '<span>Buscar</span>',
+                '<input id="adminMateriasSearch" type="search" placeholder="Buscar materia o variante">',
+              '</label>',
+              '<button id="adminMateriaNewBtn" class="btn-primary" type="button">Nueva materia</button>',
+            '</div>',
+          '</div>',
+          '<div class="admin-materias-kpis">',
+            '<div class="admin-materias-kpi"><strong id="adminMateriasKpiTotal">0</strong><span>Total materias</span></div>',
+            '<div class="admin-materias-kpi"><strong id="adminMateriasKpiActive">0</strong><span>Activas</span></div>',
+            '<div class="admin-materias-kpi"><strong id="adminMateriasKpiVariants">0</strong><span>Con variantes</span></div>',
+            '<div class="admin-materias-kpi"><strong id="adminMateriasKpiArchived">0</strong><span>Archivadas</span></div>',
+          '</div>',
+          '<div class="admin-alumnos-filterbar">',
+            '<div class="admin-alumnos-filterchips">',
+              '<button id="adminMateriasFilterAllBtn" class="btn-ghost" type="button">Todas</button>',
+              '<button id="adminMateriasFilterActiveBtn" class="btn-ghost" type="button">Activas</button>',
+              '<button id="adminMateriasFilterArchivedBtn" class="btn-ghost" type="button">Archivadas</button>',
+              '<button id="adminMateriasFilterVariantsBtn" class="btn-ghost" type="button">Con submaterias</button>',
+            '</div>',
+          '</div>',
+          '<div class="admin-alumnos-layout">',
+            '<section class="admin-alumnos-main">',
+              '<div class="admin-alumnos-section-head">',
+                '<div>',
+                  '<h4 id="adminMateriasListTitle">Materias activas</h4>',
+                  '<div id="adminMateriasListMeta" class="subtle">Catálogo base, estructura y orden visual.</div>',
+                '</div>',
+              '</div>',
+              '<div id="adminMateriasList" class="admin-alumnos-list"></div>',
+            '</section>',
+            '<aside class="admin-alumnos-side">',
+              '<section id="adminMateriaDetailPanel" class="admin-alumnos-panel"></section>',
+              '<section id="adminMateriaEditorPanel" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4 id="adminMateriaEditorTitle">Nueva materia</h4>',
+                    '<div class="subtle">Define catálogo base, estructura y estatus operativo.</div>',
+                  '</div>',
+                '</div>',
+                '<div class="admin-alumnos-editor-grid">',
+                  '<label class="field">',
+                    '<span>Materia ID</span>',
+                    '<input id="adminMateriaIdInput" type="text" maxlength="50" placeholder="Ej. MAT-010">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Estatus</span>',
+                    '<select id="adminMateriaStatusInput">',
+                      '<option value="activa">Activa</option>',
+                      '<option value="inactiva">Inactiva</option>',
+                      '<option value="archivada">Archivada</option>',
+                    '</select>',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Nombre</span>',
+                    '<input id="adminMateriaNombreInput" type="text" maxlength="100" placeholder="Nombre visible de la materia">',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Estructura</span>',
+                    '<select id="adminMateriaVariantsInput">',
+                      '<option value="no">Simple</option>',
+                      '<option value="si">Con submaterias</option>',
+                    '</select>',
+                  '</label>',
+                '</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminMateriaCancelBtn" class="btn-ghost" type="button">Cancelar</button>',
+                  '<button id="adminMateriaSaveBtn" class="btn-primary" type="button">Guardar</button>',
+                '</div>',
+              '</section>',
+            '</aside>',
+          '</div>',
+        '</article>'
+      ].join('');
+    }
+
+    function renderAdminMateriasModule() {
+      const panel = $('admin-panel-materias');
+      if (!panel || !canUseAdminShell()) return;
+      if (panel.dataset.ready !== '1') {
+        panel.innerHTML = getAdminMateriasModuleTemplate();
+        panel.dataset.ready = '1';
+        bindAdminMateriasEvents();
+      }
+      syncAdminMateriasModule();
+      const kpis = getMateriasKpis();
+      if ($('adminMateriasSearch')) $('adminMateriasSearch').value = state.materiasUi.search || '';
+      if ($('adminMateriasKpiTotal')) $('adminMateriasKpiTotal').textContent = String(kpis.total);
+      if ($('adminMateriasKpiActive')) $('adminMateriasKpiActive').textContent = String(kpis.activas);
+      if ($('adminMateriasKpiVariants')) $('adminMateriasKpiVariants').textContent = String(kpis.conSubmaterias);
+      if ($('adminMateriasKpiArchived')) $('adminMateriasKpiArchived').textContent = String(kpis.archivadas);
+      if ($('adminMateriasFilterAllBtn')) $('adminMateriasFilterAllBtn').classList.toggle('is-active', state.materiasUi.filter === 'todas');
+      if ($('adminMateriasFilterActiveBtn')) $('adminMateriasFilterActiveBtn').classList.toggle('is-active', state.materiasUi.filter === 'activas');
+      if ($('adminMateriasFilterArchivedBtn')) $('adminMateriasFilterArchivedBtn').classList.toggle('is-active', state.materiasUi.filter === 'archivadas');
+      if ($('adminMateriasFilterVariantsBtn')) $('adminMateriasFilterVariantsBtn').classList.toggle('is-active', state.materiasUi.filter === 'con_submaterias');
+      renderAdminMateriasList();
+      renderAdminMateriaDetail();
+      renderMateriaEditor();
+    }
+
+    function renderAdminMateriasList() {
+      const host = $('adminMateriasList');
+      if (!host) return;
+      const rows = getVisibleMaterias();
+      const filter = String(state.materiasUi.filter || 'activas').trim();
+      if ($('adminMateriasListTitle')) {
+        $('adminMateriasListTitle').textContent = filter === 'todas'
+          ? 'Todas las materias'
+          : (filter === 'archivadas'
+            ? 'Materias archivadas'
+            : (filter === 'con_submaterias' ? 'Materias con submaterias' : 'Materias activas'));
+      }
+      if ($('adminMateriasListMeta')) $('adminMateriasListMeta').textContent = rows.length + ' materia(s) visibles en esta vista.';
+      if (!rows.length) {
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay materias para mostrar.</strong><div class="subtle">Ajusta el filtro o crea una materia base para empezar.</div></div></div>';
+        return;
+      }
+      host.innerHTML = [
+        '<div class="admin-alumnos-table">',
+          '<div class="admin-materias-list-header">',
+            '<div>Orden</div>',
+            '<div>Materia</div>',
+            '<div>Tipo</div>',
+            '<div>Estado</div>',
+            '<div>Submaterias</div>',
+            '<div>Acciones</div>',
+          '</div>',
+          rows.map((row) => {
+            const selected = String(state.materiasUi.selectedMateriaId || '').trim() === row.materia_id;
+            const subRows = getSubmateriasForMateria(row.materia_id);
+            const actions = [
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); openMateriaEditor(\'edit\', \'' + escapeHtml(row.materia_id) + '\')">Editar</button>',
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeHtml(row.materia_id) + '\', \'up\')">↑</button>',
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeHtml(row.materia_id) + '\', \'down\')">↓</button>',
+              '<button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectMateria(\'' + escapeHtml(row.materia_id) + '\')">Ver panel</button>'
+            ];
+            return [
+              '<article class="admin-materias-row' + (selected ? ' is-selected' : '') + '" onclick="selectMateria(\'' + escapeHtml(row.materia_id) + '\')">',
+                '<div class="admin-alumnos-cell"><span class="admin-materias-order">' + escapeHtml(String(row.orden_visual || 0)) + '</span></div>',
+                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.materia_id) + '</strong><div class="mini">' + escapeHtml(row.materia_id) + '</div></div>',
+                '<div class="admin-alumnos-cell"><div class="admin-materias-structure"><span class="admin-alumnos-badge">' + escapeHtml(getMateriaStructureLabel(row)) + '</span></div></div>',
+                '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getMateriaStatusBadgeClass(row.estatus) + '">' + escapeHtml(getMateriaStatusLabel(row.estatus)) + '</span></div>',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(String(subRows.length)) + ' variante(s)</div></div>',
+                '<div class="admin-alumnos-actions">' + actions.join('') + '</div>',
+              '</article>'
+            ].join('');
+          }).join(''),
+        '</div>'
+      ].join('');
+    }
+
+    function renderAdminMateriaDetail() {
+      const host = $('adminMateriaDetailPanel');
+      if (!host) return;
+      const materia = getSelectedMateria();
+      if (!materia) {
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">Aquí aparecerá su estructura, variantes y acciones operativas.</div></div></div>';
+        return;
+      }
+      const subRows = getSubmateriasForMateria(materia.materia_id);
+      const canManage = canUseAdminShell();
+      host.hidden = false;
+      host.innerHTML = [
+        '<div class="admin-materias-detail">',
+          '<div class="admin-materias-identity">',
+            '<div>',
+              '<strong>' + escapeHtml(materia.nombre || materia.materia_id) + '</strong>',
+              '<div class="mini">' + escapeHtml(materia.materia_id) + ' · ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
+            '</div>',
+            '<div class="admin-materias-structure">',
+              '<span class="admin-alumnos-badge">' + escapeHtml(getMateriaStructureLabel(materia)) + '</span>',
+              '<span class="admin-alumnos-badge ' + getMateriaStatusBadgeClass(materia.estatus) + '">' + escapeHtml(getMateriaStatusLabel(materia.estatus)) + '</span>',
+            '</div>',
+          '</div>',
+          '<div class="admin-materias-inline-actions">',
+            (canManage ? '<button class="btn-ghost" type="button" onclick="openMateriaEditor(\'edit\', \'' + escapeHtml(materia.materia_id) + '\')">Editar materia</button>' : ''),
+            (canManage ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\')">' + escapeHtml(materia.estatus === 'activa' ? 'Desactivar' : 'Activar') + '</button>' : ''),
+            (canManage && materia.estatus !== 'archivada' ? '<button class="btn-accent" type="button" onclick="archiveMateria(this, \'' + escapeHtml(materia.materia_id) + '\')">Archivar</button>' : ''),
+            (canManage && materiaHasVariants(materia) && materia.estatus !== 'archivada' ? '<button class="btn-primary" type="button" onclick="openSubmateriaEditor(\'new\', \'' + escapeHtml(materia.materia_id) + '\')">Agregar submateria</button>' : ''),
+          '</div>',
+          '<div class="admin-materias-meta-grid">',
+            '<div class="admin-alumnos-readonly"><span>Materia ID</span><strong>' + escapeHtml(materia.materia_id) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Orden visual</span><strong>' + escapeHtml(String(materia.orden_visual || 0)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Estructura</span><strong>' + escapeHtml(getMateriaStructureLabel(materia)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Variantes registradas</span><strong>' + escapeHtml(String(subRows.length)) + '</strong></div>',
+          '</div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Variantes</h4><div class="subtle">' + escapeHtml(materiaHasVariants(materia) ? 'Submaterias de operación para esta materia base.' : 'Materia simple sin variantes registradas.') + '</div></div></div>',
+          (materiaHasVariants(materia) ? renderMateriaVariantsList(materia) : '<div class="admin-alumnos-empty" style="min-height:136px;"><div><strong>Materia simple.</strong><div class="subtle">Esta materia no usa submaterias operativas en este momento.</div></div></div>'),
+          (state.materiasUi.subEditorOpen && String(state.materiasUi.subEditor.materia_id || '').trim() === materia.materia_id ? renderSubmateriaEditor() : ''),
+        '</div>'
+      ].join('');
+    }
+
+    function renderMateriaVariantsList(materia) {
+      const subRows = getSubmateriasForMateria(materia.materia_id);
+      if (!subRows.length) {
+        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin variantes registradas.</strong><div class="subtle">Agrega submaterias para especializar la operación sin duplicar la materia base.</div></div></div>';
+      }
+      return [
+        '<div class="admin-materias-variants">',
+          subRows.map((row) => {
+            const actions = [
+              '<button class="btn-ghost" type="button" onclick="openSubmateriaEditor(\'edit\', \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Editar</button>',
+              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\', \'up\')">↑</button>',
+              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\', \'down\')">↓</button>',
+              '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">' + escapeHtml(row.estatus === 'activa' ? 'Desactivar' : 'Activar') + '</button>'
+            ];
+            if (row.estatus !== 'archivada') {
+              actions.push('<button class="btn-accent" type="button" onclick="archiveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Archivar</button>');
+            }
+            return [
+              '<article class="admin-materias-variant-item">',
+                '<div class="admin-materias-variant-copy">',
+                  '<strong>' + escapeHtml(row.nombre || row.submateria_id) + '</strong>',
+                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' · ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' · Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
+                '</div>',
+                '<div class="admin-materias-variant-actions">' + actions.join('') + '</div>',
+              '</article>'
+            ].join('');
+          }).join(''),
+        '</div>'
+      ].join('');
+    }
+
+    function renderMateriaEditor() {
+      const panel = $('adminMateriaEditorPanel');
+      if (!panel) return;
+      panel.hidden = !state.materiasUi.editorOpen;
+      if (panel.hidden) return;
+      const mode = state.materiasUi.editorMode || 'new';
+      const editor = state.materiasUi.editor || createEmptyMateriaEditorState();
+      if ($('adminMateriaEditorTitle')) $('adminMateriaEditorTitle').textContent = mode === 'edit' ? 'Editar materia' : 'Nueva materia';
+      if ($('adminMateriaIdInput')) {
+        $('adminMateriaIdInput').value = editor.materia_id || '';
+        $('adminMateriaIdInput').disabled = mode === 'edit';
+      }
+      if ($('adminMateriaNombreInput')) $('adminMateriaNombreInput').value = editor.nombre || '';
+      if ($('adminMateriaVariantsInput')) $('adminMateriaVariantsInput').value = editor.admite_submaterias ? 'si' : 'no';
+      if ($('adminMateriaStatusInput')) $('adminMateriaStatusInput').value = editor.estatus || 'activa';
+    }
+
+    function renderSubmateriaEditor() {
+      const editor = state.materiasUi.subEditor || createEmptySubmateriaEditorState();
+      return [
+        '<section class="admin-alumnos-panel">',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">Mantén la materia base limpia y administra sus variantes aquí.</div></div></div>',
+          '<div class="admin-alumnos-mini-grid">',
+            '<label class="field">',
+              '<span>Submateria ID</span>',
+              '<input id="adminSubmateriaIdInput" type="text" maxlength="50" value="' + escapeHtml(editor.submateria_id || '') + '"' + (editor.submateria_id ? ' disabled' : '') + ' placeholder="Ej. SUB-FUT">',
+            '</label>',
+            '<label class="field">',
+              '<span>Estatus</span>',
+              '<select id="adminSubmateriaStatusInput">',
+                '<option value="activa"' + (editor.estatus === 'activa' ? ' selected' : '') + '>Activa</option>',
+                '<option value="inactiva"' + (editor.estatus === 'inactiva' ? ' selected' : '') + '>Inactiva</option>',
+                '<option value="archivada"' + (editor.estatus === 'archivada' ? ' selected' : '') + '>Archivada</option>',
+              '</select>',
+            '</label>',
+            '<label class="field admin-alumnos-field-full">',
+              '<span>Nombre</span>',
+              '<input id="adminSubmateriaNombreInput" type="text" maxlength="100" value="' + escapeHtml(editor.nombre || '') + '" placeholder="Nombre visible de la variante">',
+            '</label>',
+          '</div>',
+          '<div class="actions compact admin-alumnos-panel-actions">',
+            '<button class="btn-ghost" type="button" onclick="closeSubmateriaEditor(); renderAdminMateriasModule()">Cancelar</button>',
+            '<button class="btn-primary" type="button" onclick="saveSubmateriaEditor(this)">Guardar</button>',
+          '</div>',
+        '</section>'
+      ].join('');
+    }
+
+    function openMateriaEditor(mode, materiaId) {
+      const nextMode = mode === 'edit' ? 'edit' : 'new';
+      const materia = nextMode === 'edit'
+        ? getMateriaBaseRows().find((row) => row.materia_id === String(materiaId || '').trim())
+        : null;
+      state.materiasUi.editorMode = nextMode;
+      state.materiasUi.editorOpen = true;
+      state.materiasUi.subEditorOpen = false;
+      state.materiasUi.selectedMateriaId = materia ? materia.materia_id : state.materiasUi.selectedMateriaId;
+      state.materiasUi.editor = materia ? {
+        materia_id: materia.materia_id,
+        nombre: materia.nombre || '',
+        admite_submaterias: !!materia.admite_submaterias,
+        estatus: materia.estatus || 'activa'
+      } : createEmptyMateriaEditorState();
+      renderAdminMateriasModule();
+      focusAdminFacilitadorPanel(
+        'adminMateriaEditorPanel',
+        nextMode === 'edit' ? 'adminMateriaNombreInput' : 'adminMateriaIdInput'
+      );
+    }
+
+    async function saveMateriaEditor(button) {
+      const mode = state.materiasUi.editorMode || 'new';
+      const payload = {
+        materia_id: $('adminMateriaIdInput') ? $('adminMateriaIdInput').value.trim() : '',
+        nombre: $('adminMateriaNombreInput') ? $('adminMateriaNombreInput').value.trim() : '',
+        admite_submaterias: $('adminMateriaVariantsInput') ? $('adminMateriaVariantsInput').value === 'si' : false,
+        estatus: $('adminMateriaStatusInput') ? $('adminMateriaStatusInput').value : 'activa',
+        request_id: uid('MAT')
+      };
+      if (!payload.materia_id) throw new Error('Captura la materia ID.');
+      if (!payload.nombre) throw new Error('Captura el nombre de la materia.');
+      await handleAction('guardarMateria', async () => {
+        const data = await api('guardarMateria', payload);
+        closeMateriaEditor();
+        state.materiasUi.selectedMateriaId = data.materia_id || payload.materia_id;
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner(mode === 'new' ? 'Materia creada.' : 'Materia actualizada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarMateria', [payload.materia_id, mode]),
+        busyText: mode === 'new' ? 'Creando...' : 'Guardando...'
+      });
+    }
+
+    function openSubmateriaEditor(mode, materiaId, submateriaId) {
+      const nextMode = mode === 'edit' ? 'edit' : 'new';
+      const parentId = String(materiaId || state.materiasUi.selectedMateriaId || '').trim();
+      const current = nextMode === 'edit'
+        ? getSubmateriasForMateria(parentId).find((row) => row.submateria_id === String(submateriaId || '').trim())
+        : null;
+      state.materiasUi.selectedMateriaId = parentId;
+      state.materiasUi.subEditorOpen = true;
+      state.materiasUi.subEditorMode = nextMode;
+      state.materiasUi.subEditor = current ? {
+        submateria_id: current.submateria_id,
+        materia_id: current.materia_id,
+        nombre: current.nombre || '',
+        estatus: current.estatus || 'activa'
+      } : {
+        submateria_id: '',
+        materia_id: parentId,
+        nombre: '',
+        estatus: 'activa'
+      };
+      renderAdminMateriasModule();
+      focusAdminFacilitadorPanel('adminMateriaDetailPanel', nextMode === 'edit' ? 'adminSubmateriaNombreInput' : 'adminSubmateriaIdInput');
+    }
+
+    async function saveSubmateriaEditor(button) {
+      const editor = state.materiasUi.subEditor || createEmptySubmateriaEditorState();
+      const payload = {
+        materia_id: editor.materia_id,
+        submateria_id: $('adminSubmateriaIdInput') ? $('adminSubmateriaIdInput').value.trim() : editor.submateria_id,
+        nombre: $('adminSubmateriaNombreInput') ? $('adminSubmateriaNombreInput').value.trim() : editor.nombre,
+        estatus: $('adminSubmateriaStatusInput') ? $('adminSubmateriaStatusInput').value : editor.estatus,
+        request_id: uid('SUB')
+      };
+      if (!payload.materia_id) throw new Error('Selecciona una materia base.');
+      if (!payload.submateria_id) throw new Error('Captura la submateria ID.');
+      if (!payload.nombre) throw new Error('Captura el nombre de la submateria.');
+      await handleAction('guardarSubmateria', async () => {
+        await api('guardarSubmateria', payload);
+        closeSubmateriaEditor();
+        state.materiasUi.selectedMateriaId = payload.materia_id;
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('Submateria guardada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarSubmateria', [payload.materia_id, payload.submateria_id]),
+        busyText: 'Guardando...'
+      });
+    }
+
+    function selectMateria(materiaId) {
+      state.materiasUi.selectedMateriaId = String(materiaId || '').trim();
+      renderAdminMateriasModule();
+      focusAdminFacilitadorPanel('adminMateriaDetailPanel');
+    }
+
+    async function archiveMateria(button, materiaId) {
+      if (!window.confirm('Esto archivará la materia base y retirará sus variantes operativas visibles.')) return;
+      await handleAction('archivarMateria', async () => {
+        await api('archivarMateria', {
+          materia_id: materiaId,
+          request_id: uid('MATARC')
+        });
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner('Materia archivada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('archivarMateria', [materiaId]),
+        busyText: 'Archivando...'
+      });
+    }
+
+    async function toggleMateriaStatus(button, materiaId) {
+      const row = getMateriaBaseRows().find((item) => item.materia_id === String(materiaId || '').trim());
+      if (!row) throw new Error('Materia no encontrada.');
+      const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
+      await handleAction('toggleMateriaStatus', async () => {
+        await api('guardarMateria', {
+          materia_id: row.materia_id,
+          estatus: nextStatus,
+          request_id: uid('MATTOG')
+        });
+        await refreshAll({ silent: true });
+        renderAll();
+        setBanner(nextStatus === 'activa' ? 'Materia activada.' : 'Materia desactivada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('toggleMateriaStatus', [materiaId, nextStatus]),
+        busyText: nextStatus === 'activa' ? 'Activando...' : 'Desactivando...'
+      });
+    }
+
+    async function moveMateria(button, materiaId, direction) {
+      await handleAction('reordenarMateria', async () => {
+        await api('reordenarMateria', {
+          materia_id: materiaId,
+          direction: direction,
+          request_id: uid('MATMOV')
+        });
+        await refreshAll({ silent: true });
+        renderAll();
+      }, {
+        button,
+        key: buildActionKey('reordenarMateria', [materiaId, direction]),
+        busyText: direction === 'up' ? '↑' : '↓'
+      });
+    }
+
+    async function archiveSubmateria(button, materiaId, submateriaId) {
+      if (!window.confirm('Esta variante dejará de estar disponible en el catálogo operativo.')) return;
+      await handleAction('archivarSubmateria', async () => {
+        await api('archivarSubmateria', {
+          submateria_id: submateriaId,
+          request_id: uid('SUBARC')
+        });
+        await refreshAll({ silent: true });
+        state.materiasUi.selectedMateriaId = materiaId;
+        renderAll();
+        setBanner('Submateria archivada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('archivarSubmateria', [submateriaId]),
+        busyText: 'Archivando...'
+      });
+    }
+
+    async function toggleSubmateriaStatus(button, materiaId, submateriaId) {
+      const row = getSubmateriasForMateria(materiaId).find((item) => item.submateria_id === String(submateriaId || '').trim());
+      if (!row) throw new Error('Submateria no encontrada.');
+      const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
+      await handleAction('toggleSubmateriaStatus', async () => {
+        await api('guardarSubmateria', {
+          materia_id: materiaId,
+          submateria_id: submateriaId,
+          estatus: nextStatus,
+          request_id: uid('SUBTOG')
+        });
+        await refreshAll({ silent: true });
+        state.materiasUi.selectedMateriaId = materiaId;
+        renderAll();
+        setBanner(nextStatus === 'activa' ? 'Submateria activada.' : 'Submateria desactivada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('toggleSubmateriaStatus', [submateriaId, nextStatus]),
+        busyText: nextStatus === 'activa' ? 'Activando...' : 'Desactivando...'
+      });
+    }
+
+    async function moveSubmateria(button, materiaId, submateriaId, direction) {
+      await handleAction('reordenarSubmateria', async () => {
+        await api('reordenarSubmateria', {
+          materia_id: materiaId,
+          submateria_id: submateriaId,
+          direction: direction,
+          request_id: uid('SUBMOV')
+        });
+        await refreshAll({ silent: true });
+        state.materiasUi.selectedMateriaId = materiaId;
+        renderAll();
+      }, {
+        button,
+        key: buildActionKey('reordenarSubmateria', [submateriaId, direction]),
+        busyText: direction === 'up' ? '↑' : '↓'
+      });
+    }
+
+    function bindAdminMateriasEvents() {
+      if ($('adminMateriasSearch')) $('adminMateriasSearch').addEventListener('input', (event) => {
+        state.materiasUi.search = event.currentTarget.value;
+        renderAdminMateriasModule();
+      });
+      if ($('adminMateriasFilterAllBtn')) $('adminMateriasFilterAllBtn').addEventListener('click', () => {
+        state.materiasUi.filter = 'todas';
+        renderAdminMateriasModule();
+      });
+      if ($('adminMateriasFilterActiveBtn')) $('adminMateriasFilterActiveBtn').addEventListener('click', () => {
+        state.materiasUi.filter = 'activas';
+        renderAdminMateriasModule();
+      });
+      if ($('adminMateriasFilterArchivedBtn')) $('adminMateriasFilterArchivedBtn').addEventListener('click', () => {
+        state.materiasUi.filter = 'archivadas';
+        renderAdminMateriasModule();
+      });
+      if ($('adminMateriasFilterVariantsBtn')) $('adminMateriasFilterVariantsBtn').addEventListener('click', () => {
+        state.materiasUi.filter = 'con_submaterias';
+        renderAdminMateriasModule();
+      });
+      if ($('adminMateriaNewBtn')) $('adminMateriaNewBtn').addEventListener('click', () => openMateriaEditor('new'));
+      if ($('adminMateriaCancelBtn')) $('adminMateriaCancelBtn').addEventListener('click', () => {
+        closeMateriaEditor();
+        renderAdminMateriasModule();
+      });
+      if ($('adminMateriaSaveBtn')) $('adminMateriaSaveBtn').addEventListener('click', (event) => saveMateriaEditor(event.currentTarget));
     }
 
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
@@ -7716,6 +8634,7 @@
       renderNotificationsAdmin();
       renderAdminAlumnosModule();
       renderAdminFacilitadoresModule();
+      renderAdminMateriasModule();
       renderInstitutionalNotices();
       renderPeriodSelects();
       renderBaseSelects();
@@ -8471,6 +9390,20 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.saveFacilitadorAsignacion = saveFacilitadorAsignacion;
     window.archiveFacilitadorAsignacion = archiveFacilitadorAsignacion;
     window.openFacilitadorPlaneaciones = openFacilitadorPlaneaciones;
+    window.renderAdminMateriasModule = renderAdminMateriasModule;
+    window.selectMateria = selectMateria;
+    window.openMateriaEditor = openMateriaEditor;
+    window.closeMateriaEditor = closeMateriaEditor;
+    window.saveMateriaEditor = saveMateriaEditor;
+    window.openSubmateriaEditor = openSubmateriaEditor;
+    window.closeSubmateriaEditor = closeSubmateriaEditor;
+    window.saveSubmateriaEditor = saveSubmateriaEditor;
+    window.archiveMateria = archiveMateria;
+    window.toggleMateriaStatus = toggleMateriaStatus;
+    window.moveMateria = moveMateria;
+    window.archiveSubmateria = archiveSubmateria;
+    window.toggleSubmateriaStatus = toggleSubmateriaStatus;
+    window.moveSubmateria = moveSubmateria;
     window.openAlumnoEditor = openAlumnoEditor;
     window.closeAlumnoEditor = closeAlumnoEditor;
     window.saveAlumnoEditor = saveAlumnoEditor;
