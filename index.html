@@ -643,42 +643,117 @@
     .badge.cerrada { background: rgba(24, 121, 78, 0.14); color: var(--success); }
     .badge.archivada { background: rgba(95, 113, 108, 0.12); color: var(--muted); }
 
+    #alertsCard {
+      grid-column: 1 / -1;
+    }
+
     .alert-list {
       display: grid;
-      gap: 12px;
+      gap: 10px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 2px;
+      scrollbar-width: thin;
     }
 
     .alert-item {
-      border-radius: 18px;
-      border: 1px solid rgba(23, 51, 45, 0.08);
-      background: rgba(255, 255, 255, 0.82);
-      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(29, 182, 193, 0.14);
+      background: rgba(18, 28, 39, 0.88);
+      padding: 12px 16px;
       display: grid;
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    .alert-item-main {
+      min-width: 0;
+      display: grid;
+      gap: 6px;
     }
 
     .alert-item-top {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .alert-item-actions {
-      margin-top: 10px;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
     }
 
     .alert-type {
+      min-width: 0;
+      font-size: 0.96rem;
       font-weight: 800;
-      color: var(--text);
+      color: var(--paper);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .alert-summary {
+      font-size: 0.93rem;
+      color: rgba(245, 242, 234, 0.9);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .alert-meta {
+      font-size: 0.82rem;
+      color: rgba(245, 242, 234, 0.66);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .alert-status {
-      font-size: 0.78rem;
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: var(--muted);
+      background: rgba(95, 113, 108, 0.18);
+      color: rgba(245, 242, 234, 0.74);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .alert-status.abierta {
+      background: rgba(240, 123, 32, 0.15);
+      border-color: rgba(240, 123, 32, 0.22);
+      color: #ffd3a6;
+    }
+
+    .alert-status.en_revision {
+      background: rgba(31, 182, 229, 0.14);
+      border-color: rgba(31, 182, 229, 0.24);
+      color: var(--la-cyan);
+    }
+
+    .alert-item-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .alert-open-btn {
+      min-height: 38px;
+      padding: 9px 14px !important;
+      font-size: 0.92rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .plan-card.is-alert-focus {
+      border-color: rgba(31, 182, 229, 0.34);
+      box-shadow:
+        0 0 0 1px rgba(31, 182, 229, 0.16),
+        0 0 0 6px rgba(31, 182, 229, 0.08),
+        var(--shadow);
+      transition: box-shadow 0.22s ease, border-color 0.22s ease;
     }
 
     .obs-list {
@@ -867,6 +942,23 @@
       }
       .plan-top {
         flex-direction: column;
+      }
+      .alert-item {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .alert-item-top {
+        align-items: flex-start;
+      }
+      .alert-summary,
+      .alert-meta {
+        white-space: normal;
+      }
+      .alert-item-actions {
+        justify-content: stretch;
+      }
+      .alert-open-btn {
+        width: 100%;
       }
       .hero-step {
         grid-template-columns: 38px minmax(0, 1fr);
@@ -6043,7 +6135,11 @@
     }
 
     function openPlanFromAlert(button, planId) {
-      activateTab('planeaciones');
+      if (canUseAdminShell()) {
+        activateAdminModule('planeaciones');
+      } else {
+        activateTab('planeaciones');
+      }
       if (state.openPlanId !== planId) {
         state.openPlanId = planId;
         const plan = getPlanById(planId);
@@ -6054,7 +6150,19 @@
       window.requestAnimationFrame(() => {
         const card = $('plan-card-' + planId);
         if (card && typeof card.scrollIntoView === 'function') {
-          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          document.querySelectorAll('.plan-card.is-alert-focus').forEach((item) => {
+            item.classList.remove('is-alert-focus');
+            if (item._alertFocusTimer) {
+              window.clearTimeout(item._alertFocusTimer);
+              item._alertFocusTimer = null;
+            }
+          });
+          card.classList.add('is-alert-focus');
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card._alertFocusTimer = window.setTimeout(() => {
+            card.classList.remove('is-alert-focus');
+            card._alertFocusTimer = null;
+          }, 2200);
         }
       });
     }
@@ -6080,16 +6188,20 @@
           materia ? (materia.nombre || materia.materia_id) : '',
           semana ? (semana.nombre_visible || semana.semana_id) : ''
         ].filter(Boolean).join(' · ') : '';
+        const metaParts = [];
+        if (contexto) metaParts.push(contexto);
+        if (alerta.fecha_creacion) metaParts.push('Creada ' + formatFechaHumana(alerta.fecha_creacion));
         return (
           '<div class="alert-item">' +
-            '<div class="alert-item-top">' +
-              '<div class="alert-type">' + escapeHtml(getAlertTypeLabel(alerta.tipo_alerta)) + '</div>' +
-              '<div class="alert-status">' + escapeHtml(getAlertStatusLabel(alerta.estado)) + '</div>' +
+            '<div class="alert-item-main">' +
+              '<div class="alert-item-top">' +
+                '<div class="alert-type">' + escapeHtml(getAlertTypeLabel(alerta.tipo_alerta)) + '</div>' +
+                '<div class="alert-status ' + escapeHtml(String(alerta.estado || '').trim()) + '">' + escapeHtml(getAlertStatusLabel(alerta.estado)) + '</div>' +
+              '</div>' +
+              '<div class="alert-summary">' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
+              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>' : '') +
             '</div>' +
-            '<div>' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
-            (contexto ? '<div class="mini">' + escapeHtml(contexto) + '</div>' : '') +
-            (alerta.fecha_creacion ? '<div class="mini">Creada: ' + escapeHtml(formatFechaHumana(alerta.fecha_creacion)) + '</div>' : '') +
-            (plan ? '<div class="actions alert-item-actions"><button class="btn-open-plan" type="button" onclick="openPlanFromAlert(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir planeación</button></div>' : '') +
+            (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button" onclick="openPlanFromAlert(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
           '</div>'
         );
       }).join('');
