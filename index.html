@@ -2108,14 +2108,25 @@
           <article class="module-card">
             <div class="module-card-top">
               <div>
-                <h3>Facilitadores y materias</h3>
-                <p>Gestiona usuarios operativos, orden visual, estatus y catálogo institucional.</p>
+                <h3>Facilitadores</h3>
+                <p>Gestiona usuarios operativos, estatus, acceso y organización del equipo docente.</p>
+              </div>
+              <div class="module-card-count" id="adminCountFacilitadoresCard">0</div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" type="button" data-admin-module-launch="facilitadores">Abrir facilitadores</button>
+            </div>
+          </article>
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
+                <h3>Materias</h3>
+                <p>Organiza el catálogo institucional y el orden visual de las materias disponibles.</p>
               </div>
               <div class="module-card-count" id="adminCountMaterias">0</div>
             </div>
             <div class="actions">
-              <button class="btn-secondary" type="button" data-admin-module-launch="facilitadores">Facilitadores</button>
-              <button class="btn-ghost" type="button" data-admin-module-launch="materias">Materias</button>
+              <button class="btn-primary" type="button" data-admin-module-launch="materias">Abrir materias</button>
             </div>
           </article>
         </div>
@@ -3310,6 +3321,7 @@
       if ($('adminCountAlumnos')) $('adminCountAlumnos').textContent = String(state.catalogos.alumnos.length || 0);
       if ($('adminCountPlaneaciones')) $('adminCountPlaneaciones').textContent = String(state.planeaciones.length || 0);
       if ($('adminCountNotifications')) $('adminCountNotifications').textContent = String((state.notificaciones || []).filter((row) => isNotificationActiveToday(row)).length || 0);
+      if ($('adminCountFacilitadoresCard')) $('adminCountFacilitadoresCard').textContent = String(activeFacilitadores);
       if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(state.catalogos.materias.length || 0);
 
       document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
