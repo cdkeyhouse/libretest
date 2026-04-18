@@ -821,6 +821,26 @@
       margin-top: 10px;
     }
 
+    .plan-alert-bar {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .plan-alert-bar .plan-alert-chip {
+      margin-top: 0;
+    }
+
+    .plan-alert-action {
+      min-height: 38px;
+      padding: 9px 14px !important;
+      font-size: 0.92rem;
+      white-space: nowrap;
+    }
+
     .plan-alert-history {
       margin-top: 8px;
       font-size: 0.82rem;
@@ -6047,7 +6067,16 @@
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
               '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + '</div>' +
             '</div>' +
-            (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
+            (hasMaterialAlert
+              ? (
+                  '<div class="plan-alert-bar">' +
+                    '<div class="plan-alert-chip">Material pendiente</div>' +
+                    (allowStructureEdit
+                      ? '<button class="btn-primary plan-alert-action" type="button" onclick="markPlanMaterialReady(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Marcar material listo</button>'
+                      : '') +
+                  '</div>'
+                )
+              : '') +
             materialHistoryHtml +
             (allowStructureEdit
               ? renderOpenPlanStructureEditor(plan, allowStructureEdit)
@@ -6646,10 +6675,7 @@
       setBanner('Planeación cargada en el editor.', 'info', { button });
     }
 
-    async function saveOpenPlan(button, planId) {
-      const plan = getPlanById(planId);
-      const draft = getOpenPlanDraft(plan);
-      if (!plan || !draft) throw new Error('Planeación no encontrada.');
+    function buildOpenPlanSaveRequest(plan, draft) {
       const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
       if (!semana) throw new Error('Selecciona una fecha válida.');
@@ -6666,17 +6692,31 @@
         }))
         .filter((activity) => activity.texto);
       if (!actividades.length) throw new Error('Captura al menos una actividad.');
+      return {
+        fallbackDate,
+        semana,
+        alumnosIds,
+        actividades
+      };
+    }
 
-      await handleAction('guardarPlaneacionCompletaInline', async () => {
+    async function persistOpenPlanDraft(button, planId, draft, options = {}) {
+      const plan = getPlanById(planId);
+      if (!plan || !draft) throw new Error('Planeación no encontrada.');
+      const request = buildOpenPlanSaveRequest(plan, draft);
+      const successMessage = options.successMessage || 'Planeación actualizada.';
+      const actionLabel = options.actionLabel || 'guardarPlaneacionCompletaInline';
+      const actionKey = options.actionKey || buildActionKey(actionLabel, [planId, request.fallbackDate, request.alumnosIds.join(',')]);
+      await handleAction(actionLabel, async () => {
         await api('guardarPlaneacionCompleta', {
           planeacion_id: planId,
-          fecha_planeacion: draft.fecha_planeacion || fallbackDate,
-          semana_id: semana.draft ? '' : semana.semana_id,
+          fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
+          semana_id: request.semana.draft ? '' : request.semana.semana_id,
           grupo_id: plan.grupo_id,
           materia_id: plan.materia_id,
           frase_semana: String(draft.frase_semana || '').trim(),
-          alumnos_ids: alumnosIds,
-          actividades,
+          alumnos_ids: request.alumnosIds,
+          actividades: request.actividades,
           last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
           last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
           request_id: uid('PLAOPEN')
@@ -6685,8 +6725,42 @@
         state.openPlanDraft = null;
         await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
         renderAll();
-        setBanner('Planeación actualizada.', 'success');
-      }, { button, key: buildActionKey('guardarPlaneacionCompletaInline', [planId, draft.fecha_planeacion || fallbackDate, alumnosIds.join(',')]) });
+        setBanner(successMessage, 'success');
+      }, {
+        button,
+        key: actionKey,
+        busyText: options.busyText || button && button.textContent || 'Guardando...'
+      });
+    }
+
+    async function saveOpenPlan(button, planId) {
+      const plan = getPlanById(planId);
+      const draft = getOpenPlanDraft(plan);
+      await persistOpenPlanDraft(button, planId, draft, {
+        successMessage: 'Planeación actualizada.',
+        actionLabel: 'guardarPlaneacionCompletaInline'
+      });
+    }
+
+    async function markPlanMaterialReady(button, planId) {
+      if (!window.confirm('Esto marcará como listo el material pendiente de esta planeación.')) return;
+      const plan = getPlanById(planId);
+      const draft = getOpenPlanDraft(plan);
+      if (!plan || !draft) throw new Error('Planeación no encontrada.');
+      const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
+      if (!pendingActivities.length) {
+        setBanner('Ya no hay material pendiente en esta planeación.', 'info', { button });
+        return;
+      }
+      pendingActivities.forEach((activity) => {
+        activity.material_en_carpeta = 'listo';
+      });
+      await persistOpenPlanDraft(button, planId, draft, {
+        successMessage: 'Material marcado como listo.',
+        actionLabel: 'marcarMaterialListo',
+        actionKey: buildActionKey('marcarMaterialListo', [planId, String(pendingActivities.length)]),
+        busyText: 'Marcando...'
+      });
     }
 
     async function approvePlan(button, planId) {
@@ -6958,6 +7032,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.resubmitPlan = resubmitPlan;
     window.confirmClosePlan = confirmClosePlan;
     window.saveOpenPlan = saveOpenPlan;
+    window.markPlanMaterialReady = markPlanMaterialReady;
     window.saveGeneralObservation = saveGeneralObservation;
     window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
     window.saveAllAlumnoFinalObservations = saveAllAlumnoFinalObservations;
