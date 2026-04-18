@@ -3615,9 +3615,10 @@
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
     }
 
-    async function refreshAll() {
+    async function refreshAll(options = {}) {
       ensureLoggedIn();
-      setBanner('Cargando catálogos y planeaciones...', 'info');
+      const silent = !!(options && options.silent);
+      if (!silent) setBanner('Cargando catálogos y planeaciones...', 'info');
       try {
         const notificationLimit = canUseAdminShell() ? 1000 : 200;
         const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), { alert_limit: 20, notification_limit: notificationLimit }));
@@ -3644,7 +3645,7 @@
         setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
         return;
       }
-      setBanner('Datos actualizados.', 'success');
+      if (!silent) setBanner('Datos actualizados.', 'success');
     }
 
     function syncRoleUi() {
@@ -3752,6 +3753,7 @@
         resetNotificationEditor();
       }
       if (nextModule !== 'alumnos') {
+        state.alumnosUi.filter = 'activos';
         syncAdminAlumnosModule();
       }
       if (nextModule === 'notificaciones' && state.ui) {
@@ -4543,12 +4545,13 @@
           invalidateAlumnoHistorialCache(savedId);
         }
         closeAlumnoEditor();
-        await refreshAll();
+        await refreshAll({ silent: true });
         renderAll();
         setBanner(editing ? 'Ficha actualizada.' : 'Alumno creado.', 'success');
       }, {
         button,
-        key: buildActionKey('guardarAlumno', [existingId || editor.matricula, editor.grupo_id])
+        key: buildActionKey('guardarAlumno', [existingId || editor.matricula, editor.grupo_id]),
+        busyText: button ? button.textContent : 'Guardar'
       });
     }
 
@@ -4604,10 +4607,10 @@
         pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
-        await refreshAll();
+        await refreshAll({ silent: true });
         renderAll();
         setBanner(meta.successMessage, 'success');
-      }, { button, key: buildActionKey(meta.actionKey, [alumno.alumno_id, targetStatus]) });
+      }, { button, key: buildActionKey(meta.actionKey, [alumno.alumno_id, targetStatus]), busyText: button ? button.textContent : meta.historyTitle });
     }
 
     function pauseAlumno(alumnoId, button) {
@@ -4649,12 +4652,13 @@
         );
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         closeCambioGrupo();
-        await refreshAll();
+        await refreshAll({ silent: true });
         renderAll();
         setBanner('Grupo actualizado.', 'success');
       }, {
         button,
-        key: buildActionKey('guardarAlumno:cambioGrupo', [alumno.alumno_id, cambio.nuevo_grupo_id])
+        key: buildActionKey('guardarAlumno:cambioGrupo', [alumno.alumno_id, cambio.nuevo_grupo_id]),
+        busyText: button ? button.textContent : 'Confirmar cambio'
       });
     }
 
@@ -4678,10 +4682,10 @@
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
-        await refreshAll();
+        await refreshAll({ silent: true });
         renderAll();
         setBanner('Alumno archivado.', 'success');
-      }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]) });
+      }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]), busyText: button ? button.textContent : 'Archivar' });
     }
 
     async function reactivateAlumno(alumnoId, button) {
