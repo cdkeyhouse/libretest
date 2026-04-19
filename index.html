@@ -4500,6 +4500,17 @@
       };
     }
 
+    function hasCatalogosLoaded() {
+      return !!(
+        state.catalogos &&
+        (
+          (state.catalogos.alumnos && state.catalogos.alumnos.length) ||
+          (state.catalogos.grupos && state.catalogos.grupos.length) ||
+          (state.catalogos.periodos && state.catalogos.periodos.length)
+        )
+      );
+    }
+
     function createEmptyNotificationEditorState() {
       return {
         notificacion_id: '',
@@ -5058,7 +5069,7 @@
 
     async function refreshNotificaciones() {
       ensureLoggedIn();
-      const limit = canUseAdminShell() ? 1000 : 200;
+      const limit = canUseAdminShell() ? 250 : 120;
       const data = await api('getNotificaciones', { limit });
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
     }
@@ -5068,9 +5079,18 @@
       const silent = !!(options && options.silent);
       if (!silent) setBanner('Cargando catálogos y planeaciones...', 'info');
       try {
-        const notificationLimit = canUseAdminShell() ? 1000 : 200;
-        const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), { alert_limit: 20, notification_limit: notificationLimit }));
-        state.catalogos = Object.assign(createEmptyCatalogos(), dashboard && dashboard.catalogos ? dashboard.catalogos : {});
+        const notificationLimit = canUseAdminShell() ? 250 : 120;
+        const reuseCatalogos = silent && hasCatalogosLoaded();
+        const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), {
+          alert_limit: 20,
+          notification_limit: notificationLimit,
+          include_catalogos: !reuseCatalogos
+        }));
+        if (dashboard && dashboard.catalogos && Object.keys(dashboard.catalogos).length) {
+          state.catalogos = Object.assign(createEmptyCatalogos(), dashboard.catalogos);
+        } else if (!hasCatalogosLoaded()) {
+          state.catalogos = createEmptyCatalogos();
+        }
         state.planeaciones = Array.isArray(dashboard && dashboard.planeaciones && dashboard.planeaciones.rows)
           ? dashboard.planeaciones.rows
           : [];
@@ -9345,24 +9365,39 @@
     }
 
     function renderAll() {
+      const adminMode = canUseAdminShell();
+      const activeTab = state.activeTab;
+      const activeAdminModule = state.activeAdminModule;
+      const shouldRenderPlaneaciones = adminMode ? activeAdminModule === 'planeaciones' : activeTab === 'planeaciones';
+      const shouldRenderSeguimiento = !adminMode && activeTab === 'seguimiento';
+      const shouldRenderReportes = adminMode ? activeAdminModule === 'reporte-ciclo' : activeTab === 'reportes';
+      const shouldRenderCatalogSelects = shouldRenderPlaneaciones || shouldRenderSeguimiento || shouldRenderReportes;
+      const shouldRenderAlerts = !adminMode || activeAdminModule === 'dashboard' || activeAdminModule === 'planeaciones';
+
       refreshStaticCopy();
       syncAuthMode();
       renderSession();
       renderStats();
       renderAdminShell();
-      renderNotificationsAdmin();
-      renderAdminAlumnosModule();
-      renderAdminFacilitadoresModule();
-      renderAdminMateriasModule();
-      renderAdminReporteCicloModule();
+      if (!adminMode || activeAdminModule === 'notificaciones') renderNotificationsAdmin();
+      if (!adminMode || activeAdminModule === 'alumnos') renderAdminAlumnosModule();
+      if (!adminMode || activeAdminModule === 'facilitadores') renderAdminFacilitadoresModule();
+      if (!adminMode || activeAdminModule === 'materias') renderAdminMateriasModule();
+      if (!adminMode || activeAdminModule === 'reporte-ciclo') renderAdminReporteCicloModule();
       renderInstitutionalNotices();
-      renderPeriodSelects();
-      renderBaseSelects();
-      renderObsAlumnoSelect();
-      renderEvaluationDependencies();
-      renderPlaneacionesList();
-      renderAlertas();
-      renderPlanBuilderVisibility();
+      if (shouldRenderCatalogSelects) {
+        renderPeriodSelects();
+        renderBaseSelects();
+      }
+      if (shouldRenderSeguimiento) {
+        renderObsAlumnoSelect();
+        renderEvaluationDependencies();
+      }
+      if (shouldRenderPlaneaciones) {
+        renderPlaneacionesList();
+        renderPlanBuilderVisibility();
+      }
+      if (shouldRenderAlerts) renderAlertas();
       syncRoleUi();
       activateTab(state.activeTab);
     }
