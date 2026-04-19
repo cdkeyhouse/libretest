@@ -639,6 +639,11 @@
       font-size: 0.9rem;
     }
 
+    .plan-list-compact-head,
+    .plan-collapsed-desktop {
+      display: none;
+    }
+
     .workspace-session-bar {
       justify-content: space-between;
       align-items: center;
@@ -3152,6 +3157,193 @@
       gap: 10px;
     }
 
+    @media (min-width: 901px) {
+      .plan-collapsed-mobile {
+        display: none;
+      }
+
+      .plan-list-compact-head {
+        display: grid;
+        grid-template-columns: 0.9fr 0.92fr 1fr 1.7fr 1.1fr 0.82fr 0.8fr;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 18px;
+        background: rgba(19, 25, 34, 0.88);
+        color: #a9c7e6;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .plan-collapsed-desktop {
+        display: grid;
+      }
+
+      .plan-card.is-collapsed.plan-card-compact {
+        padding: 0;
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(19, 25, 34, 0.88);
+      }
+
+      .plan-compact-grid {
+        display: grid;
+        grid-template-columns: 0.9fr 0.92fr 1fr 1.7fr 1.1fr 0.82fr 0.8fr;
+        gap: 10px;
+        align-items: center;
+        min-height: 60px;
+        padding: 10px 12px;
+      }
+
+      .plan-card.is-collapsed.plan-card-compact + .plan-card.is-collapsed.plan-card-compact {
+        margin-top: 10px;
+      }
+
+      .plan-compact-cell {
+        min-width: 0;
+      }
+
+      .plan-compact-label {
+        display: none;
+      }
+
+      .plan-compact-value,
+      .plan-compact-cell .subtle,
+      .plan-compact-cell strong {
+        min-width: 0;
+      }
+
+      .plan-compact-primary {
+        display: block;
+        color: var(--text-strong);
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .plan-compact-secondary {
+        display: block;
+        margin-top: 2px;
+        color: var(--text-soft);
+        font-size: 0.82rem;
+        line-height: 1.2;
+      }
+
+      .plan-compact-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .plan-compact-status,
+      .plan-compact-actions {
+        display: flex;
+        align-items: center;
+      }
+
+      .plan-compact-status {
+        justify-content: flex-start;
+      }
+
+      .plan-compact-actions {
+        justify-content: flex-end;
+      }
+
+      .plan-card.is-collapsed.plan-card-compact .btn-open-plan {
+        min-width: 96px;
+      }
+
+      .plan-card.is-collapsed.plan-card-compact .plan-alert-chip {
+        margin-top: 0;
+        white-space: nowrap;
+      }
+
+      .plan-card.is-collapsed.plan-card-compact .plan-alert-history {
+        margin-top: 2px;
+        font-size: 0.78rem;
+      }
+
+      #planGruposChecklist.checklist-groups {
+        grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+        max-height: none;
+        padding: 8px;
+        gap: 8px;
+      }
+
+      #planGruposChecklist.checklist-groups .check-item {
+        padding: 7px 9px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.03);
+        align-items: center;
+      }
+
+      #planGruposChecklist.checklist-groups .check-item span,
+      #planAlumnosChecklist .check-item span,
+      .plan-open-students .check-item span {
+        display: inline;
+        min-width: 0;
+      }
+
+      #planGruposChecklist.checklist-groups .check-item br,
+      #planAlumnosChecklist .check-item br,
+      .plan-open-students .check-item br {
+        display: none;
+      }
+
+      #planGruposChecklist.checklist-groups .check-item .mini,
+      #planAlumnosChecklist .check-item .mini,
+      .plan-open-students .check-item .mini {
+        display: inline;
+        margin-left: 8px;
+        color: var(--text-dim);
+      }
+
+      #planAlumnosChecklist .group-block,
+      .plan-open-editor .group-block {
+        padding: 10px 12px;
+        border-radius: 16px;
+      }
+
+      #planAlumnosChecklist .group-block-head,
+      .plan-open-editor .group-block-head {
+        margin-bottom: 6px;
+      }
+
+      #planAlumnosChecklist .group-block-head strong,
+      .plan-open-editor .group-block-head strong {
+        font-size: 0.96rem;
+      }
+
+      #planAlumnosChecklist .checklist,
+      .plan-open-students {
+        max-height: 168px;
+        padding: 8px 10px;
+        gap: 6px;
+      }
+
+      #planAlumnosChecklist .check-item,
+      .plan-open-students .check-item {
+        align-items: center;
+        padding: 4px 0;
+        min-height: 0;
+      }
+
+      #planAlumnosChecklist .actions.compact,
+      .plan-open-editor .actions.compact {
+        gap: 6px;
+      }
+
+      #planAlumnosChecklist .actions.compact > .btn-ghost,
+      .plan-open-editor .actions.compact > .btn-ghost {
+        min-height: 38px;
+        padding: 8px 12px;
+      }
+    }
+
     /* ===== Restored institutional dark theme ===== */
     :root {
       --la-cyan: #1FB6E5;
@@ -4436,6 +4628,7 @@
       openPlanDraft: null,
       ui: {
         planBuilderExpanded: false,
+        planeacionesLoaded: false,
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
         planeacionesMateriaFilter: ''
@@ -4606,6 +4799,11 @@
       return ['planeaciones', 'seguimiento', 'reportes'].includes(String(state.activeTab || '').trim());
     }
 
+    function currentViewNeedsPlaneaciones() {
+      if (canUseAdminShell()) return String(state.activeAdminModule || '').trim() === 'planeaciones';
+      return String(state.activeTab || '').trim() === 'planeaciones';
+    }
+
     function createEmptyNotificationEditorState() {
       return {
         notificacion_id: '',
@@ -4746,6 +4944,7 @@
       state.openPlanId = '';
       if (state.ui) {
         state.ui.planBuilderExpanded = false;
+        state.ui.planeacionesLoaded = false;
         state.ui.notificationEditorExpanded = false;
         state.ui.notificationFilter = 'activas';
         state.ui.planeacionesMateriaFilter = '';
@@ -4789,6 +4988,10 @@
 
     function togglePlanBuilder(forceValue) {
       const next = typeof forceValue === 'boolean' ? forceValue : !isPlanBuilderExpanded();
+      if (next) {
+        closeOpenPlan();
+        renderPlaneacionesList();
+      }
       if (state.ui) state.ui.planBuilderExpanded = next;
       renderPlanBuilderVisibility();
     }
@@ -5167,6 +5370,7 @@
         include_detail: false
       }));
       state.planeaciones = Array.isArray(data.rows) ? data.rows : [];
+      if (state.ui) state.ui.planeacionesLoaded = true;
       if (state.openPlanId && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
         await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
       }
@@ -5190,6 +5394,7 @@
       const silent = !!(options && options.silent);
       const shouldIncludeCatalogos = currentViewNeedsCatalogos();
       const requestedCatalogBlocks = shouldIncludeCatalogos ? getCurrentCatalogBlocks() : [];
+      const shouldIncludePlaneaciones = currentViewNeedsPlaneaciones();
       if (!silent) setBanner('Cargando catálogos y planeaciones...', 'info');
       try {
         const notificationLimit = canUseAdminShell() ? 250 : 120;
@@ -5202,6 +5407,7 @@
           notification_limit: notificationLimit,
           include_catalogos: shouldIncludeCatalogos && !reuseCatalogos,
           catalog_blocks: dashboardCatalogBlocks,
+          include_planeaciones: shouldIncludePlaneaciones,
           include_detail: false
         }));
         state.dashboardStats = dashboard && dashboard.stats ? dashboard.stats : {};
@@ -5211,10 +5417,13 @@
           state.catalogos = createEmptyCatalogos();
           state.catalogosMeta = createEmptyCatalogosMeta();
         }
-        state.planeaciones = Array.isArray(dashboard && dashboard.planeaciones && dashboard.planeaciones.rows)
-          ? dashboard.planeaciones.rows
-          : [];
-        if (state.openPlanId && shouldIncludeCatalogos && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
+        if (shouldIncludePlaneaciones) {
+          state.planeaciones = Array.isArray(dashboard && dashboard.planeaciones && dashboard.planeaciones.rows)
+            ? dashboard.planeaciones.rows
+            : [];
+          if (state.ui) state.ui.planeacionesLoaded = true;
+        }
+        if (state.openPlanId && shouldIncludePlaneaciones && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
           await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
         }
         state.alertas = Array.isArray(dashboard && dashboard.alertas && dashboard.alertas.rows)
@@ -5224,12 +5433,11 @@
           ? dashboard.notificaciones.rows
           : [];
       } catch (_) {
-        await Promise.all([
-          refreshCatalogos(),
-          refreshPlaneaciones(),
-          refreshAlertas(),
-          refreshNotificaciones()
-        ]);
+        const tasks = [];
+        if (shouldIncludeCatalogos) tasks.push(refreshCatalogos());
+        if (shouldIncludePlaneaciones) tasks.push(refreshPlaneaciones());
+        tasks.push(refreshAlertas(), refreshNotificaciones());
+        await Promise.all(tasks);
       }
       renderAll();
       if (requestedCatalogBlocks.includes('periodos') && (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length)) {
@@ -5334,10 +5542,12 @@
     }
 
     function renderStats() {
-      $('statAlumnos').textContent = String(canUseAdminShell() ? getAdminAlumnosCount() : (state.catalogos.alumnos.length || 0));
-      $('statPlaneaciones').textContent = String(state.planeaciones.length || 0);
+      $('statAlumnos').textContent = String(canUseAdminShell()
+        ? (getAdminAlumnosCount() || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0))
+        : (state.catalogos.alumnos.length || 0));
+      $('statPlaneaciones').textContent = String(Number(state.dashboardStats && state.dashboardStats.planeaciones_visibles || 0) || state.planeaciones.length || 0);
       $('statSemanas').textContent = String(state.catalogos.semanas.length || 0);
-      $('statMaterias').textContent = String(state.catalogos.materias.length || 0);
+      $('statMaterias').textContent = String(state.catalogos.materias.length || Number(state.dashboardStats && state.dashboardStats.materias_activas || 0) || 0);
     }
 
     function closeOpenPlan() {
@@ -5384,6 +5594,11 @@
       }
       state.activeAdminModule = nextModule;
       renderAdminShell();
+      if (nextModule === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
+        refreshPlaneaciones()
+          .then(() => renderAll())
+          .catch(() => {});
+      }
       if (adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getCatalogBlocksForModule(nextModule))) {
         refreshCatalogos({ blocks: getMissingCatalogBlocks(getCatalogBlocksForModule(nextModule)) })
           .then(() => renderAll())
@@ -5405,8 +5620,8 @@
         return;
       }
       const user = state.session && state.session.usuario ? state.session.usuario : null;
-      const openPlans = state.planeaciones.filter((plan) => ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente'].includes(String(plan.estado || '').trim())).length;
-      const closedPlans = state.planeaciones.filter((plan) => ['cerrada', 'archivada'].includes(String(plan.estado || '').trim())).length;
+      const openPlans = Number(state.dashboardStats && state.dashboardStats.planeaciones_abiertas || state.planeaciones.filter((plan) => ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente'].includes(String(plan.estado || '').trim())).length || 0);
+      const closedPlans = Number(state.dashboardStats && state.dashboardStats.planeaciones_cerradas || state.planeaciones.filter((plan) => ['cerrada', 'archivada'].includes(String(plan.estado || '').trim())).length || 0);
       const openAlerts = state.alertas.filter((alerta) => String(alerta.estado || '').trim() !== 'resuelta').length;
       const activeFacilitadores = state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)).length || Number(state.dashboardStats && state.dashboardStats.facilitadores_activos || 0);
       const visibleAlumnos = getAdminAlumnosCount() || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0);
@@ -5423,7 +5638,7 @@
       if ($('adminKpiAlerts')) $('adminKpiAlerts').textContent = String(openAlerts);
       if ($('adminKpiFacilitadores')) $('adminKpiFacilitadores').textContent = String(activeFacilitadores);
       if ($('adminCountAlumnos')) $('adminCountAlumnos').textContent = String(visibleAlumnos);
-      if ($('adminCountPlaneaciones')) $('adminCountPlaneaciones').textContent = String(state.planeaciones.length || 0);
+      if ($('adminCountPlaneaciones')) $('adminCountPlaneaciones').textContent = String(Number(state.dashboardStats && state.dashboardStats.planeaciones_visibles || 0) || state.planeaciones.length || 0);
       if ($('adminCountNotifications')) $('adminCountNotifications').textContent = String((state.notificaciones || []).filter((row) => isNotificationActiveToday(row)).length || 0);
       if ($('adminCountFacilitadoresCard')) $('adminCountFacilitadoresCard').textContent = String(activeFacilitadores);
       if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(activeMaterias);
@@ -9143,10 +9358,24 @@
         return;
       }
 
-      host.innerHTML = visiblePlans.map((plan) => {
+      const desktopHeader = (
+        '<div class="plan-list-compact-head">' +
+          '<span>Semana</span>' +
+          '<span>Grupo</span>' +
+          '<span>Materia</span>' +
+          '<span>Frase</span>' +
+          '<span>Resumen</span>' +
+          '<span>Estado</span>' +
+          '<span>Acciones</span>' +
+        '</div>'
+      );
+
+      host.innerHTML = desktopHeader + visiblePlans.map((plan) => {
         const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
         const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
+        const groupLabel = grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id;
+        const materiaLabel = materia ? (materia.nombre || materia.materia_id) : plan.materia_id;
         const weekLabel = getWeekLabelForPlan(plan, semana);
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
         const hasAdminPower = role === 'admin' || role === 'directora';
@@ -9234,23 +9463,64 @@
 
         if (!isOpen) {
           return (
-            '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card is-collapsed">' +
-              '<div class="plan-top">' +
-                '<div>' +
-                  '<h3>' + escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id) + '</h3>' +
-                  '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
-                  ' · ' + escapeHtml(weekLabel) + '</div>' +
+            '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card is-collapsed plan-card-compact">' +
+              '<div class="plan-collapsed-mobile">' +
+                '<div class="plan-top">' +
+                  '<div>' +
+                    '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
+                    '<div class="subtle">' + escapeHtml(groupLabel) +
+                    ' · ' + escapeHtml(weekLabel) + '</div>' +
+                  '</div>' +
+                  '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
                 '</div>' +
-                '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+                '<div class="meta-grid">' +
+                  '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
+                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</div>' +
+                '</div>' +
+                (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
+                materialHistoryHtml +
+                '<div class="actions" style="margin-top:14px;">' +
+                  '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
+                '</div>' +
               '</div>' +
-              '<div class="meta-grid">' +
-                '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</div>' +
-              '</div>' +
-              (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
-              materialHistoryHtml +
-              '<div class="actions" style="margin-top:14px;">' +
-                '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
+              '<div class="plan-collapsed-desktop">' +
+                '<div class="plan-compact-grid">' +
+                  '<div class="plan-compact-cell">' +
+                    '<span class="plan-compact-label">Semana</span>' +
+                    '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(weekLabel) + '</span>' +
+                  '</div>' +
+                  '<div class="plan-compact-cell">' +
+                    '<span class="plan-compact-label">Grupo</span>' +
+                    '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(groupLabel) + '</span>' +
+                  '</div>' +
+                  '<div class="plan-compact-cell">' +
+                    '<span class="plan-compact-label">Materia</span>' +
+                    '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(materiaLabel) + '</span>' +
+                  '</div>' +
+                  '<div class="plan-compact-cell">' +
+                    '<span class="plan-compact-label">Frase</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(plan.frase_semana || '-') + '</span>' +
+                    ((hasMaterialAlert || latestResolvedMaterialAlert)
+                      ? (
+                          '<div class="plan-alert-history">' +
+                            (hasMaterialAlert ? '<span class="plan-alert-chip">Material pendiente</span>' : '') +
+                            (!hasMaterialAlert && latestResolvedMaterialAlert ? escapeHtml('Histórico: material resuelto ' + formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) : '') +
+                          '</div>'
+                        )
+                      : '') +
+                  '</div>' +
+                  '<div class="plan-compact-cell">' +
+                    '<span class="plan-compact-label">Resumen</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
+                  '</div>' +
+                  '<div class="plan-compact-cell plan-compact-status">' +
+                    '<span class="plan-compact-label">Estado</span>' +
+                    '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+                  '</div>' +
+                  '<div class="plan-compact-cell plan-compact-actions">' +
+                    '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
+                  '</div>' +
+                '</div>' +
               '</div>' +
             '</article>'
           );
@@ -9261,8 +9531,8 @@
             '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card">' +
               '<div class="plan-top">' +
                 '<div>' +
-                  '<h3>' + escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id) + '</h3>' +
-                  '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
+                  '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
+                  '<div class="subtle">' + escapeHtml(groupLabel) +
                   ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
                 '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
@@ -9278,12 +9548,12 @@
 
         return (
           '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card">' +
-            '<div class="plan-top">' +
-              '<div>' +
-                '<h3>' + escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id) + '</h3>' +
-                '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
-                ' · ' + escapeHtml(weekLabel) + '</div>' +
-              '</div>' +
+              '<div class="plan-top">' +
+                '<div>' +
+                  '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
+                  '<div class="subtle">' + escapeHtml(groupLabel) +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
+                '</div>' +
               '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
             '</div>' +
             '<div class="meta-grid">' +
@@ -9566,6 +9836,11 @@
       document.querySelectorAll('.panel').forEach((panel) => {
         panel.classList.toggle('is-active', panel.id === 'panel-' + tabName);
       });
+      if (tabName === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
+        refreshPlaneaciones()
+          .then(() => renderAll())
+          .catch(() => {});
+      }
     }
 
     function renderAll() {
