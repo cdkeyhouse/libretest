@@ -5066,8 +5066,13 @@
 
     async function refreshPlaneaciones() {
       ensureLoggedIn();
-      const data = await api('getPlaneaciones', buildPlaneacionesPayload());
+      const data = await api('getPlaneaciones', Object.assign({}, buildPlaneacionesPayload(), {
+        include_detail: false
+      }));
       state.planeaciones = Array.isArray(data.rows) ? data.rows : [];
+      if (state.openPlanId && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
+        await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+      }
     }
 
     async function refreshAlertas() {
@@ -5094,7 +5099,8 @@
         const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), {
           alert_limit: 20,
           notification_limit: notificationLimit,
-          include_catalogos: shouldIncludeCatalogos && !reuseCatalogos
+          include_catalogos: shouldIncludeCatalogos && !reuseCatalogos,
+          include_detail: false
         }));
         state.dashboardStats = dashboard && dashboard.stats ? dashboard.stats : {};
         if (dashboard && dashboard.catalogos && Object.keys(dashboard.catalogos).length) {
@@ -5105,6 +5111,9 @@
         state.planeaciones = Array.isArray(dashboard && dashboard.planeaciones && dashboard.planeaciones.rows)
           ? dashboard.planeaciones.rows
           : [];
+        if (state.openPlanId && shouldIncludeCatalogos && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
+          await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+        }
         state.alertas = Array.isArray(dashboard && dashboard.alertas && dashboard.alertas.rows)
           ? dashboard.alertas.rows
           : [];
@@ -8581,6 +8590,49 @@
       return state.planeaciones.find((plan) => plan.planeacion_id === planId) || null;
     }
 
+    function getPlanAlumnoCount(plan) {
+      if (!plan) return 0;
+      if (Array.isArray(plan.alumnos) && plan.alumnos.length) return plan.alumnos.length;
+      return Number(plan.alumnos_count || 0);
+    }
+
+    function getPlanActividadCount(plan) {
+      if (!plan) return 0;
+      if (Array.isArray(plan.actividades) && plan.actividades.length) return plan.actividades.length;
+      return Number(plan.actividades_count || 0);
+    }
+
+    function upsertPlaneacionRow(row) {
+      if (!row || !row.planeacion_id) return null;
+      const idx = state.planeaciones.findIndex((plan) => plan.planeacion_id === row.planeacion_id);
+      if (idx === -1) {
+        state.planeaciones.unshift(row);
+        return row;
+      }
+      state.planeaciones.splice(idx, 1, Object.assign({}, state.planeaciones[idx], row));
+      return state.planeaciones[idx];
+    }
+
+    async function fetchPlaneacionDetalle(planId) {
+      const data = await api('getPlaneaciones', {
+        planeacion_id: planId,
+        include_detail: true,
+        limit: 1
+      });
+      const rows = Array.isArray(data && data.rows) ? data.rows : [];
+      if (!rows.length) throw new Error('Planeación no encontrada.');
+      return rows[0];
+    }
+
+    async function ensurePlaneacionDetailLoaded(planId, options = {}) {
+      const current = getPlanById(planId);
+      if (current && current.detail_loaded) return current;
+      const detail = await fetchPlaneacionDetalle(planId);
+      const merged = upsertPlaneacionRow(detail);
+      if (!options.silent) renderPlaneacionesList();
+      return merged;
+    }
+
     function renderPlanWeekResolved() {
       const host = $('planSemanaResolved');
       const fallbackDate = state.planEditor.mode === 'edit'
@@ -8870,16 +8922,23 @@
       }, {});
     }
 
-    function togglePlanOpen(button, planId) {
+    async function togglePlanOpen(button, planId) {
       if (state.openPlanId === planId) {
         state.openPlanId = '';
         state.openPlanDraft = null;
-      } else {
-        const plan = getPlanById(planId);
+        renderPlaneacionesList();
+        return;
+      }
+      await handleAction('togglePlanOpen', async () => {
+        const plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
         state.openPlanId = planId;
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
         closePlanBuilder();
-      }
+      }, {
+        button,
+        key: buildActionKey('togglePlanOpen', [planId]),
+        busyText: 'Abriendo...'
+      });
       renderPlaneacionesList();
       if (state.openPlanId) {
         window.requestAnimationFrame(() => {
@@ -9004,8 +9063,8 @@
         const materialHistoryHtml = latestResolvedMaterialAlert
           ? '<div class="plan-alert-history">Historico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</div>'
           : '';
-        const alumnosCount = alumnos.length || 0;
-        const actividadesCount = Array.isArray(plan.actividades) ? plan.actividades.length : 0;
+        const alumnosCount = getPlanAlumnoCount(plan);
+        const actividadesCount = getPlanActividadCount(plan);
         const actividades = (plan.actividades || []).map((item) => {
           const material = normalizeMaterialStatus(item.material_en_carpeta);
           const realizada = normalizeRealizadaStatus(item.realizada);
@@ -9090,6 +9149,26 @@
               '<div class="actions" style="margin-top:14px;">' +
                 '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
               '</div>' +
+            '</article>'
+          );
+        }
+
+        if (!plan.detail_loaded) {
+          return (
+            '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card">' +
+              '<div class="plan-top">' +
+                '<div>' +
+                  '<h3>' + escapeHtml(materia ? (materia.nombre || materia.materia_id) : plan.materia_id) + '</h3>' +
+                  '<div class="subtle">' + escapeHtml(grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id) +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
+                '</div>' +
+                '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+              '</div>' +
+              '<div class="meta-grid">' +
+                '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + '</div>' +
+              '</div>' +
+              '<div class="empty">Cargando detalle de la planeación...</div>' +
             '</article>'
           );
         }
@@ -9215,17 +9294,21 @@
       });
     }
 
-    function openPlanFromAlert(button, planId) {
+    async function openPlanFromAlert(button, planId) {
       if (canUseAdminShell()) {
         activateAdminModule('planeaciones');
       } else {
         activateTab('planeaciones');
       }
-      if (state.openPlanId !== planId) {
+      await handleAction('openPlanFromAlert', async () => {
+        const plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
         state.openPlanId = planId;
-        const plan = getPlanById(planId);
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
-      }
+      }, {
+        button,
+        key: buildActionKey('openPlanFromAlert', [planId]),
+        busyText: 'Abriendo...'
+      });
       closePlanBuilder();
       renderPlaneacionesList();
       window.requestAnimationFrame(() => {
@@ -9785,7 +9868,14 @@
     }
 
     async function editPlan(button, planId) {
-      const plan = getPlanById(planId);
+      let plan = null;
+      await handleAction('editPlanLoad', async () => {
+        plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
+      }, {
+        button,
+        key: buildActionKey('editPlanLoad', [planId]),
+        busyText: 'Abriendo...'
+      });
       if (!plan) throw new Error('Planeación no encontrada.');
       loadPlanIntoEditor(plan);
       activateTab('planeaciones');
