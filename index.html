@@ -600,6 +600,9 @@
       background: rgba(31,182,229,0.14) !important;
       border: 1px solid rgba(31,182,229,0.24) !important;
       color: var(--la-cyan) !important;
+      white-space: nowrap;
+      min-width: 108px;
+      justify-content: center;
     }
 
     .plan-card.is-collapsed {
@@ -4825,7 +4828,12 @@
         if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
         if (!button.dataset.originalWidth) button.dataset.originalWidth = String(button.offsetWidth || 0);
         button.disabled = true;
-        if (button.offsetWidth) {
+        if (button.classList.contains('btn-open-plan')) {
+          if (button.offsetWidth) {
+            button.style.minWidth = Math.max(button.offsetWidth, 108) + 'px';
+          }
+          button.style.width = '';
+        } else if (button.offsetWidth) {
           button.style.width = button.offsetWidth + 'px';
         }
         button.textContent = busyText;
@@ -4837,6 +4845,7 @@
         delete button.dataset.originalText;
       }
       button.style.width = '';
+      button.style.minWidth = '';
       if (button.dataset.originalWidth) {
         delete button.dataset.originalWidth;
       }
