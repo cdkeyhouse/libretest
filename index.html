@@ -4511,6 +4511,15 @@
       );
     }
 
+    function adminModuleNeedsCatalogos(moduleName) {
+      return ['planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias'].includes(String(moduleName || '').trim());
+    }
+
+    function currentViewNeedsCatalogos() {
+      if (canUseAdminShell()) return adminModuleNeedsCatalogos(state.activeAdminModule);
+      return ['planeaciones', 'seguimiento', 'reportes'].includes(String(state.activeTab || '').trim());
+    }
+
     function createEmptyNotificationEditorState() {
       return {
         notificacion_id: '',
@@ -5080,12 +5089,14 @@
       if (!silent) setBanner('Cargando catálogos y planeaciones...', 'info');
       try {
         const notificationLimit = canUseAdminShell() ? 250 : 120;
-        const reuseCatalogos = silent && hasCatalogosLoaded();
+        const shouldIncludeCatalogos = currentViewNeedsCatalogos();
+        const reuseCatalogos = shouldIncludeCatalogos && silent && hasCatalogosLoaded();
         const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), {
           alert_limit: 20,
           notification_limit: notificationLimit,
-          include_catalogos: !reuseCatalogos
+          include_catalogos: shouldIncludeCatalogos && !reuseCatalogos
         }));
+        state.dashboardStats = dashboard && dashboard.stats ? dashboard.stats : {};
         if (dashboard && dashboard.catalogos && Object.keys(dashboard.catalogos).length) {
           state.catalogos = Object.assign(createEmptyCatalogos(), dashboard.catalogos);
         } else if (!hasCatalogosLoaded()) {
@@ -5261,6 +5272,11 @@
       }
       state.activeAdminModule = nextModule;
       renderAdminShell();
+      if (adminModuleNeedsCatalogos(nextModule) && !hasCatalogosLoaded()) {
+        refreshCatalogos()
+          .then(() => renderAll())
+          .catch(() => {});
+      }
       renderNotificationsAdmin();
       renderAdminAlumnosModule();
       renderAdminFacilitadoresModule();
@@ -5280,7 +5296,9 @@
       const openPlans = state.planeaciones.filter((plan) => ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente'].includes(String(plan.estado || '').trim())).length;
       const closedPlans = state.planeaciones.filter((plan) => ['cerrada', 'archivada'].includes(String(plan.estado || '').trim())).length;
       const openAlerts = state.alertas.filter((alerta) => String(alerta.estado || '').trim() !== 'resuelta').length;
-      const activeFacilitadores = state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)).length;
+      const activeFacilitadores = state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)).length || Number(state.dashboardStats && state.dashboardStats.facilitadores_activos || 0);
+      const visibleAlumnos = getAdminAlumnosCount() || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0);
+      const activeMaterias = state.catalogos.materias.length || Number(state.dashboardStats && state.dashboardStats.materias_activas || 0);
 
       if ($('adminShellTitle')) {
         $('adminShellTitle').textContent = 'Centro de control' + (user ? ' de ' + (user.nombre || user.nombre_mostrado || user.facilitador_id || '') : '');
@@ -5292,11 +5310,11 @@
       if ($('adminKpiClosedPlans')) $('adminKpiClosedPlans').textContent = String(closedPlans);
       if ($('adminKpiAlerts')) $('adminKpiAlerts').textContent = String(openAlerts);
       if ($('adminKpiFacilitadores')) $('adminKpiFacilitadores').textContent = String(activeFacilitadores);
-      if ($('adminCountAlumnos')) $('adminCountAlumnos').textContent = String(getAdminAlumnosCount());
+      if ($('adminCountAlumnos')) $('adminCountAlumnos').textContent = String(visibleAlumnos);
       if ($('adminCountPlaneaciones')) $('adminCountPlaneaciones').textContent = String(state.planeaciones.length || 0);
       if ($('adminCountNotifications')) $('adminCountNotifications').textContent = String((state.notificaciones || []).filter((row) => isNotificationActiveToday(row)).length || 0);
       if ($('adminCountFacilitadoresCard')) $('adminCountFacilitadoresCard').textContent = String(activeFacilitadores);
-      if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(state.catalogos.materias.length || 0);
+      if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(activeMaterias);
       if ($('adminCountReportes')) $('adminCountReportes').textContent = getReportStatusLabel(getReportSelectionState().lastResult && (getReportSelectionState().lastResult.status || getReportSelectionState().lastResult.estado) || 'PDF');
 
       document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
