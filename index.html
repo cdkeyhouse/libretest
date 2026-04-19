@@ -3205,6 +3205,7 @@
 
       .plan-compact-cell {
         min-width: 0;
+        position: relative;
       }
 
       .plan-compact-label {
@@ -3236,6 +3237,61 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .plan-compact-tooltip {
+        cursor: help;
+      }
+
+      .plan-compact-tooltip::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: 0;
+        top: calc(100% + 10px);
+        min-width: 220px;
+        max-width: min(420px, 38vw);
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(37, 34, 31, 0.98), rgba(27, 24, 22, 0.98));
+        border: 1px solid rgba(255,255,255,0.10);
+        box-shadow: 0 18px 36px rgba(0,0,0,0.28);
+        color: var(--text-strong);
+        font-size: 0.84rem;
+        line-height: 1.35;
+        white-space: normal;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-4px);
+        transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+        pointer-events: none;
+        z-index: 30;
+      }
+
+      .plan-compact-tooltip::before {
+        content: '';
+        position: absolute;
+        left: 16px;
+        top: calc(100% + 4px);
+        width: 10px;
+        height: 10px;
+        background: rgba(37, 34, 31, 0.98);
+        border-left: 1px solid rgba(255,255,255,0.10);
+        border-top: 1px solid rgba(255,255,255,0.10);
+        transform: rotate(45deg);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 140ms ease, visibility 140ms ease;
+        pointer-events: none;
+        z-index: 31;
+      }
+
+      .plan-compact-tooltip:hover::after,
+      .plan-compact-tooltip:hover::before,
+      .plan-compact-tooltip:focus-visible::after,
+      .plan-compact-tooltip:focus-visible::before {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
       }
 
       .plan-compact-status,
@@ -9499,7 +9555,7 @@
                   '</div>' +
                   '<div class="plan-compact-cell">' +
                     '<span class="plan-compact-label">Frase</span>' +
-                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(plan.frase_semana || '-') + '</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate plan-compact-tooltip" tabindex="0" data-tooltip="' + escapeHtml(plan.frase_semana || '-') + '">' + escapeHtml(plan.frase_semana || '-') + '</span>' +
                     ((hasMaterialAlert || latestResolvedMaterialAlert)
                       ? (
                           '<div class="plan-alert-history">' +
