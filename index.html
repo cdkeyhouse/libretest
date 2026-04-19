@@ -4423,6 +4423,9 @@
         periodos: [],
         semanas: []
       },
+      catalogosMeta: {
+        loadedBlocks: []
+      },
       planeaciones: [],
       alertas: [],
       notificaciones: [],
@@ -4500,19 +4503,99 @@
       };
     }
 
+    function createEmptyCatalogosMeta() {
+      return {
+        loadedBlocks: []
+      };
+    }
+
+    function getCatalogBlockKeys() {
+      return Object.keys(createEmptyCatalogos());
+    }
+
+    function normalizeCatalogBlocks(blocks) {
+      const valid = new Set(getCatalogBlockKeys());
+      const raw = Array.isArray(blocks)
+        ? blocks
+        : String(blocks || '').split(',');
+      const seen = new Set();
+      return raw
+        .map((item) => String(item || '').trim())
+        .filter((item) => item && valid.has(item) && !seen.has(item) && (seen.add(item) || true));
+    }
+
+    function markCatalogBlocksLoaded(blocks) {
+      const normalized = normalizeCatalogBlocks(blocks);
+      if (!state.catalogosMeta || !Array.isArray(state.catalogosMeta.loadedBlocks)) {
+        state.catalogosMeta = createEmptyCatalogosMeta();
+      }
+      const seen = new Set(state.catalogosMeta.loadedBlocks || []);
+      normalized.forEach((block) => seen.add(block));
+      state.catalogosMeta.loadedBlocks = Array.from(seen);
+    }
+
+    function mergeCatalogosPayload(partial, requestedBlocks) {
+      if (!partial || typeof partial !== 'object') return;
+      state.catalogos = Object.assign(createEmptyCatalogos(), state.catalogos || {}, partial);
+      const loaded = requestedBlocks && requestedBlocks.length
+        ? requestedBlocks
+        : Object.keys(partial);
+      markCatalogBlocksLoaded(loaded);
+    }
+
+    function isCatalogBlockLoaded(blockKey) {
+      return !!(
+        state.catalogosMeta &&
+        Array.isArray(state.catalogosMeta.loadedBlocks) &&
+        state.catalogosMeta.loadedBlocks.includes(String(blockKey || '').trim())
+      );
+    }
+
+    function getMissingCatalogBlocks(blocks) {
+      return normalizeCatalogBlocks(blocks).filter((block) => !isCatalogBlockLoaded(block));
+    }
+
     function hasCatalogosLoaded() {
       return !!(
-        state.catalogos &&
-        (
-          (state.catalogos.alumnos && state.catalogos.alumnos.length) ||
-          (state.catalogos.grupos && state.catalogos.grupos.length) ||
-          (state.catalogos.periodos && state.catalogos.periodos.length)
-        )
+        state.catalogosMeta &&
+        Array.isArray(state.catalogosMeta.loadedBlocks) &&
+        state.catalogosMeta.loadedBlocks.length
       );
+    }
+
+    function hasCatalogBlocksLoaded(blocks) {
+      return getMissingCatalogBlocks(blocks).length === 0;
+    }
+
+    function getCatalogBlocksForModule(moduleName) {
+      switch (String(moduleName || '').trim()) {
+        case 'planeaciones':
+          return ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'habilidades', 'periodos', 'semanas'];
+        case 'alumnos':
+          return ['alumnos', 'grupos'];
+        case 'notificaciones':
+          return ['facilitadores'];
+        case 'reporte-ciclo':
+        case 'reportes':
+          return ['alumnos', 'periodos'];
+        case 'facilitadores':
+          return ['facilitadores', 'facilitadores_admin', 'facilitador_asignaciones', 'grupos', 'materias'];
+        case 'materias':
+          return ['materias', 'materias_admin', 'submaterias', 'submaterias_admin'];
+        case 'seguimiento':
+          return ['alumnos', 'materias', 'submaterias', 'habilidades', 'periodos'];
+        default:
+          return [];
+      }
     }
 
     function adminModuleNeedsCatalogos(moduleName) {
       return ['planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias'].includes(String(moduleName || '').trim());
+    }
+
+    function getCurrentCatalogBlocks() {
+      if (canUseAdminShell()) return getCatalogBlocksForModule(state.activeAdminModule);
+      return getCatalogBlocksForModule(state.activeTab);
     }
 
     function currentViewNeedsCatalogos() {
@@ -4656,6 +4739,7 @@
       state.alertas = [];
       state.notificaciones = [];
       state.catalogos = createEmptyCatalogos();
+      state.catalogosMeta = createEmptyCatalogosMeta();
       state.openPlanId = '';
       if (state.ui) {
         state.ui.planBuilderExpanded = false;
@@ -5044,9 +5128,13 @@
       setBanner('Sesión cerrada.', 'success');
     }
 
-    async function refreshCatalogos() {
+    async function refreshCatalogos(options = {}) {
       ensureLoggedIn();
-      state.catalogos = await api('getCatalogos', {});
+      const blocks = normalizeCatalogBlocks(options.blocks || getCurrentCatalogBlocks());
+      if (!blocks.length) return state.catalogos;
+      const data = await api('getCatalogos', { blocks });
+      mergeCatalogosPayload(data, blocks);
+      return state.catalogos;
     }
 
     function buildPlaneacionesPayload() {
@@ -5091,22 +5179,28 @@
     async function refreshAll(options = {}) {
       ensureLoggedIn();
       const silent = !!(options && options.silent);
+      const shouldIncludeCatalogos = currentViewNeedsCatalogos();
+      const requestedCatalogBlocks = shouldIncludeCatalogos ? getCurrentCatalogBlocks() : [];
       if (!silent) setBanner('Cargando catálogos y planeaciones...', 'info');
       try {
         const notificationLimit = canUseAdminShell() ? 250 : 120;
-        const shouldIncludeCatalogos = currentViewNeedsCatalogos();
-        const reuseCatalogos = shouldIncludeCatalogos && silent && hasCatalogosLoaded();
+        const dashboardCatalogBlocks = shouldIncludeCatalogos
+          ? (silent ? getMissingCatalogBlocks(requestedCatalogBlocks) : requestedCatalogBlocks)
+          : [];
+        const reuseCatalogos = shouldIncludeCatalogos && silent && dashboardCatalogBlocks.length === 0;
         const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), {
           alert_limit: 20,
           notification_limit: notificationLimit,
           include_catalogos: shouldIncludeCatalogos && !reuseCatalogos,
+          catalog_blocks: dashboardCatalogBlocks,
           include_detail: false
         }));
         state.dashboardStats = dashboard && dashboard.stats ? dashboard.stats : {};
         if (dashboard && dashboard.catalogos && Object.keys(dashboard.catalogos).length) {
-          state.catalogos = Object.assign(createEmptyCatalogos(), dashboard.catalogos);
+          mergeCatalogosPayload(dashboard.catalogos, dashboardCatalogBlocks);
         } else if (!hasCatalogosLoaded()) {
           state.catalogos = createEmptyCatalogos();
+          state.catalogosMeta = createEmptyCatalogosMeta();
         }
         state.planeaciones = Array.isArray(dashboard && dashboard.planeaciones && dashboard.planeaciones.rows)
           ? dashboard.planeaciones.rows
@@ -5129,7 +5223,7 @@
         ]);
       }
       renderAll();
-      if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
+      if (requestedCatalogBlocks.includes('periodos') && (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length)) {
         setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
         return;
       }
@@ -5281,8 +5375,8 @@
       }
       state.activeAdminModule = nextModule;
       renderAdminShell();
-      if (adminModuleNeedsCatalogos(nextModule) && !hasCatalogosLoaded()) {
-        refreshCatalogos()
+      if (adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getCatalogBlocksForModule(nextModule))) {
+        refreshCatalogos({ blocks: getMissingCatalogBlocks(getCatalogBlocksForModule(nextModule)) })
           .then(() => renderAll())
           .catch(() => {});
       }
