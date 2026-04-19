@@ -2199,6 +2199,401 @@
     .admin-materias-module .admin-alumnos-empty {
       min-height: 168px;
     }
+    .admin-reporte-ciclo-module {
+      display: grid;
+      gap: 16px;
+    }
+    .admin-reporte-ciclo-head {
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .admin-reporte-ciclo-copy {
+      max-width: 640px;
+    }
+    .admin-reporte-ciclo-kpis {
+      margin-left: auto;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(96px, 1fr));
+      gap: 10px;
+      min-width: min(100%, 360px);
+    }
+    .admin-reporte-ciclo-kpi {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+      min-height: 72px;
+      align-content: start;
+    }
+    .admin-reporte-ciclo-kpi strong {
+      color: var(--text-strong);
+      font-size: 1rem;
+      line-height: 1.15;
+    }
+    .admin-reporte-ciclo-kpi span {
+      color: var(--text-soft);
+      font-size: 0.7rem;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .admin-reporte-ciclo-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .admin-reporte-ciclo-main,
+    .admin-reporte-ciclo-side,
+    .admin-reporte-ciclo-request,
+    .admin-reporte-ciclo-preview-card {
+      display: grid;
+      gap: 12px;
+    }
+    .admin-reporte-ciclo-request,
+    .admin-reporte-ciclo-preview-card {
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 14px 16px;
+    }
+    .admin-reporte-ciclo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .admin-reporte-ciclo-grid select,
+    .admin-reporte-ciclo-grid input {
+      background: rgba(29, 26, 24, 0.92) !important;
+      border-color: rgba(255,255,255,0.08) !important;
+      box-shadow: none !important;
+    }
+    .admin-reporte-ciclo-actions {
+      margin: 0;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .admin-reporte-ciclo-actions > button {
+      min-height: 34px;
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      box-shadow: none !important;
+    }
+    .admin-reporte-ciclo-helper {
+      margin-top: -2px;
+      font-size: 0.82rem;
+    }
+    .admin-reporte-ciclo-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .admin-reporte-ciclo-summary-card {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.025);
+      padding: 11px 12px;
+      display: grid;
+      gap: 4px;
+    }
+    .admin-reporte-ciclo-summary-card span {
+      color: var(--text-soft);
+      font-size: 0.74rem;
+      line-height: 1.25;
+    }
+    .admin-reporte-ciclo-summary-card strong {
+      color: var(--text-strong);
+      font-size: 0.94rem;
+      line-height: 1.25;
+    }
+    .admin-reporte-ciclo-preview {
+      display: grid;
+    }
+    .admin-reporte-ciclo-preview-sheet {
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(248, 247, 243, 0.98), rgba(241, 238, 232, 0.98));
+      color: #1f1b18;
+      padding: 18px 18px 16px;
+      display: grid;
+      gap: 12px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+    }
+    .admin-reporte-ciclo-preview-header {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 18px;
+      background: #272422;
+      color: #f0ebe4;
+    }
+    .admin-reporte-ciclo-preview-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: #302c29;
+      display: grid;
+      place-items: center;
+      color: #1DB6C1;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .admin-reporte-ciclo-preview-header strong {
+      display: block;
+      font-size: 1rem;
+      margin-bottom: 2px;
+    }
+    .admin-reporte-ciclo-preview-header span {
+      display: block;
+      font-size: 0.78rem;
+      color: #8a847c;
+    }
+    .admin-reporte-ciclo-preview-strip {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      border-radius: 999px;
+      overflow: hidden;
+      min-height: 5px;
+    }
+    .admin-reporte-ciclo-preview-strip span:nth-child(1) { background: #F5C024; }
+    .admin-reporte-ciclo-preview-strip span:nth-child(2) { background: #F07B20; }
+    .admin-reporte-ciclo-preview-strip span:nth-child(3) { background: #E8196A; }
+    .admin-reporte-ciclo-preview-strip span:nth-child(4) { background: #F178B6; }
+    .admin-reporte-ciclo-preview-strip span:nth-child(5) { background: #5BC4F5; }
+    .admin-reporte-ciclo-preview-strip span:nth-child(6) { background: #1DB6C1; }
+    .admin-reporte-ciclo-preview-strip span:nth-child(7) { background: #B8D832; }
+    .admin-reporte-ciclo-preview-strip span:nth-child(8) { background: #B0B0B0; }
+    .admin-reporte-ciclo-preview-block {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 4px 0 12px;
+      border-bottom: 1px solid rgba(31, 27, 24, 0.1);
+    }
+    .admin-reporte-ciclo-preview-block strong {
+      display: block;
+      font-size: 1.08rem;
+      color: #1a1a1a;
+      margin-bottom: 2px;
+    }
+    .admin-reporte-ciclo-preview-block span {
+      display: block;
+      font-size: 0.78rem;
+      color: #666666;
+      line-height: 1.35;
+    }
+    .admin-reporte-ciclo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(29,182,193,0.28);
+      background: #f0f9f6;
+      color: #0F6E56;
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-align: center;
+    }
+    .admin-reporte-ciclo-preview-section {
+      display: grid;
+      gap: 8px;
+    }
+    .admin-reporte-ciclo-preview-section-head,
+    .admin-reporte-ciclo-preview-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .admin-reporte-ciclo-preview-section-head {
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(31, 27, 24, 0.12);
+    }
+    .admin-reporte-ciclo-preview-section-head strong {
+      letter-spacing: 0.05em;
+      font-size: 0.76rem;
+    }
+    .admin-reporte-ciclo-preview-section-head span {
+      font-size: 0.72rem;
+      color: #555555;
+    }
+    .admin-reporte-ciclo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #1DB6C1;
+    }
+    .admin-reporte-ciclo-preview-row {
+      font-size: 0.82rem;
+      color: #333333;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(31, 27, 24, 0.08);
+    }
+    .admin-reporte-ciclo-preview-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .admin-reporte-ciclo-preview-row span {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      border: 1px solid #cccccc;
+      background: #f5f5f5;
+      color: #999999;
+    }
+    .admin-reporte-ciclo-preview-row span.is-done {
+      background: #e1f5ee;
+      color: #1D9E75;
+      border-color: #1D9E75;
+    }
+    .admin-reporte-ciclo-preview-row span.is-no {
+      background: #fce3df;
+      color: #d85a30;
+      border-color: #d85a30;
+    }
+    .admin-reporte-ciclo-preview-row span.is-pending {
+      background: #f5f5f5;
+      border-color: #cccccc;
+      color: transparent;
+    }
+    .admin-reporte-ciclo-preview-row small {
+      font-size: 0.72rem;
+      color: #888888;
+    }
+    .admin-reporte-ciclo-result {
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 14px 14px 12px;
+      display: grid;
+      gap: 10px;
+      min-height: 180px;
+    }
+    .admin-reporte-ciclo-result-empty {
+      min-height: 160px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--text-soft);
+    }
+    .admin-reporte-ciclo-result-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .admin-reporte-ciclo-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-strong);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .admin-reporte-ciclo-status.is-pendiente,
+    .admin-reporte-ciclo-status.is-obsoleto {
+      background: rgba(232, 193, 77, 0.18);
+      color: #fff2bb;
+      border-color: rgba(245, 216, 124, 0.24);
+    }
+    .admin-reporte-ciclo-status.is-generando {
+      background: rgba(67, 189, 241, 0.18);
+      color: #dff7ff;
+      border-color: rgba(117, 208, 255, 0.24);
+    }
+    .admin-reporte-ciclo-status.is-listo {
+      background: rgba(18, 156, 129, 0.18);
+      color: #dffff8;
+      border-color: rgba(82, 222, 197, 0.24);
+    }
+    .admin-reporte-ciclo-status.is-error {
+      background: rgba(220, 116, 53, 0.2);
+      color: #ffe4d2;
+      border-color: rgba(255, 164, 112, 0.22);
+    }
+    .admin-reporte-ciclo-result-meta {
+      display: grid;
+      gap: 8px;
+    }
+    .admin-reporte-ciclo-result-row {
+      display: grid;
+      gap: 3px;
+    }
+    .admin-reporte-ciclo-result-row span {
+      color: var(--text-soft);
+      font-size: 0.73rem;
+      line-height: 1.25;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .admin-reporte-ciclo-result-row strong,
+    .admin-reporte-ciclo-result-row .code {
+      color: var(--text-strong);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+    .admin-reporte-ciclo-notes {
+      display: grid;
+      gap: 8px;
+    }
+    .admin-reporte-ciclo-note {
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+    .admin-reporte-ciclo-note strong {
+      color: var(--text-strong);
+      font-size: 0.86rem;
+    }
+    .admin-reporte-ciclo-note span {
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+    @media (max-width: 1180px) {
+      .admin-reporte-ciclo-layout {
+        grid-template-columns: 1fr;
+      }
+      .admin-reporte-ciclo-kpis {
+        margin-left: 0;
+        min-width: 0;
+      }
+    }
+    @media (max-width: 820px) {
+      .admin-reporte-ciclo-grid,
+      .admin-reporte-ciclo-summary {
+        grid-template-columns: 1fr;
+      }
+      .admin-reporte-ciclo-kpis {
+        grid-template-columns: 1fr;
+      }
+      .admin-reporte-ciclo-preview-block {
+        grid-template-columns: 1fr;
+      }
+    }
     .admin-planeaciones-shell {
       display: none;
     }
@@ -3377,18 +3772,121 @@
       </section>
 
       <section id="admin-panel-reporte-ciclo" class="admin-panel">
-        <article class="admin-placeholder">
-          <div>
-            <h3>Reporte de ciclo</h3>
-            <p>Esta pantalla reunirá por alumno las actividades realizadas en el ciclo para generar la salida académica para familias.</p>
+        <article class="admin-toolbar admin-reporte-ciclo-module">
+          <div class="admin-alumnos-head admin-reporte-ciclo-head">
+            <div class="admin-alumnos-head-copy admin-reporte-ciclo-copy">
+              <h3>Reporte de ciclo</h3>
+              <p class="subtle">Genera, regenera y monitorea el PDF académico familiar por alumno y período sin salir del adminShell.</p>
+            </div>
+            <div class="admin-reporte-ciclo-kpis">
+              <div class="admin-reporte-ciclo-kpi">
+                <strong id="adminReporteKpiAlumnos">0</strong>
+                <span>Alumnos</span>
+              </div>
+              <div class="admin-reporte-ciclo-kpi">
+                <strong id="adminReporteKpiPeriodos">0</strong>
+                <span>Períodos</span>
+              </div>
+              <div class="admin-reporte-ciclo-kpi">
+                <strong id="adminReporteKpiPdf">Sin consulta</strong>
+                <span>Último estado</span>
+              </div>
+            </div>
           </div>
-          <div class="admin-action-list">
-            <span class="admin-action-chip">Buscar alumno</span>
-            <span class="admin-action-chip">Vista previa</span>
-            <span class="admin-action-chip">Exportar PDF</span>
-            <span class="admin-action-chip">Imprimir</span>
+
+          <div class="admin-reporte-ciclo-layout">
+            <div class="admin-reporte-ciclo-main">
+              <div class="admin-reporte-ciclo-request">
+                <div class="admin-reporte-ciclo-grid">
+                  <div class="field">
+                    <label for="adminReportAlumno">Alumno</label>
+                    <select id="adminReportAlumno"></select>
+                  </div>
+                  <div class="field">
+                    <label for="adminReportPeriodo">Período</label>
+                    <select id="adminReportPeriodo"></select>
+                  </div>
+                </div>
+                <div class="admin-reporte-ciclo-actions actions compact">
+                  <button id="adminGenerateNowBtn" class="btn-primary" type="button">Solicitar / actualizar</button>
+                  <button id="adminRequestReportBtn" class="btn-secondary" type="button">Forzar regeneración</button>
+                  <button id="adminStatusReportBtn" class="btn-ghost" type="button">Revisar estado</button>
+                </div>
+                <div class="admin-reporte-ciclo-helper subtle">El PDF se genera desde backend y puede quedar listo de inmediato o unos segundos después, según el estado del caché.</div>
+              </div>
+
+              <div class="admin-reporte-ciclo-preview-card">
+                <div class="admin-alumnos-section-head">
+                  <h4>Vista del documento</h4>
+                </div>
+                <div id="adminReportSelectionSummary" class="admin-reporte-ciclo-summary"></div>
+                <div class="admin-reporte-ciclo-preview">
+                  <div class="admin-reporte-ciclo-preview-sheet">
+                    <div class="admin-reporte-ciclo-preview-header">
+                      <div class="admin-reporte-ciclo-preview-logo">LA</div>
+                      <div>
+                        <strong>Libre Aprendiz</strong>
+                        <span>Reporte académico para familias</span>
+                      </div>
+                    </div>
+                    <div class="admin-reporte-ciclo-preview-strip">
+                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="admin-reporte-ciclo-preview-block">
+                      <div>
+                        <strong id="adminReportPreviewAlumno">Selecciona un alumno</strong>
+                        <span id="adminReportPreviewMeta">Grupo, matrícula y facilitadora se resolverán aquí.</span>
+                      </div>
+                      <div class="admin-reporte-ciclo-badge" id="adminReportPreviewPeriodo">Período</div>
+                    </div>
+                    <div class="admin-reporte-ciclo-preview-section">
+                      <div class="admin-reporte-ciclo-preview-section-head">
+                        <div class="admin-reporte-ciclo-dot"></div>
+                        <strong>ACTIVIDADES POR MATERIA</strong>
+                        <span>Estado de realización</span>
+                      </div>
+                      <div class="admin-reporte-ciclo-preview-row">
+                        <span class="is-done">✓</span>
+                        <div>Actividad registrada del período</div>
+                        <small>Sem 1</small>
+                      </div>
+                      <div class="admin-reporte-ciclo-preview-row">
+                        <span class="is-pending"></span>
+                        <div>Actividad pendiente o sin dato visible</div>
+                        <small>Sem 2</small>
+                      </div>
+                      <div class="admin-reporte-ciclo-preview-row">
+                        <span class="is-no">✕</span>
+                        <div>Actividad marcada como no realizada</div>
+                        <small>Sem 3</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="admin-alumnos-panel admin-reporte-ciclo-side">
+              <div class="admin-alumnos-panel-head">
+                <h4>Estado y PDF</h4>
+              </div>
+              <div id="adminReportResult" class="admin-reporte-ciclo-result"></div>
+              <div class="admin-reporte-ciclo-notes">
+                <div class="admin-reporte-ciclo-note">
+                  <strong>Incluye</strong>
+                  <span>Encabezado institucional, datos del alumno, actividades por materia y pie familiar.</span>
+                </div>
+                <div class="admin-reporte-ciclo-note">
+                  <strong>No incluye</strong>
+                  <span>Observaciones internas, notas de dirección, IDs técnicos ni estados administrativos.</span>
+                </div>
+                <div class="admin-reporte-ciclo-note">
+                  <strong>Salida final</strong>
+                  <span>PDF en Drive con URL directa para abrir y compartir dentro de la operación escolar.</span>
+                </div>
+              </div>
+            </aside>
           </div>
-          <div class="admin-note">Aquí no entrarán observaciones internas, habilidades ni socioemocional. Solo actividades académicas y su estado de realización.</div>
         </article>
       </section>
 
@@ -3891,6 +4389,14 @@
       };
     }
 
+    function createEmptyReportesUiState() {
+      return {
+        alumno_id: '',
+        periodo_id: '',
+        lastResult: null
+      };
+    }
+
     const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzF61zDQkF15kTFBQykHx-J2XAY1TFcqI_Gze_UtVZhD80DTlbkMEYTBIdQ-_HIqlSf/exec';
     const BRAND_LOGO = 'data:image/png;base64,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';
     const DEFAULT_PERIODS = '';
@@ -3931,6 +4437,7 @@
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
       materiasUi: createEmptyMateriasUiState(),
+      reportesUi: createEmptyReportesUiState(),
       planEditor: {
         mode: 'create',
         planId: '',
@@ -4007,11 +4514,121 @@
       };
     }
 
-    function resetReportResult() {
-      const host = $('reportResult');
-      if (host) {
-        host.innerHTML = '<div class="subtle">Todavía no hay una consulta de reporte.</div>';
+    function getReportSelectionState() {
+      if (!state.reportesUi) state.reportesUi = createEmptyReportesUiState();
+      return state.reportesUi;
+    }
+
+    function getSelectedReporteAlumnoId() {
+      const ui = getReportSelectionState();
+      return String(ui.alumno_id || $('adminReportAlumno') && $('adminReportAlumno').value || $('repAlumno') && $('repAlumno').value || '').trim();
+    }
+
+    function getSelectedReportePeriodoId() {
+      const ui = getReportSelectionState();
+      return String(ui.periodo_id || $('adminReportPeriodo') && $('adminReportPeriodo').value || $('repPeriodo') && $('repPeriodo').value || '').trim();
+    }
+
+    function setReporteSelection(field, value) {
+      const ui = getReportSelectionState();
+      const nextValue = String(value || '').trim();
+      if (ui[field] !== nextValue) {
+        ui.lastResult = null;
       }
+      ui[field] = nextValue;
+      const alumnoSelectIds = ['repAlumno', 'adminReportAlumno'];
+      const periodoSelectIds = ['repPeriodo', 'adminReportPeriodo'];
+      (field === 'alumno_id' ? alumnoSelectIds : periodoSelectIds).forEach((id) => {
+        const el = $(id);
+        if (el) el.value = ui[field];
+      });
+    }
+
+    function getSelectedReporteAlumnoRow() {
+      const alumnoId = getSelectedReporteAlumnoId();
+      return (state.catalogos.alumnos || []).find((row) => row.alumno_id === alumnoId) || null;
+    }
+
+    function getSelectedReportePeriodoRow() {
+      const periodoId = getSelectedReportePeriodoId();
+      return (state.catalogos.periodos || []).find((row) => String(row.periodo_id || '').trim() === periodoId) || null;
+    }
+
+    function getReportStatusLabel(status) {
+      return ({
+        pendiente: 'Pendiente',
+        generando: 'Generando',
+        listo: 'Listo',
+        obsoleto: 'Obsoleto',
+        error: 'Error',
+        inexistente: 'Sin caché'
+      })[String(status || '').trim().toLowerCase()] || (status || 'Sin estado');
+    }
+
+    function buildReportResultMarkup(data, options = {}) {
+      const compact = !!options.compact;
+      const warnings = Array.isArray(data && data.warnings)
+        ? data.warnings
+        : (data && data.warnings_json ? safeJsonParse(data.warnings_json) : null);
+      const alumno = data && data._selection && data._selection.alumno_id
+        ? (state.catalogos.alumnos || []).find((row) => row.alumno_id === data._selection.alumno_id)
+        : getSelectedReporteAlumnoRow();
+      const periodo = data && data._selection && data._selection.periodo_id
+        ? (state.catalogos.periodos || []).find((row) => String(row.periodo_id || '').trim() === data._selection.periodo_id)
+        : getSelectedReportePeriodoRow();
+      const alumnoLabel = alumno ? (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) : '';
+      const periodoLabel = periodo ? (periodo.nombre_visible || periodo.periodo_id) : '';
+
+      if (!data) {
+        return compact
+          ? '<div class="subtle">Todavía no hay una consulta de reporte.</div>'
+          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>Aún no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y período para generar o revisar el PDF.</div></div></div>';
+      }
+
+      const status = String(data.status || data.estado || '').trim().toLowerCase();
+      const rows = [
+        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' · ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
+        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Período</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
+        data.url ? '<div class="admin-reporte-ciclo-result-row"><span>PDF</span><strong><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></strong></div>' : '',
+        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Versión de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
+        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>Versión PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
+        data.started_at ? '<div class="admin-reporte-ciclo-result-row"><span>Inicio</span><strong>' + escapeHtml(formatFechaHumana(data.started_at)) + '</strong></div>' : '',
+        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>Finalización</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
+        data.next_retry_at ? '<div class="admin-reporte-ciclo-result-row"><span>Reintento</span><strong>' + escapeHtml(formatFechaHumana(data.next_retry_at)) + '</strong></div>' : '',
+        data.error_message ? '<div class="admin-reporte-ciclo-result-row"><span>Error</span><strong>' + escapeHtml(data.error_message) + '</strong></div>' : '',
+        data._meta && data._meta.message ? '<div class="admin-reporte-ciclo-result-row"><span>Info</span><strong>' + escapeHtml(data._meta.message) + '</strong></div>' : '',
+        Array.isArray(warnings) && warnings.length ? '<div class="admin-reporte-ciclo-result-row"><span>Warnings</span><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : ''
+      ].filter(Boolean).join('');
+
+      if (compact) {
+        return [
+          '<div><strong>Estado:</strong> ' + escapeHtml(getReportStatusLabel(status)) + '</div>',
+          data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
+          data && data.version_datos ? '<div><strong>Versión datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
+          data && data.version_pdf ? '<div><strong>Versión PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
+          data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
+          data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
+          Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
+          data && data.next_retry_at ? '<div><strong>Reintento:</strong> ' + escapeHtml(data.next_retry_at) + '</div>' : ''
+        ].filter(Boolean).join('');
+      }
+
+      return (
+        '<div class="admin-reporte-ciclo-result-head">' +
+          '<div><strong>Resultado del reporte</strong></div>' +
+          '<div class="admin-reporte-ciclo-status is-' + escapeHtml(status || 'inexistente') + '">' + escapeHtml(getReportStatusLabel(status || 'inexistente')) + '</div>' +
+        '</div>' +
+        '<div class="admin-reporte-ciclo-result-meta">' + rows + '</div>'
+      );
+    }
+
+    function resetReportResult() {
+      const ui = getReportSelectionState();
+      ui.lastResult = null;
+      const legacyHost = $('reportResult');
+      const adminHost = $('adminReportResult');
+      if (legacyHost) legacyHost.innerHTML = buildReportResultMarkup(null, { compact: true });
+      if (adminHost) adminHost.innerHTML = buildReportResultMarkup(null);
     }
 
     function clearLoadedData() {
@@ -4039,6 +4656,8 @@
       };
       state.alumnosUi = createEmptyAlumnosUiState();
       state.facilitadoresUi = createEmptyFacilitadoresUiState();
+      state.materiasUi = createEmptyMateriasUiState();
+      state.reportesUi = createEmptyReportesUiState();
       state.activeTab = 'planeaciones';
       state.activeAdminModule = 'dashboard';
       resetReportResult();
@@ -4626,6 +5245,7 @@
       renderAdminAlumnosModule();
       renderAdminFacilitadoresModule();
       renderAdminMateriasModule();
+      renderAdminReporteCicloModule();
       syncRoleUi();
     }
 
@@ -4657,6 +5277,7 @@
       if ($('adminCountNotifications')) $('adminCountNotifications').textContent = String((state.notificaciones || []).filter((row) => isNotificationActiveToday(row)).length || 0);
       if ($('adminCountFacilitadoresCard')) $('adminCountFacilitadoresCard').textContent = String(activeFacilitadores);
       if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(state.catalogos.materias.length || 0);
+      if ($('adminCountReportes')) $('adminCountReportes').textContent = getReportStatusLabel(getReportSelectionState().lastResult && (getReportSelectionState().lastResult.status || getReportSelectionState().lastResult.estado) || 'PDF');
 
       document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
         btn.classList.toggle('is-active', btn.dataset.adminModule === state.activeAdminModule);
@@ -7585,6 +8206,8 @@
       ['obsPeriodo', 'evaPeriodo', 'notaPeriodo', 'repPeriodo'].forEach((id) => {
         fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona período');
       });
+      const reportUi = getReportSelectionState();
+      if ($('repPeriodo') && reportUi.periodo_id) $('repPeriodo').value = reportUi.periodo_id;
       syncNotePeriodoState();
     }
 
@@ -8043,6 +8666,7 @@
     }
 
     function renderBaseSelects() {
+      const reportUi = getReportSelectionState();
       fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
       fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
       fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => g.nombre_grupo || g.grupo_id, 'Todos los grupos');
@@ -8050,6 +8674,7 @@
       fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
       fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
       fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+      if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
       fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
       fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
       renderPlanEditor();
@@ -8636,22 +9261,68 @@
       }
     }
 
+    function renderAdminReporteCicloModule() {
+      const ui = getReportSelectionState();
+      const alumnos = state.catalogos.alumnos || [];
+      const periodos = getAvailablePeriods();
+      const adminAlumno = $('adminReportAlumno');
+      const adminPeriodo = $('adminReportPeriodo');
+      const selectedAlumno = getSelectedReporteAlumnoRow();
+      const selectedPeriodo = getSelectedReportePeriodoRow();
+
+      if (adminAlumno) {
+        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' · ' + row.alumno_id, 'Selecciona alumno');
+        if (ui.alumno_id) adminAlumno.value = ui.alumno_id;
+      }
+      if (adminPeriodo) {
+        fillSelect(adminPeriodo, periodos, (row) => row.id, (row) => row.id + ' - ' + row.name, 'Selecciona período');
+        if (ui.periodo_id) adminPeriodo.value = ui.periodo_id;
+      }
+      if ($('repAlumno') && ui.alumno_id) $('repAlumno').value = ui.alumno_id;
+      if ($('repPeriodo') && ui.periodo_id) $('repPeriodo').value = ui.periodo_id;
+
+      if ($('adminReporteKpiAlumnos')) $('adminReporteKpiAlumnos').textContent = String(alumnos.length || 0);
+      if ($('adminReporteKpiPeriodos')) $('adminReporteKpiPeriodos').textContent = String(periodos.length || 0);
+      if ($('adminReporteKpiPdf')) $('adminReporteKpiPdf').textContent = getReportStatusLabel(ui.lastResult && (ui.lastResult.status || ui.lastResult.estado) || 'sin consulta');
+
+      if ($('adminReportSelectionSummary')) {
+        $('adminReportSelectionSummary').innerHTML = [
+          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selección') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matrícula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' · ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Período</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selección') + '</strong></div>'
+        ].join('');
+      }
+      if ($('adminReportPreviewAlumno')) {
+        $('adminReportPreviewAlumno').textContent = selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Selecciona un alumno';
+      }
+      if ($('adminReportPreviewMeta')) {
+        $('adminReportPreviewMeta').textContent = selectedAlumno
+          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' · Matrícula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' · Documento académico familiar')
+          : 'Grupo, matrícula y facilitadora se resolverán aquí.';
+      }
+      if ($('adminReportPreviewPeriodo')) {
+        $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'Período') : 'Período';
+      }
+
+      const adminHost = $('adminReportResult');
+      if (adminHost) {
+        adminHost.innerHTML = buildReportResultMarkup(ui.lastResult);
+      }
+      if (!ui.lastResult && $('reportResult')) {
+        $('reportResult').innerHTML = buildReportResultMarkup(null, { compact: true });
+      }
+    }
+
     function renderReportResult(data) {
+      const ui = getReportSelectionState();
+      ui.lastResult = data || null;
+      const label = getReportStatusLabel(data && (data.status || data.estado) || 'sin consulta');
       const host = $('reportResult');
-      const warnings = Array.isArray(data && data.warnings)
-        ? data.warnings
-        : (data && data.warnings_json ? safeJsonParse(data.warnings_json) : null);
-      const status = data && (data.status || data.estado) ? (data.status || data.estado) : '-';
-      host.innerHTML = [
-        '<div><strong>Estado:</strong> ' + escapeHtml(status) + '</div>',
-        data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
-        data && data.version_datos ? '<div><strong>Versión datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
-        data && data.version_pdf ? '<div><strong>Versión PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
-        data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
-        data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
-        Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
-        data && data.next_retry_at ? '<div><strong>Reintento:</strong> ' + escapeHtml(data.next_retry_at) + '</div>' : ''
-      ].filter(Boolean).join('');
+      if (host) host.innerHTML = buildReportResultMarkup(data, { compact: true });
+      const adminHost = $('adminReportResult');
+      if (adminHost) adminHost.innerHTML = buildReportResultMarkup(data);
+      if ($('adminReporteKpiPdf')) $('adminReporteKpiPdf').textContent = label;
+      if ($('adminCountReportes')) $('adminCountReportes').textContent = label;
     }
 
     function activateTab(tabName) {
@@ -8683,6 +9354,7 @@
       renderAdminAlumnosModule();
       renderAdminFacilitadoresModule();
       renderAdminMateriasModule();
+      renderAdminReporteCicloModule();
       renderInstitutionalNotices();
       renderPeriodSelects();
       renderBaseSelects();
@@ -8843,13 +9515,16 @@
       ensureLoggedIn();
       ensureCanUseReportes();
       ensureBackendPeriodsReady();
-      if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('repPeriodo').value) throw new Error('Selecciona un período.');
+      const alumnoId = getSelectedReporteAlumnoId();
+      const periodoId = getSelectedReportePeriodoId();
+      if (!alumnoId) throw new Error('Selecciona un alumno.');
+      if (!periodoId) throw new Error('Selecciona un período.');
       const data = await api('requestReporteAlumno', {
-        alumno_id: $('repAlumno').value,
-        periodo_id: $('repPeriodo').value,
+        alumno_id: alumnoId,
+        periodo_id: periodoId,
         request_id: uid('REP')
       });
+      data._selection = { alumno_id: alumnoId, periodo_id: periodoId };
       renderReportResult(data);
       if (data.status === 'listo' && data.url) {
         setBanner('El reporte ya estaba vigente y listo para abrir.', 'success');
@@ -8862,13 +9537,16 @@
       ensureLoggedIn();
       ensureCanUseReportes();
       ensureBackendPeriodsReady();
-      if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('repPeriodo').value) throw new Error('Selecciona un período.');
+      const alumnoId = getSelectedReporteAlumnoId();
+      const periodoId = getSelectedReportePeriodoId();
+      if (!alumnoId) throw new Error('Selecciona un alumno.');
+      if (!periodoId) throw new Error('Selecciona un período.');
       const data = await api('regenerarReporteAlumno', {
-        alumno_id: $('repAlumno').value,
-        periodo_id: $('repPeriodo').value,
+        alumno_id: alumnoId,
+        periodo_id: periodoId,
         request_id: uid('RRG')
       });
+      data._selection = { alumno_id: alumnoId, periodo_id: periodoId };
       renderReportResult(data);
       setBanner('Regeneración forzada registrada. El worker armará una nueva versión del PDF.', 'success');
     }
@@ -8877,12 +9555,15 @@
       ensureLoggedIn();
       ensureCanUseReportes();
       ensureBackendPeriodsReady();
-      if (!$('repAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('repPeriodo').value) throw new Error('Selecciona un período.');
+      const alumnoId = getSelectedReporteAlumnoId();
+      const periodoId = getSelectedReportePeriodoId();
+      if (!alumnoId) throw new Error('Selecciona un alumno.');
+      if (!periodoId) throw new Error('Selecciona un período.');
       const data = await api('getReporteAlumnoStatus', {
-        alumno_id: $('repAlumno').value,
-        periodo_id: $('repPeriodo').value
+        alumno_id: alumnoId,
+        periodo_id: periodoId
       });
+      data._selection = { alumno_id: alumnoId, periodo_id: periodoId };
       renderReportResult(data);
       setBanner('Estado de reporte actualizado.', data.status === 'listo' ? 'success' : 'info');
     }
@@ -9339,17 +10020,45 @@
         button: event.currentTarget,
         key: buildActionKey('crearNotaDirectora', [$('notaAlumno').value, $('notaAlcance').value, $('notaPeriodo').value, $('notaTipo').value, $('notaTexto').value.trim().slice(0, 40)])
       }));
+      if ($('repAlumno')) $('repAlumno').addEventListener('change', (event) => {
+        setReporteSelection('alumno_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      if ($('repPeriodo')) $('repPeriodo').addEventListener('change', (event) => {
+        setReporteSelection('periodo_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      if ($('adminReportAlumno')) $('adminReportAlumno').addEventListener('change', (event) => {
+        setReporteSelection('alumno_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      if ($('adminReportPeriodo')) $('adminReportPeriodo').addEventListener('change', (event) => {
+        setReporteSelection('periodo_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
       $('generateNowBtn').addEventListener('click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
         button: event.currentTarget,
-        key: buildActionKey('requestReporteAlumno', [$('repAlumno').value, $('repPeriodo').value])
+        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
       }));
       $('requestReportBtn').addEventListener('click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
         button: event.currentTarget,
-        key: buildActionKey('regenerarReporteAlumno', [$('repAlumno').value, $('repPeriodo').value])
+        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
       }));
       $('statusReportBtn').addEventListener('click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
         button: event.currentTarget,
-        key: buildActionKey('getReporteAlumnoStatus', [$('repAlumno').value, $('repPeriodo').value])
+        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      if ($('adminGenerateNowBtn')) $('adminGenerateNowBtn').addEventListener('click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
+        button: event.currentTarget,
+        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      if ($('adminRequestReportBtn')) $('adminRequestReportBtn').addEventListener('click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
+        button: event.currentTarget,
+        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      if ($('adminStatusReportBtn')) $('adminStatusReportBtn').addEventListener('click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
+        button: event.currentTarget,
+        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
       }));
       $('planFecha').addEventListener('change', renderPlanWeekResolved);
       $('planGruposChecklist').addEventListener('change', renderPlanAlumnosChecklist);
