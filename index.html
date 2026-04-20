@@ -3837,6 +3837,10 @@
       box-shadow: none !important;
     }
 
+    input[type="date"] {
+      cursor: pointer;
+    }
+
     input::placeholder, textarea::placeholder { color: var(--text-dim) !important; }
 
     input:focus, select:focus, textarea:focus {
@@ -5036,6 +5040,14 @@
     let actionToastTimer = null;
 
     const $ = (id) => document.getElementById(id);
+
+    function tryShowDatePicker(input) {
+      if (!input || input.disabled || input.readOnly) return;
+      if (typeof input.showPicker !== 'function') return;
+      try {
+        input.showPicker();
+      } catch (_) {}
+    }
 
     const escapeHtml = (value) => String(value == null ? '' : value)
       .replace(/\u00C2\u00B7/g, '\u00B7')
@@ -11566,6 +11578,13 @@
 
     function bindEvents() {
       bindHiddenPingShortcut();
+      document.addEventListener('click', (event) => {
+        const dateInput = event.target && typeof event.target.closest === 'function'
+          ? event.target.closest('input[type="date"]')
+          : null;
+        if (!dateInput) return;
+        tryShowDatePicker(dateInput);
+      });
       $('pingBtn').addEventListener('click', (event) => handleAction('ping', pingBackend, { button: event.currentTarget }));
       $('loginBtn').addEventListener('click', (event) => triggerLoginAction(event.currentTarget));
       $('pinInput').addEventListener('keydown', (event) => {
