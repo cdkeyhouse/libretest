@@ -1617,8 +1617,15 @@
     .admin-alumnos-list-header,
     .admin-alumnos-row {
       display: grid;
-      grid-template-columns: 0.76fr 1.34fr 0.8fr 0.72fr 0.8fr 0.86fr 1fr;
-      gap: 10px;
+      grid-template-columns:
+        minmax(82px, 0.72fr)
+        minmax(180px, 1.65fr)
+        minmax(112px, 0.9fr)
+        minmax(96px, 0.82fr)
+        minmax(96px, 0.84fr)
+        minmax(124px, 1fr)
+        minmax(250px, 1.55fr);
+      gap: 12px;
       align-items: center;
       padding: 10px 12px;
     }
