@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
@@ -5550,6 +5550,14 @@
       );
     }
 
+    function triggerLoginAction(button) {
+      const loginButton = button || $('loginBtn');
+      return handleAction('login', login, {
+        button: loginButton,
+        key: buildActionKey('login', [$('facilitadorId').value])
+      });
+    }
+
     async function login() {
       const facilitadorId = $('facilitadorId').value.trim();
       const pin = $('pinInput').value.trim();
@@ -10981,10 +10989,12 @@
     function bindEvents() {
       bindHiddenPingShortcut();
       $('pingBtn').addEventListener('click', (event) => handleAction('ping', pingBackend, { button: event.currentTarget }));
-      $('loginBtn').addEventListener('click', (event) => handleAction('login', login, {
-        button: event.currentTarget,
-        key: buildActionKey('login', [$('facilitadorId').value])
-      }));
+      $('loginBtn').addEventListener('click', (event) => triggerLoginAction(event.currentTarget));
+      $('pinInput').addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        triggerLoginAction($('loginBtn'));
+      });
       $('logoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('workspaceLogoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
