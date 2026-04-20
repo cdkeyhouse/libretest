@@ -10206,9 +10206,9 @@
                 '</select></div>' +
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
               '</div>' +
-              (hasAdminPower
-                ? `<div class="actions"><button class="btn-ghost" type="button" onclick="saveActivityProgress(this, '${escapeJsAttrValue(item.actividad_id)}', '${escapeJsAttrValue(item.fecha_actualizacion || '')}')">Guardar actividad</button></div>`
-                : (editableSeguimiento ? '<div class="mini">Confirma si se realizó cada actividad y luego pulsa Cerrar semana.</div>' : '')) +
+              ((hasAdminPower || editableSeguimiento)
+                ? '<div class="mini">Los cambios de seguimiento se guardan con el botón Guardar cambios.</div>'
+                : '') +
             '</div>'
           );
         }).join('');
