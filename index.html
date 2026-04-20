@@ -4895,6 +4895,17 @@
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
 
+    // Escapa valores cuando terminan dentro de una cadena JS en atributos HTML.
+    const escapeJsAttrValue = (value) => String(value == null ? '' : value)
+      .replace(/\\/g, '\\\\')
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '\\\'');
+
     function uid(prefix = 'RID') {
       return prefix + '-' + Math.random().toString(36).slice(2, 10).toUpperCase();
     }
@@ -6043,7 +6054,7 @@
       host.innerHTML = facilitadores.map((row) => {
         const label = row.nombre_mostrado || row.nombre_completo || row.facilitador_id;
         return '<label class="check-item">' +
-          '<input type="checkbox" value="' + escapeHtml(row.facilitador_id) + '"' + (selected.has(row.facilitador_id) ? ' checked' : '') + ' onchange="toggleNotificationAudienceFacilitador(\'' + escapeHtml(row.facilitador_id) + '\', this.checked)">' +
+          '<input type="checkbox" value="' + escapeHtml(row.facilitador_id) + '"' + (selected.has(row.facilitador_id) ? ' checked' : '') + ' onchange="toggleNotificationAudienceFacilitador(\'' + escapeJsAttrValue(row.facilitador_id) + '\', this.checked)">' +
           '<span><strong>' + escapeHtml(label) + '</strong><br><span class="mini">' + escapeHtml(row.facilitador_id) + '</span></span>' +
         '</label>';
       }).join('') || '<div class="empty">No hay facilitadores activos disponibles.</div>';
@@ -6104,18 +6115,18 @@
         const status = String(row.estatus || '').trim();
         const actions = [];
         if (status === 'borrador') {
-          actions.push('<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeHtml(row.notificacion_id) + '\')">Editar</button>');
-          actions.push('<button class="btn-primary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'publicarNotificacion\')">Publicar</button>');
-          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeJsAttrValue(row.notificacion_id) + '\')">Editar</button>');
+          actions.push('<button class="btn-primary" type="button" onclick="notificationAction(this, \'' + escapeJsAttrValue(row.notificacion_id) + '\', \'publicarNotificacion\')">Publicar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeJsAttrValue(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>');
         } else if (status === 'publicada') {
-          actions.push('<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeHtml(row.notificacion_id) + '\')">Editar</button>');
-          actions.push('<button class="btn-secondary" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'despublicarNotificacion\')">Despublicar</button>');
-          actions.push('<button class="btn-accent" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'cerrarNotificacion\')">Cerrar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="editNotification(\'' + escapeJsAttrValue(row.notificacion_id) + '\')">Editar</button>');
+          actions.push('<button class="btn-secondary" type="button" onclick="notificationAction(this, \'' + escapeJsAttrValue(row.notificacion_id) + '\', \'despublicarNotificacion\')">Despublicar</button>');
+          actions.push('<button class="btn-accent" type="button" onclick="notificationAction(this, \'' + escapeJsAttrValue(row.notificacion_id) + '\', \'cerrarNotificacion\')">Cerrar</button>');
         } else if (status === 'cerrada') {
-          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>');
-          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeJsAttrValue(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeJsAttrValue(row.notificacion_id) + '\', \'archivarNotificacion\')">Archivar</button>');
         } else if (status === 'archivada') {
-          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeHtml(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>');
+          actions.push('<button class="btn-ghost" type="button" onclick="notificationAction(this, \'' + escapeJsAttrValue(row.notificacion_id) + '\', \'duplicarNotificacion\')">Duplicar</button>');
         }
         return '<article class="admin-notification-row' + (high ? ' is-high' : '') + '">' +
           '<div class="admin-notification-title">' +
@@ -6896,24 +6907,24 @@
           const visualStatus = getAlumnoStatusVisual(row);
           const actions = [];
           if (visualStatus === 'activo') {
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
-            actions.push('<button class="btn-secondary" type="button" onclick="openCambioGrupo(\'' + escapeHtml(row.alumno_id) + '\')">Cambiar grupo</button>');
-            actions.push('<button class="btn-accent" type="button" onclick="pauseAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Pausar</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
+            actions.push('<button class="btn-secondary" type="button" onclick="openCambioGrupo(\'' + escapeJsAttrValue(row.alumno_id) + '\')">Cambiar grupo</button>');
+            actions.push('<button class="btn-accent" type="button" onclick="pauseAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Pausar</button>');
           } else if (visualStatus === 'pausa' || visualStatus === 'inactivo') {
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
-            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Reactivar</button>');
-            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Archivar</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
+            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Reactivar</button>');
+            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Archivar</button>');
           } else if (visualStatus === 'egresado') {
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeHtml(row.alumno_id) + '\')">Editar</button>');
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">Ver historial</button>');
-            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Archivar</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">Ver historial</button>');
+            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Archivar</button>');
           } else {
-            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeHtml(row.alumno_id) + '\', this)">Reactivar</button>');
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">Ver historial</button>');
+            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Reactivar</button>');
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">Ver historial</button>');
           }
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
-            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeHtml(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button></div>' +
+            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
             '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
@@ -7555,7 +7566,7 @@
             const asignaciones = getFacilitadorAsignaciones(row.facilitador_id).filter((item) => item.activa);
             const pulseText = buildFacilitadorPulseSummary(row.facilitador_id);
             const actions = [
-              '<button class="btn-ghost" type="button" onclick="openFacilitadorPanel(\'' + escapeHtml(row.facilitador_id) + '\')">Ver panel</button>'
+            '<button class="btn-ghost" type="button" onclick="openFacilitadorPanel(\'' + escapeJsAttrValue(row.facilitador_id) + '\')">Ver panel</button>'
             ];
             return [
               '<article class="admin-facilitadores-row">',
@@ -7598,13 +7609,13 @@
             '<span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span>',
           '</div>',
           '<div class="admin-facilitadores-inline-actions">',
-            (canManage ? '<button class="btn-ghost" type="button" onclick="openFacilitadorEditor(\'edit\', \'' + escapeHtml(facilitador.facilitador_id) + '\')">Editar ficha</button>' : ''),
-            '<button class="btn-secondary" type="button" onclick="openFacilitadorPlaneaciones(\'' + escapeHtml(facilitador.facilitador_id) + '\')">Ver planeaciones</button>',
-            (canManage ? '<button class="btn-ghost" type="button" onclick="openFacilitadorPin(\'' + escapeHtml(facilitador.facilitador_id) + '\')">Resetear PIN</button>' : ''),
-            (canManage && visualStatus === 'activo' ? '<button class="btn-ghost" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeHtml(facilitador.facilitador_id) + '\', false)">Desactivar</button>' : ''),
-            (canManage && visualStatus === 'inactivo' ? '<button class="btn-primary" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeHtml(facilitador.facilitador_id) + '\', true)">Activar</button>' : ''),
-            (canManage && visualStatus === 'archivado' ? '<button class="btn-primary" type="button" onclick="reactivateFacilitador(this, \'' + escapeHtml(facilitador.facilitador_id) + '\')">Reactivar</button>' : ''),
-            (canManage && visualStatus !== 'archivado' ? '<button class="btn-accent" type="button" onclick="archiveFacilitador(this, \'' + escapeHtml(facilitador.facilitador_id) + '\')">Archivar</button>' : ''),
+            (canManage ? '<button class="btn-ghost" type="button" onclick="openFacilitadorEditor(\'edit\', \'' + escapeJsAttrValue(facilitador.facilitador_id) + '\')">Editar ficha</button>' : ''),
+            '<button class="btn-secondary" type="button" onclick="openFacilitadorPlaneaciones(\'' + escapeJsAttrValue(facilitador.facilitador_id) + '\')">Ver planeaciones</button>',
+            (canManage ? '<button class="btn-ghost" type="button" onclick="openFacilitadorPin(\'' + escapeJsAttrValue(facilitador.facilitador_id) + '\')">Resetear PIN</button>' : ''),
+            (canManage && visualStatus === 'activo' ? '<button class="btn-ghost" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeJsAttrValue(facilitador.facilitador_id) + '\', false)">Desactivar</button>' : ''),
+            (canManage && visualStatus === 'inactivo' ? '<button class="btn-primary" type="button" onclick="toggleFacilitadorActivo(this, \'' + escapeJsAttrValue(facilitador.facilitador_id) + '\', true)">Activar</button>' : ''),
+            (canManage && visualStatus === 'archivado' ? '<button class="btn-primary" type="button" onclick="reactivateFacilitador(this, \'' + escapeJsAttrValue(facilitador.facilitador_id) + '\')">Reactivar</button>' : ''),
+            (canManage && visualStatus !== 'archivado' ? '<button class="btn-accent" type="button" onclick="archiveFacilitador(this, \'' + escapeJsAttrValue(facilitador.facilitador_id) + '\')">Archivar</button>' : ''),
           '</div>',
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Alta</span><strong>' + escapeHtml(facilitador.fecha_alta ? formatFechaHumana(facilitador.fecha_alta) : 'Sin fecha') + '</strong></div>',
@@ -7648,9 +7659,9 @@
               '<div class="mini">' + escapeHtml(periodo) + '</div>',
             '</div>',
             '<div class="admin-facilitadores-assignment-actions">',
-              '<button class="btn-ghost" type="button" onclick="openFacilitadorAsignacionEditor(\'edit\', \'' + escapeHtml(row.asignacion_id) + '\')">Editar</button>',
-              '<button class="btn-secondary" type="button" onclick="openFacilitadorPlaneaciones(\'' + escapeHtml(state.facilitadoresUi.selectedFacilitadorId) + '\', \'' + escapeHtml(row.grupo_id) + '\', \'' + escapeHtml(row.materia_id) + '\')">Ver</button>',
-              '<button class="btn-accent" type="button" onclick="archiveFacilitadorAsignacion(this, \'' + escapeHtml(row.asignacion_id) + '\')">Quitar</button>',
+          '<button class="btn-ghost" type="button" onclick="openFacilitadorAsignacionEditor(\'edit\', \'' + escapeJsAttrValue(row.asignacion_id) + '\')">Editar</button>',
+          '<button class="btn-secondary" type="button" onclick="openFacilitadorPlaneaciones(\'' + escapeJsAttrValue(state.facilitadoresUi.selectedFacilitadorId) + '\', \'' + escapeJsAttrValue(row.grupo_id) + '\', \'' + escapeJsAttrValue(row.materia_id) + '\')">Ver</button>',
+          '<button class="btn-accent" type="button" onclick="archiveFacilitadorAsignacion(this, \'' + escapeJsAttrValue(row.asignacion_id) + '\')">Quitar</button>',
             '</div>',
           '</article>'
         ].join('');
@@ -8356,13 +8367,13 @@
             const selected = String(state.materiasUi.selectedMateriaId || '').trim() === row.materia_id;
             const subRows = getSubmateriasForMateria(row.materia_id);
             const actions = [
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); openMateriaEditor(\'edit\', \'' + escapeHtml(row.materia_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeHtml(row.materia_id) + '\', \'up\')">↑</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeHtml(row.materia_id) + '\', \'down\')">↓</button>',
-              '<button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectMateria(\'' + escapeHtml(row.materia_id) + '\')">Ver panel</button>'
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); openMateriaEditor(\'edit\', \'' + escapeJsAttrValue(row.materia_id) + '\')">Editar</button>',
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'up\')">↑</button>',
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'down\')">↓</button>',
+              '<button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectMateria(\'' + escapeJsAttrValue(row.materia_id) + '\')">Ver panel</button>'
             ];
             return [
-              '<article class="admin-materias-row' + (selected ? ' is-selected' : '') + '" onclick="selectMateria(\'' + escapeHtml(row.materia_id) + '\')">',
+              '<article class="admin-materias-row' + (selected ? ' is-selected' : '') + '" onclick="selectMateria(\'' + escapeJsAttrValue(row.materia_id) + '\')">',
                 '<div class="admin-alumnos-cell"><span class="admin-materias-order">' + escapeHtml(String(row.orden_visual || 0)) + '</span></div>',
                 '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.materia_id) + '</strong><div class="mini">' + escapeHtml(row.materia_id) + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="admin-materias-structure"><span class="admin-alumnos-badge">' + escapeHtml(getMateriaStructureLabel(row)) + '</span></div></div>',
@@ -8400,12 +8411,12 @@
             '</div>',
           '</div>',
           '<div class="admin-materias-inline-actions">',
-            (canManage ? '<button class="btn-ghost" type="button" onclick="openMateriaEditor(\'edit\', \'' + escapeHtml(materia.materia_id) + '\')">Editar materia</button>' : ''),
-            (canManage && materia.estatus === 'activa' ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\')">Desactivar</button>' : ''),
-            (canManage && materia.estatus === 'inactiva' ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\')">Activar</button>' : ''),
-            (canManage && materia.estatus === 'archivada' ? '<button class="btn-secondary" type="button" onclick="reactivateMateria(this, \'' + escapeHtml(materia.materia_id) + '\')">Reactivar</button>' : ''),
-            (canManage && materia.estatus !== 'archivada' ? '<button class="btn-accent" type="button" onclick="archiveMateria(this, \'' + escapeHtml(materia.materia_id) + '\')">Archivar</button>' : ''),
-            (canManage && materiaHasVariants(materia) && materia.estatus !== 'archivada' ? '<button class="btn-primary" type="button" onclick="openSubmateriaEditor(\'new\', \'' + escapeHtml(materia.materia_id) + '\')">Agregar submateria</button>' : ''),
+            (canManage ? '<button class="btn-ghost" type="button" onclick="openMateriaEditor(\'edit\', \'' + escapeJsAttrValue(materia.materia_id) + '\')">Editar materia</button>' : ''),
+            (canManage && materia.estatus === 'activa' ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeJsAttrValue(materia.materia_id) + '\')">Desactivar</button>' : ''),
+            (canManage && materia.estatus === 'inactiva' ? '<button class="btn-secondary" type="button" onclick="toggleMateriaStatus(this, \'' + escapeJsAttrValue(materia.materia_id) + '\')">Activar</button>' : ''),
+            (canManage && materia.estatus === 'archivada' ? '<button class="btn-secondary" type="button" onclick="reactivateMateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\')">Reactivar</button>' : ''),
+            (canManage && materia.estatus !== 'archivada' ? '<button class="btn-accent" type="button" onclick="archiveMateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\')">Archivar</button>' : ''),
+            (canManage && materiaHasVariants(materia) && materia.estatus !== 'archivada' ? '<button class="btn-primary" type="button" onclick="openSubmateriaEditor(\'new\', \'' + escapeJsAttrValue(materia.materia_id) + '\')">Agregar submateria</button>' : ''),
           '</div>',
           '<div class="admin-materias-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Materia ID</span><strong>' + escapeHtml(materia.materia_id) + '</strong></div>',
@@ -8429,17 +8440,17 @@
         '<div class="admin-materias-variants">',
           subRows.map((row) => {
             const actions = [
-              '<button class="btn-ghost" type="button" onclick="openSubmateriaEditor(\'edit\', \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\', \'up\')">↑</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\', \'down\')">↓</button>',
+              '<button class="btn-ghost" type="button" onclick="openSubmateriaEditor(\'edit\', \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Editar</button>',
+              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'up\')">↑</button>',
+              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'down\')">↓</button>',
               (row.estatus === 'activa'
-                ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Desactivar</button>'
+                ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Desactivar</button>'
                 : (row.estatus === 'inactiva'
-                  ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Activar</button>'
-                  : '<button class="btn-secondary" type="button" onclick="reactivateSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Reactivar</button>'))
+                  ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Activar</button>'
+                  : '<button class="btn-secondary" type="button" onclick="reactivateSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Reactivar</button>'))
             ];
             if (row.estatus !== 'archivada') {
-              actions.push('<button class="btn-accent" type="button" onclick="archiveSubmateria(this, \'' + escapeHtml(materia.materia_id) + '\', \'' + escapeHtml(row.submateria_id) + '\')">Archivar</button>');
+              actions.push('<button class="btn-accent" type="button" onclick="archiveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Archivar</button>');
             }
             return [
               '<article class="admin-materias-variant-item">',
@@ -9563,7 +9574,7 @@
             '<div class="group-block plan-open-students">' +
               (alumnosGrupo.map((alumno) => (
                 '<label class="check-item">' +
-                  '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeHtml(alumno.alumno_id) + '\', this.checked)">' +
+                  '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
                   '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong><br><span class="mini">' + escapeHtml(alumno.matricula || alumno.alumno_id) + '</span></span>' +
                 '</label>'
               )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
@@ -9576,7 +9587,7 @@
             '<div class="stack">' + activitiesHtml + '</div>' +
           '</div>' +
           '<div class="actions plan-open-save-actions">' +
-            '<button class="btn-primary" type="button" onclick="saveOpenPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Guardar cambios</button>' +
+          '<button class="btn-primary" type="button" onclick="saveOpenPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Guardar cambios</button>' +
           '</div>' +
         '</div>'
       );
@@ -9662,7 +9673,7 @@
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
               '</div>' +
               (hasAdminPower
-                ? `<div class="actions"><button class="btn-ghost" type="button" onclick="saveActivityProgress(this, '${escapeHtml(item.actividad_id)}', '${escapeHtml(item.fecha_actualizacion || '')}')">Guardar actividad</button></div>`
+                ? `<div class="actions"><button class="btn-ghost" type="button" onclick="saveActivityProgress(this, '${escapeJsAttrValue(item.actividad_id)}', '${escapeJsAttrValue(item.fecha_actualizacion || '')}')">Guardar actividad</button></div>`
                 : (editableSeguimiento ? '<div class="mini">Confirma si se realizó cada actividad y luego pulsa Cerrar semana.</div>' : '')) +
             '</div>'
           );
@@ -9689,20 +9700,20 @@
           : '<div class="mini">No hay alumnos ligados a esta planeación.</div>';
         const buttons = [];
         if (plan.estado === 'borrador') {
-          buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
+          buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
         }
         if (plan.estado === 'borrador_pendiente_aprobacion' && hasAdminPower) {
-          buttons.push('<button class="btn-primary" type="button" onclick="approvePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Aprobar</button>');
-          buttons.push('<button class="btn-secondary" type="button" onclick="rejectPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Rechazar</button>');
+          buttons.push('<button class="btn-primary" type="button" onclick="approvePlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Aprobar</button>');
+          buttons.push('<button class="btn-secondary" type="button" onclick="rejectPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Rechazar</button>');
         }
         if (plan.estado === 'rechazada') {
-          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Reenviar aprobación</button>');
+          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Reenviar aprobación</button>');
         }
         if (allowClose) {
-          buttons.push('<button class="btn-accent" type="button" onclick="confirmClosePlan(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Cerrar semana</button>');
+          buttons.push('<button class="btn-accent" type="button" onclick="confirmClosePlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Cerrar semana</button>');
         }
         if (plan.estado === 'cerrada' && hasAdminPower) {
-          buttons.push('<button class="btn-ghost" type="button" onclick="planAction(this, \'' + escapeHtml(plan.planeacion_id) + '\', \'archivarPlaneacion\')">Archivar</button>');
+          buttons.push('<button class="btn-ghost" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'archivarPlaneacion\')">Archivar</button>');
         }
 
         if (!isOpen) {
@@ -9724,7 +9735,7 @@
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
                 materialHistoryHtml +
                 '<div class="actions" style="margin-top:14px;">' +
-                  '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
+                  '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>' +
                 '</div>' +
               '</div>' +
               '<div class="plan-collapsed-desktop">' +
@@ -9762,7 +9773,7 @@
                     '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-actions">' +
-                    '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button>' +
+              '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>' +
                   '</div>' +
                 '</div>' +
               '</div>' +
@@ -9809,7 +9820,7 @@
                   '<div class="plan-alert-bar">' +
                     '<div class="plan-alert-chip">Material pendiente</div>' +
                     (allowStructureEdit
-                      ? '<button class="btn-primary plan-alert-action" type="button" onclick="markPlanMaterialReady(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Marcar material listo</button>'
+                      ? '<button class="btn-primary plan-alert-action" type="button" onclick="markPlanMaterialReady(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Marcar material listo</button>'
                       : '') +
                   '</div>'
                 )
@@ -9824,7 +9835,7 @@
               obsGeneralesHtml +
               '<div class="actions compact">' +
                 '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
-                (allowGeneralObs ? '<button class="btn-ghost" type="button" onclick="saveGeneralObservation(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Agregar observación general</button>' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
+                (allowGeneralObs ? '<button class="btn-ghost" type="button" onclick="saveGeneralObservation(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Agregar observación general</button>' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="stack">' +
@@ -9832,12 +9843,12 @@
               obsAlumnoHtml +
               '<div class="actions obs-final-actions">' +
                 (allowAlumnoObs
-                  ? '<button class="btn-ghost" type="button" onclick="saveAllAlumnoFinalObservations(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Guardar observaciones finales</button>'
+                  ? '<button class="btn-ghost" type="button" onclick="saveAllAlumnoFinalObservations(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Guardar observaciones finales</button>'
                   : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
-              '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Ocultar</button>' +
+              '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
               buttons.join('') +
             '</div>' +
           '</article>'
@@ -9985,7 +9996,7 @@
               '<div class="alert-summary">' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
               (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>' : '') +
             '</div>' +
-            (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button" onclick="openPlanFromAlert(this, \'' + escapeHtml(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
+        (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button" onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
           '</div>'
         );
       }).join('');
