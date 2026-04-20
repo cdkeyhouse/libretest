@@ -7008,12 +7008,12 @@
             actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">Ver historial</button>');
             actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Archivar</button>');
           } else {
+            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
             actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Reactivar</button>');
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">Ver historial</button>');
           }
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
-            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button></div>' +
+            '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</strong></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
             '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
