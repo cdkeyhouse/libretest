@@ -3914,6 +3914,18 @@
     .btn-secondary { background: var(--la-sky) !important; color: #171411 !important; }
     .btn-accent { background: var(--la-sun) !important; color: #171411 !important; }
     .btn-danger { background: var(--la-fuchsia) !important; color: #fff !important; }
+    .plan-builder-launch-btn {
+      min-width: 240px;
+      box-shadow: 0 12px 24px rgba(247, 197, 42, 0.16) !important;
+    }
+    .plan-builder-launch-btn.is-collapsed {
+      background: linear-gradient(135deg, var(--la-sun), var(--la-orange)) !important;
+      color: #171411 !important;
+      border-color: rgba(255,255,255,0.08) !important;
+    }
+    .plan-builder-launch-btn.is-open {
+      box-shadow: none !important;
+    }
     .btn-ghost {
       background: rgba(255,255,255,0.04) !important;
       border-color: var(--border-strong) !important;
@@ -4546,7 +4558,7 @@
                 <p class="subtle">Crea un plan semanal rapido.</p>
               </div>
               <div class="actions compact">
-                <button id="togglePlanBuilderBtn" class="btn-primary" type="button">Crear nueva planeacion</button>
+                <button id="togglePlanBuilderBtn" class="btn-accent plan-builder-launch-btn is-collapsed" type="button">Crear nueva planeacion</button>
               </div>
             </div>
             <div id="planBuilderBody" class="stack" hidden>
@@ -5432,7 +5444,9 @@
       const expanded = isPlanBuilderExpanded();
       body.hidden = !expanded;
       btn.textContent = expanded ? 'Ocultar editor' : 'Crear nueva planeacion';
-      btn.className = expanded ? 'btn-secondary' : 'btn-primary';
+      btn.className = expanded
+        ? 'btn-ghost plan-builder-launch-btn is-open'
+        : 'btn-accent plan-builder-launch-btn is-collapsed';
     }
 
     function refreshStaticCopy() {
