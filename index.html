@@ -3537,6 +3537,18 @@
         border-color: rgba(255, 199, 0, 0.36);
       }
 
+      .plan-open-editor-group {
+        overflow: visible;
+      }
+
+      .plan-open-editor-group .plan-open-students {
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 10px 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        align-items: start;
+      }
+
       #planGruposChecklist.checklist-groups {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         max-height: none;
