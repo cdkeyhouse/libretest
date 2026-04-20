@@ -3586,6 +3586,36 @@
         min-height: 38px;
         padding: 8px 12px;
       }
+
+      .plan-student-chip-cloud {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 8px 12px;
+      }
+
+      .plan-student-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 9px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.03);
+        min-width: 0;
+      }
+
+      .plan-student-chip strong {
+        display: inline;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .plan-student-chip .mini {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
     }
 
     /* ===== Restored institutional dark theme ===== */
@@ -9290,6 +9320,19 @@
       return (state.catalogos.alumnos || []).filter((alumno) => String(alumno.grupo_id || '').trim() === String(groupId || '').trim());
     }
 
+    function getAlumnoDisplaySnapshot(alumnoRow) {
+      const alumnoId = String(alumnoRow && alumnoRow.alumno_id || '').trim();
+      const catalogAlumno = (state.catalogos.alumnos || []).find((row) => String(row.alumno_id || '').trim() === alumnoId);
+      return {
+        nombre: catalogAlumno
+          ? (catalogAlumno.nombre_mostrado || catalogAlumno.nombre_completo || catalogAlumno.alumno_id)
+          : (alumnoRow && (alumnoRow.nombre_snapshot || alumnoRow.alumno_id) || alumnoId),
+        matricula: catalogAlumno
+          ? (catalogAlumno.matricula || catalogAlumno.alumno_id)
+          : (alumnoRow && (alumnoRow.matricula_snapshot || alumnoRow.alumno_id) || alumnoId)
+      };
+    }
+
     function applyGroupSelectionToAlumnoSet(selectedSet, groupId, checked) {
       const nextSelected = selectedSet instanceof Set ? selectedSet : new Set(selectedSet || []);
       getAlumnosByGroupId(groupId).forEach((alumno) => {
@@ -9700,7 +9743,6 @@
         const weekLabel = getWeekLabelForPlan(plan, semana);
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
         const hasAdminPower = role === 'admin' || role === 'directora';
-        const alumnos = (plan.alumnos || []).map((pa) => pa.nombre_snapshot || pa.alumno_id);
         const alumnosRows = plan.alumnos || [];
         const obsGenerales = getPlanGeneralObservations(plan);
         const obsAlumnoFinalMap = getPlanAlumnoFinalMap(plan);
@@ -9902,7 +9944,10 @@
             materialHistoryHtml +
             (allowStructureEdit
               ? renderOpenPlanStructureEditor(plan, allowStructureEdit)
-              : ('<div class="tag-cloud">' + alumnos.map((name) => '<span class="tag">' + escapeHtml(name) + '</span>').join('') + '</div>' +
+              : ('<div class="plan-student-chip-cloud">' + alumnosRows.map((alumnoRow) => {
+                    const alumnoDisplay = getAlumnoDisplaySnapshot(alumnoRow);
+                    return '<div class="plan-student-chip"><strong>' + escapeHtml(alumnoDisplay.nombre) + '</strong><span class="mini">' + escapeHtml(alumnoDisplay.matricula) + '</span></div>';
+                  }).join('') + '</div>' +
                 '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>')) +
             '<div class="stack">' +
               '<div><strong>Observaciones generales</strong></div>' +
