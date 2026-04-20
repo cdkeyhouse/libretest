@@ -2845,6 +2845,21 @@
     .activity-editor-top .actions.compact {
       margin: 0;
     }
+    .activity-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--brand), var(--sky));
+      color: #fff;
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      box-shadow: 0 10px 22px rgba(31, 176, 186, 0.18);
+      border: 1px solid rgba(255,255,255,0.12);
+      white-space: nowrap;
+    }
     .activity-inline-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -9718,7 +9733,7 @@
         return (
           '<div class="activity-editor">' +
             '<div class="activity-editor-top">' +
-              '<strong>Actividad ' + (index + 1) + '</strong>' +
+              '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
               '<div class="actions compact">' +
                 '<button class="btn-ghost" type="button" onclick="removeEditorActivity(' + index + ')">Quitar</button>' +
               '</div>' +
@@ -9982,7 +9997,7 @@
       const activitiesHtml = isMulti ? '' : (draft.activities || []).map((activity, index) => (
         '<div class="activity-editor">' +
           '<div class="activity-editor-top">' +
-            '<strong>Actividad ' + (index + 1) + '</strong>' +
+            '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
           '</div>' +
           '<div class="activity-inline-grid">' +
             '<div><label>Material</label><select id="activity-material-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'material_en_carpeta\', this.value)">' +
@@ -10098,7 +10113,7 @@
             '<div class="stack">' + (draft.activities || []).map((activity, index) => (
               '<div class="activity-editor">' +
                 '<div class="activity-editor-top">' +
-                  '<strong>Actividad ' + (index + 1) + '</strong>' +
+                  '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
                   '<div class="actions compact">' +
                     '<button class="btn-ghost" type="button" onclick="removeMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ')">Quitar</button>' +
                   '</div>' +
@@ -10138,7 +10153,7 @@
       const activitiesHtml = (draft.activities || []).map((activity, index) => (
         '<div class="activity-editor">' +
           '<div class="activity-editor-top">' +
-            '<strong>Actividad ' + (index + 1) + '</strong>' +
+            '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
             '<div class="actions compact">' +
               '<button class="btn-ghost" type="button" onclick="removeOpenPlanDraftActivity(' + index + ')">Quitar</button>' +
             '</div>' +
