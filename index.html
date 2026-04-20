@@ -6904,11 +6904,34 @@
       loadAlumnoHistorialRemoto(alumno.alumno_id);
     }
 
+    function buildAlumnoQuickActionsMarkup(alumno) {
+      if (!alumno) return '';
+      const visualStatus = getAlumnoStatusVisual(alumno);
+      const buttons = [
+        '<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(alumno.alumno_id) + '\')">Ver historial</button>'
+      ];
+      if (visualStatus === 'activo') {
+        buttons.unshift('<button class="btn-secondary" type="button" onclick="openCambioGrupo(\'' + escapeJsAttrValue(alumno.alumno_id) + '\')">Cambiar grupo</button>');
+        buttons.push('<button class="btn-accent" type="button" onclick="pauseAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this)">Pausar</button>');
+      } else if (visualStatus === 'pausa' || visualStatus === 'inactivo') {
+        buttons.unshift('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this)">Reactivar</button>');
+        buttons.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this)">Archivar</button>');
+      } else if (visualStatus === 'egresado') {
+        buttons.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this)">Archivar</button>');
+      } else {
+        buttons.unshift('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this)">Reactivar</button>');
+      }
+      return buttons.join('');
+    }
+
     function renderAlumnoEditor() {
       const editorHost = $('adminAlumnoEditor');
       if (!editorHost) return;
       editorHost.hidden = !state.alumnosUi.editorOpen;
       if (editorHost.hidden) return;
+      const selectedAlumno = state.alumnosUi.editorMode === 'edit'
+        ? getAlumnoById(state.alumnosUi.selectedAlumnoId)
+        : null;
       if ($('adminAlumnoEditorTitle')) $('adminAlumnoEditorTitle').textContent = state.alumnosUi.editorMode === 'edit' ? 'Editar ficha' : 'Nuevo alumno';
       if ($('adminAlumnoMatricula')) $('adminAlumnoMatricula').value = state.alumnosUi.editor.matricula || '';
       if ($('adminAlumnoNombres')) $('adminAlumnoNombres').value = state.alumnosUi.editor.nombres || '';
@@ -6917,6 +6940,10 @@
       if ($('adminAlumnoNotas')) $('adminAlumnoNotas').value = state.alumnosUi.editor.notas_internas || '';
       fillSelect($('adminAlumnoGrupo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Selecciona grupo');
       if ($('adminAlumnoGrupo')) $('adminAlumnoGrupo').value = state.alumnosUi.editor.grupo_id || '';
+      if ($('adminAlumnoQuickActions')) {
+        $('adminAlumnoQuickActions').hidden = !selectedAlumno;
+        $('adminAlumnoQuickActions').innerHTML = selectedAlumno ? buildAlumnoQuickActionsMarkup(selectedAlumno) : '';
+      }
     }
 
     function renderAlumnoCambioGrupo() {
@@ -6995,23 +7022,9 @@
         '</div>' +
         rows.map((row) => {
           const visualStatus = getAlumnoStatusVisual(row);
-          const actions = [];
-          if (visualStatus === 'activo') {
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
-            actions.push('<button class="btn-secondary" type="button" onclick="openCambioGrupo(\'' + escapeJsAttrValue(row.alumno_id) + '\')">Cambiar grupo</button>');
-            actions.push('<button class="btn-accent" type="button" onclick="pauseAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Pausar</button>');
-          } else if (visualStatus === 'pausa' || visualStatus === 'inactivo') {
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
-            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Reactivar</button>');
-            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Archivar</button>');
-          } else if (visualStatus === 'egresado') {
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">Ver historial</button>');
-            actions.push('<button class="btn-accent" type="button" onclick="archiveAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Archivar</button>');
-          } else {
-            actions.push('<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>');
-            actions.push('<button class="btn-primary" type="button" onclick="reactivateAlumno(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Reactivar</button>');
-          }
+          const actions = [
+            '<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>'
+          ];
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
             '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button></div>' +
@@ -7073,6 +7086,7 @@
                     '<div class="subtle">Completa la ficha principal del alumno.</div>',
                   '</div>',
                 '</div>',
+                '<div id="adminAlumnoQuickActions" class="actions compact admin-alumnos-panel-actions" hidden></div>',
                 '<div class="admin-alumnos-editor-grid">',
                   '<label class="field">',
                     '<span>Matrícula</span>',
