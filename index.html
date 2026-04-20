@@ -10045,11 +10045,23 @@
       return ['material_pendiente', 'material_inicio_semana_pendiente'].includes(tipo) && estado === 'resuelta';
     }
 
+    function shouldShowMaterialAlertForPlan(plan) {
+      if (!plan) return false;
+      const role = getCurrentRole();
+      const status = String((plan && plan.estado) || '').trim();
+      if (role === 'admin' || role === 'directora') return status === 'activa';
+      return status === 'borrador' || status === 'activa' || status === 'rechazada';
+    }
+
     function planHasOpenMaterialAlert(planId) {
+      const plan = getPlanById(planId);
+      if (!shouldShowMaterialAlertForPlan(plan)) return false;
       return state.alertas.some((alerta) => alerta.planeacion_id === planId && isOpenMaterialAlert(alerta));
     }
 
     function getLatestResolvedMaterialAlertForPlan(planId) {
+      const plan = getPlanById(planId);
+      if (!shouldShowMaterialAlertForPlan(plan)) return null;
       return state.alertas
         .filter((alerta) => alerta.planeacion_id === planId && isResolvedMaterialAlert(alerta))
         .sort((a, b) => {
@@ -10061,6 +10073,8 @@
 
     function getVisibleOperationalAlerts() {
       return state.alertas.filter((alerta) => {
+        const plan = getPlanById(alerta && alerta.planeacion_id);
+        if (isOpenMaterialAlert(alerta) && !shouldShowMaterialAlertForPlan(plan)) return false;
         return isOperationalAlert(alerta) && String((alerta && alerta.estado) || '').trim() !== 'resuelta';
       });
     }
