@@ -3483,6 +3483,60 @@
         font-size: 0.78rem;
       }
 
+      .plan-multigroup-shared {
+        display: grid;
+        gap: 14px;
+        padding: 14px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.02);
+        margin-bottom: 14px;
+      }
+
+      .plan-multigroup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .plan-multigroup-title {
+        font-size: 1rem;
+        font-weight: 800;
+      }
+
+      .plan-multigroup-groups,
+      .plan-multigroup-switcher-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .plan-multigroup-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        font-size: 0.85rem;
+      }
+
+      .plan-multigroup-switcher {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .plan-multigroup-switch {
+        min-height: 38px;
+      }
+
+      .plan-multigroup-switch.is-active {
+        background: rgba(255, 199, 0, 0.16);
+        border-color: rgba(255, 199, 0, 0.36);
+      }
+
       #planGruposChecklist.checklist-groups {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         max-height: none;
@@ -3611,6 +3665,23 @@
         border-radius: 14px;
         background: rgba(255,255,255,0.03);
         min-width: 0;
+      }
+
+      @media (max-width: 720px) {
+        .plan-multigroup-header {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+
+        .plan-multigroup-shared {
+          padding: 12px;
+        }
+
+        .plan-multigroup-chip,
+        .plan-multigroup-switch {
+          width: 100%;
+          justify-content: center;
+        }
       }
 
       .plan-student-chip strong {
@@ -4922,12 +4993,14 @@
       notificaciones: [],
       openPlanId: '',
       openPlanDraft: null,
+      multiGroupSharedDrafts: {},
       ui: {
         planBuilderExpanded: false,
         planeacionesLoaded: false,
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
-        planeacionesMateriaFilter: ''
+        planeacionesMateriaFilter: '',
+        multiGroupActiveChildByLote: {}
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -5255,12 +5328,15 @@
       state.catalogos = createEmptyCatalogos();
       state.catalogosMeta = createEmptyCatalogosMeta();
       state.openPlanId = '';
+      state.openPlanDraft = null;
+      state.multiGroupSharedDrafts = {};
       if (state.ui) {
         state.ui.planBuilderExpanded = false;
         state.ui.planeacionesLoaded = false;
         state.ui.notificationEditorExpanded = false;
         state.ui.notificationFilter = 'activas';
         state.ui.planeacionesMateriaFilter = '';
+        state.ui.multiGroupActiveChildByLote = {};
       }
       state.notificationEditor = {
         notificacion_id: '',
@@ -9271,6 +9347,182 @@
       return Number(plan.actividades_count || 0);
     }
 
+    function getPlanLoteId(plan) {
+      return String((plan && plan.planeacion_lote_id) || '').trim();
+    }
+
+    function getPlaneacionEntryKey(plan) {
+      const loteId = getPlanLoteId(plan);
+      return loteId ? ('lote:' + loteId) : ('plan:' + String((plan && plan.planeacion_id) || '').trim());
+    }
+
+    function buildPlaneacionEntries(plans) {
+      const source = Array.isArray(plans) ? plans : [];
+      const entries = [];
+      const index = {};
+      source.forEach((plan) => {
+        const key = getPlaneacionEntryKey(plan);
+        if (!index[key]) {
+          index[key] = {
+            key,
+            loteId: getPlanLoteId(plan),
+            isMulti: !!getPlanLoteId(plan),
+            representative: plan,
+            plans: []
+          };
+          entries.push(index[key]);
+        }
+        index[key].plans.push(plan);
+      });
+      return entries.map((entry) => {
+        entry.isMulti = entry.plans.length > 1;
+        return entry;
+      });
+    }
+
+    function getVisiblePlaneacionEntries() {
+      return buildPlaneacionEntries(getVisiblePlaneaciones());
+    }
+
+    function getPlaneacionEntryByKey(entryKey) {
+      return buildPlaneacionEntries(state.planeaciones || []).find((entry) => entry.key === entryKey) || null;
+    }
+
+    function getOpenPlaneacionEntry(entry) {
+      if (!entry) return null;
+      const plans = Array.isArray(entry.plans) ? entry.plans : [];
+      if (!plans.length) return null;
+      const openPlanId = String(state.openPlanId || '').trim();
+      if (openPlanId) {
+        const matched = plans.find((plan) => String(plan.planeacion_id || '').trim() === openPlanId);
+        if (matched) return matched;
+      }
+      if (entry.isMulti && state.ui && state.ui.multiGroupActiveChildByLote) {
+        const preferredId = String(state.ui.multiGroupActiveChildByLote[entry.loteId] || '').trim();
+        if (preferredId) {
+          const preferred = plans.find((plan) => String(plan.planeacion_id || '').trim() === preferredId);
+          if (preferred) return preferred;
+        }
+      }
+      return plans[0];
+    }
+
+    function setMultiGroupActivePlan(loteId, planId) {
+      if (!loteId || !state.ui || !state.ui.multiGroupActiveChildByLote) return;
+      state.ui.multiGroupActiveChildByLote[loteId] = planId;
+    }
+
+    function isPlaneacionEntryOpen(entry) {
+      if (!entry) return false;
+      const openPlanId = String(state.openPlanId || '').trim();
+      if (!openPlanId) return false;
+      return (entry.plans || []).some((plan) => String(plan.planeacion_id || '').trim() === openPlanId);
+    }
+
+    function getPlaneacionEntryGroupLabels(entry) {
+      return (entry && entry.plans || []).map((plan) => {
+        const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
+        return grupo ? getGrupoDisplayName(grupo) : plan.grupo_id;
+      });
+    }
+
+    function getPlaneacionEntryAlumnoCount(entry) {
+      return (entry && entry.plans || []).reduce((sum, plan) => sum + getPlanAlumnoCount(plan), 0);
+    }
+
+    function getPlaneacionEntryActividadCount(entry) {
+      const plan = entry && entry.representative;
+      return getPlanActividadCount(plan);
+    }
+
+    function planEntryHasOpenMaterialAlert(entry) {
+      return !!((entry && entry.plans || []).some((plan) => planHasOpenMaterialAlert(plan.planeacion_id)));
+    }
+
+    function getLatestResolvedMaterialAlertForEntry(entry) {
+      const role = getCurrentRole();
+      if (role !== 'admin' && role !== 'directora') return null;
+      const alerts = (entry && entry.plans || [])
+        .map((plan) => getLatestResolvedMaterialAlertForPlan(plan.planeacion_id))
+        .filter(Boolean)
+        .sort((a, b) => {
+          const aDate = new Date(a.fecha_resolucion || a.fecha_actualizacion || a.fecha_creacion || 0).getTime();
+          const bDate = new Date(b.fecha_resolucion || b.fecha_actualizacion || b.fecha_creacion || 0).getTime();
+          return bDate - aDate;
+        });
+      return alerts[0] || null;
+    }
+
+    function buildMultiGroupSharedDraft(entry) {
+      const selectedPlan = getOpenPlaneacionEntry(entry) || (entry && entry.representative) || null;
+      if (!selectedPlan) return null;
+      const semana = getWeekById(selectedPlan.semana_id);
+      return {
+        entryKey: entry.key,
+        loteId: entry.loteId,
+        basePlanId: selectedPlan.planeacion_id,
+        fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
+        frase_semana: selectedPlan.frase_semana || '',
+        activities: (selectedPlan.actividades || []).length ? (selectedPlan.actividades || []).map((actividad) => ({
+          key: actividad.actividad_id || uid('ACTSHR'),
+          texto: actividad.texto || ''
+        })) : [{ key: uid('ACTSHR'), texto: '' }],
+        plans: (entry.plans || []).map((plan) => ({
+          planeacion_id: plan.planeacion_id,
+          last_known_updated_at: plan.fecha_actualizacion || '',
+          last_known_activities_version: plan.actividades_version_actual || ''
+        }))
+      };
+    }
+
+    function getMultiGroupSharedDraft(entry) {
+      if (!entry || !entry.isMulti) return null;
+      const existing = state.multiGroupSharedDrafts[entry.key];
+      const selectedPlan = getOpenPlaneacionEntry(entry);
+      if (!existing || !selectedPlan || existing.basePlanId !== selectedPlan.planeacion_id) {
+        state.multiGroupSharedDrafts[entry.key] = buildMultiGroupSharedDraft(entry);
+      }
+      return state.multiGroupSharedDrafts[entry.key] || null;
+    }
+
+    function updateMultiGroupSharedField(entryKey, field, value, rerender) {
+      const draft = state.multiGroupSharedDrafts[entryKey];
+      if (!draft) return;
+      draft[field] = value;
+      if (rerender) renderPlaneacionesList();
+    }
+
+    function updateMultiGroupSharedActivityField(entryKey, index, value) {
+      const draft = state.multiGroupSharedDrafts[entryKey];
+      if (!draft || !draft.activities[index]) return;
+      draft.activities[index].texto = value;
+    }
+
+    function addMultiGroupSharedActivity(entryKey) {
+      const draft = state.multiGroupSharedDrafts[entryKey];
+      if (!draft) return;
+      draft.activities.push({ key: uid('ACTSHR'), texto: '' });
+      renderPlaneacionesList();
+    }
+
+    function removeMultiGroupSharedActivity(entryKey, index) {
+      const draft = state.multiGroupSharedDrafts[entryKey];
+      if (!draft || draft.activities.length <= 1) return;
+      draft.activities.splice(index, 1);
+      renderPlaneacionesList();
+    }
+
+    async function switchMultiGroupPlan(planId) {
+      let plan = getPlanById(planId);
+      if (!plan) return;
+      plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
+      const loteId = getPlanLoteId(plan);
+      if (loteId) setMultiGroupActivePlan(loteId, planId);
+      state.openPlanId = planId;
+      state.openPlanDraft = buildOpenPlanDraft(plan);
+      renderPlaneacionesList();
+    }
+
     function upsertPlaneacionRow(row) {
       if (!row || !row.planeacion_id) return null;
       const idx = state.planeaciones.findIndex((plan) => plan.planeacion_id === row.planeacion_id);
@@ -9655,8 +9907,121 @@
       }
     }
 
-    function renderOpenPlanStructureEditor(plan, allowStructureEdit) {
+    function renderOpenPlanGroupSpecificEditor(plan) {
+      const draft = getOpenPlanDraft(plan);
+      if (!draft) return '';
+      const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
+      const selected = new Set(draft.alumnos_ids || []);
+      const showSeguimientoFields = String(plan.estado || '').trim() === 'activa';
+      const activitiesHtml = (draft.activities || []).map((activity, index) => (
+        '<div class="activity-editor">' +
+          '<div class="activity-editor-top">' +
+            '<strong>Actividad ' + (index + 1) + '</strong>' +
+          '</div>' +
+          '<div class="activity-inline-grid">' +
+            '<div><label>Material</label><select id="activity-material-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'material_en_carpeta\', this.value)">' +
+              '<option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
+              '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
+              '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
+            '</select></div>' +
+            (showSeguimientoFields
+              ? '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
+                  '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
+                  '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
+                '</select></div>' +
+                '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(activity.actividad_id) + '" type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>'
+              : '<div class="helper" style="grid-column: span 2;">La estructura se comparte arriba. Aquí solo ajustas material y seguimiento de este grupo.</div>') +
+          '</div>' +
+        '</div>'
+      )).join('');
+
+      return (
+        '<div class="plan-open-editor plan-open-editor-group">' +
+          '<div>' +
+            '<div class="card-head inline-head">' +
+              '<div><label>Alumnos del grupo</label><p class="subtle">Esta selección solo afecta al grupo actual.</p></div>' +
+              '<div class="actions compact">' +
+                '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
+                '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(false)">Limpiar</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="group-block plan-open-students">' +
+              (alumnosGrupo.map((alumno) => (
+                '<label class="check-item">' +
+                  '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
+                  '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong></span>' +
+                '</label>'
+              )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
+            '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="card-head inline-head">' +
+              '<div><label>Seguimiento del grupo</label><p class="subtle">Material, realizada y comentario se guardan por grupo.</p></div>' +
+            '</div>' +
+            '<div class="stack">' + activitiesHtml + '</div>' +
+          '</div>' +
+          '<div class="actions plan-open-save-actions">' +
+            '<button class="btn-primary" type="button" onclick="saveOpenPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Guardar grupo</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    function renderMultiGroupSharedEditor(entry) {
+      const draft = getMultiGroupSharedDraft(entry);
+      if (!draft) return '';
+      const selectedPlan = getOpenPlaneacionEntry(entry);
+      const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || ''));
+      const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
+      return (
+        '<div class="plan-multigroup-shared">' +
+          '<div class="plan-multigroup-header">' +
+            '<div>' +
+              '<div class="plan-multigroup-title">Planeación multigrupo</div>' +
+              '<div class="plan-multigroup-groups">' + getPlaneacionEntryGroupLabels(entry).map((label) => '<span class="plan-multigroup-chip">' + escapeHtml(label) + '</span>').join('') + '</div>' +
+            '</div>' +
+            '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
+          '</div>' +
+          '<div class="grid-3">' +
+            '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"></div>' +
+            '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
+            '<div><label>Materia</label><div class="inline-note">' + escapeHtml((state.catalogos.materias.find((item) => item.materia_id === (selectedPlan || {}).materia_id) || {}).nombre || (selectedPlan || {}).materia_id || '-') + '</div></div>' +
+          '</div>' +
+          '<div class="plan-inline-field">' +
+            '<label>Frase de la semana</label>' +
+            '<textarea onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'frase_semana\', this.value)">' + escapeHtml(draft.frase_semana || '') + '</textarea>' +
+          '</div>' +
+          '<div>' +
+            '<div class="card-head inline-head">' +
+              '<div><label>Estructura compartida</label><p class="subtle">Estas actividades se replican a todos los grupos del lote conservando su material y seguimiento.</p></div>' +
+              '<div class="actions compact">' +
+                '<button class="btn-accent" type="button" onclick="addMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\')">Agregar actividad</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="stack">' + (draft.activities || []).map((activity, index) => (
+              '<div class="activity-editor">' +
+                '<div class="activity-editor-top">' +
+                  '<strong>Actividad ' + (index + 1) + '</strong>' +
+                  '<div class="actions compact">' +
+                    '<button class="btn-ghost" type="button" onclick="removeMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ')">Quitar</button>' +
+                  '</div>' +
+                '</div>' +
+                '<label>Actividad</label>' +
+                '<textarea onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
+              '</div>'
+            )).join('') + '</div>' +
+          '</div>' +
+          '<div class="actions plan-open-save-actions">' +
+            '<button class="btn-primary" type="button" onclick="saveMultiGroupShared(this, \'' + escapeJsAttrValue(entry.key) + '\')">Guardar base multigrupo</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    function renderOpenPlanStructureEditor(plan, allowStructureEdit, options = {}) {
       if (!allowStructureEdit) return '';
+      if (options.groupSpecificOnly) return renderOpenPlanGroupSpecificEditor(plan);
       const draft = getOpenPlanDraft(plan);
       if (!draft) return '';
       const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
@@ -9736,11 +10101,13 @@
     function renderPlaneacionesList() {
       const host = $('planeacionesList');
       const role = state.session && state.session.usuario ? state.session.usuario.rol : '';
-      const visiblePlans = getVisiblePlaneaciones();
+      const visibleEntries = getVisiblePlaneacionEntries();
+      const visiblePlans = visibleEntries.flatMap((entry) => entry.plans || []);
       if (state.openPlanId && !visiblePlans.some((plan) => plan.planeacion_id === state.openPlanId)) {
         state.openPlanId = '';
+        state.openPlanDraft = null;
       }
-      if (!visiblePlans.length) {
+      if (!visibleEntries.length) {
         host.innerHTML = '<div class="empty">Todavía no hay planeaciones para los filtros actuales.</div>';
         return;
       }
@@ -9757,11 +10124,15 @@
         '</div>'
       );
 
-      host.innerHTML = desktopHeader + visiblePlans.map((plan) => {
+      host.innerHTML = desktopHeader + visibleEntries.map((entry) => {
+        const plan = getOpenPlaneacionEntry(entry) || entry.representative;
+        if (!plan) return '';
         const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
         const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
-        const groupLabel = grupo ? getGrupoDisplayName(grupo) : plan.grupo_id;
+        const groupLabel = entry.isMulti
+          ? getPlaneacionEntryGroupLabels(entry).join(' · ')
+          : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
         const materiaLabel = materia ? (materia.nombre || materia.materia_id) : plan.materia_id;
         const weekLabel = getWeekLabelForPlan(plan, semana);
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
@@ -9775,14 +10146,14 @@
         const allowClose = hasAdminPower
           ? ['activa', 'cierre_pendiente'].includes(plan.estado)
           : plan.estado === 'activa';
-        const isOpen = state.openPlanId === plan.planeacion_id;
-        const hasMaterialAlert = planHasOpenMaterialAlert(plan.planeacion_id);
-        const latestResolvedMaterialAlert = hasAdminPower ? getLatestResolvedMaterialAlertForPlan(plan.planeacion_id) : null;
+        const isOpen = isPlaneacionEntryOpen(entry);
+        const hasMaterialAlert = entry.isMulti ? planEntryHasOpenMaterialAlert(entry) : planHasOpenMaterialAlert(plan.planeacion_id);
+        const latestResolvedMaterialAlert = entry.isMulti ? getLatestResolvedMaterialAlertForEntry(entry) : (hasAdminPower ? getLatestResolvedMaterialAlertForPlan(plan.planeacion_id) : null);
         const materialHistoryHtml = latestResolvedMaterialAlert
           ? '<div class="plan-alert-history">Historico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</div>'
           : '';
-        const alumnosCount = getPlanAlumnoCount(plan);
-        const actividadesCount = getPlanActividadCount(plan);
+        const alumnosCount = entry.isMulti ? getPlaneacionEntryAlumnoCount(entry) : getPlanAlumnoCount(plan);
+        const actividadesCount = entry.isMulti ? getPlaneacionEntryActividadCount(entry) : getPlanActividadCount(plan);
         const phraseText = String(plan.frase_semana || '-');
         const phraseNeedsTooltip = phraseText.length > 42;
         const phraseCompactClass = phraseNeedsTooltip
@@ -9796,6 +10167,7 @@
               '<div class="plan-compact-summary-meta">' +
                 (hasMaterialAlert ? '<span class="plan-alert-chip">Material pendiente</span>' : '') +
                 (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">Histórico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
+                (entry.isMulti ? '<span class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</span>' : '') +
               '</div>'
             )
           : '');
@@ -9877,7 +10249,7 @@
                 '</div>' +
                 '<div class="meta-grid">' +
                   '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</div>' +
+                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
                 '</div>' +
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
                 materialHistoryHtml +
@@ -9894,6 +10266,7 @@
                   '<div class="plan-compact-cell">' +
                     '<span class="plan-compact-label">Grupo</span>' +
                     '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(groupLabel) + '</span>' +
+                    (entry.isMulti ? '<span class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos</span>' : '') +
                   '</div>' +
                   '<div class="plan-compact-cell">' +
                     '<span class="plan-compact-label">Materia</span>' +
@@ -9934,7 +10307,7 @@
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
               '<div class="empty">Cargando detalle de la planeación...</div>' +
             '</article>'
@@ -9953,7 +10326,7 @@
             '</div>' +
             '<div class="meta-grid">' +
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + '</div>' +
+              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
             '</div>' +
             (hasMaterialAlert
               ? (
@@ -9966,15 +10339,31 @@
                 )
               : '') +
             materialHistoryHtml +
+            (entry.isMulti && allowStructureEdit ? renderMultiGroupSharedEditor(entry) : '') +
+            (entry.isMulti
+              ? (
+                  '<div class="plan-multigroup-switcher">' +
+                    '<div class="mini">Grupo activo para seguimiento y observaciones</div>' +
+                    '<div class="plan-multigroup-switcher-list">' +
+                      (entry.plans || []).map((groupPlan) => {
+                        const groupRow = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
+                        const groupText = groupRow ? getGrupoDisplayName(groupRow) : groupPlan.grupo_id;
+                        const activeClass = groupPlan.planeacion_id === plan.planeacion_id ? ' is-active' : '';
+                        return '<button class="btn-ghost plan-multigroup-switch' + activeClass + '" type="button" onclick="switchMultiGroupPlan(\'' + escapeJsAttrValue(groupPlan.planeacion_id) + '\')">' + escapeHtml(groupText) + '</button>';
+                      }).join('') +
+                    '</div>' +
+                  '</div>'
+                )
+              : '') +
             (allowStructureEdit
-              ? renderOpenPlanStructureEditor(plan, allowStructureEdit)
+              ? renderOpenPlanStructureEditor(plan, allowStructureEdit, { groupSpecificOnly: entry.isMulti })
               : ('<div class="plan-student-chip-cloud">' + alumnosRows.map((alumnoRow) => {
                     const alumnoDisplay = getAlumnoDisplaySnapshot(alumnoRow);
                     return '<div class="plan-student-chip"><strong>' + escapeHtml(alumnoDisplay.nombre) + '</strong></div>';
                   }).join('') + '</div>' +
                 '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>')) +
             '<div class="stack">' +
-              '<div><strong>Observaciones generales</strong></div>' +
+              '<div><strong>Observaciones generales' + (entry.isMulti ? ' · grupo activo' : '') + '</strong></div>' +
               obsGeneralesHtml +
               '<div class="actions compact">' +
                 '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
@@ -9982,7 +10371,7 @@
               '</div>' +
             '</div>' +
             '<div class="stack">' +
-              '<div><strong>Observación final por alumno</strong></div>' +
+              '<div><strong>Observación final por alumno' + (entry.isMulti ? ' · grupo activo' : '') + '</strong></div>' +
               obsAlumnoHtml +
               '<div class="actions obs-final-actions">' +
                 (allowAlumnoObs
@@ -10956,6 +11345,46 @@
       });
     }
 
+    async function saveMultiGroupShared(button, entryKey) {
+      const entry = getPlaneacionEntryByKey(entryKey);
+      if (!entry || !entry.isMulti) throw new Error('Planeación multigrupo no encontrada.');
+      const draft = getMultiGroupSharedDraft(entry);
+      if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
+      const selectedPlan = getOpenPlaneacionEntry(entry);
+      const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
+      const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
+      if (!semana) throw new Error('Selecciona una fecha válida para el multigrupo.');
+      const activities = (draft.activities || [])
+        .map((activity) => ({ texto: String((activity && activity.texto) || '').trim() }))
+        .filter((activity) => activity.texto);
+      if (!activities.length) throw new Error('Captura al menos una actividad compartida.');
+      await handleAction('guardarPlaneacionMultigrupo', async () => {
+        await api('guardarPlaneacionMultigrupo', {
+          planeacion_lote_id: draft.loteId,
+          planeacion_base_id: (selectedPlan && selectedPlan.planeacion_id) || draft.basePlanId,
+          fecha_planeacion: draft.fecha_planeacion || fallbackDate,
+          semana_id: semana.draft ? '' : semana.semana_id,
+          frase_semana: String(draft.frase_semana || '').trim(),
+          actividades: activities,
+          planes: (entry.plans || []).map((plan) => ({
+            planeacion_id: plan.planeacion_id,
+            last_known_updated_at: plan.fecha_actualizacion || '',
+            last_known_activities_version: plan.actividades_version_actual || ''
+          })),
+          request_id: uid('PLMG')
+        });
+        state.multiGroupSharedDrafts[entryKey] = null;
+        state.openPlanDraft = null;
+        await Promise.all([refreshPlaneaciones(), refreshAlertas()]);
+        renderAll();
+        setBanner('Base multigrupo actualizada.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarPlaneacionMultigrupo', [entryKey, draft.fecha_planeacion || fallbackDate, activities.map((activity) => activity.texto).join('|')]),
+        busyText: 'Guardando lote...'
+      });
+    }
+
     async function markPlanMaterialReady(button, planId) {
       if (!window.confirm('Esto marcará como listo el material pendiente de esta planeación.')) return;
       const plan = getPlanById(planId);
@@ -11277,6 +11706,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.resubmitPlan = resubmitPlan;
     window.confirmClosePlan = confirmClosePlan;
     window.saveOpenPlan = saveOpenPlan;
+    window.saveMultiGroupShared = saveMultiGroupShared;
     window.markPlanMaterialReady = markPlanMaterialReady;
     window.saveGeneralObservation = saveGeneralObservation;
     window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
@@ -11334,6 +11764,11 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.removeOpenPlanDraftActivity = removeOpenPlanDraftActivity;
     window.moveOpenPlanDraftActivity = moveOpenPlanDraftActivity;
     window.toggleAllOpenPlanDraftAlumnos = toggleAllOpenPlanDraftAlumnos;
+    window.updateMultiGroupSharedField = updateMultiGroupSharedField;
+    window.updateMultiGroupSharedActivityField = updateMultiGroupSharedActivityField;
+    window.addMultiGroupSharedActivity = addMultiGroupSharedActivity;
+    window.removeMultiGroupSharedActivity = removeMultiGroupSharedActivity;
+    window.switchMultiGroupPlan = switchMultiGroupPlan;
     window.updateEditorActivityField = updateEditorActivityField;
     window.moveEditorActivity = moveEditorActivity;
     window.removeEditorActivity = removeEditorActivity;
