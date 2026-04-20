@@ -10307,7 +10307,7 @@
                 '<div class="mini">' + escapeHtml(formatFechaHumana(obs.fecha || obs.fecha_creacion || '')) + '</div>' +
               '</div>'
             )).join('') + '</div>'
-          : '<div class="mini">Todavía no hay observaciones generales.</div>';
+          : '';
         const obsAlumnoHtml = alumnosRows.length
           ? '<div class="obs-grid">' + alumnosRows.map((alumnoRow) => {
               const alumnoKey = entry.isMulti
@@ -10469,11 +10469,11 @@
                   }).join('') + '</div>' +
                 '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>')) +
             '<div class="stack">' +
-              '<div><strong>Observaciones generales' + (entry.isMulti ? ' · grupo activo' : '') + '</strong></div>' +
+              '<div><strong>Observaciones generales</strong></div>' +
               obsGeneralesHtml +
               '<div class="actions compact">' +
                 '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
-                (allowGeneralObs ? '<span class="mini">Se guardará al pulsar Guardar cambios.</span>' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
+                (allowGeneralObs ? '' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="stack">' +
