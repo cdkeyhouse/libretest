@@ -9985,9 +9985,6 @@
             '</div>' +
             '<div class="stack">' + activitiesHtml + '</div>' +
           '</div>' +
-          '<div class="actions plan-open-save-actions">' +
-            '<button class="btn-primary" type="button" onclick="saveOpenPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Guardar grupo</button>' +
-          '</div>' +
         '</div>'
       );
     }
@@ -10035,9 +10032,6 @@
                 '<textarea onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
               '</div>'
             )).join('') + '</div>' +
-          '</div>' +
-          '<div class="actions plan-open-save-actions">' +
-            '<button class="btn-primary" type="button" onclick="saveMultiGroupShared(this, \'' + escapeJsAttrValue(entry.key) + '\')">Guardar base multigrupo</button>' +
           '</div>' +
         '</div>'
       );
@@ -10114,9 +10108,6 @@
               '<button class="btn-accent" type="button" onclick="addOpenPlanDraftActivity()">Agregar actividad</button>' +
             '</div>' +
             '<div class="stack">' + activitiesHtml + '</div>' +
-          '</div>' +
-          '<div class="actions plan-open-save-actions">' +
-          '<button class="btn-primary" type="button" onclick="saveOpenPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Guardar cambios</button>' +
           '</div>' +
         '</div>'
       );
@@ -10391,7 +10382,7 @@
               obsGeneralesHtml +
               '<div class="actions compact">' +
                 '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
-                (allowGeneralObs ? '<button class="btn-ghost" type="button" onclick="saveGeneralObservation(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Agregar observación general</button>' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
+                (allowGeneralObs ? '<span class="mini">Se guardará al pulsar Guardar cambios.</span>' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="stack">' +
@@ -10399,11 +10390,14 @@
               obsAlumnoHtml +
               '<div class="actions obs-final-actions">' +
                 (allowAlumnoObs
-                  ? '<button class="btn-ghost" type="button" onclick="saveAllAlumnoFinalObservations(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Guardar observaciones finales</button>'
+                  ? '<span class="mini">Se guardarán al pulsar Guardar cambios.</span>'
                   : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
+              ((allowStructureEdit || allowGeneralObs || allowAlumnoObs)
+                ? '<button class="btn-primary" type="button" onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">Guardar cambios</button>'
+                : '') +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
               buttons.join('') +
             '</div>' +
@@ -11221,11 +11215,7 @@
       const texto = input ? input.value.trim() : '';
       if (!texto) throw new Error('Escribe la observación general.');
       await handleAction('crearObsSemana', async () => {
-        await api('crearObsSemana', {
-          planeacion_id: planId,
-          texto,
-          request_id: uid('OSG')
-        });
+        await persistGeneralObservation(planId, texto);
         if (input) input.value = '';
         await refreshPlaneaciones();
         renderAll();
@@ -11238,12 +11228,7 @@
       const nota = input ? input.value.trim() : '';
       if (!nota) throw new Error('Escribe la observación final del alumno.');
       await handleAction('guardarObsAlumnoFinal', async () => {
-        await api('guardarObsAlumnoFinal', {
-          planeacion_id: planId,
-          alumno_id: alumnoId,
-          nota,
-          request_id: uid('OAF')
-        });
+        await persistAlumnoFinalObservation(planId, alumnoId, nota);
         await refreshPlaneaciones();
         renderAll();
         setBanner('Observación final por alumno guardada.', 'success');
@@ -11259,24 +11244,11 @@
     async function saveAllAlumnoFinalObservations(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
-      const alumnosRows = Array.isArray(plan.alumnos) ? plan.alumnos : [];
-      const payloads = alumnosRows.map((alumnoRow) => {
-        const alumnoId = alumnoRow.alumno_id;
-        const input = $('obs-final-' + planId + '-' + alumnoId);
-        const nota = input ? input.value.trim() : '';
-        return { alumnoId, nota };
-      }).filter((row) => row.nota);
+      const payloads = collectPendingAlumnoFinalObservations(planId, plan);
       if (!payloads.length) throw new Error('Escribe al menos una observación final.');
 
       await handleAction('guardarObsAlumnoFinalLote', async () => {
-        for (const row of payloads) {
-          await api('guardarObsAlumnoFinal', {
-            planeacion_id: planId,
-            alumno_id: row.alumnoId,
-            nota: row.nota,
-            request_id: uid('OAFL')
-          });
-        }
+        await persistAlumnoFinalObservationBatch(planId, payloads);
         await refreshPlaneaciones();
         renderAll();
         payloads.forEach((row) => {
@@ -11335,19 +11307,7 @@
       const actionLabel = options.actionLabel || 'guardarPlaneacionCompletaInline';
       const actionKey = options.actionKey || buildActionKey(actionLabel, [planId, request.fallbackDate, request.alumnosIds.join(',')]);
       await handleAction(actionLabel, async () => {
-        await api('guardarPlaneacionCompleta', {
-          planeacion_id: planId,
-          fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
-          semana_id: request.semana.draft ? '' : request.semana.semana_id,
-          grupo_id: plan.grupo_id,
-          materia_id: plan.materia_id,
-          frase_semana: String(draft.frase_semana || '').trim(),
-          alumnos_ids: request.alumnosIds,
-          actividades: request.actividades,
-          last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
-          last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
-          request_id: uid('PLAOPEN')
-        });
+        await persistOpenPlanDraftApi(planId, draft, plan, request);
         state.openPlanId = planId;
         state.openPlanDraft = null;
         await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
@@ -11373,30 +11333,8 @@
       const entry = getPlaneacionEntryByKey(entryKey);
       if (!entry || !entry.isMulti) throw new Error('Planeación multigrupo no encontrada.');
       const draft = getMultiGroupSharedDraft(entry);
-      if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
-      const selectedPlan = getOpenPlaneacionEntry(entry);
-      const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
-      const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha válida para el multigrupo.');
-      const activities = (draft.activities || [])
-        .map((activity) => ({ texto: String((activity && activity.texto) || '').trim() }))
-        .filter((activity) => activity.texto);
-      if (!activities.length) throw new Error('Captura al menos una actividad compartida.');
       await handleAction('guardarPlaneacionMultigrupo', async () => {
-        await api('guardarPlaneacionMultigrupo', {
-          planeacion_lote_id: draft.loteId,
-          planeacion_base_id: (selectedPlan && selectedPlan.planeacion_id) || draft.basePlanId,
-          fecha_planeacion: draft.fecha_planeacion || fallbackDate,
-          semana_id: semana.draft ? '' : semana.semana_id,
-          frase_semana: String(draft.frase_semana || '').trim(),
-          actividades: activities,
-          planes: (entry.plans || []).map((plan) => ({
-            planeacion_id: plan.planeacion_id,
-            last_known_updated_at: plan.fecha_actualizacion || '',
-            last_known_activities_version: plan.actividades_version_actual || ''
-          })),
-          request_id: uid('PLMG')
-        });
+        await persistMultiGroupSharedApi(entry, draft);
         state.multiGroupSharedDrafts[entryKey] = null;
         state.openPlanDraft = null;
         await Promise.all([refreshPlaneaciones(), refreshAlertas()]);
@@ -11404,8 +11342,167 @@
         setBanner('Base multigrupo actualizada.', 'success');
       }, {
         button,
-        key: buildActionKey('guardarPlaneacionMultigrupo', [entryKey, draft.fecha_planeacion || fallbackDate, activities.map((activity) => activity.texto).join('|')]),
+        key: buildActionKey('guardarPlaneacionMultigrupo', [entryKey, String((draft && draft.fecha_planeacion) || ''), ((draft && draft.activities) || []).map((activity) => String((activity && activity.texto) || '').trim()).join('|')]),
         busyText: 'Guardando lote...'
+      });
+    }
+
+    function getPendingGeneralObservationText(planId) {
+      const input = $('obs-general-' + planId);
+      return input ? input.value.trim() : '';
+    }
+
+    function collectPendingAlumnoFinalObservations(planId, plan) {
+      const targetPlan = plan || getPlanById(planId);
+      if (!targetPlan) return [];
+      const alumnosRows = Array.isArray(targetPlan.alumnos) ? targetPlan.alumnos : [];
+      return alumnosRows.map((alumnoRow) => {
+        const alumnoId = alumnoRow.alumno_id;
+        const input = $('obs-final-' + planId + '-' + alumnoId);
+        const nota = input ? input.value.trim() : '';
+        return { alumnoId, nota };
+      }).filter((row) => row.nota);
+    }
+
+    async function persistGeneralObservation(planId, texto) {
+      await api('crearObsSemana', {
+        planeacion_id: planId,
+        texto,
+        request_id: uid('OSG')
+      });
+    }
+
+    async function persistAlumnoFinalObservation(planId, alumnoId, nota) {
+      await api('guardarObsAlumnoFinal', {
+        planeacion_id: planId,
+        alumno_id: alumnoId,
+        nota,
+        request_id: uid('OAF')
+      });
+    }
+
+    async function persistAlumnoFinalObservationBatch(planId, payloads) {
+      for (const row of payloads) {
+        await api('guardarObsAlumnoFinal', {
+          planeacion_id: planId,
+          alumno_id: row.alumnoId,
+          nota: row.nota,
+          request_id: uid('OAFL')
+        });
+      }
+    }
+
+    async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
+      const plan = providedPlan || getPlanById(planId);
+      if (!plan || !draft) throw new Error('Planeación no encontrada.');
+      const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
+      await api('guardarPlaneacionCompleta', {
+        planeacion_id: planId,
+        fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
+        semana_id: request.semana.draft ? '' : request.semana.semana_id,
+        grupo_id: plan.grupo_id,
+        materia_id: plan.materia_id,
+        frase_semana: String(draft.frase_semana || '').trim(),
+        alumnos_ids: request.alumnosIds,
+        actividades: request.actividades,
+        last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
+        last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
+        request_id: uid('PLAOPEN')
+      });
+    }
+
+    function buildMultiGroupSharedSavePayload(entry, draft) {
+      if (!entry || !entry.isMulti) throw new Error('Planeación multigrupo no encontrada.');
+      if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
+      const selectedPlan = getOpenPlaneacionEntry(entry) || entry.representative || null;
+      const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
+      const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
+      if (!semana) throw new Error('Selecciona una fecha válida para el multigrupo.');
+      const activities = (draft.activities || [])
+        .map((activity) => ({ texto: String((activity && activity.texto) || '').trim() }))
+        .filter((activity) => activity.texto);
+      if (!activities.length) throw new Error('Captura al menos una actividad compartida.');
+      return {
+        planeacion_lote_id: draft.loteId,
+        planeacion_base_id: (selectedPlan && selectedPlan.planeacion_id) || draft.basePlanId,
+        fecha_planeacion: draft.fecha_planeacion || fallbackDate,
+        semana_id: semana.draft ? '' : semana.semana_id,
+        frase_semana: String(draft.frase_semana || '').trim(),
+        actividades: activities,
+        planes: (entry.plans || []).map((plan) => ({
+          planeacion_id: plan.planeacion_id,
+          last_known_updated_at: plan.fecha_actualizacion || '',
+          last_known_activities_version: plan.actividades_version_actual || ''
+        })),
+        request_id: uid('PLMG')
+      };
+    }
+
+    async function persistMultiGroupSharedApi(entry, draft) {
+      const payload = buildMultiGroupSharedSavePayload(entry, draft);
+      await api('guardarPlaneacionMultigrupo', payload);
+    }
+
+    async function savePlanChanges(button, planId, entryKey) {
+      const plan = getPlanById(planId);
+      if (!plan) throw new Error('Planeación no encontrada.');
+      const entry = entryKey ? getPlaneacionEntryByKey(entryKey) : null;
+      const planCard = $('plan-card-' + planId);
+      const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
+      const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
+      const generalText = getPendingGeneralObservationText(planId);
+      const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan);
+      const currentDraft = hasPlanEditor ? getOpenPlanDraft(plan) : null;
+      const planDraft = currentDraft ? JSON.parse(JSON.stringify(currentDraft)) : null;
+      const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
+      const shouldSavePlan = !!planDraft;
+      const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
+      if (!generalText && !finalPayloads.length && !shouldSavePlan && !shouldSaveShared) {
+        throw new Error('No hay cambios para guardar.');
+      }
+
+      await handleAction('guardarCambiosPlaneacion', async () => {
+        const savedParts = [];
+        if (generalText) {
+          await persistGeneralObservation(planId, generalText);
+          const generalInput = $('obs-general-' + planId);
+          if (generalInput) generalInput.value = '';
+          savedParts.push('observación general');
+        }
+        if (finalPayloads.length) {
+          await persistAlumnoFinalObservationBatch(planId, finalPayloads);
+          savedParts.push('observaciones finales');
+        }
+        if (shouldSavePlan) {
+          await persistOpenPlanDraftApi(planId, planDraft, plan);
+          state.openPlanId = planId;
+          state.openPlanDraft = null;
+          savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
+        }
+        if (shouldSavePlan && shouldSaveShared) {
+          await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
+        }
+        if (shouldSaveShared) {
+          const freshEntry = getPlaneacionEntryByKey(entryKey) || entry;
+          await persistMultiGroupSharedApi(freshEntry, sharedDraft);
+          state.multiGroupSharedDrafts[entryKey] = null;
+          state.openPlanDraft = null;
+          savedParts.push('base multigrupo');
+        }
+        await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
+        renderAll();
+        finalPayloads.forEach((row) => {
+          const input = $('obs-final-' + planId + '-' + row.alumnoId);
+          if (input) autoGrowObsFinal(input);
+        });
+        const successText = savedParts.length > 1
+          ? 'Cambios guardados.'
+          : ((savedParts[0] || 'Cambios') + ' guardados.');
+        setBanner(successText, 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarCambiosPlaneacion', [planId, entryKey || '', generalText.slice(0, 40), finalPayloads.map((row) => row.alumnoId).join(','), shouldSavePlan ? 'plan' : '', shouldSaveShared ? 'multi' : '']),
+        busyText: 'Guardando cambios...'
       });
     }
 
@@ -11795,6 +11892,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.removeOpenPlanDraftActivity = removeOpenPlanDraftActivity;
     window.moveOpenPlanDraftActivity = moveOpenPlanDraftActivity;
     window.toggleAllOpenPlanDraftAlumnos = toggleAllOpenPlanDraftAlumnos;
+    window.savePlanChanges = savePlanChanges;
     window.updateMultiGroupSharedField = updateMultiGroupSharedField;
     window.updateMultiGroupSharedActivityField = updateMultiGroupSharedActivityField;
     window.addMultiGroupSharedActivity = addMultiGroupSharedActivity;
