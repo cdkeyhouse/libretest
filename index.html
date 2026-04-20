@@ -9578,6 +9578,20 @@
       return merged;
     }
 
+    async function ensurePlaneacionEntryDetailsLoaded(entry, options = {}) {
+      if (!entry || !entry.isMulti) return entry;
+      const missingPlanIds = (entry.plans || [])
+        .filter((plan) => !plan.detail_loaded)
+        .map((plan) => plan.planeacion_id);
+      if (!missingPlanIds.length) return entry;
+      for (const siblingPlanId of missingPlanIds) {
+        await ensurePlaneacionDetailLoaded(siblingPlanId, { silent: true });
+      }
+      const refreshedEntry = getPlaneacionEntryByKey(entry.key) || entry;
+      if (!options.silent) renderPlaneacionesList();
+      return refreshedEntry;
+    }
+
     function renderPlanWeekResolved() {
       const host = $('planSemanaResolved');
       const fallbackDate = state.planEditor.mode === 'edit'
@@ -9912,6 +9926,10 @@
       }
       await handleAction('togglePlanOpen', async () => {
         const plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
+        const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
+        if (entry && entry.isMulti) {
+          await ensurePlaneacionEntryDetailsLoaded(entry, { silent: true });
+        }
         state.openPlanId = planId;
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
         closePlanBuilder();
@@ -9934,8 +9952,8 @@
     function renderOpenPlanGroupSpecificEditor(plan) {
       const draft = getOpenPlanDraft(plan);
       if (!draft) return '';
-      const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
-      const selected = new Set(draft.alumnos_ids || []);
+      const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
+      const isMulti = !!(entry && entry.isMulti);
       const showSeguimientoFields = String(plan.estado || '').trim() === 'activa';
       const activitiesHtml = (draft.activities || []).map((activity, index) => (
         '<div class="activity-editor">' +
@@ -9960,24 +9978,55 @@
         '</div>'
       )).join('');
 
+      const allStudentBlocks = (() => {
+        const plansToRender = isMulti ? (entry.plans || []) : [plan];
+        return plansToRender.map((groupPlan) => {
+          const isActiveGroup = groupPlan.planeacion_id === plan.planeacion_id;
+          const groupDraft = isActiveGroup ? draft : null;
+          const selectedIds = new Set(
+            isActiveGroup
+              ? (groupDraft && groupDraft.alumnos_ids || [])
+              : ((Array.isArray(groupPlan.alumnos) ? groupPlan.alumnos : []).map((row) => row.alumno_id))
+          );
+          const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === groupPlan.grupo_id);
+          const grupo = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
+          const grupoLabel = grupo ? getGrupoDisplayName(grupo) : groupPlan.grupo_id;
+          const helperText = isMulti
+            ? (isActiveGroup
+                ? 'Este grupo está activo y sí se puede editar aquí.'
+                : 'Visible como referencia. Para editar este grupo, selecciónalo arriba.')
+            : 'Selecciona en un solo lugar a quiénes aplica esta planeación.';
+          return (
+            '<div class="group-block">' +
+              '<div class="group-block-head">' +
+                '<div><strong>' + escapeHtml(grupoLabel) + '</strong><div class="subtle">' + escapeHtml(helperText) + '</div></div>' +
+                (isActiveGroup
+                  ? '<div class="actions compact">' +
+                      '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
+                      '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(false)">Limpiar</button>' +
+                    '</div>'
+                  : '') +
+              '</div>' +
+              '<div class="group-block plan-open-students">' +
+                (alumnosGrupo.map((alumno) => (
+                  '<label class="check-item">' +
+                    '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selectedIds.has(alumno.alumno_id) ? ' checked' : '') + (isActiveGroup ? '' : ' disabled') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
+                    '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong></span>' +
+                  '</label>'
+                )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
+              '</div>' +
+            '</div>'
+          );
+        }).join('');
+      })();
+
       return (
         '<div class="plan-open-editor plan-open-editor-group">' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<div><label>Alumnos del grupo</label><p class="subtle">Esta selección solo afecta al grupo actual.</p></div>' +
-              '<div class="actions compact">' +
-                '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
-                '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(false)">Limpiar</button>' +
-              '</div>' +
+              '<div><label>' + (isMulti ? 'Alumnos de grupos vinculados' : 'Alumnos del grupo') + '</label><p class="subtle">' + (isMulti ? 'Todos los grupos quedan visibles. La edición sigue aplicando solo al grupo activo.' : 'Esta selección solo afecta al grupo actual.') + '</p></div>' +
             '</div>' +
-            '<div class="group-block plan-open-students">' +
-              (alumnosGrupo.map((alumno) => (
-                '<label class="check-item">' +
-                  '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
-                  '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong></span>' +
-                '</label>'
-              )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
-            '</div>' +
+            '<div class="stack">' + allStudentBlocks + '</div>' +
           '</div>' +
           '<div>' +
             '<div class="card-head inline-head">' +
