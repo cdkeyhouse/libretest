@@ -3476,7 +3476,7 @@
       }
 
       #planGruposChecklist.checklist-groups {
-        grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         max-height: none;
         padding: 8px;
         gap: 8px;
@@ -3493,8 +3493,9 @@
       #planGruposChecklist.checklist-groups .check-item span,
       #planAlumnosChecklist .check-item span,
       .plan-open-students .check-item span {
-        display: inline;
+        display: block;
         min-width: 0;
+        overflow: hidden;
       }
 
       #planGruposChecklist.checklist-groups .check-item br,
@@ -3509,6 +3510,15 @@
         display: inline;
         margin-left: 8px;
         color: var(--text-dim);
+      }
+
+      #planGruposChecklist.checklist-groups .check-item strong,
+      #planAlumnosChecklist .check-item strong,
+      .plan-open-students .check-item strong {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       #planAlumnosChecklist .group-block,
@@ -3529,16 +3539,20 @@
 
       #planAlumnosChecklist .checklist,
       .plan-open-students {
-        max-height: 168px;
+        max-height: none;
+        overflow: visible;
         padding: 8px 10px;
-        gap: 6px;
+        gap: 8px 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
 
       #planAlumnosChecklist .check-item,
       .plan-open-students .check-item {
         align-items: center;
-        padding: 4px 0;
+        padding: 6px 8px;
         min-height: 0;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.03);
       }
 
       #planAlumnosChecklist .actions.compact,
@@ -6311,10 +6325,15 @@
       return [String(nombres || '').trim(), firstSurname].filter(Boolean).join(' ').trim() || String(fullName || '').trim();
     }
 
+    function getGrupoDisplayName(group) {
+      if (!group) return '';
+      return String(group.nombre_grupo || group.grupo_id || '').trim() || String(group.grupo_id || '').trim();
+    }
+
     function getGrupoNombre(grupoId) {
       if (!grupoId) return 'Sin grupo';
       const row = (state.catalogos.grupos || []).find((item) => String(item.grupo_id || '').trim() === String(grupoId || '').trim());
-      return row ? (row.nombre_grupo || row.grupo_id) : grupoId;
+      return row ? getGrupoDisplayName(row) : grupoId;
     }
 
     function getAlumnoStatusVisual(row) {
@@ -6833,7 +6852,7 @@
       if ($('adminAlumnoApellidos')) $('adminAlumnoApellidos').value = state.alumnosUi.editor.apellidos || '';
       if ($('adminAlumnoStatus')) $('adminAlumnoStatus').value = state.alumnosUi.editor.estatus || 'activo';
       if ($('adminAlumnoNotas')) $('adminAlumnoNotas').value = state.alumnosUi.editor.notas_internas || '';
-      fillSelect($('adminAlumnoGrupo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => row.nombre_grupo || row.grupo_id, 'Selecciona grupo');
+      fillSelect($('adminAlumnoGrupo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Selecciona grupo');
       if ($('adminAlumnoGrupo')) $('adminAlumnoGrupo').value = state.alumnosUi.editor.grupo_id || '';
     }
 
@@ -6846,7 +6865,7 @@
       if ($('adminAlumnoCambioMatricula')) $('adminAlumnoCambioMatricula').textContent = alumno ? (alumno.matricula || alumno.alumno_id) : '-';
       if ($('adminAlumnoCambioNombre')) $('adminAlumnoCambioNombre').textContent = alumno ? (alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) : '-';
       if ($('adminAlumnoCambioGrupoActual')) $('adminAlumnoCambioGrupoActual').textContent = alumno ? getGrupoNombre(alumno.grupo_id) : '-';
-      fillSelect($('adminAlumnoCambioGrupoNuevo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => row.nombre_grupo || row.grupo_id, 'Selecciona grupo');
+      fillSelect($('adminAlumnoCambioGrupoNuevo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Selecciona grupo');
       if ($('adminAlumnoCambioGrupoNuevo')) $('adminAlumnoCambioGrupoNuevo').value = state.alumnosUi.cambioGrupo.nuevo_grupo_id || '';
       if ($('adminAlumnoCambioMotivo')) $('adminAlumnoCambioMotivo').value = state.alumnosUi.cambioGrupo.motivo || '';
     }
@@ -7091,7 +7110,7 @@
       syncAdminAlumnosModule();
       const filter = String(state.alumnosUi.filter || 'activos').trim();
       if ($('adminAlumnosSearch')) $('adminAlumnosSearch').value = state.alumnosUi.search || '';
-      fillSelect($('adminAlumnosGroupFilter'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => row.nombre_grupo || row.grupo_id, 'Todos los grupos');
+      fillSelect($('adminAlumnosGroupFilter'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Todos los grupos');
       if ($('adminAlumnosGroupFilter')) $('adminAlumnosGroupFilter').value = state.alumnosUi.grupo || '';
       if ($('adminAlumnosFilterAllBtn')) $('adminAlumnosFilterAllBtn').classList.toggle('is-active', filter === 'todos');
       if ($('adminAlumnosFilterActiveBtn')) $('adminAlumnosFilterActiveBtn').classList.toggle('is-active', filter === 'activos');
@@ -7539,7 +7558,7 @@
       renderFacilitadorDetailPanel();
       renderFacilitadorEditorPanel();
       if (state.facilitadoresUi.asignacionOpen) {
-        fillSelect($('adminFacilitadorAsignacionGrupo'), state.catalogos.grupos || [], (item) => item.grupo_id, (item) => item.nombre_grupo || item.grupo_id, 'Selecciona grupo');
+        fillSelect($('adminFacilitadorAsignacionGrupo'), state.catalogos.grupos || [], (item) => item.grupo_id, (item) => getGrupoDisplayName(item), 'Selecciona grupo');
         fillSelect($('adminFacilitadorAsignacionMateria'), state.catalogos.materias || [], (item) => item.materia_id, (item) => item.nombre || item.materia_id, 'Selecciona materia');
         if ($('adminFacilitadorAsignacionGrupo')) $('adminFacilitadorAsignacionGrupo').value = state.facilitadoresUi.asignacion.grupo_id || '';
         if ($('adminFacilitadorAsignacionMateria')) $('adminFacilitadorAsignacionMateria').value = state.facilitadoresUi.asignacion.materia_id || '';
@@ -8007,7 +8026,7 @@
         fecha_fin: ''
       };
       renderAdminFacilitadoresModule();
-      fillSelect($('adminFacilitadorAsignacionGrupo'), state.catalogos.grupos || [], (item) => item.grupo_id, (item) => item.nombre_grupo || item.grupo_id, 'Selecciona grupo');
+      fillSelect($('adminFacilitadorAsignacionGrupo'), state.catalogos.grupos || [], (item) => item.grupo_id, (item) => getGrupoDisplayName(item), 'Selecciona grupo');
       fillSelect($('adminFacilitadorAsignacionMateria'), state.catalogos.materias || [], (item) => item.materia_id, (item) => item.nombre || item.materia_id, 'Selecciona materia');
       if ($('adminFacilitadorAsignacionGrupo')) $('adminFacilitadorAsignacionGrupo').value = state.facilitadoresUi.asignacion.grupo_id || '';
       if ($('adminFacilitadorAsignacionMateria')) $('adminFacilitadorAsignacionMateria').value = state.facilitadoresUi.asignacion.materia_id || '';
@@ -9153,7 +9172,7 @@
       const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
       const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
       return [
-        grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id,
+        grupo ? getGrupoDisplayName(grupo) : plan.grupo_id,
         materia ? (materia.nombre || materia.materia_id) : plan.materia_id,
         semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id
       ].join(' · ');
@@ -9230,14 +9249,14 @@
           ? (currentSelectedGroups.length ? currentSelectedGroups : [state.planEditor.lockedGrupoId])
           : currentSelectedGroups
       );
-      const groups = [...state.catalogos.grupos].sort((a, b) => String(a.nombre_grupo || '').localeCompare(String(b.nombre_grupo || '')));
+      const groups = [...state.catalogos.grupos].sort((a, b) => getGrupoDisplayName(a).localeCompare(getGrupoDisplayName(b), 'es'));
       host.innerHTML = groups.map((group) => {
         const disabled = editLocked && group.grupo_id !== state.planEditor.lockedGrupoId;
         const checked = editLocked ? group.grupo_id === state.planEditor.lockedGrupoId : checkedSet.has(group.grupo_id);
         return (
           '<label class="check-item">' +
             '<input type="checkbox" value="' + escapeHtml(group.grupo_id) + '"' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '') + '>' +
-            '<span><strong>' + escapeHtml(group.nombre_grupo || group.grupo_id) + '</strong><br><span class="mini">' + escapeHtml(group.nivel || '') + '</span></span>' +
+            '<span><strong>' + escapeHtml(getGrupoDisplayName(group)) + '</strong></span>' +
           '</label>'
         );
       }).join('');
@@ -9246,9 +9265,22 @@
       });
     }
 
-    function renderPlanAlumnosChecklist() {
+    function getAlumnosByGroupId(groupId) {
+      return (state.catalogos.alumnos || []).filter((alumno) => String(alumno.grupo_id || '').trim() === String(groupId || '').trim());
+    }
+
+    function applyGroupSelectionToAlumnoSet(selectedSet, groupId, checked) {
+      const nextSelected = selectedSet instanceof Set ? selectedSet : new Set(selectedSet || []);
+      getAlumnosByGroupId(groupId).forEach((alumno) => {
+        if (checked) nextSelected.add(alumno.alumno_id);
+        else nextSelected.delete(alumno.alumno_id);
+      });
+      return nextSelected;
+    }
+
+    function renderPlanAlumnosChecklist(selectedOverride) {
       const host = $('planAlumnosChecklist');
-      const selected = new Set(getSelectedPlanAlumnos());
+      const selected = selectedOverride instanceof Set ? new Set(selectedOverride) : new Set(getSelectedPlanAlumnos());
       const selectedGroups = getSelectedGroupIds();
       const groupIds = state.planEditor.mode === 'edit'
         ? ((canUseAdminShell() ? selectedGroups : []).length ? selectedGroups : [state.planEditor.lockedGrupoId])
@@ -9259,11 +9291,11 @@
       }
       host.innerHTML = groupIds.map((groupId) => {
         const group = state.catalogos.grupos.find((row) => row.grupo_id === groupId);
-        const alumnos = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === groupId);
+        const alumnos = getAlumnosByGroupId(groupId);
         return (
             '<div class="group-block">' +
               '<div class="group-block-head">' +
-                '<div><strong>' + escapeHtml(group ? (group.nombre_grupo || group.grupo_id) : groupId) + '</strong></div>' +
+                '<div><strong>' + escapeHtml(group ? getGrupoDisplayName(group) : groupId) + '</strong></div>' +
               '</div>' +
             '<div class="checklist">' +
               alumnos.map((alumno) => {
@@ -9279,6 +9311,13 @@
           '</div>'
         );
       }).join('');
+    }
+
+    function handlePlanGroupChecklistChange(event) {
+      const input = event && event.target;
+      if (!input || input.type !== 'checkbox') return;
+      const selected = applyGroupSelectionToAlumnoSet(new Set(getSelectedPlanAlumnos()), input.value, !!input.checked);
+      renderPlanAlumnosChecklist(selected);
     }
 
     function renderPlanActivitiesEditor() {
@@ -9332,7 +9371,7 @@
       const reportUi = getReportSelectionState();
       fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
       fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
-      fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => g.nombre_grupo || g.grupo_id, 'Todos los grupos');
+      fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => getGrupoDisplayName(g), 'Todos los grupos');
       fillSelect($('filterFacilitador'), state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)), (f) => f.facilitador_id, (f) => f.nombre_mostrado || f.nombre_completo || f.facilitador_id, 'Todos los facilitadores');
       fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
       fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
@@ -9387,7 +9426,13 @@
       Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
         input.checked = checked;
       });
-      renderPlanAlumnosChecklist();
+      if (!checked) {
+        renderPlanAlumnosChecklist(new Set());
+        return;
+      }
+      const selected = new Set();
+      getSelectedGroupIds().forEach((groupId) => applyGroupSelectionToAlumnoSet(selected, groupId, true));
+      renderPlanAlumnosChecklist(selected);
     }
 
     function renderObsAlumnoSelect() {
@@ -9629,7 +9674,7 @@
         const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
         const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
-        const groupLabel = grupo ? (grupo.nombre_grupo || grupo.grupo_id) : plan.grupo_id;
+        const groupLabel = grupo ? getGrupoDisplayName(grupo) : plan.grupo_id;
         const materiaLabel = materia ? (materia.nombre || materia.materia_id) : plan.materia_id;
         const weekLabel = getWeekLabelForPlan(plan, semana);
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
@@ -9987,7 +10032,7 @@
         const materia = plan ? state.catalogos.materias.find((item) => item.materia_id === plan.materia_id) : null;
         const semana = plan ? state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id) : null;
         const contexto = plan ? [
-          grupo ? (grupo.nombre_grupo || grupo.grupo_id) : '',
+          grupo ? getGrupoDisplayName(grupo) : '',
           materia ? (materia.nombre || materia.materia_id) : '',
           semana ? (semana.nombre_visible || semana.semana_id) : ''
         ].filter(Boolean).join(' · ') : '';
@@ -11064,7 +11109,7 @@
         key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
       }));
       $('planFecha').addEventListener('change', renderPlanWeekResolved);
-      $('planGruposChecklist').addEventListener('change', renderPlanAlumnosChecklist);
+      $('planGruposChecklist').addEventListener('change', handlePlanGroupChecklistChange);
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
       $('evaMateria').addEventListener('change', renderEvaluationDependencies);
       $('filterAlumnoSearch').addEventListener('change', syncAlumnoFilterFromInput);
