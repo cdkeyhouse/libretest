@@ -3337,7 +3337,7 @@
 
       .plan-card.is-collapsed.plan-card-compact {
         padding: 0;
-        overflow: hidden;
+        overflow: visible;
         border-radius: 18px;
         border: 1px solid rgba(255,255,255,0.08);
         background: rgba(19, 25, 34, 0.88);
@@ -3400,7 +3400,7 @@
         content: attr(data-tooltip);
         position: absolute;
         left: 0;
-        top: calc(100% + 10px);
+        bottom: calc(100% + 10px);
         min-width: 220px;
         max-width: min(420px, 38vw);
         padding: 10px 12px;
@@ -3414,7 +3414,7 @@
         white-space: normal;
         opacity: 0;
         visibility: hidden;
-        transform: translateY(-4px);
+        transform: translateY(4px);
         transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
         pointer-events: none;
         z-index: 30;
@@ -3424,7 +3424,7 @@
         content: '';
         position: absolute;
         left: 16px;
-        top: calc(100% + 4px);
+        bottom: calc(100% + 4px);
         width: 10px;
         height: 10px;
         background: rgba(37, 34, 31, 0.98);
@@ -3535,6 +3535,7 @@
 
       #planAlumnosChecklist .checklist,
       .plan-open-students {
+        display: grid;
         max-height: none;
         overflow: visible;
         padding: 8px 10px;
@@ -3605,16 +3606,19 @@
       }
 
       .plan-student-chip strong {
-        display: inline;
+        display: block;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      .plan-student-chip .mini {
-        flex: 0 0 auto;
-        white-space: nowrap;
+      .plan-compact-summary-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        margin-top: 6px;
       }
     }
 
@@ -9326,10 +9330,7 @@
       return {
         nombre: catalogAlumno
           ? (catalogAlumno.nombre_mostrado || catalogAlumno.nombre_completo || catalogAlumno.alumno_id)
-          : (alumnoRow && (alumnoRow.nombre_snapshot || alumnoRow.alumno_id) || alumnoId),
-        matricula: catalogAlumno
-          ? (catalogAlumno.matricula || catalogAlumno.alumno_id)
-          : (alumnoRow && (alumnoRow.matricula_snapshot || alumnoRow.alumno_id) || alumnoId)
+          : (alumnoRow && (alumnoRow.nombre_snapshot || alumnoRow.alumno_id) || alumnoId)
       };
     }
 
@@ -9367,7 +9368,7 @@
                 return (
                   '<label class="check-item">' +
                     '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + '>' +
-                    '<span><strong>' + escapeHtml(label) + '</strong><br><span class="mini">' + escapeHtml(alumno.matricula || alumno.alumno_id) + '</span></span>' +
+                    '<span><strong>' + escapeHtml(label) + '</strong></span>' +
                   '</label>'
                 );
               }).join('') +
@@ -9692,7 +9693,7 @@
               (alumnosGrupo.map((alumno) => (
                 '<label class="check-item">' +
                   '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
-                  '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong><br><span class="mini">' + escapeHtml(alumno.matricula || alumno.alumno_id) + '</span></span>' +
+                  '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong></span>' +
                 '</label>'
               )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
             '</div>' +
@@ -9768,6 +9769,14 @@
         const phraseCompactAttrs = phraseNeedsTooltip
           ? ' tabindex="0" data-tooltip="' + escapeHtml(phraseText) + '"'
           : '';
+        const summaryMetaHtml = ((hasMaterialAlert || latestResolvedMaterialAlert)
+          ? (
+              '<div class="plan-compact-summary-meta">' +
+                (hasMaterialAlert ? '<span class="plan-alert-chip">Material pendiente</span>' : '') +
+                (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">Histórico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
+              '</div>'
+            )
+          : '');
         const actividades = (plan.actividades || []).map((item) => {
           const material = normalizeMaterialStatus(item.material_en_carpeta);
           const realizada = normalizeRealizadaStatus(item.realizada);
@@ -9871,18 +9880,11 @@
                   '<div class="plan-compact-cell">' +
                     '<span class="plan-compact-label">Frase</span>' +
                     '<span class="' + phraseCompactClass + '"' + phraseCompactAttrs + '>' + escapeHtml(phraseText) + '</span>' +
-                    ((hasMaterialAlert || latestResolvedMaterialAlert)
-                      ? (
-                          '<div class="plan-alert-history">' +
-                            (hasMaterialAlert ? '<span class="plan-alert-chip">Material pendiente</span>' : '') +
-                            (!hasMaterialAlert && latestResolvedMaterialAlert ? escapeHtml('Histórico: material resuelto ' + formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) : '') +
-                          '</div>'
-                        )
-                      : '') +
                   '</div>' +
                   '<div class="plan-compact-cell">' +
                     '<span class="plan-compact-label">Resumen</span>' +
                     '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
+                    summaryMetaHtml +
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-status">' +
                     '<span class="plan-compact-label">Estado</span>' +
@@ -9946,7 +9948,7 @@
               ? renderOpenPlanStructureEditor(plan, allowStructureEdit)
               : ('<div class="plan-student-chip-cloud">' + alumnosRows.map((alumnoRow) => {
                     const alumnoDisplay = getAlumnoDisplaySnapshot(alumnoRow);
-                    return '<div class="plan-student-chip"><strong>' + escapeHtml(alumnoDisplay.nombre) + '</strong><span class="mini">' + escapeHtml(alumnoDisplay.matricula) + '</span></div>';
+                    return '<div class="plan-student-chip"><strong>' + escapeHtml(alumnoDisplay.nombre) + '</strong></div>';
                   }).join('') + '</div>' +
                 '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>')) +
             '<div class="stack">' +
