@@ -3387,7 +3387,7 @@
 
       .plan-list-compact-head {
         display: grid;
-        grid-template-columns: 0.9fr 0.92fr 1fr 1.7fr 1.1fr 0.82fr 0.8fr;
+        grid-template-columns: 0.88fr 0.92fr 0.98fr 1.55fr 1.08fr 0.78fr 1.24fr;
         gap: 10px;
         align-items: center;
         padding: 10px 12px;
@@ -3415,7 +3415,7 @@
 
       .plan-compact-grid {
         display: grid;
-        grid-template-columns: 0.9fr 0.92fr 1fr 1.7fr 1.1fr 0.82fr 0.8fr;
+        grid-template-columns: 0.88fr 0.92fr 0.98fr 1.55fr 1.08fr 0.78fr 1.24fr;
         gap: 10px;
         align-items: center;
         min-height: 60px;
@@ -3529,10 +3529,18 @@
 
       .plan-compact-actions {
         justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
       .plan-card.is-collapsed.plan-card-compact .btn-open-plan {
         min-width: 96px;
+      }
+
+      .plan-card.is-collapsed.plan-card-compact .plan-compact-actions > button {
+        min-height: 36px;
+        padding: 8px 14px;
+        font-size: 0.88rem;
       }
 
       .plan-card.is-collapsed.plan-card-compact .plan-alert-chip {
