@@ -5902,6 +5902,41 @@
       if (!silent) setBanner('Datos actualizados.', 'success');
     }
 
+    function isPlaneacionesSurfaceVisible() {
+      return canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones';
+    }
+
+    function isAlertasSurfaceVisible() {
+      return !canUseAdminShell() || state.activeAdminModule === 'dashboard' || state.activeAdminModule === 'planeaciones';
+    }
+
+    function renderPlaneacionesSurface(options = {}) {
+      const includeStats = options.includeStats !== false;
+      const includePlaneaciones = options.includePlaneaciones !== false;
+      const includeAlertas = options.includeAlertas !== false;
+      if (includeStats) renderStats();
+      if (canUseAdminShell()) renderAdminShell();
+      if (includePlaneaciones && isPlaneacionesSurfaceVisible()) {
+        renderPlaneacionesList();
+        renderPlanBuilderVisibility();
+      }
+      if (includeAlertas && isAlertasSurfaceVisible()) renderAlertas();
+    }
+
+    async function refreshPlaneacionesSurface(options = {}) {
+      const includePlaneaciones = options.includePlaneaciones !== false;
+      const includeAlertas = options.includeAlertas !== false;
+      const tasks = [];
+      if (includePlaneaciones) tasks.push(refreshPlaneaciones());
+      if (includeAlertas) tasks.push(refreshAlertas());
+      if (tasks.length) await Promise.all(tasks);
+      renderPlaneacionesSurface({
+        includeStats: options.includeStats,
+        includePlaneaciones,
+        includeAlertas
+      });
+    }
+
     function syncRoleUi() {
       const tabs = document.querySelector('.tabs');
       const seguimientoTabBtn = document.querySelector('.tab-btn[data-tab="seguimiento"]');
@@ -11106,8 +11141,7 @@
       }
 
       resetPlanEditor();
-      await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
-      renderAll();
+      await refreshPlaneacionesSurface();
       setBanner(
         responseData && responseData._meta && responseData._meta.message
           ? responseData._meta.message
@@ -11275,13 +11309,11 @@
     async function planAction(button, planId, action) {
       await handleAction(action, async () => {
         await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
-        await refreshPlaneaciones();
-        await refreshAlertas();
+        await refreshPlaneacionesSurface();
         if (action === 'activarPlaneacion' && state.openPlanId === planId) {
           state.openPlanId = '';
           state.openPlanDraft = null;
         }
-        renderAll();
         setBanner(
           action === 'activarPlaneacion'
             ? 'La planeación ya está activa y lista para trabajarse.'
@@ -11312,8 +11344,7 @@
           draftActivity.material_en_carpeta = material;
           draftActivity.comentario_cierre = comentario;
         }
-        await refreshPlaneaciones();
-        await refreshAlertas();
+        await refreshPlaneacionesSurface();
         if (state.openPlanDraft && state.openPlanId && state.openPlanDraft.planId === state.openPlanId) {
           const freshPlan = getPlanById(state.openPlanId);
           if (freshPlan) {
@@ -11325,7 +11356,7 @@
             }
           }
         }
-        renderAll();
+        renderPlaneacionesSurface();
         setBanner('Actividad actualizada.', 'success');
       }, { button, key: buildActionKey('actualizarActividad', [actividadId, realizada, material, comentario.slice(0, 20)]) });
     }
@@ -11337,8 +11368,7 @@
       await handleAction('crearObsSemana', async () => {
         await persistGeneralObservation(planId, texto);
         if (input) input.value = '';
-        await refreshPlaneaciones();
-        renderAll();
+        await refreshPlaneacionesSurface({ includeAlertas: false });
         setBanner('Observación general guardada.', 'success');
       }, { button, key: buildActionKey('crearObsSemana', [planId, texto.slice(0, 40)]) });
     }
@@ -11349,8 +11379,7 @@
       if (!nota) throw new Error('Escribe la observación final del alumno.');
       await handleAction('guardarObsAlumnoFinal', async () => {
         await persistAlumnoFinalObservation(planId, alumnoId, nota);
-        await refreshPlaneaciones();
-        renderAll();
+        await refreshPlaneacionesSurface({ includeAlertas: false });
         setBanner('Observación final por alumno guardada.', 'success');
       }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
     }
@@ -11370,8 +11399,7 @@
 
       await handleAction('guardarObsAlumnoFinalLote', async () => {
         await persistAlumnoFinalObservationBatch(planId, payloads);
-        await refreshPlaneaciones();
-        renderAll();
+        await refreshPlaneacionesSurface({ includeAlertas: false });
         payloads.forEach((row) => {
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
@@ -11431,8 +11459,7 @@
         await persistOpenPlanDraftApi(planId, draft, plan, request);
         state.openPlanId = planId;
         state.openPlanDraft = null;
-        await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
-        renderAll();
+        await refreshPlaneacionesSurface();
         setBanner(successMessage, 'success');
       }, {
         button,
@@ -11458,8 +11485,7 @@
         await persistMultiGroupSharedApi(entry, draft);
         state.multiGroupSharedDrafts[entryKey] = null;
         state.openPlanDraft = null;
-        await Promise.all([refreshPlaneaciones(), refreshAlertas()]);
-        renderAll();
+        await refreshPlaneacionesSurface();
         setBanner('Base multigrupo actualizada.', 'success');
       }, {
         button,
@@ -11617,9 +11643,6 @@
           state.openPlanDraft = null;
           savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
         }
-        if (shouldSavePlan && shouldSaveShared) {
-          await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
-        }
         if (shouldSaveShared) {
           const freshEntry = getPlaneacionEntryByKey(entryKey) || entry;
           await persistMultiGroupSharedApi(freshEntry, sharedDraft);
@@ -11627,8 +11650,7 @@
           state.openPlanDraft = null;
           savedParts.push('base multigrupo');
         }
-        await Promise.all([refreshCatalogos(), refreshPlaneaciones(), refreshAlertas()]);
-        renderAll();
+        await refreshPlaneacionesSurface({ includeAlertas: shouldSavePlan || shouldSaveShared });
         finalPayloads.forEach((row) => {
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
@@ -11664,8 +11686,7 @@
           await persistMultiGroupSharedApi(entry, draft);
           state.multiGroupSharedDrafts[entry.key] = null;
           state.openPlanDraft = null;
-          await Promise.all([refreshPlaneaciones(), refreshAlertas()]);
-          renderAll();
+          await refreshPlaneacionesSurface();
           setBanner('Material compartido marcado como listo.', 'success');
         }, {
           button,
@@ -11695,9 +11716,7 @@
     async function approvePlan(button, planId) {
       await handleAction('aprobarPlaneacionPendiente', async () => {
         await api('aprobarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('APP') });
-        await refreshPlaneaciones();
-        await refreshAlertas();
-        renderAll();
+        await refreshPlaneacionesSurface();
         setBanner('Planeación aprobada.', 'success');
       }, { button, key: buildActionKey('aprobarPlaneacionPendiente', [planId]) });
     }
@@ -11711,9 +11730,7 @@
           comentario: comentario.trim(),
           request_id: uid('REJ')
         });
-        await refreshPlaneaciones();
-        await refreshAlertas();
-        renderAll();
+        await refreshPlaneacionesSurface();
         setBanner('Planeación rechazada.', 'success');
       }, { button, key: buildActionKey('rechazarPlaneacionPendiente', [planId, comentario.trim().slice(0, 30)]) });
     }
@@ -11721,9 +11738,7 @@
     async function resubmitPlan(button, planId) {
       await handleAction('reenviarPlaneacionPendiente', async () => {
         await api('reenviarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('REAPP') });
-        await refreshPlaneaciones();
-        await refreshAlertas();
-        renderAll();
+        await refreshPlaneacionesSurface();
         setBanner('Planeación reenviada a aprobación.', 'success');
       }, { button, key: buildActionKey('reenviarPlaneacionPendiente', [planId]) });
     }
@@ -11799,9 +11814,7 @@
           request_id: uid('CIE')
         });
         state.openPlanDraft = null;
-        await refreshPlaneaciones();
-        await refreshAlertas();
-        renderAll();
+        await refreshPlaneacionesSurface();
         closeClosePlanModal();
         setBanner('Cierre confirmado.', 'success');
       }, { button, key: buildActionKey('confirmarCierre', [planId]) });
@@ -11944,8 +11957,7 @@
       $('filterPlaneacionesBtn').addEventListener('click', (event) => handleAction('filtrar planeaciones', async () => {
         syncAlumnoFilterFromInput();
         clearPlaneacionesMateriaFilter();
-        await refreshPlaneaciones();
-        renderAll();
+        await refreshPlaneacionesSurface({ includeAlertas: false });
         setBanner('Planeaciones filtradas.', 'info');
       }, { button: event.currentTarget }));
       if ($('adminNotificationNewBtn')) $('adminNotificationNewBtn').addEventListener('click', () => openNotificationEditor());
