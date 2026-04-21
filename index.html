@@ -2118,6 +2118,35 @@
     .admin-materias-row .admin-alumnos-actions {
       justify-content: flex-start;
     }
+    .admin-talleres-list-header,
+    .admin-talleres-row {
+      display: grid;
+      grid-template-columns: 0.72fr 1.32fr 0.88fr 0.96fr 0.76fr 0.9fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+    }
+    .admin-talleres-list-header {
+      color: #a9c7e6;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .admin-talleres-row {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      min-height: 60px;
+      cursor: pointer;
+    }
+    .admin-talleres-row:last-child {
+      border-bottom: 0;
+    }
+    .admin-talleres-row.is-selected {
+      background: linear-gradient(180deg, rgba(33, 52, 70, 0.46), rgba(24, 33, 44, 0.3));
+    }
+    .admin-talleres-row .admin-alumnos-actions {
+      justify-content: flex-start;
+    }
     .admin-materias-order {
       display: inline-flex;
       align-items: center;
@@ -2945,6 +2974,9 @@
       .admin-materias-list-header {
         display: none;
       }
+      .admin-talleres-list-header {
+        display: none;
+      }
       .admin-alumnos-table {
         padding: 0;
         border: none;
@@ -2968,6 +3000,14 @@
         margin-bottom: 8px;
       }
       .admin-materias-row {
+        grid-template-columns: 1fr;
+        padding: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(33, 38, 47, 0.98), rgba(25, 30, 38, 0.98));
+        margin-bottom: 8px;
+      }
+      .admin-talleres-row {
         grid-template-columns: 1fr;
         padding: 12px;
         border: 1px solid rgba(255,255,255,0.08);
@@ -4307,6 +4347,7 @@
           <button class="admin-nav-btn" type="button" data-admin-module="reporte-ciclo">Reporte de ciclo</button>
           <button class="admin-nav-btn" type="button" data-admin-module="facilitadores">Facilitadores</button>
           <button class="admin-nav-btn" type="button" data-admin-module="materias">Materias</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="talleres">Talleres</button>
           <button class="admin-nav-btn" type="button" data-admin-module="configuracion">Configuración</button>
         </div>
       </article>
@@ -4401,6 +4442,18 @@
             </div>
             <div class="actions">
               <button class="btn-primary" type="button" data-admin-module-launch="materias">Abrir materias</button>
+            </div>
+          </article>
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
+                <h3>Talleres</h3>
+                <p>Configura los talleres institucionales que después podrán recibir alumnos de distintos grupos.</p>
+              </div>
+              <div class="module-card-count" id="adminCountTalleres">0</div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" type="button" data-admin-module-launch="talleres">Abrir talleres</button>
             </div>
           </article>
         </div>
@@ -4602,6 +4655,8 @@
       <section id="admin-panel-facilitadores" class="admin-panel"></section>
 
       <section id="admin-panel-materias" class="admin-panel"></section>
+
+      <section id="admin-panel-talleres" class="admin-panel"></section>
 
       <section id="admin-panel-configuracion" class="admin-panel"></section>
     </section>
@@ -5036,6 +5091,27 @@
       };
     }
 
+    function createEmptyTallerEditorState() {
+      return {
+        taller_id: '',
+        nombre: '',
+        materia_id: '',
+        facilitador_id: '',
+        estatus: 'activo'
+      };
+    }
+
+    function createEmptyTalleresUiState() {
+      return {
+        search: '',
+        filter: 'activos',
+        selectedTallerId: '',
+        editorOpen: false,
+        editorMode: 'new',
+        editor: createEmptyTallerEditorState()
+      };
+    }
+
     function createEmptyMateriaEditorState() {
       return {
         materia_id: '',
@@ -5108,6 +5184,7 @@
         submaterias_admin: [],
         habilidades: [],
         talleres: [],
+        talleres_admin: [],
         refuerzos: [],
         periodos: [],
         semanas: []
@@ -5134,6 +5211,7 @@
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
+      talleresUi: createEmptyTalleresUiState(),
       materiasUi: createEmptyMateriasUiState(),
       reportesUi: createEmptyReportesUiState(),
       maintenanceUi: createEmptyMaintenanceUiState(),
@@ -5212,6 +5290,7 @@
         submaterias_admin: [],
         habilidades: [],
         talleres: [],
+        talleres_admin: [],
         refuerzos: [],
         periodos: [],
         semanas: []
@@ -5297,6 +5376,8 @@
           return ['facilitadores', 'facilitadores_admin', 'facilitador_asignaciones', 'grupos', 'materias'];
         case 'materias':
           return ['materias', 'materias_admin', 'submaterias', 'submaterias_admin'];
+        case 'talleres':
+          return ['talleres', 'talleres_admin', 'materias', 'facilitadores', 'facilitadores_admin'];
         case 'seguimiento':
           return ['alumnos', 'materias', 'submaterias', 'habilidades', 'periodos'];
         default:
@@ -5305,7 +5386,7 @@
     }
 
     function adminModuleNeedsCatalogos(moduleName) {
-      return ['planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias'].includes(String(moduleName || '').trim());
+      return ['planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias', 'talleres'].includes(String(moduleName || '').trim());
     }
 
     function getCurrentCatalogBlocks() {
@@ -5492,6 +5573,7 @@
       };
       state.alumnosUi = createEmptyAlumnosUiState();
       state.facilitadoresUi = createEmptyFacilitadoresUiState();
+      state.talleresUi = createEmptyTalleresUiState();
       state.materiasUi = createEmptyMateriasUiState();
       state.reportesUi = createEmptyReportesUiState();
       state.maintenanceUi = createEmptyMaintenanceUiState();
@@ -6182,6 +6264,9 @@
         case 'materias':
           renderAdminMateriasModule();
           break;
+        case 'talleres':
+          renderAdminTalleresModule();
+          break;
         case 'reporte-ciclo':
           renderAdminReporteCicloModule();
           break;
@@ -6259,7 +6344,7 @@
         if ($('filterAlumnoSearch')) $('filterAlumnoSearch').value = '';
         if ($('filterAlumnoId')) $('filterAlumnoId').value = '';
       }
-      if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias', 'configuracion'].includes(state.activeAdminModule)) {
+      if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias', 'talleres', 'configuracion'].includes(state.activeAdminModule)) {
         state.activeAdminModule = 'dashboard';
       }
       if (facilitatorMode && state.activeTab !== 'planeaciones') {
@@ -6353,6 +6438,9 @@
         closeFacilitadorPin();
         closeFacilitadorAsignacionEditor();
       }
+      if (nextModule !== 'talleres') {
+        closeTallerEditor();
+      }
       if (nextModule !== 'materias') {
         closeMateriaEditor();
         closeSubmateriaEditor();
@@ -6406,6 +6494,7 @@
       const activeFacilitadores = state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)).length || Number(state.dashboardStats && state.dashboardStats.facilitadores_activos || 0);
       const visibleAlumnos = getAdminAlumnosCount() || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0);
       const activeMaterias = state.catalogos.materias.length || Number(state.dashboardStats && state.dashboardStats.materias_activas || 0);
+      const activeTalleres = (state.catalogos.talleres || []).length || (Array.isArray(state.catalogos.talleres_admin) ? state.catalogos.talleres_admin.filter((item) => String(item.estatus || '').trim() === 'activo').length : 0);
 
       if ($('adminShellTitle')) {
         $('adminShellTitle').textContent = 'Centro de control' + (user ? ' de ' + (user.nombre || user.nombre_mostrado || user.facilitador_id || '') : '');
@@ -6422,6 +6511,7 @@
       if ($('adminCountNotifications')) $('adminCountNotifications').textContent = String((state.notificaciones || []).filter((row) => isNotificationActiveToday(row)).length || 0);
       if ($('adminCountFacilitadoresCard')) $('adminCountFacilitadoresCard').textContent = String(activeFacilitadores);
       if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(activeMaterias);
+      if ($('adminCountTalleres')) $('adminCountTalleres').textContent = String(activeTalleres);
       if ($('adminCountReportes')) $('adminCountReportes').textContent = getReportStatusLabel(getReportSelectionState().lastResult && (getReportSelectionState().lastResult.status || getReportSelectionState().lastResult.estado) || 'PDF');
 
       document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
@@ -8673,6 +8763,458 @@
           : 'Planeaciones filtradas por facilitador.',
         'info'
       );
+    }
+
+    function canManageTalleresCatalog() {
+      return canUseAdminShell();
+    }
+
+    function getAdminTalleresCatalog() {
+      const rows = Array.isArray(state.catalogos.talleres_admin) && state.catalogos.talleres_admin.length
+        ? state.catalogos.talleres_admin
+        : (state.catalogos.talleres || []);
+      return rows.map((row) => ({
+        taller_id: String(row.taller_id || '').trim(),
+        nombre: String(row.nombre || '').trim(),
+        materia_id: String(row.materia_id || '').trim(),
+        facilitador_id: String(row.facilitador_id || '').trim(),
+        activo: !!row.activo,
+        estatus: String(row.estatus || '').trim() || (row.activo ? 'activo' : 'inactivo'),
+        fecha_actualizacion: String(row.fecha_actualizacion || '').trim(),
+        archivado_at: String(row.archivado_at || '').trim(),
+        archivado_por: String(row.archivado_por || '').trim()
+      }));
+    }
+
+    function getTallerById(tallerId) {
+      const id = String(tallerId || '').trim();
+      return getAdminTalleresCatalog().find((row) => row.taller_id === id) || null;
+    }
+
+    function applySavedTallerCatalogRow(row) {
+      if (!row || !row.taller_id) return null;
+      upsertCatalogEntityRow('talleres_admin', 'taller_id', row);
+      upsertCatalogEntityRow('talleres', 'taller_id', row);
+      return getTallerById(row.taller_id);
+    }
+
+    function getTallerStatusLabel(status) {
+      if (status === 'archivado') return 'Archivado';
+      if (status === 'inactivo') return 'Inactivo';
+      return 'Activo';
+    }
+
+    function getTallerStatusBadgeClass(status) {
+      if (status === 'archivado') return 'is-archived';
+      if (status === 'inactivo') return 'is-inactive';
+      return 'is-active';
+    }
+
+    function closeTallerEditor() {
+      state.talleresUi.editorOpen = false;
+      state.talleresUi.editorMode = 'new';
+      state.talleresUi.editor = createEmptyTallerEditorState();
+    }
+
+    function syncAdminTalleresModule() {
+      const visible = getVisibleTalleres();
+      const selected = String(state.talleresUi.selectedTallerId || '').trim();
+      if (selected && visible.some((row) => row.taller_id === selected)) return;
+      state.talleresUi.selectedTallerId = visible.length ? visible[0].taller_id : '';
+      if (!visible.length) closeTallerEditor();
+    }
+
+    function getTallerSearchText(row) {
+      const materia = (state.catalogos.materias || []).find((item) => item.materia_id === row.materia_id);
+      const facilitador = getFacilitadorById(row.facilitador_id);
+      return [
+        row.taller_id,
+        row.nombre,
+        row.materia_id,
+        materia && materia.nombre,
+        row.facilitador_id,
+        facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)
+      ].filter(Boolean).join(' ').toLowerCase();
+    }
+
+    function getVisibleTalleres() {
+      const filter = String(state.talleresUi.filter || 'activos').trim();
+      const query = String(state.talleresUi.search || '').trim().toLowerCase();
+      return getAdminTalleresCatalog()
+        .filter((row) => {
+          const status = String(row.estatus || '').trim();
+          if (filter === 'activos' && status !== 'activo') return false;
+          if (filter === 'inactivos' && status !== 'inactivo') return false;
+          if (filter === 'archivados' && status !== 'archivado') return false;
+          if (!query) return true;
+          return getTallerSearchText(row).includes(query);
+        })
+        .sort((a, b) => String(a.nombre || a.taller_id).localeCompare(String(b.nombre || b.taller_id), 'es'));
+    }
+
+    function getTalleresKpis() {
+      const rows = getAdminTalleresCatalog();
+      return {
+        total: rows.length,
+        activos: rows.filter((row) => row.estatus === 'activo').length,
+        inactivos: rows.filter((row) => row.estatus === 'inactivo').length,
+        archivados: rows.filter((row) => row.estatus === 'archivado').length
+      };
+    }
+
+    function getTallerMateriaOptions() {
+      return (state.catalogos.materias || []).filter((row) => String(row.estatus || '').trim() !== 'archivada');
+    }
+
+    function getTallerFacilitadorOptions() {
+      const rows = Array.isArray(state.catalogos.facilitadores_admin) && state.catalogos.facilitadores_admin.length
+        ? state.catalogos.facilitadores_admin
+        : (state.catalogos.facilitadores || []);
+      return rows.filter((row) => String(row.archivado_at || '').trim() === '');
+    }
+
+    function getAdminTalleresModuleTemplate() {
+      return [
+        '<article class="admin-toolbar admin-alumnos-module admin-talleres-module">',
+          '<div class="admin-toolbar-head admin-alumnos-head">',
+            '<div class="admin-alumnos-head-copy">',
+              '<h3>Talleres</h3>',
+              '<p class="subtle">Administra el catálogo base de talleres antes de asignar alumnos o crear planeaciones por taller.</p>',
+            '</div>',
+            '<div class="admin-alumnos-head-actions">',
+              '<label class="admin-alumnos-search" for="adminTalleresSearch">',
+                '<span>Buscar</span>',
+                '<input id="adminTalleresSearch" type="search" placeholder="Buscar por ID, nombre o responsable">',
+              '</label>',
+              '<button id="adminTallerNewBtn" class="btn-primary" type="button">Nuevo taller</button>',
+            '</div>',
+          '</div>',
+          '<div class="admin-materias-kpis">',
+            '<div class="admin-materias-kpi"><strong id="adminTalleresKpiTotal">0</strong><span>Total talleres</span></div>',
+            '<div class="admin-materias-kpi"><strong id="adminTalleresKpiActive">0</strong><span>Activos</span></div>',
+            '<div class="admin-materias-kpi"><strong id="adminTalleresKpiInactive">0</strong><span>Inactivos</span></div>',
+            '<div class="admin-materias-kpi"><strong id="adminTalleresKpiArchived">0</strong><span>Archivados</span></div>',
+          '</div>',
+          '<div class="admin-alumnos-filterbar">',
+            '<div class="admin-alumnos-filterchips">',
+              '<button id="adminTalleresFilterAllBtn" class="btn-ghost" type="button">Todos</button>',
+              '<button id="adminTalleresFilterActiveBtn" class="btn-ghost" type="button">Activos</button>',
+              '<button id="adminTalleresFilterInactiveBtn" class="btn-ghost" type="button">Inactivos</button>',
+              '<button id="adminTalleresFilterArchivedBtn" class="btn-ghost" type="button">Archivados</button>',
+            '</div>',
+          '</div>',
+          '<div class="admin-alumnos-layout">',
+            '<section class="admin-alumnos-main">',
+              '<div class="admin-alumnos-section-head">',
+                '<div>',
+                  '<h4 id="adminTalleresListTitle">Talleres activos</h4>',
+                  '<div id="adminTalleresListMeta" class="subtle">Catálogo operativo base para futuros grupos mixtos.</div>',
+                '</div>',
+              '</div>',
+              '<div id="adminTalleresList" class="admin-alumnos-list"></div>',
+            '</section>',
+            '<aside class="admin-alumnos-side">',
+              '<section id="adminTallerDetailPanel" class="admin-alumnos-panel"></section>',
+              '<section id="adminTallerEditorPanel" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4 id="adminTallerEditorTitle">Nuevo taller</h4>',
+                    '<div class="subtle">Configura el taller base con su materia y facilitador responsable.</div>',
+                  '</div>',
+                '</div>',
+                '<div class="admin-alumnos-editor-grid">',
+                  '<label class="field">',
+                    '<span>Taller ID</span>',
+                    '<input id="adminTallerIdInput" type="text" maxlength="50" placeholder="Ej. TALL-001">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Estatus</span>',
+                    '<select id="adminTallerStatusInput">',
+                      '<option value="activo">Activo</option>',
+                      '<option value="inactivo">Inactivo</option>',
+                    '</select>',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Nombre</span>',
+                    '<input id="adminTallerNombreInput" type="text" maxlength="100" placeholder="Ej. Taller de futbol">',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Materia base</span>',
+                    '<select id="adminTallerMateriaInput"></select>',
+                  '</label>',
+                  '<label class="field">',
+                    '<span>Facilitador responsable</span>',
+                    '<select id="adminTallerFacilitadorInput"></select>',
+                  '</label>',
+                '</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminTallerCancelBtn" class="btn-ghost" type="button">Cancelar</button>',
+                  '<button id="adminTallerSaveBtn" class="btn-primary" type="button">Guardar</button>',
+                '</div>',
+              '</section>',
+            '</aside>',
+          '</div>',
+        '</article>'
+      ].join('');
+    }
+
+    function renderAdminTalleresModule() {
+      const panel = $('admin-panel-talleres');
+      if (!panel || !canUseAdminShell()) return;
+      if (panel.dataset.ready !== '1') {
+        panel.innerHTML = getAdminTalleresModuleTemplate();
+        panel.dataset.ready = '1';
+        bindAdminTalleresEvents();
+      }
+      syncAdminTalleresModule();
+      const kpis = getTalleresKpis();
+      if ($('adminTalleresSearch')) $('adminTalleresSearch').value = state.talleresUi.search || '';
+      if ($('adminTalleresKpiTotal')) $('adminTalleresKpiTotal').textContent = String(kpis.total);
+      if ($('adminTalleresKpiActive')) $('adminTalleresKpiActive').textContent = String(kpis.activos);
+      if ($('adminTalleresKpiInactive')) $('adminTalleresKpiInactive').textContent = String(kpis.inactivos);
+      if ($('adminTalleresKpiArchived')) $('adminTalleresKpiArchived').textContent = String(kpis.archivados);
+      if ($('adminTalleresFilterAllBtn')) $('adminTalleresFilterAllBtn').classList.toggle('is-active', state.talleresUi.filter === 'todos');
+      if ($('adminTalleresFilterActiveBtn')) $('adminTalleresFilterActiveBtn').classList.toggle('is-active', state.talleresUi.filter === 'activos');
+      if ($('adminTalleresFilterInactiveBtn')) $('adminTalleresFilterInactiveBtn').classList.toggle('is-active', state.talleresUi.filter === 'inactivos');
+      if ($('adminTalleresFilterArchivedBtn')) $('adminTalleresFilterArchivedBtn').classList.toggle('is-active', state.talleresUi.filter === 'archivados');
+      renderAdminTalleresList();
+      renderTallerDetailPanel();
+      renderTallerEditorPanel();
+    }
+
+    function renderAdminTalleresList() {
+      const host = $('adminTalleresList');
+      if (!host) return;
+      const rows = getVisibleTalleres();
+      const filter = String(state.talleresUi.filter || 'activos').trim();
+      if ($('adminTalleresListTitle')) $('adminTalleresListTitle').textContent = filter === 'todos' ? 'Todos los talleres' : (filter === 'archivados' ? 'Talleres archivados' : (filter === 'inactivos' ? 'Talleres inactivos' : 'Talleres activos'));
+      if ($('adminTalleresListMeta')) $('adminTalleresListMeta').textContent = rows.length + ' taller(es) visibles en esta vista.';
+      if (!rows.length) {
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay talleres para mostrar.</strong><div class="subtle">Crea el catálogo base del taller para pasar después a inscripciones y planeaciones.</div></div></div>';
+        return;
+      }
+      host.innerHTML = [
+        '<div class="admin-alumnos-table">',
+          '<div class="admin-talleres-list-header">',
+            '<div>ID</div>',
+            '<div>Taller</div>',
+            '<div>Materia</div>',
+            '<div>Responsable</div>',
+            '<div>Estado</div>',
+            '<div>Acciones</div>',
+          '</div>',
+          rows.map((row) => {
+            const selected = String(state.talleresUi.selectedTallerId || '').trim() === row.taller_id;
+            const materia = (state.catalogos.materias || []).find((item) => item.materia_id === row.materia_id);
+            const facilitador = getFacilitadorById(row.facilitador_id);
+            return [
+              '<article class="admin-talleres-row' + (selected ? ' is-selected' : '') + '" onclick="selectTaller(\'' + escapeJsAttrValue(row.taller_id) + '\')">',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.taller_id) + '</div></div>',
+                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos después') + '</div></div>',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</div></div>',
+                '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</div></div>',
+                '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getTallerStatusBadgeClass(row.estatus) + '">' + escapeHtml(getTallerStatusLabel(row.estatus)) + '</span></div>',
+                '<div class="admin-alumnos-actions"><button class="btn-ghost" type="button" onclick="event.stopPropagation(); openTallerEditor(\'edit\', \'' + escapeJsAttrValue(row.taller_id) + '\')">Editar</button></div>',
+              '</article>'
+            ].join('');
+          }).join(''),
+        '</div>'
+      ].join('');
+    }
+
+    function renderTallerDetailPanel() {
+      const host = $('adminTallerDetailPanel');
+      if (!host) return;
+      const taller = getTallerById(state.talleresUi.selectedTallerId);
+      if (!taller) {
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">Aquí verás su materia base, responsable y el acceso rápido para editar el catálogo.</div></div></div>';
+        return;
+      }
+      const materia = (state.catalogos.materias || []).find((item) => item.materia_id === taller.materia_id);
+      const facilitador = getFacilitadorById(taller.facilitador_id);
+      const canManage = canManageTalleresCatalog();
+      host.hidden = false;
+      host.innerHTML = [
+        '<div class="admin-facilitadores-summary">',
+          '<div class="admin-facilitadores-identity">',
+            '<div>',
+              '<strong>' + escapeHtml(taller.nombre || taller.taller_id) + '</strong>',
+              '<div class="mini">' + escapeHtml(taller.taller_id) + '</div>',
+            '</div>',
+            '<span class="admin-alumnos-badge ' + getTallerStatusBadgeClass(taller.estatus) + '">' + escapeHtml(getTallerStatusLabel(taller.estatus)) + '</span>',
+          '</div>',
+          '<div class="admin-facilitadores-inline-actions">',
+            (canManage ? '<button class="btn-ghost" type="button" onclick="openTallerEditor(\'edit\', \'' + escapeJsAttrValue(taller.taller_id) + '\')">Editar ficha</button>' : ''),
+            (canManage && taller.estatus === 'activo' ? '<button class="btn-ghost" type="button" onclick="toggleTallerStatus(this, \'' + escapeJsAttrValue(taller.taller_id) + '\', \'inactivo\')">Desactivar</button>' : ''),
+            (canManage && taller.estatus === 'inactivo' ? '<button class="btn-primary" type="button" onclick="toggleTallerStatus(this, \'' + escapeJsAttrValue(taller.taller_id) + '\', \'activo\')">Activar</button>' : ''),
+            (canManage && taller.estatus === 'archivado' ? '<button class="btn-primary" type="button" onclick="reactivateTaller(this, \'' + escapeJsAttrValue(taller.taller_id) + '\')">Reactivar</button>' : ''),
+            (canManage && taller.estatus !== 'archivado' ? '<button class="btn-accent" type="button" onclick="archiveTaller(this, \'' + escapeJsAttrValue(taller.taller_id) + '\')">Archivar</button>' : ''),
+          '</div>',
+          '<div class="admin-facilitadores-meta-grid">',
+            '<div class="admin-alumnos-readonly"><span>Materia base</span><strong>' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Responsable</span><strong>' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Última actualización</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Siguiente paso</span><strong>Inscribir alumnos</strong></div>',
+          '</div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Preparación del taller</h4><div class="subtle">Este catálogo base permitirá después mezclar alumnos de distintos grupos sin tocar su grupo escolar original.</div></div></div>',
+        '</div>'
+      ].join('');
+    }
+
+    function renderTallerEditorPanel() {
+      const panel = $('adminTallerEditorPanel');
+      if (!panel) return;
+      panel.hidden = !state.talleresUi.editorOpen;
+      if (panel.hidden) return;
+      const mode = state.talleresUi.editorMode || 'new';
+      const editor = state.talleresUi.editor || createEmptyTallerEditorState();
+      if ($('adminTallerEditorTitle')) $('adminTallerEditorTitle').textContent = mode === 'edit' ? 'Editar taller' : 'Nuevo taller';
+      if ($('adminTallerIdInput')) {
+        $('adminTallerIdInput').value = editor.taller_id || '';
+        $('adminTallerIdInput').disabled = mode === 'edit';
+      }
+      if ($('adminTallerNombreInput')) $('adminTallerNombreInput').value = editor.nombre || '';
+      fillSelect($('adminTallerMateriaInput'), getTallerMateriaOptions(), (item) => item.materia_id, (item) => item.nombre || item.materia_id, 'Sin materia base');
+      fillSelect($('adminTallerFacilitadorInput'), getTallerFacilitadorOptions(), (item) => item.facilitador_id, (item) => item.nombre_mostrado || item.nombre_completo || item.facilitador_id, 'Sin responsable');
+      if ($('adminTallerMateriaInput')) $('adminTallerMateriaInput').value = editor.materia_id || '';
+      if ($('adminTallerFacilitadorInput')) $('adminTallerFacilitadorInput').value = editor.facilitador_id || '';
+      if ($('adminTallerStatusInput')) $('adminTallerStatusInput').value = editor.estatus || 'activo';
+    }
+
+    function openTallerEditor(mode, tallerId) {
+      const nextMode = mode === 'edit' ? 'edit' : 'new';
+      const taller = nextMode === 'edit'
+        ? getTallerById(String(tallerId || '').trim())
+        : null;
+      state.talleresUi.editorMode = nextMode;
+      state.talleresUi.editorOpen = true;
+      state.talleresUi.selectedTallerId = taller ? taller.taller_id : state.talleresUi.selectedTallerId;
+      state.talleresUi.editor = taller ? {
+        taller_id: taller.taller_id,
+        nombre: taller.nombre || '',
+        materia_id: taller.materia_id || '',
+        facilitador_id: taller.facilitador_id || '',
+        estatus: taller.estatus || 'activo'
+      } : createEmptyTallerEditorState();
+      renderAdminTalleresModule();
+      focusAdminFacilitadorPanel('adminTallerEditorPanel', nextMode === 'edit' ? 'adminTallerNombreInput' : 'adminTallerIdInput');
+    }
+
+    function selectTaller(tallerId) {
+      state.talleresUi.selectedTallerId = String(tallerId || '').trim();
+      renderAdminTalleresModule();
+      focusAdminFacilitadorPanel('adminTallerDetailPanel');
+    }
+
+    async function saveTallerEditor(button) {
+      if (!canManageTalleresCatalog()) throw new Error('No tienes permiso para editar talleres.');
+      const mode = state.talleresUi.editorMode || 'new';
+      const payload = {
+        taller_id: $('adminTallerIdInput') ? $('adminTallerIdInput').value.trim() : '',
+        nombre: $('adminTallerNombreInput') ? $('adminTallerNombreInput').value.trim() : '',
+        materia_id: $('adminTallerMateriaInput') ? $('adminTallerMateriaInput').value : '',
+        facilitador_id: $('adminTallerFacilitadorInput') ? $('adminTallerFacilitadorInput').value : '',
+        estatus: $('adminTallerStatusInput') ? $('adminTallerStatusInput').value : 'activo',
+        request_id: uid('TAL')
+      };
+      if (!payload.taller_id) throw new Error('Captura el taller ID.');
+      if (!payload.nombre) throw new Error('Captura el nombre del taller.');
+      await handleAction('guardarTaller', async () => {
+        const data = await api('guardarTaller', payload);
+        if (data && data.taller) applySavedTallerCatalogRow(data.taller);
+        closeTallerEditor();
+        state.talleresUi.selectedTallerId = data.taller_id || payload.taller_id;
+        renderAdminModuleSurface('talleres');
+        setBanner(mode === 'new' ? 'Taller creado.' : 'Taller actualizado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('guardarTaller', [payload.taller_id, mode]),
+        busyText: mode === 'new' ? 'Creando...' : 'Guardando...'
+      });
+    }
+
+    async function toggleTallerStatus(button, tallerId, nextStatus) {
+      const row = getTallerById(tallerId);
+      if (!row) throw new Error('Taller no encontrado.');
+      await handleAction('toggleTallerStatus', async () => {
+        const data = await api('guardarTaller', {
+          taller_id: row.taller_id,
+          estatus: nextStatus,
+          request_id: uid('TALTOG')
+        });
+        if (data && data.taller) applySavedTallerCatalogRow(data.taller);
+        renderAdminModuleSurface('talleres');
+        setBanner(nextStatus === 'activo' ? 'Taller activado.' : 'Taller desactivado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('toggleTallerStatus', [tallerId, nextStatus]),
+        busyText: nextStatus === 'activo' ? 'Activando...' : 'Desactivando...'
+      });
+    }
+
+    async function archiveTaller(button, tallerId) {
+      if (!window.confirm('Esto archivará el taller del catálogo base.')) return;
+      await handleAction('archivarTaller', async () => {
+        await api('archivarTaller', {
+          taller_id: tallerId,
+          request_id: uid('TALARC')
+        });
+        upsertCatalogEntityRow('talleres_admin', 'taller_id', Object.assign({}, getTallerById(tallerId) || { taller_id: tallerId }, { estatus: 'archivado', activo: false }));
+        renderAdminModuleSurface('talleres');
+        setBanner('Taller archivado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('archivarTaller', [tallerId]),
+        busyText: 'Archivando...'
+      });
+    }
+
+    async function reactivateTaller(button, tallerId) {
+      const row = getTallerById(tallerId);
+      if (!row) throw new Error('Taller no encontrado.');
+      await handleAction('reactivateTaller', async () => {
+        const data = await api('guardarTaller', {
+          taller_id: row.taller_id,
+          estatus: 'activo',
+          request_id: uid('TALREA')
+        });
+        if (data && data.taller) applySavedTallerCatalogRow(data.taller);
+        renderAdminModuleSurface('talleres');
+        setBanner('Taller reactivado.', 'success');
+      }, {
+        button,
+        key: buildActionKey('reactivateTaller', [tallerId]),
+        busyText: 'Reactivando...'
+      });
+    }
+
+    function bindAdminTalleresEvents() {
+      if ($('adminTalleresSearch')) $('adminTalleresSearch').addEventListener('input', (event) => {
+        state.talleresUi.search = event.currentTarget.value;
+        renderAdminTalleresModule();
+      });
+      if ($('adminTalleresFilterAllBtn')) $('adminTalleresFilterAllBtn').addEventListener('click', () => {
+        state.talleresUi.filter = 'todos';
+        renderAdminTalleresModule();
+      });
+      if ($('adminTalleresFilterActiveBtn')) $('adminTalleresFilterActiveBtn').addEventListener('click', () => {
+        state.talleresUi.filter = 'activos';
+        renderAdminTalleresModule();
+      });
+      if ($('adminTalleresFilterInactiveBtn')) $('adminTalleresFilterInactiveBtn').addEventListener('click', () => {
+        state.talleresUi.filter = 'inactivos';
+        renderAdminTalleresModule();
+      });
+      if ($('adminTalleresFilterArchivedBtn')) $('adminTalleresFilterArchivedBtn').addEventListener('click', () => {
+        state.talleresUi.filter = 'archivados';
+        renderAdminTalleresModule();
+      });
+      if ($('adminTallerNewBtn')) $('adminTallerNewBtn').addEventListener('click', () => openTallerEditor('new'));
+      if ($('adminTallerCancelBtn')) $('adminTallerCancelBtn').addEventListener('click', () => {
+        closeTallerEditor();
+        renderAdminTalleresModule();
+      });
+      if ($('adminTallerSaveBtn')) $('adminTallerSaveBtn').addEventListener('click', (event) => saveTallerEditor(event.currentTarget));
     }
 
     function getAdminMateriasCatalog() {
@@ -12740,6 +13282,13 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.saveFacilitadorAsignacion = saveFacilitadorAsignacion;
     window.archiveFacilitadorAsignacion = archiveFacilitadorAsignacion;
     window.openFacilitadorPlaneaciones = openFacilitadorPlaneaciones;
+    window.renderAdminTalleresModule = renderAdminTalleresModule;
+    window.selectTaller = selectTaller;
+    window.openTallerEditor = openTallerEditor;
+    window.saveTallerEditor = saveTallerEditor;
+    window.toggleTallerStatus = toggleTallerStatus;
+    window.archiveTaller = archiveTaller;
+    window.reactivateTaller = reactivateTaller;
     window.renderAdminMateriasModule = renderAdminMateriasModule;
     window.selectMateria = selectMateria;
     window.openMateriaEditor = openMateriaEditor;
