@@ -5185,6 +5185,7 @@
         habilidades: [],
         talleres: [],
         talleres_admin: [],
+        alumno_talleres: [],
         refuerzos: [],
         periodos: [],
         semanas: []
@@ -5291,6 +5292,7 @@
         habilidades: [],
         talleres: [],
         talleres_admin: [],
+        alumno_talleres: [],
         refuerzos: [],
         periodos: [],
         semanas: []
@@ -5377,7 +5379,7 @@
         case 'materias':
           return ['materias', 'materias_admin', 'submaterias', 'submaterias_admin'];
         case 'talleres':
-          return ['talleres', 'talleres_admin', 'materias', 'facilitadores', 'facilitadores_admin'];
+          return ['talleres', 'talleres_admin', 'alumno_talleres', 'alumnos', 'materias', 'facilitadores', 'facilitadores_admin'];
         case 'seguimiento':
           return ['alumnos', 'materias', 'submaterias', 'habilidades', 'periodos'];
         default:
