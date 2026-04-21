@@ -2898,64 +2898,6 @@
       font-weight: 700;
       box-shadow: none;
     }
-    .plan-create-state-card {
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
-      padding: 12px 14px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    }
-    .plan-create-state-title {
-      display: block;
-      font-weight: 800;
-      margin-bottom: 4px;
-      color: rgba(255, 248, 238, 0.94);
-    }
-    .plan-create-state-copy {
-      margin: 0 0 10px;
-      color: rgba(241, 225, 208, 0.78);
-      font-size: 0.92rem;
-    }
-    .plan-create-state-options {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .plan-create-state-option {
-      position: relative;
-      display: block;
-      cursor: pointer;
-    }
-    .plan-create-state-option input {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
-    .plan-create-state-option span {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 46px;
-      padding: 0 14px;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.04);
-      font-weight: 800;
-      color: rgba(255, 245, 235, 0.84);
-      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-    }
-    .plan-create-state-option input:checked + span {
-      border-color: rgba(31, 176, 186, 0.42);
-      background: linear-gradient(135deg, rgba(31, 176, 186, 0.18), rgba(93, 193, 235, 0.22));
-      color: #eafcff;
-      box-shadow: 0 10px 22px rgba(31, 176, 186, 0.14);
-    }
-    .plan-create-state-meta {
-      margin-top: 8px;
-      font-size: 0.84rem;
-      color: rgba(201, 211, 224, 0.78);
-    }
     @media (max-width: 720px) {
       .admin-notification-head-copy {
         max-width: none;
@@ -3064,9 +3006,6 @@
       }
       .plan-multigroup-header {
         display: none;
-      }
-      .plan-create-state-options {
-        grid-template-columns: 1fr;
       }
       .group-block-head,
       .activity-editor-top,
@@ -4681,21 +4620,6 @@
                 <label for="planFrase">Frase de la semana</label>
                 <textarea id="planFrase" placeholder="Idea o enfoque pedagogico de la semana"></textarea>
               </div>
-              <div id="planCreateStateCard" class="plan-create-state-card" hidden>
-                <span class="plan-create-state-title">Al crear esta planeación</span>
-                <p class="plan-create-state-copy">Decide si debe guardarse como borrador o quedar activa desde el primer momento.</p>
-                <div class="plan-create-state-options">
-                  <label class="plan-create-state-option">
-                    <input id="planCreateStateDraft" type="radio" name="planCreateState" value="borrador">
-                    <span>Borrador</span>
-                  </label>
-                  <label class="plan-create-state-option">
-                    <input id="planCreateStateActive" type="radio" name="planCreateState" value="activa">
-                    <span>Activa</span>
-                  </label>
-                </div>
-                <div id="planCreateStateMeta" class="plan-create-state-meta">Si la semana está cerrada, el backend ajustará el estado permitido.</div>
-              </div>
               <div>
                 <label>Grupos</label>
                 <div id="planGruposChecklist" class="checklist checklist-groups"></div>
@@ -4715,8 +4639,9 @@
                 </div>
               </div>
               <div class="actions">
-                <button id="savePlanBtn" class="btn-primary" type="button">Guardar planeación</button>
-                <button id="resetPlanEditorBtn" class="btn-secondary" type="button">Limpiar editor</button>
+                <button id="savePlanDraftBtn" class="btn-primary" type="button">Guardar como borrador</button>
+                <button id="savePlanActiveBtn" class="btn-accent" type="button">Activar planeación</button>
+                <button id="savePlanBtn" class="btn-primary" type="button" hidden>Guardar cambios</button>
               </div>
             </div>
           </article>
@@ -9375,7 +9300,6 @@
         planId: '',
         lockedSemanaId: '',
         lockedGrupoId: '',
-        createTargetStatus: 'borrador',
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: [createEmptyActivityDraft()]
@@ -9571,7 +9495,6 @@
         planId: plan.planeacion_id,
         lockedSemanaId: plan.semana_id,
         lockedGrupoId: plan.grupo_id,
-        createTargetStatus: 'borrador',
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
@@ -9592,32 +9515,6 @@
       Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
         input.checked = (plan.alumnos || []).some((row) => row.alumno_id === input.value);
       });
-    }
-
-    function updatePlanEditorCreateState(value) {
-      if (state.planEditor.mode === 'edit') return;
-      state.planEditor.createTargetStatus = String(value || '').trim() === 'activa' ? 'activa' : 'borrador';
-      renderPlanCreateStateChoice();
-    }
-
-    function renderPlanCreateStateChoice() {
-      const card = $('planCreateStateCard');
-      const draftInput = $('planCreateStateDraft');
-      const activeInput = $('planCreateStateActive');
-      const meta = $('planCreateStateMeta');
-      if (!card || !draftInput || !activeInput || !meta) return;
-      const isCreate = state.planEditor.mode !== 'edit';
-      const selected = String(state.planEditor.createTargetStatus || 'borrador').trim() === 'activa' ? 'activa' : 'borrador';
-      const week = getWeekByDateOrDraft($('planFecha').value || '');
-      const weekClosed = !!(week && String(week.cerrada_global || '').toLowerCase() === 'si');
-      card.hidden = !isCreate;
-      draftInput.checked = selected === 'borrador';
-      activeInput.checked = selected === 'activa';
-      meta.textContent = weekClosed
-        ? 'Semana cerrada: el backend ajustará el estado permitido al guardar.'
-        : (selected === 'activa'
-          ? 'La planeación nacerá activa y lista para trabajarse.'
-          : 'La planeación se guardará como borrador para revisarla después.');
     }
 
     function buildOpenPlanDraft(plan) {
@@ -10115,19 +10012,31 @@
       const canEditDate = !isEdit || hasAdminPower || (currentPlan && ['borrador', 'activa', 'rechazada'].includes(String(currentPlan.estado || '').trim()));
       const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
       const loadingNote = $('planBuilderLoadingNote');
+      const primarySaveBtn = $('savePlanBtn');
+      const draftSaveBtn = $('savePlanDraftBtn');
+      const activeSaveBtn = $('savePlanActiveBtn');
       $('planEditorTitle').textContent = isEdit ? 'Editar planeacion' : 'Plan';
-      $('savePlanBtn').textContent = isEdit ? 'Guardar cambios' : 'Guardar planeacion';
+      if (primarySaveBtn) {
+        primarySaveBtn.hidden = !isEdit;
+        primarySaveBtn.textContent = 'Guardar cambios';
+        primarySaveBtn.disabled = catalogsLoading;
+      }
+      if (draftSaveBtn) {
+        draftSaveBtn.hidden = isEdit;
+        draftSaveBtn.disabled = catalogsLoading;
+      }
+      if (activeSaveBtn) {
+        activeSaveBtn.hidden = isEdit;
+        activeSaveBtn.disabled = catalogsLoading;
+      }
       $('planFecha').disabled = !canEditDate;
       $('planMateria').disabled = (isEdit && !hasAdminPower) || catalogsLoading;
       $('planFrase').disabled = catalogsLoading;
       $('selectAllVisibleAlumnosBtn').disabled = catalogsLoading;
       $('clearVisibleAlumnosBtn').disabled = catalogsLoading;
       $('addActivityBtn').disabled = catalogsLoading;
-      $('savePlanBtn').disabled = catalogsLoading;
-      if ($('resetPlanEditorBtn')) $('resetPlanEditorBtn').disabled = catalogsLoading;
       if (loadingNote) loadingNote.hidden = !catalogsLoading;
       renderPlanWeekResolved();
-      renderPlanCreateStateChoice();
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
@@ -11398,7 +11307,7 @@
       activateTab(state.activeTab);
     }
 
-    async function savePlanEditor() {
+    async function savePlanEditor(targetStatusOverride) {
       ensureLoggedIn();
       if (state.ui && state.ui.planeacionesCatalogosLoading) {
         throw new Error('Espera a que terminen de cargar materias y grupos.');
@@ -11458,11 +11367,12 @@
           request_id: uid('PLAUPD')
         });
       } else {
+        const targetStatus = String(targetStatusOverride || '').trim() === 'activa' ? 'activa' : 'borrador';
         responseData = await api('crearPlaneacion', {
           fecha_planeacion: fechaPlaneacion,
           semana_id: semana.draft ? '' : semana.semana_id,
           grupo_ids: grupoIds,
-          estado_inicial: state.planEditor.createTargetStatus || 'borrador',
+          estado_inicial: targetStatus,
           materia_id: $('planMateria').value,
           frase_semana: $('planFrase').value.trim(),
           alumnos_ids: alumnosIds,
@@ -12376,15 +12286,20 @@
       $('logoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('workspaceLogoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
-      $('savePlanBtn').addEventListener('click', (event) => handleAction(state.planEditor.mode === 'edit' ? 'guardarPlaneacionCompleta' : 'crearPlaneacion', savePlanEditor, {
+      $('savePlanBtn').addEventListener('click', (event) => handleAction('guardarPlaneacionCompleta', () => savePlanEditor(), {
         button: event.currentTarget,
-        key: buildActionKey(state.planEditor.mode === 'edit' ? 'guardarPlaneacionCompleta' : 'crearPlaneacion', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+        key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+      }));
+      if ($('savePlanDraftBtn')) $('savePlanDraftBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', () => savePlanEditor('borrador'), {
+        button: event.currentTarget,
+        key: buildActionKey('crearPlaneacion', ['borrador', $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+      }));
+      if ($('savePlanActiveBtn')) $('savePlanActiveBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', () => savePlanEditor('activa'), {
+        button: event.currentTarget,
+        key: buildActionKey('crearPlaneacion', ['activa', $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
       $('togglePlanBuilderBtn').addEventListener('click', () => togglePlanBuilder());
-      $('resetPlanEditorBtn').addEventListener('click', () => resetPlanEditor());
       $('addActivityBtn').addEventListener('click', () => addEditorActivity());
-      if ($('planCreateStateDraft')) $('planCreateStateDraft').addEventListener('change', (event) => updatePlanEditorCreateState(event.currentTarget.value));
-      if ($('planCreateStateActive')) $('planCreateStateActive').addEventListener('change', (event) => updatePlanEditorCreateState(event.currentTarget.value));
       if ($('closePlanCancelBtn')) $('closePlanCancelBtn').addEventListener('click', () => closeClosePlanModal());
       if ($('closePlanConfirmBtn')) $('closePlanConfirmBtn').addEventListener('click', (event) => submitClosePlan(event.currentTarget));
       if ($('selectAllGroupsBtn')) $('selectAllGroupsBtn').addEventListener('click', () => toggleAllGroups(true));
