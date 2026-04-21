@@ -11324,12 +11324,13 @@
 
     async function planAction(button, planId, action) {
       await handleAction(action, async () => {
-        await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
-        await refreshPlaneacionesSurface();
-        if (action === 'activarPlaneacion' && state.openPlanId === planId) {
+        const shouldCloseOpenCard = action === 'activarPlaneacion' && state.openPlanId === planId;
+        if (shouldCloseOpenCard) {
           state.openPlanId = '';
           state.openPlanDraft = null;
         }
+        await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
+        await refreshPlaneacionesSurface();
         setBanner(
           action === 'activarPlaneacion'
             ? 'La planeación ya está activa y lista para trabajarse.'
@@ -11878,13 +11879,17 @@
         return;
       }
       await handleAction('confirmarCierre', async () => {
+        const shouldCloseOpenCard = state.openPlanId === planId;
+        if (shouldCloseOpenCard) {
+          state.openPlanId = '';
+          state.openPlanDraft = null;
+        }
         await api('confirmarCierre', {
           planeacion_id: planId,
           actividades: closePayload.actividades,
           obs_semana: obs,
           request_id: uid('CIE')
         });
-        state.openPlanDraft = null;
         await refreshPlaneacionesSurface();
         closeClosePlanModal();
         setBanner('Cierre confirmado.', 'success');
