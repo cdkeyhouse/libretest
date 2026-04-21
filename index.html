@@ -10913,9 +10913,7 @@
         .filter((plan) => !plan.detail_loaded)
         .map((plan) => plan.planeacion_id);
       if (!missingPlanIds.length) return entry;
-      for (const siblingPlanId of missingPlanIds) {
-        await ensurePlaneacionDetailLoaded(siblingPlanId, { silent: true });
-      }
+      await Promise.all(missingPlanIds.map((siblingPlanId) => ensurePlaneacionDetailLoaded(siblingPlanId, { silent: true })));
       const refreshedEntry = getPlaneacionEntryByKey(entry.key) || entry;
       if (!options.silent) renderPlaneacionesList();
       return refreshedEntry;
@@ -12517,7 +12515,7 @@
         ? responseData.planeaciones.filter((plan) => plan && plan.planeacion_id)
         : (updatedPlan && updatedPlan.planeacion_id ? [updatedPlan] : []);
       const canApplyLocally = editorMode === 'edit' && updatedPlan && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan);
-      const canApplyCreateLocally = editorMode !== 'edit' && createdPlans.length && !hasActivePlaneacionesFilters();
+      const canApplyCreateLocally = editorMode !== 'edit' && createdPlans.length;
       resetPlanEditor();
       if (canApplyLocally) {
         upsertPlaneacionRow(updatedPlan);
