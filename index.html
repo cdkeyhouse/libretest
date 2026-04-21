@@ -9589,6 +9589,7 @@
         planId: plan.planeacion_id,
         fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
         frase_semana: plan.frase_semana || '',
+        materia_id: plan.materia_id || '',
         submateria_id: plan.submateria_id || '',
         alumnos_ids: (plan.alumnos || []).map((row) => row.alumno_id),
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
@@ -9616,6 +9617,12 @@
     function updateOpenPlanDraftField(field, value, rerender) {
       if (!state.openPlanDraft) return;
       state.openPlanDraft[field] = value;
+      if (field === 'materia_id') {
+        const nextMateriaId = String(value || '').trim();
+        const currentSubmateriaId = String(state.openPlanDraft.submateria_id || '').trim();
+        const hasMatchingSubmateria = currentSubmateriaId && getPlanSubmateriasForMateria(nextMateriaId).some((item) => String(item.submateria_id || '').trim() === currentSubmateriaId);
+        state.openPlanDraft.submateria_id = hasMatchingSubmateria ? currentSubmateriaId : '';
+      }
       if (rerender) renderPlaneacionesList();
     }
 
@@ -9849,6 +9856,7 @@
         loteId: entry.loteId,
         basePlanId: selectedPlan.planeacion_id,
         fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
+        materia_id: selectedPlan.materia_id || '',
         submateria_id: selectedPlan.submateria_id || '',
         frase_semana: selectedPlan.frase_semana || '',
         activities: (selectedPlan.actividades || []).length ? (selectedPlan.actividades || []).map((actividad) => ({
@@ -9880,6 +9888,12 @@
       const draft = state.multiGroupSharedDrafts[entryKey];
       if (!draft) return;
       draft[field] = value;
+      if (field === 'materia_id') {
+        const nextMateriaId = String(value || '').trim();
+        const currentSubmateriaId = String(draft.submateria_id || '').trim();
+        const hasMatchingSubmateria = currentSubmateriaId && getPlanSubmateriasForMateria(nextMateriaId).some((item) => String(item.submateria_id || '').trim() === currentSubmateriaId);
+        draft.submateria_id = hasMatchingSubmateria ? currentSubmateriaId : '';
+      }
       if (rerender) renderPlaneacionesList();
     }
 
@@ -10116,9 +10130,8 @@
 
     function renderPlanEditor() {
       const isEdit = state.planEditor.mode === 'edit';
-      const hasAdminPower = canUseAdminShell();
       const currentPlan = isEdit ? getPlanById(state.planEditor.planId) : null;
-      const canEditDate = !isEdit || hasAdminPower || (currentPlan && ['borrador', 'activa', 'rechazada'].includes(String(currentPlan.estado || '').trim()));
+      const canEditDate = !isEdit || canUseAdminShell() || (currentPlan && ['borrador', 'activa', 'rechazada'].includes(String(currentPlan.estado || '').trim()));
       const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
       const loadingNote = $('planBuilderLoadingNote');
       const primarySaveBtn = $('savePlanBtn');
@@ -10139,8 +10152,8 @@
         activeSaveBtn.disabled = catalogsLoading;
       }
       $('planFecha').disabled = !canEditDate;
-      $('planMateria').disabled = (isEdit && !hasAdminPower) || catalogsLoading;
-      if ($('planSubmateria')) $('planSubmateria').disabled = (isEdit && !hasAdminPower) || catalogsLoading;
+      $('planMateria').disabled = catalogsLoading;
+      if ($('planSubmateria')) $('planSubmateria').disabled = catalogsLoading;
       $('planFrase').disabled = catalogsLoading;
       $('selectAllVisibleAlumnosBtn').disabled = catalogsLoading;
       $('clearVisibleAlumnosBtn').disabled = catalogsLoading;
@@ -10474,7 +10487,7 @@
       const draft = getMultiGroupSharedDraft(entry);
       if (!draft) return '';
       const selectedPlan = getOpenPlaneacionEntry(entry);
-      const selectedMateriaId = (selectedPlan || {}).materia_id || '';
+      const selectedMateriaId = String((draft && draft.materia_id) || (selectedPlan || {}).materia_id || '').trim();
       const selectedSubmaterias = getPlanSubmateriasForMateria(selectedMateriaId);
       const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || ''));
       const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
@@ -10490,7 +10503,10 @@
           '<div class="grid-3">' +
             '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"></div>' +
             '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
-            '<div><label>Materia</label><div class="inline-note">' + escapeHtml(getPlanMateriaDisplayLabel(selectedPlan || {}, state.catalogos.materias.find((item) => item.materia_id === (selectedPlan || {}).materia_id))) + '</div></div>' +
+            '<div><label>Materia</label><select onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'materia_id\', this.value, true)">' +
+              '<option value="">Selecciona materia</option>' +
+              (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
+            '</select></div>' +
             (selectedSubmaterias.length
               ? '<div><label>Submateria</label><select onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'submateria_id\', this.value, true)">' +
                   '<option value="">Selecciona submateria</option>' +
@@ -10544,7 +10560,8 @@
       if (options.groupSpecificOnly) return renderOpenPlanGroupSpecificEditor(plan);
       const draft = getOpenPlanDraft(plan);
       if (!draft) return '';
-      const submaterias = getPlanSubmateriasForMateria(plan.materia_id);
+      const selectedMateriaId = String((draft && draft.materia_id) || plan.materia_id || '').trim();
+      const submaterias = getPlanSubmateriasForMateria(selectedMateriaId);
       const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
       const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
       const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
@@ -10583,7 +10600,10 @@
           '<div class="grid-3">' +
             '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"></div>' +
             '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
-            '<div><label>Materia</label><div class="inline-note">' + escapeHtml(getPlanMateriaDisplayLabel(plan, state.catalogos.materias.find((item) => item.materia_id === plan.materia_id))) + '</div></div>' +
+            '<div><label>Materia</label><select onchange="updateOpenPlanDraftField(\'materia_id\', this.value, true)">' +
+              '<option value="">Selecciona materia</option>' +
+              (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
+            '</select></div>' +
             (submaterias.length
               ? '<div><label>Submateria</label><select onchange="updateOpenPlanDraftField(\'submateria_id\', this.value, true)">' +
                   '<option value="">Selecciona submateria</option>' +
@@ -11835,8 +11855,10 @@
       const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
       if (!semana) throw new Error('Selecciona una fecha válida.');
-      const submateriaId = String((draft && draft.submateria_id) || (plan && plan.submateria_id) || '').trim();
-      if (materiaRequiresPlanSubmateria(plan.materia_id) && !submateriaId) {
+      const materiaId = String((draft && draft.materia_id) || (plan && plan.materia_id) || '').trim();
+      if (!materiaId) throw new Error('Selecciona una materia.');
+      const submateriaId = String((draft && draft.submateria_id) || '').trim();
+      if (materiaRequiresPlanSubmateria(materiaId) && !submateriaId) {
         throw new Error('Selecciona una submateria.');
       }
       const alumnosIds = Array.from(new Set(draft.alumnos_ids || []));
@@ -11855,6 +11877,7 @@
       return {
         fallbackDate,
         semana,
+        materiaId,
         submateriaId,
         alumnosIds,
         actividades
@@ -11979,7 +12002,7 @@
         fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
         semana_id: request.semana.draft ? '' : request.semana.semana_id,
         grupo_id: plan.grupo_id,
-        materia_id: plan.materia_id,
+        materia_id: request.materiaId,
         submateria_id: request.submateriaId,
         frase_semana: String(draft.frase_semana || '').trim(),
         alumnos_ids: request.alumnosIds,
@@ -12037,6 +12060,12 @@
       const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
       if (!semana) throw new Error('Selecciona una fecha válida para el multigrupo.');
+      const materiaId = String((draft && draft.materia_id) || (selectedPlan && selectedPlan.materia_id) || '').trim();
+      if (!materiaId) throw new Error('Selecciona una materia.');
+      const submateriaId = String(((draft && draft.submateria_id) || '')).trim();
+      if (materiaRequiresPlanSubmateria(materiaId) && !submateriaId) {
+        throw new Error('Selecciona una submateria.');
+      }
       const activities = (draft.activities || [])
         .map((activity) => ({
           texto: String((activity && activity.texto) || '').trim(),
@@ -12051,7 +12080,8 @@
         planeacion_base_id: (selectedPlan && selectedPlan.planeacion_id) || draft.basePlanId,
         fecha_planeacion: draft.fecha_planeacion || fallbackDate,
         semana_id: semana.draft ? '' : semana.semana_id,
-        submateria_id: String(((selectedPlan && selectedPlan.submateria_id) || draft.submateria_id || '')).trim(),
+        materia_id: materiaId,
+        submateria_id: submateriaId,
         frase_semana: String(draft.frase_semana || '').trim(),
         actividades: activities,
         planes: (entry.plans || []).map((plan) => ({
