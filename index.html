@@ -5305,6 +5305,7 @@
         planeacionesLoaded: false,
         planeacionesCatalogosLoading: false,
         planeacionesCatalogosPromise: null,
+        tallerMembershipCatalogosPromise: null,
         fastPlaneacionesBootPromise: null,
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
@@ -5480,7 +5481,7 @@
         case 'materias':
           return ['materias', 'materias_admin', 'submaterias', 'submaterias_admin'];
         case 'talleres':
-          return ['talleres', 'talleres_admin', 'alumno_talleres', 'alumnos', 'materias', 'facilitadores', 'facilitadores_admin'];
+          return ['talleres', 'talleres_admin', 'alumno_talleres', 'materias', 'facilitadores', 'facilitadores_admin'];
         case 'seguimiento':
           return ['alumnos', 'materias', 'submaterias', 'habilidades', 'periodos'];
         default:
@@ -5657,6 +5658,7 @@
         state.ui.planeacionesLoaded = false;
         state.ui.planeacionesCatalogosLoading = false;
         state.ui.planeacionesCatalogosPromise = null;
+        state.ui.tallerMembershipCatalogosPromise = null;
         state.ui.fastPlaneacionesBootPromise = null;
         state.ui.notificationEditorExpanded = false;
         state.ui.notificationFilter = 'activas';
@@ -6169,6 +6171,26 @@
       return promise;
     }
 
+    async function ensureTallerMembershipCatalogosAvailable(options = {}) {
+      const blocks = getMissingCatalogBlocks(['alumnos', 'grupos']);
+      if (!blocks.length) return state.catalogos;
+      if (state.ui && state.ui.tallerMembershipCatalogosPromise) {
+        return state.ui.tallerMembershipCatalogosPromise;
+      }
+      const promise = refreshCatalogos({ blocks })
+        .then(() => {
+          if (options.render !== false && state.activeAdminModule === 'talleres') {
+            renderAdminTalleresModule();
+          }
+          return state.catalogos;
+        })
+        .finally(() => {
+          if (state.ui) state.ui.tallerMembershipCatalogosPromise = null;
+        });
+      if (state.ui) state.ui.tallerMembershipCatalogosPromise = promise;
+      return promise;
+    }
+
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
       const silent = !!(options && options.silent);
@@ -6543,6 +6565,7 @@
       }
       if (nextModule !== 'talleres') {
         closeTallerEditor();
+        closeTallerMembershipEditor();
       }
       if (nextModule !== 'materias') {
         closeMateriaEditor();
@@ -8993,9 +9016,8 @@
         .filter((row) => String(row.taller_id || '').trim() === targetId && row.activa !== false)
         .map((row) => {
           const alumno = getAlumnoById(row.alumno_id);
-          return alumno ? Object.assign({}, row, { alumno }) : null;
+          return Object.assign({}, row, { alumno: alumno || null });
         })
-        .filter(Boolean)
         .sort((a, b) => String((a.alumno && (a.alumno.nombre_mostrado || a.alumno.nombre_completo)) || '').localeCompare(String((b.alumno && (b.alumno.nombre_mostrado || b.alumno.nombre_completo)) || ''), 'es'));
     }
 
@@ -9037,16 +9059,18 @@
       nextRows.forEach((row) => state.catalogos.alumno_talleres.push(row));
     }
 
-    function openTallerMembershipEditor(tallerId) {
+    async function openTallerMembershipEditor(tallerId) {
       const targetId = String(tallerId || state.talleresUi.selectedTallerId || '').trim();
       const taller = getTallerById(targetId);
       if (!taller) return;
+      closeTallerEditor();
       state.talleresUi.selectedTallerId = targetId;
       state.talleresUi.membershipOpen = true;
       state.talleresUi.membershipSearch = '';
       state.talleresUi.membershipGroup = '';
       state.talleresUi.membershipSelectedAlumnoIds = getTallerAlumnoIds(targetId);
       renderAdminTalleresModule();
+      await ensureTallerMembershipCatalogosAvailable();
       focusAdminFacilitadorPanel('adminTallerDetailPanel', 'adminTallerMembershipSearch');
     }
 
@@ -9369,6 +9393,9 @@
       }
       state.talleresUi.selectedTallerId = nextId;
       renderAdminTalleresModule();
+      if ((state.catalogos.alumno_talleres || []).some((row) => String(row.taller_id || '').trim() === nextId && row.activa !== false) && getMissingCatalogBlocks(['alumnos', 'grupos']).length) {
+        ensureTallerMembershipCatalogosAvailable({ render: true }).catch(() => {});
+      }
       focusAdminFacilitadorPanel('adminTallerDetailPanel');
     }
 
