@@ -3042,6 +3042,23 @@
     .plan-detail-wrap[hidden],
     #adminPlaneacionesShell[hidden] { display: none !important; }
 
+    .plan-builder-loading-note {
+      display: grid;
+      gap: 6px;
+      padding: 12px 14px;
+      border: 1px dashed rgba(83, 194, 237, 0.35);
+      border-radius: 14px;
+      background: rgba(35, 120, 150, 0.12);
+      color: #dff6ff;
+    }
+    .plan-builder-loading-note strong {
+      color: #f7fbfd;
+      font-size: 14px;
+    }
+    .plan-builder-loading-note .mini {
+      color: rgba(223, 246, 255, 0.82);
+    }
+
     .plan-builder-shell,
     .planeaciones-shell-card {
       background: linear-gradient(180deg, rgba(34, 42, 47, 0.96), rgba(48, 42, 43, 0.92));
@@ -4572,6 +4589,10 @@
               </div>
             </div>
             <div id="planBuilderBody" class="stack" hidden>
+              <div id="planBuilderLoadingNote" class="plan-builder-loading-note" hidden>
+                <strong>Cargando materias y grupos...</strong>
+                <div class="mini">Puedes ver el editor desde ahora, pero estos campos se habilitan en cuanto termine la carga.</div>
+              </div>
               <div class="grid-3">
                 <div>
                   <label for="planFecha">Fecha de referencia</label>
@@ -5051,6 +5072,9 @@
       ui: {
         planBuilderExpanded: false,
         planeacionesLoaded: false,
+        planeacionesCatalogosLoading: false,
+        planeacionesCatalogosPromise: null,
+        fastPlaneacionesBootPromise: null,
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
         planeacionesMateriaFilter: '',
@@ -5395,6 +5419,9 @@
       if (state.ui) {
         state.ui.planBuilderExpanded = false;
         state.ui.planeacionesLoaded = false;
+        state.ui.planeacionesCatalogosLoading = false;
+        state.ui.planeacionesCatalogosPromise = null;
+        state.ui.fastPlaneacionesBootPromise = null;
         state.ui.notificationEditorExpanded = false;
         state.ui.notificationFilter = 'activas';
         state.ui.planeacionesMateriaFilter = '';
@@ -5874,13 +5901,23 @@
       if (state.ui && state.ui.planeacionesCatalogosPromise) {
         return state.ui.planeacionesCatalogosPromise;
       }
+      if (state.ui) state.ui.planeacionesCatalogosLoading = true;
+      if (options.render !== false) renderPlanEditor();
       const promise = refreshCatalogos({ blocks })
         .then(() => {
-          if (options.render !== false) renderAll();
+          if (state.ui) state.ui.planeacionesCatalogosLoading = false;
+          if (options.render !== false) {
+            renderAll();
+          } else if (isPlanBuilderExpanded() || isPlaneacionesSurfaceVisible()) {
+            renderAll();
+          }
           return state.catalogos;
         })
         .finally(() => {
-          if (state.ui) state.ui.planeacionesCatalogosPromise = null;
+          if (state.ui) {
+            state.ui.planeacionesCatalogosPromise = null;
+            state.ui.planeacionesCatalogosLoading = false;
+          }
         });
       if (state.ui) state.ui.planeacionesCatalogosPromise = promise;
       return promise;
@@ -9760,6 +9797,11 @@
 
     function renderPlanGroupChecklist() {
       const host = $('planGruposChecklist');
+      const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
+      if (catalogsLoading) {
+        host.innerHTML = '<div class="empty">Cargando grupos...</div>';
+        return;
+      }
       const editLocked = state.planEditor.mode === 'edit' && !canUseAdminShell();
       const currentSelectedGroups = getSelectedGroupIds();
       const checkedSet = new Set(
@@ -9808,6 +9850,11 @@
 
     function renderPlanAlumnosChecklist(selectedOverride) {
       const host = $('planAlumnosChecklist');
+      const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
+      if (catalogsLoading) {
+        host.innerHTML = '<div class="empty">Cargando grupos y alumnos...</div>';
+        return;
+      }
       const selected = selectedOverride instanceof Set ? new Set(selectedOverride) : new Set(getSelectedPlanAlumnos());
       const selectedGroups = getSelectedGroupIds();
       const groupIds = state.planEditor.mode === 'edit'
@@ -9884,10 +9931,19 @@
       const hasAdminPower = canUseAdminShell();
       const currentPlan = isEdit ? getPlanById(state.planEditor.planId) : null;
       const canEditDate = !isEdit || hasAdminPower || (currentPlan && ['borrador', 'activa', 'rechazada'].includes(String(currentPlan.estado || '').trim()));
+      const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
+      const loadingNote = $('planBuilderLoadingNote');
       $('planEditorTitle').textContent = isEdit ? 'Editar planeacion' : 'Plan';
       $('savePlanBtn').textContent = isEdit ? 'Guardar cambios' : 'Guardar planeacion';
       $('planFecha').disabled = !canEditDate;
-      $('planMateria').disabled = isEdit && !hasAdminPower;
+      $('planMateria').disabled = (isEdit && !hasAdminPower) || catalogsLoading;
+      $('planFrase').disabled = catalogsLoading;
+      $('selectAllVisibleAlumnosBtn').disabled = catalogsLoading;
+      $('clearVisibleAlumnosBtn').disabled = catalogsLoading;
+      $('addActivityBtn').disabled = catalogsLoading;
+      $('savePlanBtn').disabled = catalogsLoading;
+      if ($('resetPlanEditorBtn')) $('resetPlanEditorBtn').disabled = catalogsLoading;
+      if (loadingNote) loadingNote.hidden = !catalogsLoading;
       renderPlanWeekResolved();
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
@@ -11158,6 +11214,9 @@
 
     async function savePlanEditor() {
       ensureLoggedIn();
+      if (state.ui && state.ui.planeacionesCatalogosLoading) {
+        throw new Error('Espera a que terminen de cargar materias y grupos.');
+      }
       const hasAdminPower = canUseAdminShell();
       const editorMode = state.planEditor.mode;
       const fallbackDate = editorMode === 'edit'
