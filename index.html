@@ -10315,9 +10315,6 @@
           '<div>' +
             '<div class="card-head inline-head">' +
               '<div><label>Estructura compartida</label><p class="subtle">Estas actividades, materiales y seguimiento se aplican igual a todos los grupos del lote.</p></div>' +
-              '<div class="actions compact">' +
-                '<button class="btn-accent" type="button" onclick="addMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\')">Agregar actividad</button>' +
-              '</div>' +
             '</div>' +
             '<div class="stack">' + (draft.activities || []).map((activity, index) => (
               '<div class="activity-editor">' +
@@ -10344,6 +10341,9 @@
                 '</div>' +
               '</div>'
             )).join('') + '</div>' +
+            '<div class="plan-activities-add-wrap">' +
+              '<button class="btn-accent plan-activities-add-btn" type="button" onclick="addMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\')">Agregar otra actividad</button>' +
+            '</div>' +
           '</div>' +
         '</div>'
       );
@@ -10417,9 +10417,12 @@
           '</div>' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<button class="btn-accent" type="button" onclick="addOpenPlanDraftActivity()">Agregar actividad</button>' +
+              '<div><label>Actividades</label><p class="subtle">Mantén la secuencia y agrega otra actividad al final cuando haga falta.</p></div>' +
             '</div>' +
             '<div class="stack">' + activitiesHtml + '</div>' +
+            '<div class="plan-activities-add-wrap">' +
+              '<button class="btn-accent plan-activities-add-btn" type="button" onclick="addOpenPlanDraftActivity()">Agregar otra actividad</button>' +
+            '</div>' +
           '</div>' +
         '</div>'
       );
