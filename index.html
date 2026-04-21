@@ -5443,6 +5443,9 @@
       if (next) {
         closeOpenPlan();
         renderPlaneacionesList();
+        if (state.planEditor.mode === 'create' && currentViewNeedsCatalogos()) {
+          ensurePlaneacionesCatalogosAvailable({ render: true }).catch(() => {});
+        }
       }
       if (state.ui) state.ui.planBuilderExpanded = next;
       renderPlanBuilderVisibility();
@@ -5784,7 +5787,7 @@
       saveSession({ token: data.token, usuario: data.usuario });
       clearLoginInputs();
       setBanner('Sesión iniciada como ' + data.usuario.nombre + '.', 'success');
-      await refreshAll();
+      await refreshAll({ fastFacilitadorBoot: true });
     }
 
     async function logout() {
@@ -5855,8 +5858,78 @@
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
     }
 
+    function shouldUseFastFacilitadorPlaneacionesBoot(options = {}) {
+      return !!(
+        options &&
+        options.fastFacilitadorBoot &&
+        getCurrentRole() === 'facilitador' &&
+        !canUseAdminShell() &&
+        String(state.activeTab || '').trim() === 'planeaciones'
+      );
+    }
+
+    async function ensurePlaneacionesCatalogosAvailable(options = {}) {
+      const blocks = getMissingCatalogBlocks(getCatalogBlocksForModule('planeaciones'));
+      if (!blocks.length) return state.catalogos;
+      if (state.ui && state.ui.planeacionesCatalogosPromise) {
+        return state.ui.planeacionesCatalogosPromise;
+      }
+      const promise = refreshCatalogos({ blocks })
+        .then(() => {
+          if (options.render !== false) renderAll();
+          return state.catalogos;
+        })
+        .finally(() => {
+          if (state.ui) state.ui.planeacionesCatalogosPromise = null;
+        });
+      if (state.ui) state.ui.planeacionesCatalogosPromise = promise;
+      return promise;
+    }
+
+    async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
+      ensureLoggedIn();
+      const silent = !!(options && options.silent);
+      if (!silent) setBanner('Cargando planeaciones...', 'info');
+      await refreshPlaneaciones();
+      state.dashboardStats = Object.assign({}, state.dashboardStats || {}, {
+        planeaciones_visibles: Array.isArray(state.planeaciones) ? state.planeaciones.length : 0
+      });
+      renderAll();
+      if (!silent) setBanner('Planeaciones cargadas. Completando panel...', 'info');
+
+      const deferredTasks = [
+        refreshAlertas(),
+        refreshNotificaciones(),
+        ensurePlaneacionesCatalogosAvailable({ render: false })
+      ];
+
+      const deferredPromise = Promise.allSettled(deferredTasks).then((results) => {
+        const hadFailures = results.some((result) => result.status === 'rejected');
+        renderAll();
+        if (!silent) {
+          setBanner(
+            hadFailures
+              ? 'Planeaciones cargadas. Algunos datos secundarios tardaron más en actualizarse.'
+              : 'Datos actualizados.',
+            hadFailures ? 'warning' : 'success'
+          );
+        }
+      });
+
+      if (state.ui) state.ui.fastPlaneacionesBootPromise = deferredPromise;
+      deferredPromise.finally(() => {
+        if (state.ui) state.ui.fastPlaneacionesBootPromise = null;
+      });
+    }
+
     async function refreshAll(options = {}) {
       ensureLoggedIn();
+      if (shouldUseFastFacilitadorPlaneacionesBoot(options)) {
+        try {
+          await refreshFacilitadorPlaneacionesFastBoot(options);
+          return;
+        } catch (_) {}
+      }
       const silent = !!(options && options.silent);
       const shouldIncludeCatalogos = currentViewNeedsCatalogos();
       const requestedCatalogBlocks = shouldIncludeCatalogos ? getCurrentCatalogBlocks() : [];
@@ -12125,7 +12198,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
       refreshStaticConfigUi();
       renderAll();
       if (state.session && state.session.token) {
-        await handleAction('restore', refreshAll);
+        await handleAction('restore', () => refreshAll({ fastFacilitadorBoot: true }));
       }
     }
 
