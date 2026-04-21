@@ -6813,6 +6813,25 @@
       return buildAlumnoSourceRows().find((row) => row.alumno_id === id) || null;
     }
 
+    function upsertCatalogEntityRow(collectionKey, idField, row, options = {}) {
+      if (!state.catalogos || !collectionKey || !idField || !row || !row[idField]) return null;
+      if (!Array.isArray(state.catalogos[collectionKey])) state.catalogos[collectionKey] = [];
+      const rows = state.catalogos[collectionKey];
+      const id = String(row[idField] || '').trim();
+      const index = rows.findIndex((item) => String((item && item[idField]) || '').trim() === id);
+      if (index === -1) {
+        if (options.append) rows.push(row);
+        else rows.unshift(row);
+        return row;
+      }
+      rows.splice(index, 1, Object.assign({}, rows[index], row));
+      return rows[index];
+    }
+
+    function applySavedAlumnoCatalogRow(row) {
+      return upsertCatalogEntityRow('alumnos', 'alumno_id', row);
+    }
+
     function pushAlumnoHistory(alumnoId, tipo, titulo, detalle, fecha) {
       const id = String(alumnoId || '').trim();
       if (!id) return;
@@ -7050,8 +7069,10 @@
         };
         const response = await api('guardarAlumno', payload);
         const savedId = (response && response.alumno_id) || existingId || '';
+        const savedAlumno = response && response.alumno ? response.alumno : null;
         if (savedId) {
           state.alumnosUi.notesByAlumno[savedId] = String(editor.notas_internas || '').trim();
+          if (savedAlumno) applySavedAlumnoCatalogRow(savedAlumno);
           pushAlumnoHistory(
             savedId,
             editing ? 'edicion' : 'alta',
@@ -7062,7 +7083,7 @@
           invalidateAlumnoHistorialCache(savedId);
         }
         closeAlumnoEditor();
-        await refreshAdminModuleSurface('alumnos');
+        renderAdminModuleSurface('alumnos');
         setBanner(editing ? 'Ficha actualizada.' : 'Alumno creado.', 'success');
       }, {
         button,
@@ -7627,6 +7648,13 @@
     function getFacilitadorById(facilitadorId) {
       const id = String(facilitadorId || '').trim();
       return getAdminFacilitadoresCatalog().find((row) => row.facilitador_id === id) || null;
+    }
+
+    function applySavedFacilitadorCatalogRow(row) {
+      if (!row || !row.facilitador_id) return null;
+      upsertCatalogEntityRow('facilitadores_admin', 'facilitador_id', row);
+      upsertCatalogEntityRow('facilitadores', 'facilitador_id', row);
+      return getFacilitadorById(row.facilitador_id);
     }
 
     function getFacilitadorVisualStatus(row) {
@@ -8298,9 +8326,10 @@
       if (pinPlano) payload.pin_plano = pinPlano;
       await handleAction('guardarFacilitador', async () => {
         const data = await api('guardarFacilitador', payload);
+        if (data && data.facilitador) applySavedFacilitadorCatalogRow(data.facilitador);
         closeFacilitadorEditor();
         state.facilitadoresUi.selectedFacilitadorId = data.facilitador_id || payload.facilitador_id;
-        await refreshAdminModuleSurface('facilitadores');
+        renderAdminModuleSurface('facilitadores');
         setBanner(mode === 'new' ? 'Facilitador creado.' : 'Ficha del facilitador actualizada.', 'success');
       }, {
         button,
@@ -8528,6 +8557,13 @@
         if (orderDiff) return orderDiff;
         return String(a.nombre || a.materia_id).localeCompare(String(b.nombre || b.materia_id), 'es');
       });
+    }
+
+    function applySavedMateriaCatalogRow(row) {
+      if (!row || !row.materia_id) return null;
+      upsertCatalogEntityRow('materias_admin', 'materia_id', row);
+      upsertCatalogEntityRow('materias', 'materia_id', row);
+      return getAdminMateriasCatalog().find((item) => item.materia_id === row.materia_id) || null;
     }
 
     function getAdminSubmateriasCatalog() {
@@ -8973,9 +9009,10 @@
       if (!payload.nombre) throw new Error('Captura el nombre de la materia.');
       await handleAction('guardarMateria', async () => {
         const data = await api('guardarMateria', payload);
+        if (data && data.materia) applySavedMateriaCatalogRow(data.materia);
         closeMateriaEditor();
         state.materiasUi.selectedMateriaId = data.materia_id || payload.materia_id;
-        await refreshAdminModuleSurface('materias');
+        renderAdminModuleSurface('materias');
         setBanner(mode === 'new' ? 'Materia creada.' : 'Materia actualizada.', 'success');
       }, {
         button,
@@ -9772,12 +9809,16 @@
     }
 
     async function fetchPlaneacionDetalle(planId) {
-      const data = await api('getPlaneaciones', {
+      try {
+        const data = await api('getPlaneacionDetalle', { planeacion_id: planId });
+        if (data && data.planeacion) return data.planeacion;
+      } catch (_) {}
+      const fallback = await api('getPlaneaciones', {
         planeacion_id: planId,
         include_detail: true,
         limit: 1
       });
-      const rows = Array.isArray(data && data.rows) ? data.rows : [];
+      const rows = Array.isArray(fallback && fallback.rows) ? fallback.rows : [];
       if (!rows.length) throw new Error('Planeación no encontrada.');
       return rows[0];
     }
@@ -11501,8 +11542,13 @@
           state.openPlanId = '';
           state.openPlanDraft = null;
         }
-        await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
-        await refreshPlaneacionesSurface();
+        const response = await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
+        const updatedPlan = response && response.planeacion ? response.planeacion : null;
+        const appliedLocally = !hasActivePlaneacionesFilters() &&
+          await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
+        if (!appliedLocally) {
+          await refreshPlaneacionesSurface();
+        }
         setBanner(
           action === 'activarPlaneacion'
             ? 'La planeación ya está activa y lista para trabajarse.'
@@ -11789,6 +11835,20 @@
       upsertPlaneacionRow(updatedPlan);
       state.openPlanId = planId;
       state.openPlanDraft = buildOpenPlanDraft(updatedPlan);
+    }
+
+    async function applySavedPlaneacionTransition(planId, updatedPlan, options = {}) {
+      if (!updatedPlan || !updatedPlan.planeacion_id) return false;
+      upsertPlaneacionRow(updatedPlan);
+      if (options.closeOpenCard) {
+        state.openPlanId = '';
+        state.openPlanDraft = null;
+      } else if (state.openPlanId === planId) {
+        state.openPlanDraft = buildOpenPlanDraft(Object.assign({}, getPlanById(planId) || updatedPlan));
+      }
+      await refreshAlertas();
+      renderPlaneacionesSurface();
+      return true;
     }
 
     function buildMultiGroupSharedSavePayload(entry, draft) {
@@ -12100,13 +12160,18 @@
           state.openPlanId = '';
           state.openPlanDraft = null;
         }
-        await api('confirmarCierre', {
+        const response = await api('confirmarCierre', {
           planeacion_id: planId,
           actividades: closePayload.actividades,
           obs_semana: obs,
           request_id: uid('CIE')
         });
-        await refreshPlaneacionesSurface();
+        const updatedPlan = response && response.planeacion ? response.planeacion : null;
+        const appliedLocally = !hasActivePlaneacionesFilters() &&
+          await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
+        if (!appliedLocally) {
+          await refreshPlaneacionesSurface();
+        }
         closeClosePlanModal();
         setBanner('Cierre confirmado.', 'success');
       }, {
