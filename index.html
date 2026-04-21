@@ -3753,16 +3753,46 @@
         .plan-multigroup-header {
           grid-template-columns: 1fr;
           display: grid;
+          gap: 8px;
         }
 
         .plan-multigroup-shared {
           padding: 12px;
         }
 
+        .plan-multigroup-title {
+          font-size: 1.04rem;
+          line-height: 1.25;
+        }
+
+        .plan-multigroup-groups,
+        .plan-multigroup-header .mini {
+          display: none;
+        }
+
         .plan-multigroup-chip,
         .plan-multigroup-switch {
           width: 100%;
           justify-content: center;
+        }
+
+        .plan-open-editor .card-head.inline-head {
+          gap: 10px;
+        }
+
+        .plan-open-editor .card-head.inline-head .subtle,
+        .plan-open-editor .group-block-head .subtle {
+          margin-top: 4px;
+          line-height: 1.35;
+        }
+
+        .plan-open-editor .group-block {
+          padding: 14px;
+        }
+
+        .plan-activities-add-wrap {
+          margin-top: 14px;
+          margin-bottom: 4px;
         }
       }
 
@@ -10248,14 +10278,12 @@
           const grupo = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
           const grupoLabel = grupo ? getGrupoDisplayName(grupo) : groupPlan.grupo_id;
           const helperText = isMulti
-            ? (isActiveGroup
-                ? 'Este grupo está activo y sí se puede editar aquí.'
-                : 'Visible como referencia. Para editar este grupo, selecciónalo arriba.')
+            ? ''
             : 'Selecciona en un solo lugar a quiénes aplica esta planeación.';
           return (
             '<div class="group-block">' +
               '<div class="group-block-head">' +
-                '<div><strong>' + escapeHtml(grupoLabel) + '</strong><div class="subtle">' + escapeHtml(helperText) + '</div></div>' +
+                '<div><strong>' + escapeHtml(grupoLabel) + '</strong>' + (helperText ? '<div class="subtle">' + escapeHtml(helperText) + '</div>' : '') + '</div>' +
                 (isActiveGroup
                   ? '<div class="actions compact">' +
                       '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
@@ -10280,12 +10308,12 @@
         '<div class="plan-open-editor plan-open-editor-group">' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<div><label>' + (isMulti ? 'Alumnos de grupos vinculados' : 'Alumnos del grupo') + '</label><p class="subtle">' + (isMulti ? 'Todos los grupos quedan visibles. La edición sigue aplicando solo al grupo activo.' : 'Esta selección solo afecta al grupo actual.') + '</p></div>' +
+              '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selección solo afecta al grupo actual.</p>') + '</div>' +
             '</div>' +
             '<div class="stack">' + allStudentBlocks + '</div>' +
           '</div>' +
           (isMulti
-            ? '<div class="group-block"><div class="helper">Actividades, material, realizada y comentario se editan una sola vez en la base multigrupo de arriba.</div></div>'
+            ? ''
             : '<div>' +
             '<div class="card-head inline-head">' +
               '<div><label>Seguimiento del grupo</label><p class="subtle">Material, realizada y comentario se guardan por grupo.</p></div>' +
@@ -10692,7 +10720,6 @@
             (entry.isMulti
               ? (
                   '<div class="plan-multigroup-switcher">' +
-                    '<div class="mini">Grupo activo para editar alumnos del grupo</div>' +
                     '<div class="plan-multigroup-switcher-list">' +
                       (entry.plans || []).map((groupPlan) => {
                         const groupRow = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
