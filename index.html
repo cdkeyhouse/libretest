@@ -9808,6 +9808,11 @@
       return state.planeaciones[idx];
     }
 
+    function upsertPlaneacionesRows(rows) {
+      if (!Array.isArray(rows) || !rows.length) return [];
+      return rows.map((row) => upsertPlaneacionRow(row)).filter(Boolean);
+    }
+
     async function fetchPlaneacionDetalle(planId) {
       try {
         const data = await api('getPlaneacionDetalle', { planeacion_id: planId });
@@ -11353,10 +11358,22 @@
         });
       }
       const updatedPlan = responseData && responseData.planeacion ? responseData.planeacion : null;
+      const createdPlans = Array.isArray(responseData && responseData.planeaciones)
+        ? responseData.planeaciones.filter((plan) => plan && plan.planeacion_id)
+        : (updatedPlan && updatedPlan.planeacion_id ? [updatedPlan] : []);
       const canApplyLocally = editorMode === 'edit' && updatedPlan && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan);
+      const canApplyCreateLocally = editorMode !== 'edit' && createdPlans.length && !hasActivePlaneacionesFilters();
       resetPlanEditor();
       if (canApplyLocally) {
         upsertPlaneacionRow(updatedPlan);
+        await refreshAlertas();
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: true
+        });
+      } else if (canApplyCreateLocally) {
+        upsertPlaneacionesRows(createdPlans);
         await refreshAlertas();
         renderPlaneacionesSurface({
           includeStats: true,
