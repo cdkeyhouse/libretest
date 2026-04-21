@@ -4956,6 +4956,8 @@
         alumno_id: '',
         matricula: '',
         nombres: '',
+        alias: '',
+        aliasTouched: false,
         apellidos: '',
         grupo_id: '',
         estatus: 'activo',
@@ -6824,9 +6826,29 @@
       return [String(nombres || '').trim(), String(apellidos || '').trim()].filter(Boolean).join(' ').trim();
     }
 
-    function composeAlumnoNombreMostrado(nombres, apellidos, fullName) {
-      const firstSurname = String(apellidos || '').trim().split(/\s+/).filter(Boolean)[0] || '';
-      return [String(nombres || '').trim(), firstSurname].filter(Boolean).join(' ').trim() || String(fullName || '').trim();
+    function buildAlumnoAliasSuggestion(nombres, fullName) {
+      const tokens = String(nombres || fullName || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2);
+      return tokens.join(' ').trim();
+    }
+
+    function composeAlumnoNombreMostrado(nombres, alias, fullName) {
+      return String(alias || '').trim() || buildAlumnoAliasSuggestion(nombres, fullName) || String(fullName || '').trim();
+    }
+
+    function syncAlumnoAliasSuggestion(options = {}) {
+      const editor = state.alumnosUi && state.alumnosUi.editor ? state.alumnosUi.editor : null;
+      if (!editor) return;
+      const force = !!options.force;
+      const nextAlias = buildAlumnoAliasSuggestion(editor.nombres, composeAlumnoNombreCompleto(editor.nombres, editor.apellidos));
+      if (force || !editor.aliasTouched || !String(editor.alias || '').trim()) {
+        editor.alias = nextAlias;
+        const aliasInput = $('adminAlumnoAlias');
+        if (aliasInput && aliasInput.value !== nextAlias) aliasInput.value = nextAlias;
+      }
     }
 
     function getGrupoDisplayName(group) {
@@ -7144,11 +7166,14 @@
         alumno_id: alumno.alumno_id,
         matricula: alumno.matricula || '',
         nombres: split.nombres || alumno.nombre_mostrado || '',
+        alias: alumno.nombre_mostrado || '',
+        aliasTouched: !!String(alumno.nombre_mostrado || '').trim(),
         apellidos: split.apellidos || '',
         grupo_id: alumno.grupo_id || '',
         estatus: alumno.estatus || 'activo',
         notas_internas: getAlumnoAdminNotes(alumno.alumno_id, alumno.notas_internas || '')
       } : createEmptyAlumnoEditorState();
+      if (!alumno) syncAlumnoAliasSuggestion({ force: true });
       state.alumnosUi.editorOpen = true;
       closeCambioGrupo();
       closeAlumnoHistorial();
@@ -7173,7 +7198,7 @@
           alumno_id: existingId,
           matricula: String(editor.matricula || '').trim(),
           nombre_completo: fullName,
-          nombre_mostrado: composeAlumnoNombreMostrado(editor.nombres, editor.apellidos, fullName),
+          nombre_mostrado: composeAlumnoNombreMostrado(editor.nombres, editor.alias, fullName),
           grupo_id: String(editor.grupo_id || '').trim(),
           estatus: String(editor.estatus || 'activo').trim()
         };
@@ -7393,6 +7418,7 @@
       if ($('adminAlumnoEditorTitle')) $('adminAlumnoEditorTitle').textContent = state.alumnosUi.editorMode === 'edit' ? 'Editar ficha' : 'Nuevo alumno';
       if ($('adminAlumnoMatricula')) $('adminAlumnoMatricula').value = state.alumnosUi.editor.matricula || '';
       if ($('adminAlumnoNombres')) $('adminAlumnoNombres').value = state.alumnosUi.editor.nombres || '';
+      if ($('adminAlumnoAlias')) $('adminAlumnoAlias').value = state.alumnosUi.editor.alias || '';
       if ($('adminAlumnoApellidos')) $('adminAlumnoApellidos').value = state.alumnosUi.editor.apellidos || '';
       if ($('adminAlumnoStatus')) $('adminAlumnoStatus').value = state.alumnosUi.editor.estatus || 'activo';
       if ($('adminAlumnoNotas')) $('adminAlumnoNotas').value = state.alumnosUi.editor.notas_internas || '';
@@ -7559,6 +7585,10 @@
                     '<input id="adminAlumnoNombres" type="text" maxlength="100" placeholder="Nombre(s)">',
                   '</label>',
                   '<label class="field">',
+                    '<span>Alias visible</span>',
+                    '<input id="adminAlumnoAlias" type="text" maxlength="100" placeholder="Se sugiere con primer y segundo nombre">',
+                  '</label>',
+                  '<label class="field">',
                     '<span>Apellidos</span>',
                     '<input id="adminAlumnoApellidos" type="text" maxlength="100" placeholder="Apellidos">',
                   '</label>',
@@ -7710,7 +7740,14 @@
       });
       if ($('adminAlumnoNewBtn')) $('adminAlumnoNewBtn').addEventListener('click', () => openAlumnoEditor('new'));
       if ($('adminAlumnoMatricula')) $('adminAlumnoMatricula').addEventListener('input', (event) => { state.alumnosUi.editor.matricula = event.currentTarget.value; });
-      if ($('adminAlumnoNombres')) $('adminAlumnoNombres').addEventListener('input', (event) => { state.alumnosUi.editor.nombres = event.currentTarget.value; });
+      if ($('adminAlumnoNombres')) $('adminAlumnoNombres').addEventListener('input', (event) => {
+        state.alumnosUi.editor.nombres = event.currentTarget.value;
+        syncAlumnoAliasSuggestion();
+      });
+      if ($('adminAlumnoAlias')) $('adminAlumnoAlias').addEventListener('input', (event) => {
+        state.alumnosUi.editor.alias = event.currentTarget.value;
+        state.alumnosUi.editor.aliasTouched = String(event.currentTarget.value || '').trim().length > 0;
+      });
       if ($('adminAlumnoApellidos')) $('adminAlumnoApellidos').addEventListener('input', (event) => { state.alumnosUi.editor.apellidos = event.currentTarget.value; });
       if ($('adminAlumnoGrupo')) $('adminAlumnoGrupo').addEventListener('change', (event) => { state.alumnosUi.editor.grupo_id = event.currentTarget.value; });
       if ($('adminAlumnoStatus')) $('adminAlumnoStatus').addEventListener('change', (event) => { state.alumnosUi.editor.estatus = event.currentTarget.value; });
