@@ -876,6 +876,13 @@
       margin-top: 0;
     }
 
+    .plan-quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0 14px;
+    }
+
     .plan-alert-action {
       min-height: 34px;
       padding: 7px 12px !important;
@@ -10559,6 +10566,9 @@
         }
 
         if (!isOpen) {
+          const quickActivateButton = plan.estado === 'borrador'
+            ? '<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>'
+            : '';
           return (
             '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card is-collapsed plan-card-compact">' +
               '<div class="plan-collapsed-mobile">' +
@@ -10577,6 +10587,7 @@
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
                 materialHistoryHtml +
                 '<div class="actions" style="margin-top:14px;">' +
+                  quickActivateButton +
                   '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>' +
                 '</div>' +
               '</div>' +
@@ -10609,6 +10620,7 @@
                     '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-actions">' +
+              quickActivateButton +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>' +
                   '</div>' +
                 '</div>' +
@@ -10651,6 +10663,9 @@
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
               '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
             '</div>' +
+            (plan.estado === 'borrador'
+              ? '<div class="plan-quick-actions"><button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar planeación</button></div>'
+              : '') +
             (hasMaterialAlert
               ? (
                   '<div class="plan-alert-bar">' +
