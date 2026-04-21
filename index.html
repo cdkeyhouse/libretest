@@ -1824,6 +1824,95 @@
       font-size: 0.95rem;
       color: var(--text-strong);
     }
+    .admin-taller-membership {
+      margin-top: 14px;
+      display: grid;
+      gap: 12px;
+    }
+    .admin-taller-membership-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .admin-taller-membership-copy {
+      display: grid;
+      gap: 4px;
+    }
+    .admin-taller-membership-copy h4 {
+      margin: 0;
+      font-size: 1rem;
+      color: var(--text-strong);
+    }
+    .admin-taller-membership-tools {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+    .admin-taller-membership-tools .field {
+      min-width: 150px;
+    }
+    .admin-taller-membership-summary {
+      display: grid;
+      gap: 8px;
+    }
+    .admin-taller-member-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-taller-member-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-strong);
+      font-size: 0.88rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .admin-taller-member-chip .mini {
+      color: var(--text-soft);
+      font-weight: 600;
+    }
+    .admin-taller-membership-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .admin-taller-membership-candidates {
+      max-height: 360px;
+      overflow: auto;
+    }
+    .admin-taller-membership-candidate {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+    .admin-taller-membership-candidate strong {
+      display: block;
+      color: var(--text-strong);
+      font-size: 0.94rem;
+      line-height: 1.2;
+    }
+    .admin-taller-membership-candidate .mini {
+      display: block;
+      margin-top: 3px;
+      color: var(--text-soft);
+    }
+    .admin-taller-membership-candidate input[type="checkbox"] {
+      width: auto;
+      margin-top: 2px;
+    }
     .admin-alumnos-history {
       display: grid;
       gap: 10px;
@@ -2956,6 +3045,14 @@
       .admin-alumnos-editor-grid,
       .admin-alumnos-mini-grid {
         grid-template-columns: 1fr;
+      }
+      .admin-taller-membership-head,
+      .admin-taller-membership-tools,
+      .admin-taller-membership-actions {
+        display: grid;
+      }
+      .admin-taller-membership-tools .field {
+        min-width: 0;
       }
       .admin-facilitadores-kpis,
       .admin-facilitadores-meta-grid,
@@ -5108,7 +5205,11 @@
         selectedTallerId: '',
         editorOpen: false,
         editorMode: 'new',
-        editor: createEmptyTallerEditorState()
+        editor: createEmptyTallerEditorState(),
+        membershipOpen: false,
+        membershipSearch: '',
+        membershipGroup: '',
+        membershipSelectedAlumnoIds: []
       };
     }
 
@@ -8818,12 +8919,22 @@
       state.talleresUi.editor = createEmptyTallerEditorState();
     }
 
+    function closeTallerMembershipEditor() {
+      state.talleresUi.membershipOpen = false;
+      state.talleresUi.membershipSearch = '';
+      state.talleresUi.membershipGroup = '';
+      state.talleresUi.membershipSelectedAlumnoIds = [];
+    }
+
     function syncAdminTalleresModule() {
       const visible = getVisibleTalleres();
       const selected = String(state.talleresUi.selectedTallerId || '').trim();
       if (selected && visible.some((row) => row.taller_id === selected)) return;
       state.talleresUi.selectedTallerId = visible.length ? visible[0].taller_id : '';
-      if (!visible.length) closeTallerEditor();
+      if (!visible.length) {
+        closeTallerEditor();
+        closeTallerMembershipEditor();
+      }
     }
 
     function getTallerSearchText(row) {
@@ -8873,6 +8984,92 @@
         ? state.catalogos.facilitadores_admin
         : (state.catalogos.facilitadores || []);
       return rows.filter((row) => String(row.archivado_at || '').trim() === '');
+    }
+
+    function getActiveTallerAlumnoRows(tallerId) {
+      const targetId = String(tallerId || '').trim();
+      if (!targetId) return [];
+      return (state.catalogos.alumno_talleres || [])
+        .filter((row) => String(row.taller_id || '').trim() === targetId && row.activa !== false)
+        .map((row) => {
+          const alumno = getAlumnoById(row.alumno_id);
+          return alumno ? Object.assign({}, row, { alumno }) : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => String((a.alumno && (a.alumno.nombre_mostrado || a.alumno.nombre_completo)) || '').localeCompare(String((b.alumno && (b.alumno.nombre_mostrado || b.alumno.nombre_completo)) || ''), 'es'));
+    }
+
+    function getTallerAlumnoIds(tallerId) {
+      return getActiveTallerAlumnoRows(tallerId).map((row) => String(row.alumno_id || '').trim());
+    }
+
+    function getTallerCandidateAlumnos() {
+      return (state.catalogos.alumnos || [])
+        .filter((row) => getAlumnoStatusVisual(row) === 'activo')
+        .map((row) => Object.assign({}, row, { grupo_nombre: getGrupoNombre(row.grupo_id) }))
+        .sort((a, b) => {
+          const groupDiff = String(a.grupo_nombre || '').localeCompare(String(b.grupo_nombre || ''), 'es');
+          if (groupDiff) return groupDiff;
+          return String(a.nombre_mostrado || a.nombre_completo || a.alumno_id).localeCompare(String(b.nombre_mostrado || b.nombre_completo || b.alumno_id), 'es');
+        });
+    }
+
+    function getVisibleTallerCandidateAlumnos() {
+      const query = String(state.talleresUi.membershipSearch || '').trim().toLowerCase();
+      const groupFilter = String(state.talleresUi.membershipGroup || '').trim();
+      return getTallerCandidateAlumnos().filter((row) => {
+        if (groupFilter && String(row.grupo_id || '').trim() !== groupFilter) return false;
+        if (!query) return true;
+        return [
+          row.alumno_id,
+          row.matricula,
+          row.nombre_mostrado,
+          row.nombre_completo,
+          row.grupo_nombre
+        ].filter(Boolean).join(' ').toLowerCase().includes(query);
+      });
+    }
+
+    function replaceTallerAlumnoRelations(tallerId, activeRows) {
+      const targetId = String(tallerId || '').trim();
+      const nextRows = Array.isArray(activeRows) ? activeRows.slice() : [];
+      state.catalogos.alumno_talleres = (state.catalogos.alumno_talleres || []).filter((row) => String(row.taller_id || '').trim() !== targetId);
+      nextRows.forEach((row) => state.catalogos.alumno_talleres.push(row));
+    }
+
+    function openTallerMembershipEditor(tallerId) {
+      const targetId = String(tallerId || state.talleresUi.selectedTallerId || '').trim();
+      const taller = getTallerById(targetId);
+      if (!taller) return;
+      state.talleresUi.selectedTallerId = targetId;
+      state.talleresUi.membershipOpen = true;
+      state.talleresUi.membershipSearch = '';
+      state.talleresUi.membershipGroup = '';
+      state.talleresUi.membershipSelectedAlumnoIds = getTallerAlumnoIds(targetId);
+      renderAdminTalleresModule();
+      focusAdminFacilitadorPanel('adminTallerDetailPanel', 'adminTallerMembershipSearch');
+    }
+
+    function toggleTallerAlumnoDraft(alumnoId, checked) {
+      const id = String(alumnoId || '').trim();
+      if (!id) return;
+      const selected = new Set((state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean));
+      if (checked) selected.add(id);
+      else selected.delete(id);
+      state.talleresUi.membershipSelectedAlumnoIds = Array.from(selected);
+      renderAdminTalleresModule();
+    }
+
+    function toggleAllVisibleTallerAlumnos(nextChecked) {
+      const selected = new Set((state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean));
+      getVisibleTallerCandidateAlumnos().forEach((row) => {
+        const id = String(row.alumno_id || '').trim();
+        if (!id) return;
+        if (nextChecked) selected.add(id);
+        else selected.delete(id);
+      });
+      state.talleresUi.membershipSelectedAlumnoIds = Array.from(selected);
+      renderAdminTalleresModule();
     }
 
     function getAdminTalleresModuleTemplate() {
@@ -9035,6 +9232,11 @@
       const materia = (state.catalogos.materias || []).find((item) => item.materia_id === taller.materia_id);
       const facilitador = getFacilitadorById(taller.facilitador_id);
       const canManage = canManageTalleresCatalog();
+      const activeMembers = getActiveTallerAlumnoRows(taller.taller_id);
+      const representedGroups = Array.from(new Set(activeMembers.map((row) => String((row.alumno && row.alumno.grupo_id) || '').trim()).filter(Boolean)));
+      const membershipOpen = !!state.talleresUi.membershipOpen && String(state.talleresUi.selectedTallerId || '').trim() === taller.taller_id;
+      const selectedIds = new Set((state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean));
+      const visibleCandidates = membershipOpen ? getVisibleTallerCandidateAlumnos() : [];
       host.hidden = false;
       host.innerHTML = [
         '<div class="admin-facilitadores-summary">',
@@ -9056,11 +9258,68 @@
             '<div class="admin-alumnos-readonly"><span>Materia base</span><strong>' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Responsable</span><strong>' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Última actualización</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Alumnos inscritos</span><strong>' + escapeHtml(String(activeMembers.length)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Grupos mezclados</span><strong>' + escapeHtml(representedGroups.length ? String(representedGroups.length) : '0') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Siguiente paso</span><strong>Inscribir alumnos</strong></div>',
           '</div>',
-          '<div class="admin-alumnos-section-head"><div><h4>Preparación del taller</h4><div class="subtle">Este catálogo base permitirá después mezclar alumnos de distintos grupos sin tocar su grupo escolar original.</div></div></div>',
+          '<div class="admin-taller-membership">',
+            '<div class="admin-taller-membership-head">',
+              '<div class="admin-taller-membership-copy">',
+                '<h4>Alumnos del taller</h4>',
+                '<div class="subtle">Selecciona alumnos activos de cualquier grupo sin moverlos de su grupo escolar.</div>',
+              '</div>',
+              '<div class="admin-taller-membership-actions">',
+                (canManage && taller.estatus !== 'archivado' && !membershipOpen ? '<button class="btn-primary" type="button" onclick="openTallerMembershipEditor(\'' + escapeJsAttrValue(taller.taller_id) + '\')">Inscribir alumnos</button>' : ''),
+                (canManage && membershipOpen ? '<button class="btn-ghost" type="button" onclick="cancelTallerMembershipEditor()">Cancelar</button>' : ''),
+              '</div>',
+            '</div>',
+            '<div class="admin-taller-membership-summary">',
+              (activeMembers.length
+                ? '<div class="admin-taller-member-cloud">' + activeMembers.map((row) => {
+                    const alumno = row.alumno || {};
+                    return '<span class="admin-taller-member-chip"><span>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || row.alumno_id) + '</span><span class="mini">' + escapeHtml(getGrupoNombre(alumno.grupo_id)) + '</span></span>';
+                  }).join('') + '</div>'
+                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso rápido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
+            '</div>',
+            (membershipOpen
+              ? '<div class="admin-taller-membership-head">' +
+                  '<div class="admin-taller-membership-tools">' +
+                    '<label class="field" for="adminTallerMembershipSearch"><span>Buscar alumno</span><input id="adminTallerMembershipSearch" type="search" placeholder="Nombre, matrícula o grupo"></label>' +
+                    '<label class="field" for="adminTallerMembershipGroup"><span>Grupo</span><select id="adminTallerMembershipGroup"></select></label>' +
+                  '</div>' +
+                  '<div class="admin-taller-membership-actions">' +
+                    '<button class="btn-ghost" type="button" onclick="toggleAllVisibleTallerAlumnos(true)">Seleccionar visibles</button>' +
+                    '<button class="btn-ghost" type="button" onclick="toggleAllVisibleTallerAlumnos(false)">Limpiar visibles</button>' +
+                    '<button id="adminTallerMembershipSaveBtn" class="btn-primary" type="button" onclick="saveTallerMemberships(this)">Guardar alumnos</button>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="subtle">' + escapeHtml(String(selectedIds.size)) + ' alumno(s) listos para este taller.</div>' +
+                (visibleCandidates.length
+                  ? '<div class="checklist admin-taller-membership-candidates">' + visibleCandidates.map((row) => {
+                      const alumnoId = String(row.alumno_id || '').trim();
+                      return '<label class="admin-taller-membership-candidate">' +
+                        '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedIds.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
+                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matrícula') + ' · ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
+                      '</label>';
+                    }).join('') + '</div>'
+                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta búsqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+              : ''),
+          '</div>',
         '</div>'
       ].join('');
+      if (membershipOpen) {
+        fillSelect($('adminTallerMembershipGroup'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Todos los grupos');
+        if ($('adminTallerMembershipGroup')) $('adminTallerMembershipGroup').value = state.talleresUi.membershipGroup || '';
+        if ($('adminTallerMembershipSearch')) $('adminTallerMembershipSearch').value = state.talleresUi.membershipSearch || '';
+        if ($('adminTallerMembershipSearch')) $('adminTallerMembershipSearch').addEventListener('input', (event) => {
+          state.talleresUi.membershipSearch = event.currentTarget.value;
+          renderAdminTalleresModule();
+        });
+        if ($('adminTallerMembershipGroup')) $('adminTallerMembershipGroup').addEventListener('change', (event) => {
+          state.talleresUi.membershipGroup = event.currentTarget.value;
+          renderAdminTalleresModule();
+        });
+      }
     }
 
     function renderTallerEditorPanel() {
@@ -9088,6 +9347,7 @@
       const taller = nextMode === 'edit'
         ? getTallerById(String(tallerId || '').trim())
         : null;
+      closeTallerMembershipEditor();
       state.talleresUi.editorMode = nextMode;
       state.talleresUi.editorOpen = true;
       state.talleresUi.selectedTallerId = taller ? taller.taller_id : state.talleresUi.selectedTallerId;
@@ -9103,9 +9363,39 @@
     }
 
     function selectTaller(tallerId) {
-      state.talleresUi.selectedTallerId = String(tallerId || '').trim();
+      const nextId = String(tallerId || '').trim();
+      if (String(state.talleresUi.selectedTallerId || '').trim() !== nextId) {
+        closeTallerMembershipEditor();
+      }
+      state.talleresUi.selectedTallerId = nextId;
       renderAdminTalleresModule();
       focusAdminFacilitadorPanel('adminTallerDetailPanel');
+    }
+
+    function cancelTallerMembershipEditor() {
+      closeTallerMembershipEditor();
+      renderAdminTalleresModule();
+    }
+
+    async function saveTallerMemberships(button) {
+      const tallerId = String(state.talleresUi.selectedTallerId || '').trim();
+      if (!tallerId) throw new Error('Selecciona un taller.');
+      const alumnosIds = (state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean);
+      await handleAction('syncTallerAlumnos', async () => {
+        const data = await api('syncTallerAlumnos', {
+          taller_id: tallerId,
+          alumnos_ids: alumnosIds,
+          request_id: uid('TALREL')
+        });
+        replaceTallerAlumnoRelations(tallerId, data.relaciones || []);
+        closeTallerMembershipEditor();
+        renderAdminModuleSurface('talleres');
+        setBanner('Alumnos del taller actualizados.', 'success');
+      }, {
+        button,
+        key: buildActionKey('syncTallerAlumnos', [tallerId, alumnosIds.join('|')]),
+        busyText: 'Guardando...'
+      });
     }
 
     async function saveTallerEditor(button) {
@@ -13291,6 +13581,11 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.toggleTallerStatus = toggleTallerStatus;
     window.archiveTaller = archiveTaller;
     window.reactivateTaller = reactivateTaller;
+    window.openTallerMembershipEditor = openTallerMembershipEditor;
+    window.cancelTallerMembershipEditor = cancelTallerMembershipEditor;
+    window.toggleTallerAlumnoDraft = toggleTallerAlumnoDraft;
+    window.toggleAllVisibleTallerAlumnos = toggleAllVisibleTallerAlumnos;
+    window.saveTallerMemberships = saveTallerMemberships;
     window.renderAdminMateriasModule = renderAdminMateriasModule;
     window.selectMateria = selectMateria;
     window.openMateriaEditor = openMateriaEditor;
