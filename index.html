@@ -11296,6 +11296,7 @@
         });
       }
 
+      const previousPlan = editorMode === 'edit' ? getPlanById(state.planEditor.planId) : null;
       let responseData = null;
       if (editorMode === 'edit') {
         responseData = await api('guardarPlaneacionCompleta', {
@@ -11323,9 +11324,20 @@
           request_id: uid('PLA')
         });
       }
-
+      const updatedPlan = responseData && responseData.planeacion ? responseData.planeacion : null;
+      const canApplyLocally = editorMode === 'edit' && updatedPlan && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan);
       resetPlanEditor();
-      await refreshPlaneacionesSurface();
+      if (canApplyLocally) {
+        upsertPlaneacionRow(updatedPlan);
+        await refreshAlertas();
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: true
+        });
+      } else {
+        await refreshPlaneacionesSurface();
+      }
       setBanner(
         responseData && responseData._meta && responseData._meta.message
           ? responseData._meta.message
