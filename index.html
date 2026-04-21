@@ -2878,6 +2878,19 @@
     .activity-card .actions {
       margin-top: 12px;
     }
+    .plan-activities-add-wrap {
+      display: flex;
+      justify-content: flex-start;
+      margin-top: 10px;
+    }
+    .plan-activities-add-btn {
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 14px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      box-shadow: none;
+    }
     @media (max-width: 720px) {
       .admin-notification-head-copy {
         max-width: none;
@@ -4624,10 +4637,10 @@
                 <div id="planAlumnosChecklist" class="checklist"></div>
               </div>
               <div>
-                <div class="card-head inline-head">
-                  <button id="addActivityBtn" class="btn-accent" type="button">Agregar actividad</button>
-                </div>
                 <div id="planActivitiesList" class="stack"></div>
+                <div class="plan-activities-add-wrap">
+                  <button id="addActivityBtn" class="btn-accent plan-activities-add-btn" type="button">Agregar otra actividad</button>
+                </div>
               </div>
               <div class="actions">
                 <button id="savePlanBtn" class="btn-primary" type="button">Guardar planeación</button>
