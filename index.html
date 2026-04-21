@@ -5905,6 +5905,15 @@
       );
     }
 
+    function shouldUseFastAdminDashboardBoot(options = {}) {
+      return !!(
+        options &&
+        options.fastFacilitadorBoot &&
+        canUseAdminShell() &&
+        String(state.activeAdminModule || '').trim() === 'dashboard'
+      );
+    }
+
     async function ensurePlaneacionesCatalogosAvailable(options = {}) {
       const blocks = getMissingCatalogBlocks(getCatalogBlocksForModule('planeaciones'));
       if (!blocks.length) return state.catalogos;
@@ -5969,11 +5978,59 @@
       });
     }
 
+    async function refreshAdminDashboardFastBoot(options = {}) {
+      ensureLoggedIn();
+      const silent = !!(options && options.silent);
+      if (!silent) setBanner('Cargando panel de administración...', 'info');
+      const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), {
+        alert_limit: 20,
+        notification_limit: 20,
+        include_catalogos: false,
+        include_planeaciones: false,
+        include_detail: false
+      }));
+      state.dashboardStats = dashboard && dashboard.stats ? dashboard.stats : {};
+      state.alertas = Array.isArray(dashboard && dashboard.alertas && dashboard.alertas.rows)
+        ? dashboard.alertas.rows
+        : [];
+      state.notificaciones = Array.isArray(dashboard && dashboard.notificaciones && dashboard.notificaciones.rows)
+        ? dashboard.notificaciones.rows
+        : [];
+      renderAll();
+      if (!silent) setBanner('Panel cargado. Completando notificaciones...', 'info');
+
+      const deferredPromise = Promise.allSettled([
+        refreshNotificaciones()
+      ]).then((results) => {
+        const hadFailures = results.some((result) => result.status === 'rejected');
+        renderAll();
+        if (!silent) {
+          setBanner(
+            hadFailures
+              ? 'Panel cargado. Algunas notificaciones tardaron más en actualizarse.'
+              : 'Datos actualizados.',
+            hadFailures ? 'warning' : 'success'
+          );
+        }
+      });
+
+      if (state.ui) state.ui.fastAdminBootPromise = deferredPromise;
+      deferredPromise.finally(() => {
+        if (state.ui) state.ui.fastAdminBootPromise = null;
+      });
+    }
+
     async function refreshAll(options = {}) {
       ensureLoggedIn();
       if (shouldUseFastFacilitadorPlaneacionesBoot(options)) {
         try {
           await refreshFacilitadorPlaneacionesFastBoot(options);
+          return;
+        } catch (_) {}
+      }
+      if (shouldUseFastAdminDashboardBoot(options)) {
+        try {
+          await refreshAdminDashboardFastBoot(options);
           return;
         } catch (_) {}
       }
@@ -5983,7 +6040,7 @@
       const shouldIncludePlaneaciones = currentViewNeedsPlaneaciones();
       if (!silent) setBanner('Cargando catálogos y planeaciones...', 'info');
       try {
-        const notificationLimit = canUseAdminShell() ? 250 : 120;
+        const notificationLimit = canUseAdminShell() ? 100 : 120;
         const dashboardCatalogBlocks = shouldIncludeCatalogos
           ? (silent ? getMissingCatalogBlocks(requestedCatalogBlocks) : requestedCatalogBlocks)
           : [];
@@ -8994,7 +9051,7 @@
       state.materiasUi.editor = materia ? {
         materia_id: materia.materia_id,
         nombre: materia.nombre || '',
-        admite_submaterias: !!materia.admite_submaterias,
+        admite_submaterias: materiaHasVariants(materia),
         estatus: materia.estatus || 'activa'
       } : createEmptyMateriaEditorState();
       renderAdminMateriasModule();
