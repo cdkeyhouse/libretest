@@ -6241,9 +6241,9 @@
       if (reportPanel) reportPanel.hidden = facilitatorMode || adminMode || !canViewReportes;
       if (estadoFilter) {
         Array.from(estadoFilter.options).forEach((option) => {
-          option.hidden = facilitatorMode && ['cierre_pendiente', 'cerrada', 'archivada'].includes(option.value);
+          option.hidden = facilitatorMode && ['rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(option.value);
         });
-        if (facilitatorMode && ['cierre_pendiente', 'cerrada', 'archivada'].includes(estadoFilter.value)) {
+        if (facilitatorMode && ['rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(estadoFilter.value)) {
           estadoFilter.value = '';
         }
       }
