@@ -6575,19 +6575,6 @@
         '</article>';
       }).join('') +
       '</div>';
-      const headerCells = host.querySelectorAll('.admin-alumnos-list-header > div');
-      const headerLabels = [
-        'Matr\u00edcula',
-        'Alumno',
-        'Grupo actual',
-        'Estado',
-        'Alta',
-        '\u00daltima actualizaci\u00f3n',
-        'Acciones'
-      ];
-      headerCells.forEach((cell, index) => {
-        cell.textContent = headerLabels[index] || '';
-      });
     }
 
     function renderInstitutionalNotices() {
