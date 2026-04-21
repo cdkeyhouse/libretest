@@ -3527,7 +3527,7 @@
 
       .plan-list-compact-head {
         display: grid;
-        grid-template-columns: 0.88fr 0.92fr 0.98fr 1.55fr 1.08fr 0.78fr 1.24fr;
+        grid-template-columns: 1.06fr 1fr 1.18fr 1.08fr 0.82fr 1.18fr;
         gap: 10px;
         align-items: center;
         padding: 10px 12px;
@@ -3555,10 +3555,13 @@
 
       .plan-compact-grid {
         display: grid;
-        grid-template-columns: 0.88fr 0.92fr 0.98fr 1.55fr 1.08fr 0.78fr 1.24fr;
-        gap: 10px;
-        align-items: center;
-        min-height: 60px;
+        grid-template-columns: 1.06fr 1fr 1.18fr 1.08fr 0.82fr 1.18fr;
+        grid-template-areas:
+          "date group materia summary status actions"
+          "phrase phrase phrase phrase . .";
+        gap: 8px 10px;
+        align-items: start;
+        min-height: 74px;
         padding: 10px 12px;
       }
 
@@ -3569,6 +3572,18 @@
       .plan-compact-cell {
         min-width: 0;
         position: relative;
+      }
+
+      .plan-compact-cell-date { grid-area: date; }
+      .plan-compact-cell-group { grid-area: group; }
+      .plan-compact-cell-materia { grid-area: materia; }
+      .plan-compact-cell-summary { grid-area: summary; align-self: center; }
+      .plan-compact-cell-status { grid-area: status; align-self: center; }
+      .plan-compact-cell-actions { grid-area: actions; align-self: center; }
+      .plan-compact-cell-phrase {
+        grid-area: phrase;
+        padding-top: 2px;
+        border-top: 1px solid rgba(255,255,255,0.05);
       }
 
       .plan-compact-label {
@@ -3588,12 +3603,24 @@
         line-height: 1.2;
       }
 
+      .plan-compact-cell-date .plan-compact-primary,
+      .plan-compact-cell-materia .plan-compact-primary {
+        font-size: 1rem;
+      }
+
       .plan-compact-secondary {
         display: block;
         margin-top: 2px;
         color: var(--text-soft);
         font-size: 0.82rem;
         line-height: 1.2;
+      }
+
+      .plan-compact-phrase-copy {
+        display: block;
+        color: var(--text-soft);
+        font-size: 0.88rem;
+        line-height: 1.28;
       }
 
       .plan-compact-truncate {
@@ -11610,10 +11637,9 @@
 
       const desktopHeader = (
         '<div class="plan-list-compact-head">' +
-          '<span>Semana</span>' +
+          '<span>Fecha</span>' +
           '<span>Grupo</span>' +
           '<span>Materia</span>' +
-          '<span>Frase</span>' +
           '<span>Resumen</span>' +
           '<span>Estado</span>' +
           '<span>Acciones</span>' +
@@ -11658,6 +11684,12 @@
           : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
         const materiaLabel = getPlanMateriaDisplayLabel(plan, materia);
         const weekLabel = getWeekLabelForPlan(plan, semana);
+        const weekPrimaryLabel = semana && semana.fecha_inicio
+          ? formatFechaHumana(semana.fecha_inicio)
+          : weekLabel;
+        const weekSecondaryLabel = weekLabel && weekLabel !== weekPrimaryLabel
+          ? weekLabel
+          : ((semana && semana.nombre_visible && semana.nombre_visible !== weekPrimaryLabel) ? semana.nombre_visible : '');
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
         const hasAdminPower = role === 'admin' || role === 'directora';
         const alumnosRows = entry.isMulti ? getPlaneacionEntryAlumnoRows(entry) : (plan.alumnos || []);
@@ -11789,35 +11821,36 @@
               '</div>' +
               '<div class="plan-collapsed-desktop">' +
                 '<div class="plan-compact-grid">' +
-                  '<div class="plan-compact-cell">' +
-                    '<span class="plan-compact-label">Semana</span>' +
-                    '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(weekLabel) + '</span>' +
+                  '<div class="plan-compact-cell plan-compact-cell-date">' +
+                    '<span class="plan-compact-label">Fecha</span>' +
+                    '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(weekPrimaryLabel) + '</span>' +
+                    (weekSecondaryLabel ? '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(weekSecondaryLabel) + '</span>' : '') +
                   '</div>' +
-                  '<div class="plan-compact-cell">' +
+                  '<div class="plan-compact-cell plan-compact-cell-group">' +
                     '<span class="plan-compact-label">Grupo</span>' +
                     '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(groupLabel) + '</span>' +
                     (entry.isMulti ? '<span class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos</span>' : '') +
                   '</div>' +
-                  '<div class="plan-compact-cell">' +
+                  '<div class="plan-compact-cell plan-compact-cell-materia">' +
                     '<span class="plan-compact-label">Materia</span>' +
                     '<span class="plan-compact-primary plan-compact-truncate">' + escapeHtml(materiaLabel) + '</span>' +
                   '</div>' +
-                  '<div class="plan-compact-cell">' +
-                    '<span class="plan-compact-label">Frase</span>' +
-                    '<span class="' + phraseCompactClass + '"' + phraseCompactAttrs + '>' + escapeHtml(phraseText) + '</span>' +
-                  '</div>' +
-                  '<div class="plan-compact-cell">' +
+                  '<div class="plan-compact-cell plan-compact-cell-summary">' +
                     '<span class="plan-compact-label">Resumen</span>' +
                     '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
                     summaryMetaHtml +
                   '</div>' +
-                  '<div class="plan-compact-cell plan-compact-status">' +
+                  '<div class="plan-compact-cell plan-compact-status plan-compact-cell-status">' +
                     '<span class="plan-compact-label">Estado</span>' +
                     '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
                   '</div>' +
-                  '<div class="plan-compact-cell plan-compact-actions">' +
+                  '<div class="plan-compact-cell plan-compact-actions plan-compact-cell-actions">' +
               quickActivateButton +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>' +
+                  '</div>' +
+                  '<div class="plan-compact-cell plan-compact-cell-phrase">' +
+                    '<span class="plan-compact-label">Frase</span>' +
+                    '<span class="' + phraseCompactClass.replace('plan-compact-secondary', 'plan-compact-phrase-copy') + '"' + phraseCompactAttrs + '>' + escapeHtml(phraseText) + '</span>' +
                   '</div>' +
                 '</div>' +
               '</div>' +
