@@ -3124,6 +3124,16 @@
       border: 1px solid var(--border-strong);
     }
 
+    .close-plan-modal__error {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(232,25,106,0.32);
+      background: rgba(232,25,106,0.08);
+      color: #ff8fb3;
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
     .close-plan-modal__actions {
       justify-content: flex-end;
     }
@@ -4857,6 +4867,7 @@
         <label for="closePlanObsInput">Observación final de la semana</label>
         <textarea id="closePlanObsInput" placeholder="Opcional"></textarea>
       </div>
+      <div id="closePlanModalError" class="close-plan-modal__error" hidden></div>
       <div class="actions close-plan-modal__actions">
         <button id="closePlanCancelBtn" class="btn-ghost" type="button">Cancelar</button>
         <button id="closePlanConfirmBtn" class="btn-accent" type="button">Confirmar cierre</button>
@@ -11294,7 +11305,12 @@
             setBanner('Tu sesión expiró o ya no es válida. Vuelve a iniciar sesión.', 'error', { anchor: feedbackAnchor });
             return;
           }
-          setBanner(formatApiError(err), 'error', { anchor: feedbackAnchor });
+          const handled = typeof options.onError === 'function'
+            ? options.onError(err, { anchor: feedbackAnchor, button })
+            : false;
+          if (!handled) {
+            setBanner(formatApiError(err), 'error', { anchor: feedbackAnchor });
+          }
         } finally {
           popFeedbackAnchor();
           inFlightActions.delete(actionKey);
@@ -11750,6 +11766,7 @@
       modal.dataset.planId = planId;
       modal.hidden = false;
       input.value = '';
+      clearClosePlanModalError();
       window.requestAnimationFrame(() => input.focus());
     }
 
@@ -11760,11 +11777,87 @@
       modal.hidden = true;
       modal.dataset.planId = '';
       if (input) input.value = '';
+      clearClosePlanModalError();
+    }
+
+    function setClosePlanModalError(message) {
+      const errorBox = $('closePlanModalError');
+      if (!errorBox) return;
+      const text = String(message || '').trim();
+      errorBox.textContent = text;
+      errorBox.hidden = !text;
+    }
+
+    function clearClosePlanModalError() {
+      const errorBox = $('closePlanModalError');
+      if (!errorBox) return;
+      errorBox.textContent = '';
+      errorBox.hidden = true;
+    }
+
+    function focusPlanCloseField(targetId) {
+      const field = targetId ? $(targetId) : null;
+      if (!field) return;
+      if (typeof field.scrollIntoView === 'function') {
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (typeof field.focus === 'function') {
+        window.requestAnimationFrame(() => field.focus());
+      }
+    }
+
+    function buildClosePlanPayload(planId, fallbackPlan) {
+      const currentPlan = getPlanById(planId) || fallbackPlan;
+      if (!currentPlan) throw new Error('Planeación no encontrada.');
+      const draft = getOpenPlanDraft(currentPlan);
+      const activityRows = Array.isArray(draft && draft.activities) && draft.activities.length
+        ? draft.activities
+        : (Array.isArray(currentPlan.actividades) ? currentPlan.actividades : []);
+      if (!activityRows.length) {
+        throw new Error('No puedes cerrar una planeación sin actividades.');
+      }
+      const actividades = [];
+      for (const item of activityRows) {
+        const realizadaFieldId = 'activity-realizada-' + item.actividad_id;
+        const materialFieldId = 'activity-material-' + item.actividad_id;
+        const comentarioFieldId = 'activity-comment-' + item.actividad_id;
+        const realizadaNode = $(realizadaFieldId);
+        const materialNode = $(materialFieldId);
+        const comentarioNode = $(comentarioFieldId);
+        const realizada = realizadaNode ? realizadaNode.value : normalizeRealizadaStatus(item.realizada);
+        const material = materialNode ? materialNode.value : normalizeMaterialStatus(item.material_en_carpeta);
+        const comentario = comentarioNode ? comentarioNode.value.trim() : String(item.comentario_cierre || '').trim();
+        if (!['si', 'no'].includes(realizada)) {
+          const error = new Error('Debes confirmar si se realizó la actividad ' + String(item.orden || '?') + '.');
+          error.focusTargetId = realizadaFieldId;
+          throw error;
+        }
+        if (realizada === 'no' && !comentario) {
+          const error = new Error('La actividad ' + String(item.orden || '?') + ' necesita comentario porque no se realizó.');
+          error.focusTargetId = comentarioFieldId;
+          throw error;
+        }
+        actividades.push({
+          actividad_id: item.actividad_id,
+          realizada,
+          material_en_carpeta: material,
+          comentario_cierre: comentario,
+          last_known_updated_at: item.last_known_updated_at || item.fecha_actualizacion || ''
+        });
+      }
+      return { currentPlan, actividades };
     }
 
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
+      try {
+        buildClosePlanPayload(planId, plan);
+      } catch (err) {
+        focusPlanCloseField(err && err.focusTargetId);
+        setBanner(formatApiError(err), 'error', { button });
+        return;
+      }
       openClosePlanModal(planId);
     }
 
@@ -11776,40 +11869,18 @@
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
       const obs = input ? input.value.trim() : '';
+      clearClosePlanModalError();
+      let closePayload = null;
+      try {
+        closePayload = buildClosePlanPayload(planId, plan);
+      } catch (err) {
+        setClosePlanModalError(formatApiError(err));
+        return;
+      }
       await handleAction('confirmarCierre', async () => {
-        const currentPlan = getPlanById(planId) || plan;
-        const draft = getOpenPlanDraft(currentPlan);
-        const activityRows = Array.isArray(draft && draft.activities) && draft.activities.length
-          ? draft.activities
-          : (Array.isArray(currentPlan.actividades) ? currentPlan.actividades : []);
-        if (!activityRows.length) {
-          throw new Error('No puedes cerrar una planeación sin actividades.');
-        }
-        const actividades = [];
-        for (const item of activityRows) {
-          const realizadaNode = $('activity-realizada-' + item.actividad_id);
-          const materialNode = $('activity-material-' + item.actividad_id);
-          const comentarioNode = $('activity-comment-' + item.actividad_id);
-          const realizada = realizadaNode ? realizadaNode.value : normalizeRealizadaStatus(item.realizada);
-          const material = materialNode ? materialNode.value : normalizeMaterialStatus(item.material_en_carpeta);
-          const comentario = comentarioNode ? comentarioNode.value.trim() : String(item.comentario_cierre || '').trim();
-          if (!['si', 'no'].includes(realizada)) {
-            throw new Error('Debes confirmar si se realizó la actividad ' + String(item.orden || '?') + '.');
-          }
-          if (realizada === 'no' && !comentario) {
-            throw new Error('La actividad ' + String(item.orden || '?') + ' necesita comentario porque no se realizó.');
-          }
-          actividades.push({
-            actividad_id: item.actividad_id,
-            realizada,
-            material_en_carpeta: material,
-            comentario_cierre: comentario,
-            last_known_updated_at: item.last_known_updated_at || item.fecha_actualizacion || ''
-          });
-        }
         await api('confirmarCierre', {
           planeacion_id: planId,
-          actividades,
+          actividades: closePayload.actividades,
           obs_semana: obs,
           request_id: uid('CIE')
         });
@@ -11817,7 +11888,14 @@
         await refreshPlaneacionesSurface();
         closeClosePlanModal();
         setBanner('Cierre confirmado.', 'success');
-      }, { button, key: buildActionKey('confirmarCierre', [planId]) });
+      }, {
+        button,
+        key: buildActionKey('confirmarCierre', [planId]),
+        onError: (err) => {
+          setClosePlanModalError(formatApiError(err));
+          return true;
+        }
+      });
     }
 
     function usePlanForActivities(button, planId) {
