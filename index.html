@@ -10524,6 +10524,46 @@
       );
     }
 
+    function renderMultiGroupSharedActivities(entry) {
+      const draft = getMultiGroupSharedDraft(entry);
+      if (!draft) return '';
+      return (
+        '<div>' +
+          '<div class="card-head inline-head">' +
+            '<div><label>Actividades</label><p class="subtle">La estructura compartida se aplica igual a todos los grupos del lote.</p></div>' +
+          '</div>' +
+          '<div class="stack">' + (draft.activities || []).map((activity, index) => (
+            '<div class="activity-editor">' +
+              '<div class="activity-editor-top">' +
+                '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
+                '<div class="actions compact">' +
+                  '<button class="btn-ghost" type="button" onclick="removeMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ')">Quitar</button>' +
+                '</div>' +
+              '</div>' +
+              '<label>Actividad</label>' +
+              '<textarea onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
+              '<div class="activity-inline-grid">' +
+                '<div><label>Material compartido</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'material_en_carpeta\', this.value)">' +
+                  '<option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
+                  '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
+                  '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
+                '</select></div>' +
+                '<div><label>¿Se realizó?</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
+                  '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
+                  '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
+                '</select></div>' +
+                '<div><label>Comentario compartido</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'comentario_cierre\', this.value)"></div>' +
+              '</div>' +
+            '</div>'
+          )).join('') + '</div>' +
+          '<div class="plan-activities-add-wrap">' +
+            '<button class="btn-accent plan-activities-add-btn" type="button" onclick="addMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\')">Agregar otra actividad</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
     function renderMultiGroupSharedEditor(entry) {
       const draft = getMultiGroupSharedDraft(entry);
       if (!draft) return '';
@@ -10558,39 +10598,6 @@
           '<div class="plan-inline-field">' +
             '<label>Frase de la semana</label>' +
             '<textarea onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'frase_semana\', this.value)">' + escapeHtml(draft.frase_semana || '') + '</textarea>' +
-          '</div>' +
-          '<div>' +
-            '<div class="card-head inline-head">' +
-              '<div><label>Estructura compartida</label><p class="subtle">Estas actividades, materiales y seguimiento se aplican igual a todos los grupos del lote.</p></div>' +
-            '</div>' +
-            '<div class="stack">' + (draft.activities || []).map((activity, index) => (
-              '<div class="activity-editor">' +
-                '<div class="activity-editor-top">' +
-                  '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
-                  '<div class="actions compact">' +
-                    '<button class="btn-ghost" type="button" onclick="removeMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ')">Quitar</button>' +
-                  '</div>' +
-                '</div>' +
-                '<label>Actividad</label>' +
-                '<textarea onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
-                '<div class="activity-inline-grid">' +
-                  '<div><label>Material compartido</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'material_en_carpeta\', this.value)">' +
-                    '<option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
-                    '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
-                    '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
-                  '</select></div>' +
-                  '<div><label>¿Se realizó?</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
-                    '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                    '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
-                    '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
-                  '</select></div>' +
-                  '<div><label>Comentario compartido</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'comentario_cierre\', this.value)"></div>' +
-                '</div>' +
-              '</div>'
-            )).join('') + '</div>' +
-            '<div class="plan-activities-add-wrap">' +
-              '<button class="btn-accent plan-activities-add-btn" type="button" onclick="addMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\')">Agregar otra actividad</button>' +
-            '</div>' +
           '</div>' +
         '</div>'
       );
@@ -10992,6 +10999,7 @@
                     return '<div class="plan-student-chip"><strong>' + escapeHtml(alumnoDisplay.nombre) + '</strong></div>';
                   }).join('') + '</div>' +
                 '<div class="stack">' + (actividades || '<span class="mini">Sin actividades capturadas.</span>') + '</div>')) +
+            (entry.isMulti && allowStructureEdit ? renderMultiGroupSharedActivities(entry) : '') +
             '<div class="stack">' +
               '<div><strong>Observaciones generales</strong></div>' +
               obsGeneralesHtml +
