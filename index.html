@@ -939,6 +939,40 @@
       text-align: center;
       background: rgba(255, 255, 255, 0.55);
     }
+    .plan-loading-note {
+      display: grid;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      margin-top: 12px;
+      border: 1px solid rgba(29, 182, 193, 0.22);
+      background: rgba(29, 182, 193, 0.08);
+      color: var(--text-soft);
+    }
+    .plan-loading-note strong {
+      color: var(--text);
+      font-size: 0.98rem;
+    }
+    .plan-loading-note .mini {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .plan-loading-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .plan-loading-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-soft);
+      font-size: 0.8rem;
+    }
 
     @media (max-width: 1180px) {
       .hero,
@@ -5333,6 +5367,7 @@
         planeacionesLoaded: false,
         planeacionesCatalogosLoading: false,
         planeacionesCatalogosPromise: null,
+        openPlanLoadingId: '',
         tallerMembershipCatalogosPromise: null,
         fastPlaneacionesBootPromise: null,
         notificationEditorExpanded: false,
@@ -5686,6 +5721,7 @@
         state.ui.planeacionesLoaded = false;
         state.ui.planeacionesCatalogosLoading = false;
         state.ui.planeacionesCatalogosPromise = null;
+        state.ui.openPlanLoadingId = '';
         state.ui.tallerMembershipCatalogosPromise = null;
         state.ui.fastPlaneacionesBootPromise = null;
         state.ui.notificationEditorExpanded = false;
@@ -6558,6 +6594,7 @@
     function closeOpenPlan() {
       state.openPlanId = '';
       state.openPlanDraft = null;
+      if (state.ui) state.ui.openPlanLoadingId = '';
     }
 
     function exitPlanFocus() {
@@ -11331,9 +11368,20 @@
       if (state.openPlanId === planId) {
         state.openPlanId = '';
         state.openPlanDraft = null;
+        if (state.ui) state.ui.openPlanLoadingId = '';
         renderPlaneacionesList();
         return;
       }
+      const currentPlan = getPlanById(planId);
+      if (state.ui) state.ui.openPlanLoadingId = planId;
+      state.openPlanId = planId;
+      state.openPlanDraft = null;
+      if (currentPlan) {
+        const loteId = getPlanLoteId(currentPlan);
+        if (loteId) setMultiGroupActivePlan(loteId, planId);
+      }
+      closePlanBuilder();
+      renderPlaneacionesList();
       await handleAction('togglePlanOpen', async () => {
         const plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
         const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
@@ -11341,12 +11389,23 @@
           await ensurePlaneacionEntryDetailsLoaded(entry, { silent: true });
         }
         state.openPlanId = planId;
+        if (state.ui) state.ui.openPlanLoadingId = '';
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
-        closePlanBuilder();
       }, {
         button,
         key: buildActionKey('togglePlanOpen', [planId]),
-        busyText: 'Abriendo...'
+        busyText: 'Abriendo...',
+        onError: () => {
+          if (state.openPlanId === planId) {
+            state.openPlanId = '';
+            state.openPlanDraft = null;
+          }
+          if (state.ui && state.ui.openPlanLoadingId === planId) {
+            state.ui.openPlanLoadingId = '';
+          }
+          renderPlaneacionesList();
+          return false;
+        }
       });
       renderPlaneacionesList();
       if (state.openPlanId) {
@@ -11874,7 +11933,15 @@
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
                 '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
-              '<div class="empty">Cargando detalle de la planeación...</div>' +
+              '<div class="plan-loading-note">' +
+                '<strong>Abriendo planeación...</strong>' +
+                '<div class="mini">Se están cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
+                '<div class="plan-loading-pill-row">' +
+                  '<span class="plan-loading-pill">Alumnos</span>' +
+                  '<span class="plan-loading-pill">Actividades</span>' +
+                  '<span class="plan-loading-pill">Observaciones</span>' +
+                '</div>' +
+              '</div>' +
             '</article>'
           );
         }
@@ -12045,16 +12112,32 @@
       } else {
         activateTab('planeaciones');
       }
+      if (state.ui) state.ui.openPlanLoadingId = planId;
+      state.openPlanId = planId;
+      state.openPlanDraft = null;
+      closePlanBuilder();
+      renderPlaneacionesList();
       await handleAction('openPlanFromAlert', async () => {
         const plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
         state.openPlanId = planId;
+        if (state.ui) state.ui.openPlanLoadingId = '';
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
       }, {
         button,
         key: buildActionKey('openPlanFromAlert', [planId]),
-        busyText: 'Abriendo...'
+        busyText: 'Abriendo...',
+        onError: () => {
+          if (state.openPlanId === planId) {
+            state.openPlanId = '';
+            state.openPlanDraft = null;
+          }
+          if (state.ui && state.ui.openPlanLoadingId === planId) {
+            state.ui.openPlanLoadingId = '';
+          }
+          renderPlaneacionesList();
+          return false;
+        }
       });
-      closePlanBuilder();
       renderPlaneacionesList();
       window.requestAnimationFrame(() => {
         const card = $('plan-card-' + planId);
