@@ -3556,6 +3556,37 @@
         font-size: 0.78rem;
       }
 
+      .plan-focus-shell {
+        display: grid;
+        gap: 12px;
+      }
+
+      .plan-focus-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        background: rgba(16, 22, 30, 0.78);
+      }
+
+      .plan-focus-copy {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .plan-focus-copy strong {
+        font-size: 0.96rem;
+      }
+
+      .plan-focus-copy span {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
       .plan-multigroup-shared {
         display: grid;
         gap: 14px;
@@ -3753,6 +3784,11 @@
       }
 
       @media (max-width: 720px) {
+        .plan-focus-bar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
         .plan-multigroup-header {
           grid-template-columns: 1fr;
           display: grid;
@@ -6282,6 +6318,11 @@
     function closeOpenPlan() {
       state.openPlanId = '';
       state.openPlanDraft = null;
+    }
+
+    function exitPlanFocus() {
+      closeOpenPlan();
+      renderPlaneacionesList();
     }
 
     function resetPlaneacionesTransientUi() {
@@ -10654,7 +10695,12 @@
         state.openPlanId = '';
         state.openPlanDraft = null;
       }
-      if (!visibleEntries.length) {
+      const focusedEntry = state.openPlanId
+        ? visibleEntries.find((entry) => (entry.plans || []).some((item) => item.planeacion_id === state.openPlanId))
+        : null;
+      const entriesToRender = focusedEntry ? [focusedEntry] : visibleEntries;
+
+      if (!entriesToRender.length) {
         host.innerHTML = '<div class="empty">Todavía no hay planeaciones para los filtros actuales.</div>';
         return;
       }
@@ -10671,7 +10717,34 @@
         '</div>'
       );
 
-      host.innerHTML = desktopHeader + visibleEntries.map((entry) => {
+      let focusBar = '';
+      if (focusedEntry) {
+        const focusedPlan = getOpenPlaneacionEntry(focusedEntry) || focusedEntry.representative;
+        if (focusedPlan) {
+          const focusedGrupo = focusedEntry.isMulti
+            ? getPlaneacionEntryGroupLabels(focusedEntry).join(' · ')
+            : (() => {
+                const row = state.catalogos.grupos.find((item) => item.grupo_id === focusedPlan.grupo_id);
+                return row ? getGrupoDisplayName(row) : focusedPlan.grupo_id;
+              })();
+          const focusedMateria = getPlanMateriaDisplayLabel(
+            focusedPlan,
+            state.catalogos.materias.find((item) => item.materia_id === focusedPlan.materia_id)
+          );
+          focusBar =
+            '<div class="plan-focus-shell">' +
+              '<div class="plan-focus-bar">' +
+                '<div class="plan-focus-copy">' +
+                  '<strong>' + escapeHtml(focusedMateria) + '</strong>' +
+                  '<span>' + escapeHtml(focusedGrupo) + '</span>' +
+                '</div>' +
+                '<button class="btn-ghost" type="button" onclick="exitPlanFocus()">Volver a la lista</button>' +
+              '</div>' +
+            '</div>';
+        }
+      }
+
+      host.innerHTML = (focusedEntry ? focusBar : desktopHeader) + entriesToRender.map((entry) => {
         const plan = getOpenPlaneacionEntry(entry) || entry.representative;
         if (!plan) return '';
         const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
@@ -12657,6 +12730,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
     window.removeOpenPlanDraftActivity = removeOpenPlanDraftActivity;
     window.moveOpenPlanDraftActivity = moveOpenPlanDraftActivity;
     window.toggleAllOpenPlanDraftAlumnos = toggleAllOpenPlanDraftAlumnos;
+    window.exitPlanFocus = exitPlanFocus;
     window.savePlanChanges = savePlanChanges;
     window.updateMultiGroupSharedField = updateMultiGroupSharedField;
     window.updateMultiGroupSharedActivityField = updateMultiGroupSharedActivityField;
