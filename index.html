@@ -5882,7 +5882,7 @@
 
     async function refreshNotificaciones() {
       ensureLoggedIn();
-      const limit = canUseAdminShell() ? 250 : 120;
+      const limit = canUseAdminShell() ? 100 : 120;
       const data = await api('getNotificaciones', { limit });
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
     }
@@ -6060,6 +6060,53 @@
       });
     }
 
+    function renderActiveAdminModule(moduleName = state.activeAdminModule) {
+      if (!canUseAdminShell()) return;
+      switch (String(moduleName || '').trim()) {
+        case 'notificaciones':
+          renderNotificationsAdmin();
+          break;
+        case 'alumnos':
+          renderAdminAlumnosModule();
+          break;
+        case 'facilitadores':
+          renderAdminFacilitadoresModule();
+          break;
+        case 'materias':
+          renderAdminMateriasModule();
+          break;
+        case 'reporte-ciclo':
+          renderAdminReporteCicloModule();
+          break;
+        case 'configuracion':
+          renderAdminConfiguracionModule();
+          break;
+        default:
+          break;
+      }
+    }
+
+    function renderAdminModuleSurface(moduleName = state.activeAdminModule, options = {}) {
+      if (!canUseAdminShell()) return;
+      if (options.includeStats !== false) renderStats();
+      renderAdminShell();
+      renderActiveAdminModule(moduleName);
+      syncRoleUi();
+    }
+
+    async function refreshAdminModuleSurface(moduleName = state.activeAdminModule, options = {}) {
+      if (!canUseAdminShell()) return;
+      const targetModule = String(moduleName || state.activeAdminModule || '').trim();
+      const tasks = [];
+      if (options.refreshCatalogos !== false && adminModuleNeedsCatalogos(targetModule)) {
+        tasks.push(refreshCatalogos({ blocks: getCatalogBlocksForModule(targetModule) }));
+      }
+      if (options.refreshNotificaciones) tasks.push(refreshNotificaciones());
+      if (options.refreshAlertas) tasks.push(refreshAlertas());
+      if (tasks.length) await Promise.all(tasks);
+      renderAdminModuleSurface(targetModule, { includeStats: options.includeStats });
+    }
+
     function syncRoleUi() {
       const tabs = document.querySelector('.tabs');
       const seguimientoTabBtn = document.querySelector('.tab-btn[data-tab="seguimiento"]');
@@ -6222,12 +6269,14 @@
           .then(() => renderAll())
           .catch(() => {});
       }
-      renderNotificationsAdmin();
-      renderAdminAlumnosModule();
-      renderAdminFacilitadoresModule();
-      renderAdminMateriasModule();
-      renderAdminReporteCicloModule();
-      renderAdminConfiguracionModule();
+      if (nextModule === 'planeaciones') {
+        renderPlaneacionesList();
+        renderPlanBuilderVisibility();
+      } else if (nextModule === 'dashboard') {
+        renderAlertas();
+      } else {
+        renderActiveAdminModule(nextModule);
+      }
       syncRoleUi();
     }
 
@@ -6628,7 +6677,11 @@
         }
         if (state.ui) state.ui.notificationFilter = 'activas';
         resetNotificationEditor();
-        await refreshAll();
+        await refreshAdminModuleSurface('notificaciones', {
+          refreshCatalogos: false,
+          refreshNotificaciones: true,
+          includeStats: false
+        });
         setBanner(
           targetStatus === 'publicada'
             ? (isEditing ? 'Notificación actualizada y publicada.' : 'Notificación publicada.')
@@ -6650,7 +6703,11 @@
           resetNotificationEditor();
         }
         if (state.ui) state.ui.notificationFilter = 'activas';
-        await refreshAll();
+        await refreshAdminModuleSurface('notificaciones', {
+          refreshCatalogos: false,
+          refreshNotificaciones: true,
+          includeStats: false
+        });
         return;
       }, { button, busyText: button ? button.textContent : getNotificationBusyText(action), key: buildActionKey(action, [notificationId]) });
     }
@@ -7018,8 +7075,7 @@
           invalidateAlumnoHistorialCache(savedId);
         }
         closeAlumnoEditor();
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('alumnos');
         setBanner(editing ? 'Ficha actualizada.' : 'Alumno creado.', 'success');
       }, {
         button,
@@ -7080,8 +7136,7 @@
         pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('alumnos');
         setBanner(meta.successMessage, 'success');
       }, { button, key: buildActionKey(meta.actionKey, [alumno.alumno_id, targetStatus]), busyText: button ? button.textContent : meta.historyTitle });
     }
@@ -7125,8 +7180,7 @@
         );
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         closeCambioGrupo();
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('alumnos');
         setBanner('Grupo actualizado.', 'success');
       }, {
         button,
@@ -7155,8 +7209,7 @@
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('alumnos');
         setBanner('Alumno archivado.', 'success');
       }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]), busyText: button ? button.textContent : 'Archivar' });
     }
@@ -8260,8 +8313,7 @@
         const data = await api('guardarFacilitador', payload);
         closeFacilitadorEditor();
         state.facilitadoresUi.selectedFacilitadorId = data.facilitador_id || payload.facilitador_id;
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('facilitadores');
         setBanner(mode === 'new' ? 'Facilitador creado.' : 'Ficha del facilitador actualizada.', 'success');
       }, {
         button,
@@ -8296,8 +8348,7 @@
           request_id: uid('FACPIN')
         });
         closeFacilitadorPin();
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('facilitadores');
         setBanner('PIN restablecido para el facilitador.', 'success');
       }, {
         button,
@@ -8316,8 +8367,7 @@
           activo: !!nextActive,
           request_id: uid('FACTOG')
         });
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('facilitadores');
         setBanner(nextActive ? 'Facilitador activado.' : 'Facilitador desactivado.', 'success');
       }, {
         button,
@@ -8336,8 +8386,7 @@
           facilitador_id: row.facilitador_id,
           request_id: uid('FACARC')
         });
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('facilitadores');
         setBanner('Facilitador archivado.', 'success');
       }, {
         button,
@@ -8355,8 +8404,7 @@
           facilitador_id: row.facilitador_id,
           request_id: uid('FACREA')
         });
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('facilitadores');
         setBanner('Facilitador reactivado.', 'success');
       }, {
         button,
@@ -8422,8 +8470,7 @@
       await handleAction('guardarFacilitadorAsignacion', async () => {
         await api('guardarFacilitadorAsignacion', payload);
         closeFacilitadorAsignacionEditor();
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('facilitadores');
         setBanner('Asignación guardada.', 'success');
       }, {
         button,
@@ -8440,8 +8487,7 @@
           request_id: uid('FASARC')
         });
         closeFacilitadorAsignacionEditor();
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('facilitadores');
         setBanner('Asignación retirada del pulso semanal.', 'success');
       }, {
         button,
@@ -8942,8 +8988,7 @@
         const data = await api('guardarMateria', payload);
         closeMateriaEditor();
         state.materiasUi.selectedMateriaId = data.materia_id || payload.materia_id;
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner(mode === 'new' ? 'Materia creada.' : 'Materia actualizada.', 'success');
       }, {
         button,
@@ -8992,8 +9037,7 @@
         await api('guardarSubmateria', payload);
         closeSubmateriaEditor();
         state.materiasUi.selectedMateriaId = payload.materia_id;
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner('Submateria guardada.', 'success');
       }, {
         button,
@@ -9015,8 +9059,7 @@
           materia_id: materiaId,
           request_id: uid('MATARC')
         });
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner('Materia archivada.', 'success');
       }, {
         button,
@@ -9036,8 +9079,7 @@
           estatus: nextStatus,
           request_id: uid('MATTOG')
         });
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner(nextStatus === 'activa' ? 'Materia activada.' : 'Materia desactivada.', 'success');
       }, {
         button,
@@ -9055,8 +9097,7 @@
           estatus: 'activa',
           request_id: uid('MATREA')
         });
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner('Materia reactivada.', 'success');
       }, {
         button,
@@ -9072,8 +9113,7 @@
           direction: direction,
           request_id: uid('MATMOV')
         });
-        await refreshAll({ silent: true });
-        renderAll();
+        await refreshAdminModuleSurface('materias');
       }, {
         button,
         key: buildActionKey('reordenarMateria', [materiaId, direction]),
@@ -9088,9 +9128,8 @@
           submateria_id: submateriaId,
           request_id: uid('SUBARC')
         });
-        await refreshAll({ silent: true });
         state.materiasUi.selectedMateriaId = materiaId;
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner('Submateria archivada.', 'success');
       }, {
         button,
@@ -9111,9 +9150,8 @@
           estatus: nextStatus,
           request_id: uid('SUBTOG')
         });
-        await refreshAll({ silent: true });
         state.materiasUi.selectedMateriaId = materiaId;
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner(nextStatus === 'activa' ? 'Submateria activada.' : 'Submateria desactivada.', 'success');
       }, {
         button,
@@ -9132,9 +9170,8 @@
           estatus: 'activa',
           request_id: uid('SUBREA')
         });
-        await refreshAll({ silent: true });
         state.materiasUi.selectedMateriaId = materiaId;
-        renderAll();
+        await refreshAdminModuleSurface('materias');
         setBanner('Submateria reactivada.', 'success');
       }, {
         button,
@@ -9151,9 +9188,8 @@
           direction: direction,
           request_id: uid('SUBMOV')
         });
-        await refreshAll({ silent: true });
         state.materiasUi.selectedMateriaId = materiaId;
-        renderAll();
+        await refreshAdminModuleSurface('materias');
       }, {
         button,
         key: buildActionKey('reordenarSubmateria', [submateriaId, direction]),
@@ -11198,12 +11234,7 @@
       renderSession();
       renderStats();
       renderAdminShell();
-      if (!adminMode || activeAdminModule === 'notificaciones') renderNotificationsAdmin();
-      if (!adminMode || activeAdminModule === 'alumnos') renderAdminAlumnosModule();
-      if (!adminMode || activeAdminModule === 'facilitadores') renderAdminFacilitadoresModule();
-      if (!adminMode || activeAdminModule === 'materias') renderAdminMateriasModule();
-      if (!adminMode || activeAdminModule === 'reporte-ciclo') renderAdminReporteCicloModule();
-      if (!adminMode || activeAdminModule === 'configuracion') renderAdminConfiguracionModule();
+      if (adminMode) renderActiveAdminModule(activeAdminModule);
       renderInstitutionalNotices();
       if (shouldRenderCatalogSelects) {
         renderPeriodSelects();
