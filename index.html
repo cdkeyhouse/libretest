@@ -2898,6 +2898,62 @@
       font-weight: 700;
       box-shadow: none;
     }
+    .plan-create-state-card {
+      border: 1px solid rgba(31, 58, 55, 0.1);
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.88);
+    }
+    .plan-create-state-title {
+      display: block;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .plan-create-state-copy {
+      margin: 0 0 10px;
+      color: rgba(41, 51, 60, 0.76);
+      font-size: 0.92rem;
+    }
+    .plan-create-state-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .plan-create-state-option {
+      position: relative;
+      display: block;
+      cursor: pointer;
+    }
+    .plan-create-state-option input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .plan-create-state-option span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(31, 58, 55, 0.14);
+      background: rgba(255, 255, 255, 0.92);
+      font-weight: 800;
+      color: var(--ink);
+      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .plan-create-state-option input:checked + span {
+      border-color: rgba(31, 176, 186, 0.36);
+      background: linear-gradient(135deg, rgba(31, 176, 186, 0.12), rgba(93, 193, 235, 0.18));
+      color: #0f4e5a;
+      box-shadow: 0 10px 22px rgba(31, 176, 186, 0.12);
+    }
+    .plan-create-state-meta {
+      margin-top: 8px;
+      font-size: 0.84rem;
+      color: rgba(41, 51, 60, 0.66);
+    }
     @media (max-width: 720px) {
       .admin-notification-head-copy {
         max-width: none;
@@ -3002,6 +3058,9 @@
         white-space: normal;
       }
       .activity-inline-grid {
+        grid-template-columns: 1fr;
+      }
+      .plan-create-state-options {
         grid-template-columns: 1fr;
       }
       .group-block-head,
@@ -4612,6 +4671,21 @@
               <div>
                 <label for="planFrase">Frase de la semana</label>
                 <textarea id="planFrase" placeholder="Idea o enfoque pedagogico de la semana"></textarea>
+              </div>
+              <div id="planCreateStateCard" class="plan-create-state-card" hidden>
+                <span class="plan-create-state-title">Al crear esta planeación</span>
+                <p class="plan-create-state-copy">Decide si debe guardarse como borrador o quedar activa desde el primer momento.</p>
+                <div class="plan-create-state-options">
+                  <label class="plan-create-state-option">
+                    <input id="planCreateStateDraft" type="radio" name="planCreateState" value="borrador">
+                    <span>Borrador</span>
+                  </label>
+                  <label class="plan-create-state-option">
+                    <input id="planCreateStateActive" type="radio" name="planCreateState" value="activa">
+                    <span>Activa</span>
+                  </label>
+                </div>
+                <div id="planCreateStateMeta" class="plan-create-state-meta">Si la semana está cerrada, el backend ajustará el estado permitido.</div>
               </div>
               <div>
                 <label>Grupos</label>
@@ -9292,6 +9366,7 @@
         planId: '',
         lockedSemanaId: '',
         lockedGrupoId: '',
+        createTargetStatus: 'borrador',
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: [createEmptyActivityDraft()]
@@ -9487,6 +9562,7 @@
         planId: plan.planeacion_id,
         lockedSemanaId: plan.semana_id,
         lockedGrupoId: plan.grupo_id,
+        createTargetStatus: 'borrador',
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
@@ -9507,6 +9583,32 @@
       Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
         input.checked = (plan.alumnos || []).some((row) => row.alumno_id === input.value);
       });
+    }
+
+    function updatePlanEditorCreateState(value) {
+      if (state.planEditor.mode === 'edit') return;
+      state.planEditor.createTargetStatus = String(value || '').trim() === 'activa' ? 'activa' : 'borrador';
+      renderPlanCreateStateChoice();
+    }
+
+    function renderPlanCreateStateChoice() {
+      const card = $('planCreateStateCard');
+      const draftInput = $('planCreateStateDraft');
+      const activeInput = $('planCreateStateActive');
+      const meta = $('planCreateStateMeta');
+      if (!card || !draftInput || !activeInput || !meta) return;
+      const isCreate = state.planEditor.mode !== 'edit';
+      const selected = String(state.planEditor.createTargetStatus || 'borrador').trim() === 'activa' ? 'activa' : 'borrador';
+      const week = getWeekByDateOrDraft($('planFecha').value || '');
+      const weekClosed = !!(week && String(week.cerrada_global || '').toLowerCase() === 'si');
+      card.hidden = !isCreate;
+      draftInput.checked = selected === 'borrador';
+      activeInput.checked = selected === 'activa';
+      meta.textContent = weekClosed
+        ? 'Semana cerrada: el backend ajustará el estado permitido al guardar.'
+        : (selected === 'activa'
+          ? 'La planeación nacerá activa y lista para trabajarse.'
+          : 'La planeación se guardará como borrador para revisarla después.');
     }
 
     function buildOpenPlanDraft(plan) {
@@ -10016,6 +10118,7 @@
       if ($('resetPlanEditorBtn')) $('resetPlanEditorBtn').disabled = catalogsLoading;
       if (loadingNote) loadingNote.hidden = !catalogsLoading;
       renderPlanWeekResolved();
+      renderPlanCreateStateChoice();
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
@@ -11350,6 +11453,7 @@
           fecha_planeacion: fechaPlaneacion,
           semana_id: semana.draft ? '' : semana.semana_id,
           grupo_ids: grupoIds,
+          estado_inicial: state.planEditor.createTargetStatus || 'borrador',
           materia_id: $('planMateria').value,
           frase_semana: $('planFrase').value.trim(),
           alumnos_ids: alumnosIds,
@@ -12270,6 +12374,8 @@
       $('togglePlanBuilderBtn').addEventListener('click', () => togglePlanBuilder());
       $('resetPlanEditorBtn').addEventListener('click', () => resetPlanEditor());
       $('addActivityBtn').addEventListener('click', () => addEditorActivity());
+      if ($('planCreateStateDraft')) $('planCreateStateDraft').addEventListener('change', (event) => updatePlanEditorCreateState(event.currentTarget.value));
+      if ($('planCreateStateActive')) $('planCreateStateActive').addEventListener('change', (event) => updatePlanEditorCreateState(event.currentTarget.value));
       if ($('closePlanCancelBtn')) $('closePlanCancelBtn').addEventListener('click', () => closeClosePlanModal());
       if ($('closePlanConfirmBtn')) $('closePlanConfirmBtn').addEventListener('click', (event) => submitClosePlan(event.currentTarget));
       if ($('selectAllGroupsBtn')) $('selectAllGroupsBtn').addEventListener('click', () => toggleAllGroups(true));
