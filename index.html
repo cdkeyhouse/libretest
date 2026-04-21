@@ -4615,6 +4615,10 @@
                   <label for="planMateria">Materia</label>
                   <select id="planMateria"></select>
                 </div>
+                <div id="planSubmateriaField" hidden>
+                  <label for="planSubmateria">Submateria</label>
+                  <select id="planSubmateria"></select>
+                </div>
               </div>
               <div>
                 <label for="planFrase">Frase de la semana</label>
@@ -9357,6 +9361,7 @@
         planId: '',
         lockedSemanaId: '',
         lockedGrupoId: '',
+        selectedSubmateriaId: '',
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: [createEmptyActivityDraft()]
@@ -9512,6 +9517,7 @@
       if (state.ui) state.ui.planBuilderExpanded = false;
       $('planFecha').value = '';
       $('planMateria').value = '';
+      if ($('planSubmateria')) $('planSubmateria').value = '';
       $('planFrase').value = '';
       if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
       if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
@@ -9534,6 +9540,7 @@
       if (state.ui) state.ui.planBuilderExpanded = false;
       if ($('planFecha')) $('planFecha').value = '';
       if ($('planMateria')) $('planMateria').value = '';
+      if ($('planSubmateria')) $('planSubmateria').value = '';
       if ($('planFrase')) $('planFrase').value = '';
       if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
       if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
@@ -9552,6 +9559,7 @@
         planId: plan.planeacion_id,
         lockedSemanaId: plan.semana_id,
         lockedGrupoId: plan.grupo_id,
+        selectedSubmateriaId: plan.submateria_id || '',
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
@@ -9567,6 +9575,7 @@
       $('planFecha').value = semana && semana.fecha_inicio ? toYmdFrontend_(semana.fecha_inicio) : '';
       $('planFrase').value = plan.frase_semana || '';
       $('planMateria').value = plan.materia_id || '';
+      syncPlanSubmateriaSelect(plan.submateria_id || '');
       renderPlanEditor();
       renderPlanBuilderVisibility();
       Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
@@ -9580,6 +9589,7 @@
         planId: plan.planeacion_id,
         fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
         frase_semana: plan.frase_semana || '',
+        submateria_id: plan.submateria_id || '',
         alumnos_ids: (plan.alumnos || []).map((row) => row.alumno_id),
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
           key: actividad.actividad_id || uid('ACTOPEN'),
@@ -9662,9 +9672,50 @@
       const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
       return [
         grupo ? getGrupoDisplayName(grupo) : plan.grupo_id,
-        materia ? (materia.nombre || materia.materia_id) : plan.materia_id,
+        getPlanMateriaDisplayLabel(plan, materia),
         semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id
       ].join(' · ');
+    }
+
+    function getPlanSubmateriasForMateria(materiaId) {
+      const targetId = String(materiaId || '').trim();
+      if (!targetId) return [];
+      return (state.catalogos.submaterias || []).filter((item) => String(item.materia_id || '').trim() === targetId);
+    }
+
+    function getSubmateriaById(submateriaId) {
+      const targetId = String(submateriaId || '').trim();
+      if (!targetId) return null;
+      return (state.catalogos.submaterias || []).find((item) => String(item.submateria_id || '').trim() === targetId) || null;
+    }
+
+    function materiaRequiresPlanSubmateria(materiaId) {
+      return getPlanSubmateriasForMateria(materiaId).length > 0;
+    }
+
+    function getPlanMateriaDisplayLabel(plan, materiaRow) {
+      const materia = materiaRow || state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
+      const materiaLabel = materia ? (materia.nombre || materia.materia_id) : (plan.materia_id || '-');
+      const submateria = getSubmateriaById(plan && plan.submateria_id);
+      return submateria ? (materiaLabel + ' · ' + (submateria.nombre || submateria.submateria_id)) : materiaLabel;
+    }
+
+    function syncPlanSubmateriaSelect(preferredValue) {
+      const field = $('planSubmateriaField');
+      const select = $('planSubmateria');
+      const materiaId = $('planMateria') ? $('planMateria').value : '';
+      if (!field || !select) return;
+      const submaterias = getPlanSubmateriasForMateria(materiaId);
+      field.hidden = !submaterias.length;
+      fillSelect(select, submaterias, (item) => item.submateria_id, (item) => item.nombre || item.submateria_id, 'Selecciona submateria');
+      const nextValue = preferredValue !== undefined ? String(preferredValue || '').trim() : String(state.planEditor.selectedSubmateriaId || '').trim();
+      if (nextValue && submaterias.some((item) => item.submateria_id === nextValue)) {
+        select.value = nextValue;
+      } else {
+        select.value = '';
+      }
+      state.planEditor.selectedSubmateriaId = select.value || '';
+      select.disabled = !submaterias.length || (state.ui && state.ui.planeacionesCatalogosLoading);
     }
 
     function getPlanById(planId) {
@@ -9798,6 +9849,7 @@
         loteId: entry.loteId,
         basePlanId: selectedPlan.planeacion_id,
         fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
+        submateria_id: selectedPlan.submateria_id || '',
         frase_semana: selectedPlan.frase_semana || '',
         activities: (selectedPlan.actividades || []).length ? (selectedPlan.actividades || []).map((actividad) => ({
           key: actividad.actividad_id || uid('ACTSHR'),
@@ -10088,12 +10140,14 @@
       }
       $('planFecha').disabled = !canEditDate;
       $('planMateria').disabled = (isEdit && !hasAdminPower) || catalogsLoading;
+      if ($('planSubmateria')) $('planSubmateria').disabled = (isEdit && !hasAdminPower) || catalogsLoading;
       $('planFrase').disabled = catalogsLoading;
       $('selectAllVisibleAlumnosBtn').disabled = catalogsLoading;
       $('clearVisibleAlumnosBtn').disabled = catalogsLoading;
       $('addActivityBtn').disabled = catalogsLoading;
       if (loadingNote) loadingNote.hidden = !catalogsLoading;
       renderPlanWeekResolved();
+      syncPlanSubmateriaSelect();
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
@@ -10103,6 +10157,7 @@
     function renderBaseSelects() {
       const reportUi = getReportSelectionState();
       fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
+      syncPlanSubmateriaSelect();
       fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
       fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => getGrupoDisplayName(g), 'Todos los grupos');
       fillSelect($('filterFacilitador'), state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)), (f) => f.facilitador_id, (f) => f.nombre_mostrado || f.nombre_completo || f.facilitador_id, 'Todos los facilitadores');
@@ -10419,6 +10474,8 @@
       const draft = getMultiGroupSharedDraft(entry);
       if (!draft) return '';
       const selectedPlan = getOpenPlaneacionEntry(entry);
+      const selectedMateriaId = (selectedPlan || {}).materia_id || '';
+      const selectedSubmaterias = getPlanSubmateriasForMateria(selectedMateriaId);
       const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || ''));
       const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
       return (
@@ -10433,7 +10490,13 @@
           '<div class="grid-3">' +
             '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"></div>' +
             '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
-            '<div><label>Materia</label><div class="inline-note">' + escapeHtml((state.catalogos.materias.find((item) => item.materia_id === (selectedPlan || {}).materia_id) || {}).nombre || (selectedPlan || {}).materia_id || '-') + '</div></div>' +
+            '<div><label>Materia</label><div class="inline-note">' + escapeHtml(getPlanMateriaDisplayLabel(selectedPlan || {}, state.catalogos.materias.find((item) => item.materia_id === (selectedPlan || {}).materia_id))) + '</div></div>' +
+            (selectedSubmaterias.length
+              ? '<div><label>Submateria</label><select onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'submateria_id\', this.value, true)">' +
+                  '<option value="">Selecciona submateria</option>' +
+                  selectedSubmaterias.map((item) => '<option value="' + escapeHtml(item.submateria_id) + '"' + (String(draft.submateria_id || '') === String(item.submateria_id || '') ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.submateria_id) + '</option>').join('') +
+                '</select></div>'
+              : '') +
           '</div>' +
           '<div class="plan-inline-field">' +
             '<label>Frase de la semana</label>' +
@@ -10481,6 +10544,7 @@
       if (options.groupSpecificOnly) return renderOpenPlanGroupSpecificEditor(plan);
       const draft = getOpenPlanDraft(plan);
       if (!draft) return '';
+      const submaterias = getPlanSubmateriasForMateria(plan.materia_id);
       const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
       const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
       const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
@@ -10519,7 +10583,13 @@
           '<div class="grid-3">' +
             '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"></div>' +
             '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
-            '<div><label>Materia</label><div class="inline-note">' + escapeHtml((state.catalogos.materias.find((item) => item.materia_id === plan.materia_id) || {}).nombre || plan.materia_id) + '</div></div>' +
+            '<div><label>Materia</label><div class="inline-note">' + escapeHtml(getPlanMateriaDisplayLabel(plan, state.catalogos.materias.find((item) => item.materia_id === plan.materia_id))) + '</div></div>' +
+            (submaterias.length
+              ? '<div><label>Submateria</label><select onchange="updateOpenPlanDraftField(\'submateria_id\', this.value, true)">' +
+                  '<option value="">Selecciona submateria</option>' +
+                  submaterias.map((item) => '<option value="' + escapeHtml(item.submateria_id) + '"' + (String(draft.submateria_id || '') === String(item.submateria_id || '') ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.submateria_id) + '</option>').join('') +
+                '</select></div>'
+              : '') +
           '</div>' +
           '<div class="plan-inline-field">' +
             '<label>Frase de la semana</label>' +
@@ -10590,7 +10660,7 @@
         const groupLabel = entry.isMulti
           ? getPlaneacionEntryGroupLabels(entry).join(' · ')
           : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
-        const materiaLabel = materia ? (materia.nombre || materia.materia_id) : plan.materia_id;
+        const materiaLabel = getPlanMateriaDisplayLabel(plan, materia);
         const weekLabel = getWeekLabelForPlan(plan, semana);
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
         const hasAdminPower = role === 'admin' || role === 'directora';
@@ -11378,6 +11448,10 @@
       const semana = getWeekByDateOrDraft(fechaPlaneacion);
       if (!semana) throw new Error('Selecciona una fecha valida para construir la semana.');
       if (!$('planMateria').value) throw new Error('Selecciona una materia.');
+      const selectedSubmateriaId = $('planSubmateria') ? $('planSubmateria').value : '';
+      if (materiaRequiresPlanSubmateria($('planMateria').value) && !selectedSubmateriaId) {
+        throw new Error('Selecciona una submateria.');
+      }
       const grupoIds = state.planEditor.mode === 'edit'
         ? (hasAdminPower ? getSelectedGroupIds() : [state.planEditor.lockedGrupoId])
         : getSelectedGroupIds();
@@ -11416,6 +11490,7 @@
           semana_id: semana.draft ? '' : semana.semana_id,
           grupo_id: grupoIds[0],
           materia_id: $('planMateria').value,
+          submateria_id: selectedSubmateriaId,
           frase_semana: $('planFrase').value.trim(),
           alumnos_ids: alumnosIds,
           actividades,
@@ -11431,6 +11506,7 @@
           grupo_ids: grupoIds,
           estado_inicial: targetStatus,
           materia_id: $('planMateria').value,
+          submateria_id: selectedSubmateriaId,
           frase_semana: $('planFrase').value.trim(),
           alumnos_ids: alumnosIds,
           actividades,
@@ -11759,6 +11835,10 @@
       const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
       if (!semana) throw new Error('Selecciona una fecha válida.');
+      const submateriaId = String((draft && draft.submateria_id) || (plan && plan.submateria_id) || '').trim();
+      if (materiaRequiresPlanSubmateria(plan.materia_id) && !submateriaId) {
+        throw new Error('Selecciona una submateria.');
+      }
       const alumnosIds = Array.from(new Set(draft.alumnos_ids || []));
       if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
       const actividades = (draft.activities || [])
@@ -11775,6 +11855,7 @@
       return {
         fallbackDate,
         semana,
+        submateriaId,
         alumnosIds,
         actividades
       };
@@ -11899,6 +11980,7 @@
         semana_id: request.semana.draft ? '' : request.semana.semana_id,
         grupo_id: plan.grupo_id,
         materia_id: plan.materia_id,
+        submateria_id: request.submateriaId,
         frase_semana: String(draft.frase_semana || '').trim(),
         alumnos_ids: request.alumnosIds,
         actividades: request.actividades,
@@ -11922,7 +12004,7 @@
     function shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan) {
       if (!previousPlan || !updatedPlan) return true;
       if (hasActivePlaneacionesFilters()) return true;
-      return ['semana_id', 'grupo_id', 'materia_id', 'estado', 'facilitador_id'].some((field) => {
+      return ['semana_id', 'grupo_id', 'materia_id', 'submateria_id', 'estado', 'facilitador_id'].some((field) => {
         return String(previousPlan[field] || '') !== String(updatedPlan[field] || '');
       });
     }
@@ -11969,6 +12051,7 @@
         planeacion_base_id: (selectedPlan && selectedPlan.planeacion_id) || draft.basePlanId,
         fecha_planeacion: draft.fecha_planeacion || fallbackDate,
         semana_id: semana.draft ? '' : semana.semana_id,
+        submateria_id: String(((selectedPlan && selectedPlan.submateria_id) || draft.submateria_id || '')).trim(),
         frase_semana: String(draft.frase_semana || '').trim(),
         actividades: activities,
         planes: (entry.plans || []).map((plan) => ({
@@ -12345,15 +12428,15 @@
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
       $('savePlanBtn').addEventListener('click', (event) => handleAction('guardarPlaneacionCompleta', () => savePlanEditor(), {
         button: event.currentTarget,
-        key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+        key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
       if ($('savePlanDraftBtn')) $('savePlanDraftBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', () => savePlanEditor('borrador'), {
         button: event.currentTarget,
-        key: buildActionKey('crearPlaneacion', ['borrador', $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+        key: buildActionKey('crearPlaneacion', ['borrador', $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
       if ($('savePlanActiveBtn')) $('savePlanActiveBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', () => savePlanEditor('activa'), {
         button: event.currentTarget,
-        key: buildActionKey('crearPlaneacion', ['activa', $('planFecha').value, $('planMateria').value, getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+        key: buildActionKey('crearPlaneacion', ['activa', $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
       $('togglePlanBuilderBtn').addEventListener('click', () => togglePlanBuilder());
       $('addActivityBtn').addEventListener('click', () => addEditorActivity());
@@ -12416,6 +12499,13 @@
         key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
       }));
       $('planFecha').addEventListener('change', renderPlanWeekResolved);
+      $('planMateria').addEventListener('change', () => {
+        state.planEditor.selectedSubmateriaId = '';
+        syncPlanSubmateriaSelect('');
+      });
+      if ($('planSubmateria')) $('planSubmateria').addEventListener('change', (event) => {
+        state.planEditor.selectedSubmateriaId = event.currentTarget.value || '';
+      });
       $('planGruposChecklist').addEventListener('change', handlePlanGroupChecklistChange);
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
       $('evaMateria').addEventListener('change', renderEvaluationDependencies);
