@@ -11473,10 +11473,16 @@
       const actionLabel = options.actionLabel || 'guardarPlaneacionCompletaInline';
       const actionKey = options.actionKey || buildActionKey(actionLabel, [planId, request.fallbackDate, request.alumnosIds.join(',')]);
       await handleAction(actionLabel, async () => {
-        await persistOpenPlanDraftApi(planId, draft, plan, request);
-        state.openPlanId = planId;
-        state.openPlanDraft = null;
-        await refreshPlaneacionesSurface();
+        const response = await persistOpenPlanDraftApi(planId, draft, plan, request);
+        const updatedPlan = response && response.planeacion ? response.planeacion : null;
+        if (!shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
+          applySavedPlaneacionDetail(planId, updatedPlan);
+          await refreshPlaneacionesSurface({ includePlaneaciones: false, includeAlertas: true });
+        } else {
+          state.openPlanId = planId;
+          state.openPlanDraft = null;
+          await refreshPlaneacionesSurface();
+        }
         setBanner(successMessage, 'success');
       }, {
         button,
@@ -11572,7 +11578,7 @@
       const plan = providedPlan || getPlanById(planId);
       if (!plan || !draft) throw new Error('Planeación no encontrada.');
       const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
-      await api('guardarPlaneacionCompleta', {
+      return await api('guardarPlaneacionCompleta', {
         planeacion_id: planId,
         fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
         semana_id: request.semana.draft ? '' : request.semana.semana_id,
@@ -11585,6 +11591,32 @@
         last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
         request_id: uid('PLAOPEN')
       });
+    }
+
+    function hasActivePlaneacionesFilters() {
+      return !!(
+        ($('filterSemana') && $('filterSemana').value) ||
+        ($('filterEstado') && $('filterEstado').value) ||
+        ($('filterGrupo') && $('filterGrupo').value) ||
+        ($('filterFacilitador') && $('filterFacilitador').value) ||
+        ($('filterAlumnoId') && $('filterAlumnoId').value) ||
+        (state.ui && state.ui.planeacionesMateriaFilter)
+      );
+    }
+
+    function shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan) {
+      if (!previousPlan || !updatedPlan) return true;
+      if (hasActivePlaneacionesFilters()) return true;
+      return ['semana_id', 'grupo_id', 'materia_id', 'estado', 'facilitador_id'].some((field) => {
+        return String(previousPlan[field] || '') !== String(updatedPlan[field] || '');
+      });
+    }
+
+    function applySavedPlaneacionDetail(planId, updatedPlan) {
+      if (!updatedPlan || !updatedPlan.planeacion_id) return;
+      upsertPlaneacionRow(updatedPlan);
+      state.openPlanId = planId;
+      state.openPlanDraft = buildOpenPlanDraft(updatedPlan);
     }
 
     function buildMultiGroupSharedSavePayload(entry, draft) {
@@ -11644,6 +11676,7 @@
 
       await handleAction('guardarCambiosPlaneacion', async () => {
         const savedParts = [];
+        let savedPlanResponse = null;
         if (generalText) {
           await persistGeneralObservation(planId, generalText);
           const generalInput = $('obs-general-' + planId);
@@ -11655,9 +11688,7 @@
           savedParts.push('observaciones finales');
         }
         if (shouldSavePlan) {
-          await persistOpenPlanDraftApi(planId, planDraft, plan);
-          state.openPlanId = planId;
-          state.openPlanDraft = null;
+          savedPlanResponse = await persistOpenPlanDraftApi(planId, planDraft, plan);
           savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
         }
         if (shouldSaveShared) {
@@ -11667,7 +11698,20 @@
           state.openPlanDraft = null;
           savedParts.push('base multigrupo');
         }
-        await refreshPlaneacionesSurface({ includeAlertas: shouldSavePlan || shouldSaveShared });
+        const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion ? savedPlanResponse.planeacion : null;
+        const canPatchSimplePlanLocally = shouldSavePlan &&
+          !generalText &&
+          !finalPayloads.length &&
+          !shouldSaveShared &&
+          !(entry && entry.isMulti);
+        if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
+          applySavedPlaneacionDetail(planId, updatedPlan);
+          await refreshPlaneacionesSurface({ includePlaneaciones: false, includeAlertas: true });
+        } else {
+          state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
+          state.openPlanDraft = null;
+          await refreshPlaneacionesSurface({ includeAlertas: shouldSavePlan || shouldSaveShared });
+        }
         finalPayloads.forEach((row) => {
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
