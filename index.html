@@ -1049,6 +1049,92 @@
     .plan-list-skeleton-block.micro {
       width: 42%;
     }
+    .plan-list-loading-shell {
+      display: grid;
+      gap: 10px;
+    }
+    .plan-list-loading-copy {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 2px 6px 4px;
+      color: rgba(245, 242, 234, 0.88);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+    .plan-list-loading-copy::before {
+      content: '';
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--la-cyan, #1fb6e5);
+      box-shadow: 0 0 0 6px rgba(31, 182, 229, 0.08);
+      flex: 0 0 auto;
+    }
+    .plan-card-loading {
+      position: relative;
+      overflow: hidden;
+    }
+    .plan-card-loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 45%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.05) 55%, transparent 100%);
+      animation: planListSkeletonSweep 1.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .plan-loading-line {
+      display: block;
+      min-width: 0;
+      color: rgba(245, 242, 234, 0.92);
+      line-height: 1.25;
+    }
+    .plan-loading-line.primary {
+      font-weight: 800;
+    }
+    .plan-loading-line.secondary,
+    .plan-loading-line.muted {
+      color: rgba(245, 242, 234, 0.62);
+      font-size: 0.84rem;
+    }
+    .plan-loading-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(31, 182, 229, 0.18);
+      background: rgba(31, 182, 229, 0.12);
+      color: var(--la-cyan, #1fb6e5);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .plan-loading-btn {
+      min-height: 38px;
+      padding: 9px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(31, 182, 229, 0.18);
+      background: rgba(31, 182, 229, 0.1);
+      color: rgba(245, 242, 234, 0.82);
+      font-weight: 800;
+      cursor: wait;
+    }
+    .plan-loading-phrase-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(245, 154, 27, 0.12);
+      border: 1px solid rgba(245, 154, 27, 0.18);
+      color: rgba(255, 226, 189, 0.9);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
     .plan-list-more {
       display: flex;
       justify-content: center;
@@ -1108,6 +1194,10 @@
         gap: 8px;
       }
       .plan-list-skeleton-copy {
+        padding: 0 2px 2px;
+        font-size: 0.88rem;
+      }
+      .plan-list-loading-copy {
         padding: 0 2px 2px;
         font-size: 0.88rem;
       }
@@ -12323,28 +12413,72 @@
     }
 
     function buildPlaneacionesListSkeleton(count = 3) {
+      const desktopHeader =
+        '<div class="plan-list-compact-head">' +
+          '<span>Fecha</span>' +
+          '<span>Grupo</span>' +
+          '<span>Materia</span>' +
+          '<span>Resumen</span>' +
+          '<span>Estado</span>' +
+          '<span>Acciones</span>' +
+        '</div>';
       const cards = Array.from({ length: count }).map(() => (
-        '<div class="plan-list-skeleton-card">' +
-          '<div class="plan-list-skeleton-row">' +
-            '<span class="plan-list-skeleton-block short"></span>' +
-            '<span class="plan-list-skeleton-block short"></span>' +
-            '<span class="plan-list-skeleton-block short"></span>' +
-            '<span class="plan-list-skeleton-block"></span>' +
-            '<span class="plan-list-skeleton-block tiny"></span>' +
-            '<span class="plan-list-skeleton-block micro"></span>' +
+        '<article class="plan-card is-collapsed plan-card-compact plan-card-loading">' +
+          '<div class="plan-collapsed-mobile">' +
+            '<div class="plan-top">' +
+              '<div>' +
+                '<h3>Cargando planeación...</h3>' +
+                '<div class="subtle">Preparando fecha, grupo y materia</div>' +
+              '</div>' +
+              '<span class="plan-loading-badge">Cargando</span>' +
+            '</div>' +
+            '<div class="meta-grid">' +
+              '<div><strong>Frase:</strong> Cargando frase de la semana...</div>' +
+              '<div><strong>Resumen:</strong> Preparando alumnos y actividades...</div>' +
+            '</div>' +
+            '<div class="actions" style="margin-top:14px;">' +
+              '<button class="plan-loading-btn" type="button" disabled>Cargando...</button>' +
+            '</div>' +
           '</div>' +
-          '<div class="plan-list-skeleton-row">' +
-            '<span class="plan-list-skeleton-block micro"></span>' +
-            '<span class="plan-list-skeleton-block tiny"></span>' +
-            '<span class="plan-list-skeleton-block tiny"></span>' +
-            '<span class="plan-list-skeleton-block short"></span>' +
-            '<span class="plan-list-skeleton-block micro"></span>' +
-            '<span class="plan-list-skeleton-block tiny"></span>' +
+          '<div class="plan-collapsed-desktop">' +
+            '<div class="plan-compact-grid">' +
+              '<div class="plan-compact-cell plan-compact-cell-date">' +
+                '<span class="plan-compact-label">Fecha</span>' +
+                '<span class="plan-loading-line primary">Cargando fecha...</span>' +
+                '<span class="plan-loading-line secondary">Semana en preparación</span>' +
+              '</div>' +
+              '<div class="plan-compact-cell plan-compact-cell-group">' +
+                '<span class="plan-compact-label">Grupo</span>' +
+                '<span class="plan-loading-line primary">Cargando grupo...</span>' +
+                '<span class="plan-loading-line muted">Esperando datos</span>' +
+              '</div>' +
+              '<div class="plan-compact-cell plan-compact-cell-materia">' +
+                '<span class="plan-compact-label">Materia</span>' +
+                '<span class="plan-loading-line primary">Cargando materia...</span>' +
+              '</div>' +
+              '<div class="plan-compact-cell plan-compact-cell-summary">' +
+                '<span class="plan-compact-label">Resumen</span>' +
+                '<span class="plan-loading-line secondary">Preparando alumnos y actividades...</span>' +
+              '</div>' +
+              '<div class="plan-compact-cell plan-compact-status plan-compact-cell-status">' +
+                '<span class="plan-compact-label">Estado</span>' +
+                '<span class="plan-loading-badge">Cargando</span>' +
+              '</div>' +
+              '<div class="plan-compact-cell plan-compact-actions plan-compact-cell-actions">' +
+                '<button class="plan-loading-btn" type="button" disabled>Cargando...</button>' +
+              '</div>' +
+              '<div class="plan-compact-cell plan-compact-cell-phrase">' +
+                '<span class="plan-compact-label">Frase</span>' +
+                '<span class="plan-loading-phrase-chip">Frase de la semana</span>' +
+                '<span class="plan-loading-line secondary">Preparando el contenido de la planeación...</span>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
-        '</div>'
+        '</article>'
       )).join('');
-      return '<div class="plan-list-skeleton">' +
-        '<div class="plan-list-skeleton-copy"><span class="plan-list-skeleton-dot"></span><span>Cargando planeaciones...</span></div>' +
+      return '<div class="plan-list-loading-shell">' +
+        '<div class="plan-list-loading-copy"><span>Cargando planeaciones...</span></div>' +
+        desktopHeader +
         cards +
       '</div>';
     }
