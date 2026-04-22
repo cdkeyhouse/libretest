@@ -6212,7 +6212,6 @@
       const data = await api('login', { facilitador_id: facilitadorId, pin });
       saveSession({ token: data.token, usuario: data.usuario });
       clearLoginInputs();
-      setBanner('Sesión iniciada como ' + data.usuario.nombre + '.', 'success');
       await refreshAll({ fastFacilitadorBoot: true });
     }
 
