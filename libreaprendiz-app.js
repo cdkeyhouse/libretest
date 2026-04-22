@@ -2818,6 +2818,12 @@
       return upsertCatalogEntityRow('alumnos', 'alumno_id', row);
     }
 
+    function applyPatchedAlumnoCatalogRow(alumnoId, patch = {}) {
+      const current = getAlumnoById(alumnoId);
+      if (!current) return null;
+      return applySavedAlumnoCatalogRow(Object.assign({}, current, patch));
+    }
+
     function pushAlumnoHistory(alumnoId, tipo, titulo, detalle, fecha) {
       const id = String(alumnoId || '').trim();
       if (!id) return;
@@ -3121,6 +3127,12 @@
           grupo_id: alumno.grupo_id,
           estatus: targetStatus
         });
+        applyPatchedAlumnoCatalogRow(alumno.alumno_id, {
+          estatus: targetStatus,
+          fecha_baja: targetStatus === 'activo' ? '' : (alumno.fecha_baja || ''),
+          archivado_at: targetStatus === 'activo' ? '' : (alumno.archivado_at || ''),
+          archivado_por: targetStatus === 'activo' ? '' : (alumno.archivado_por || '')
+        });
         if (currentStatus === 'archivado' && targetStatus !== 'baja') {
           delete state.alumnosUi.archivedShadow[alumno.alumno_id];
           bumpAlumnosSourceRevision();
@@ -3137,7 +3149,7 @@
         pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
-        await refreshAdminModuleSurface('alumnos');
+        renderAdminModuleSurface('alumnos');
         setBanner(meta.successMessage, 'success');
       }, { button, key: buildActionKey(meta.actionKey, [alumno.alumno_id, targetStatus]), busyText: button ? button.textContent : meta.historyTitle });
     }
@@ -3172,6 +3184,9 @@
           estatus: alumno.estatus || 'activo',
           motivo: String(cambio.motivo || '').trim()
         });
+        applyPatchedAlumnoCatalogRow(alumno.alumno_id, {
+          grupo_id: cambio.nuevo_grupo_id
+        });
         pushAlumnoHistory(
           alumno.alumno_id,
           'grupo',
@@ -3181,7 +3196,7 @@
         );
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         closeCambioGrupo();
-        await refreshAdminModuleSurface('alumnos');
+        renderAdminModuleSurface('alumnos');
         setBanner('Grupo actualizado.', 'success');
       }, {
         button,
@@ -3200,18 +3215,25 @@
       if (!confirm('El alumno pasará a archivados y saldrá de las vistas activas.')) return;
       await handleAction('archivarAlumno', async () => {
         await api('archivarAlumno', { alumno_id: alumno.alumno_id });
+        const archivedAt = new Date().toISOString();
+        applyPatchedAlumnoCatalogRow(alumno.alumno_id, {
+          estatus: 'baja',
+          fecha_baja: getTodayYmdLocal(),
+          archivado_at: archivedAt,
+          archivado_por: String(state.session && state.session.usuario && state.session.usuario.facilitador_id || '')
+        });
         state.alumnosUi.archivedShadow[alumno.alumno_id] = Object.assign({}, alumno, {
           estatus: 'baja',
           __archived: true,
           fecha_baja: getTodayYmdLocal(),
-          archivado_at: new Date().toISOString()
+          archivado_at: archivedAt
         });
         bumpAlumnosSourceRevision();
         pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiró del listado activo del catálogo.', new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
-        await refreshAdminModuleSurface('alumnos');
+        renderAdminModuleSurface('alumnos');
         setBanner('Alumno archivado.', 'success');
       }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]), busyText: button ? button.textContent : 'Archivar' });
     }
@@ -3661,6 +3683,30 @@
       upsertCatalogEntityRow('facilitadores_admin', 'facilitador_id', row);
       upsertCatalogEntityRow('facilitadores', 'facilitador_id', row);
       return getFacilitadorById(row.facilitador_id);
+    }
+
+    function applyPatchedFacilitadorCatalogRow(facilitadorId, patch = {}) {
+      const current = getFacilitadorById(facilitadorId);
+      if (!current) return null;
+      return applySavedFacilitadorCatalogRow(Object.assign({}, current, patch));
+    }
+
+    function applySavedFacilitadorAsignacionCatalogRow(row) {
+      if (!row || !row.asignacion_id) return null;
+      const normalized = Object.assign({}, row, {
+        asignacion_id: String(row.asignacion_id || '').trim(),
+        facilitador_id: String(row.facilitador_id || '').trim(),
+        grupo_id: String(row.grupo_id || '').trim(),
+        materia_id: String(row.materia_id || '').trim(),
+        activa: row.activa === undefined ? true : row.activa,
+        fecha_inicio: toYmdFrontend_(row.fecha_inicio || ''),
+        fecha_fin: toYmdFrontend_(row.fecha_fin || ''),
+        archivado_at: String(row.archivado_at || row.archivada_at || '').trim(),
+        archivada_at: String(row.archivada_at || row.archivado_at || '').trim(),
+        archivado_por: String(row.archivado_por || row.archivada_por || '').trim(),
+        archivada_por: String(row.archivada_por || row.archivado_por || '').trim()
+      });
+      return upsertCatalogEntityRow('facilitador_asignaciones', 'asignacion_id', normalized);
     }
 
     function getFacilitadorVisualStatus(row) {
@@ -4370,7 +4416,7 @@
           request_id: uid('FACPIN')
         });
         closeFacilitadorPin();
-        await refreshAdminModuleSurface('facilitadores');
+        renderAdminModuleSurface('facilitadores');
         setBanner('PIN restablecido para el facilitador.', 'success');
       }, {
         button,
@@ -4389,7 +4435,10 @@
           activo: !!nextActive,
           request_id: uid('FACTOG')
         });
-        await refreshAdminModuleSurface('facilitadores');
+        applyPatchedFacilitadorCatalogRow(row.facilitador_id, {
+          activo: !!nextActive
+        });
+        renderAdminModuleSurface('facilitadores');
         setBanner(nextActive ? 'Facilitador activado.' : 'Facilitador desactivado.', 'success');
       }, {
         button,
@@ -4408,7 +4457,14 @@
           facilitador_id: row.facilitador_id,
           request_id: uid('FACARC')
         });
-        await refreshAdminModuleSurface('facilitadores');
+        const archivedAt = new Date().toISOString();
+        applyPatchedFacilitadorCatalogRow(row.facilitador_id, {
+          activo: false,
+          fecha_baja: getTodayYmdLocal(),
+          archivado_at: archivedAt,
+          archivado_por: String(state.session && state.session.usuario && state.session.usuario.facilitador_id || '')
+        });
+        renderAdminModuleSurface('facilitadores');
         setBanner('Facilitador archivado.', 'success');
       }, {
         button,
@@ -4426,7 +4482,13 @@
           facilitador_id: row.facilitador_id,
           request_id: uid('FACREA')
         });
-        await refreshAdminModuleSurface('facilitadores');
+        applyPatchedFacilitadorCatalogRow(row.facilitador_id, {
+          activo: true,
+          fecha_baja: '',
+          archivado_at: '',
+          archivado_por: ''
+        });
+        renderAdminModuleSurface('facilitadores');
         setBanner('Facilitador reactivado.', 'success');
       }, {
         button,
@@ -4490,9 +4552,23 @@
       if (!payload.grupo_id) throw new Error('Selecciona un grupo.');
       if (!payload.materia_id) throw new Error('Selecciona una materia.');
       await handleAction('guardarFacilitadorAsignacion', async () => {
-        await api('guardarFacilitadorAsignacion', payload);
+        const data = await api('guardarFacilitadorAsignacion', payload);
+        applySavedFacilitadorAsignacionCatalogRow({
+          asignacion_id: data && data.asignacion_id ? data.asignacion_id : (payload.asignacion_id || uid('FASLOCAL')),
+          facilitador_id: facilitadorId,
+          grupo_id: payload.grupo_id,
+          materia_id: payload.materia_id,
+          activa: true,
+          fecha_inicio: payload.fecha_inicio || '',
+          fecha_fin: payload.fecha_fin || '',
+          fecha_actualizacion: new Date().toISOString(),
+          archivado_at: '',
+          archivada_at: '',
+          archivado_por: '',
+          archivada_por: ''
+        });
         closeFacilitadorAsignacionEditor();
-        await refreshAdminModuleSurface('facilitadores');
+        renderAdminModuleSurface('facilitadores');
         setBanner('Asignación guardada.', 'success');
       }, {
         button,
@@ -4508,8 +4584,19 @@
           asignacion_id: asignacionId,
           request_id: uid('FASARC')
         });
+        const archivedAt = new Date().toISOString();
+        applySavedFacilitadorAsignacionCatalogRow({
+          asignacion_id: asignacionId,
+          activa: false,
+          fecha_fin: getTodayYmdLocal(),
+          fecha_actualizacion: archivedAt,
+          archivado_at: archivedAt,
+          archivada_at: archivedAt,
+          archivado_por: String(state.session && state.session.usuario && state.session.usuario.facilitador_id || ''),
+          archivada_por: String(state.session && state.session.usuario && state.session.usuario.facilitador_id || '')
+        });
         closeFacilitadorAsignacionEditor();
-        await refreshAdminModuleSurface('facilitadores');
+        renderAdminModuleSurface('facilitadores');
         setBanner('Asignación retirada del pulso semanal.', 'success');
       }, {
         button,
@@ -5243,6 +5330,25 @@
       return getAdminMateriasCatalog().find((item) => item.materia_id === row.materia_id) || null;
     }
 
+    function applyPatchedMateriaCatalogRow(materiaId, patch = {}) {
+      const current = getMateriaBaseRows().find((item) => item.materia_id === String(materiaId || '').trim());
+      if (!current) return null;
+      return applySavedMateriaCatalogRow(Object.assign({}, current, patch));
+    }
+
+    function applySavedSubmateriaCatalogRow(row) {
+      if (!row || !row.submateria_id) return null;
+      upsertCatalogEntityRow('submaterias_admin', 'submateria_id', row);
+      upsertCatalogEntityRow('submaterias', 'submateria_id', row);
+      return getAdminSubmateriasCatalog().find((item) => item.submateria_id === row.submateria_id) || null;
+    }
+
+    function applyPatchedSubmateriaCatalogRow(submateriaId, patch = {}) {
+      const current = getAdminSubmateriasCatalog().find((item) => item.submateria_id === String(submateriaId || '').trim());
+      if (!current) return null;
+      return applySavedSubmateriaCatalogRow(Object.assign({}, current, patch));
+    }
+
     function getAdminSubmateriasCatalog() {
       const revision = getCatalogosRevision();
       if (adminCatalogMemo.submaterias.revision === revision) {
@@ -5742,9 +5848,20 @@
       if (!payload.nombre) throw new Error('Captura el nombre de la submateria.');
       await handleAction('guardarSubmateria', async () => {
         await api('guardarSubmateria', payload);
+        applySavedSubmateriaCatalogRow(Object.assign({}, state.materiasUi.subEditorMode === 'edit'
+          ? (getAdminSubmateriasCatalog().find((item) => item.submateria_id === payload.submateria_id) || {})
+          : {}, {
+          materia_id: payload.materia_id,
+          submateria_id: payload.submateria_id,
+          nombre: payload.nombre,
+          estatus: payload.estatus,
+          fecha_actualizacion: new Date().toISOString(),
+          archivado_at: payload.estatus === 'archivada' ? new Date().toISOString() : '',
+          archivado_por: payload.estatus === 'archivada' ? String(state.session && state.session.usuario && state.session.usuario.facilitador_id || '') : ''
+        }));
         closeSubmateriaEditor();
         state.materiasUi.selectedMateriaId = payload.materia_id;
-        await refreshAdminModuleSurface('materias');
+        renderAdminModuleSurface('materias');
         setBanner('Submateria guardada.', 'success');
       }, {
         button,
@@ -5766,7 +5883,23 @@
           materia_id: materiaId,
           request_id: uid('MATARC')
         });
-        await refreshAdminModuleSurface('materias');
+        const archivedAt = new Date().toISOString();
+        applyPatchedMateriaCatalogRow(materiaId, {
+          activo: false,
+          estatus: 'archivada',
+          archivado_at: archivedAt,
+          archivado_por: String(state.session && state.session.usuario && state.session.usuario.facilitador_id || ''),
+          fecha_actualizacion: archivedAt
+        });
+        getSubmateriasForMateria(materiaId).forEach((row) => {
+          applyPatchedSubmateriaCatalogRow(row.submateria_id, {
+            estatus: 'archivada',
+            archivado_at: archivedAt,
+            archivado_por: String(state.session && state.session.usuario && state.session.usuario.facilitador_id || ''),
+            fecha_actualizacion: archivedAt
+          });
+        });
+        renderAdminModuleSurface('materias');
         setBanner('Materia archivada.', 'success');
       }, {
         button,
@@ -5786,7 +5919,14 @@
           estatus: nextStatus,
           request_id: uid('MATTOG')
         });
-        await refreshAdminModuleSurface('materias');
+        applyPatchedMateriaCatalogRow(row.materia_id, {
+          activo: nextStatus === 'activa',
+          estatus: nextStatus,
+          archivado_at: '',
+          archivado_por: '',
+          fecha_actualizacion: new Date().toISOString()
+        });
+        renderAdminModuleSurface('materias');
         setBanner(nextStatus === 'activa' ? 'Materia activada.' : 'Materia desactivada.', 'success');
       }, {
         button,
@@ -5804,7 +5944,14 @@
           estatus: 'activa',
           request_id: uid('MATREA')
         });
-        await refreshAdminModuleSurface('materias');
+        applyPatchedMateriaCatalogRow(row.materia_id, {
+          activo: true,
+          estatus: 'activa',
+          archivado_at: '',
+          archivado_por: '',
+          fecha_actualizacion: new Date().toISOString()
+        });
+        renderAdminModuleSurface('materias');
         setBanner('Materia reactivada.', 'success');
       }, {
         button,
@@ -5820,7 +5967,16 @@
           direction: direction,
           request_id: uid('MATMOV')
         });
-        await refreshAdminModuleSurface('materias');
+        const visibleRows = getMateriaBaseRows().filter((item) => item.estatus !== 'archivada');
+        const currentIndex = visibleRows.findIndex((item) => item.materia_id === String(materiaId || '').trim());
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (currentIndex >= 0 && targetIndex >= 0 && targetIndex < visibleRows.length) {
+          const current = visibleRows[currentIndex];
+          const target = visibleRows[targetIndex];
+          applyPatchedMateriaCatalogRow(current.materia_id, { orden_visual: target.orden_visual });
+          applyPatchedMateriaCatalogRow(target.materia_id, { orden_visual: current.orden_visual });
+        }
+        renderAdminModuleSurface('materias');
       }, {
         button,
         key: buildActionKey('reordenarMateria', [materiaId, direction]),
@@ -5836,7 +5992,13 @@
           request_id: uid('SUBARC')
         });
         state.materiasUi.selectedMateriaId = materiaId;
-        await refreshAdminModuleSurface('materias');
+        applyPatchedSubmateriaCatalogRow(submateriaId, {
+          estatus: 'archivada',
+          archivado_at: new Date().toISOString(),
+          archivado_por: String(state.session && state.session.usuario && state.session.usuario.facilitador_id || ''),
+          fecha_actualizacion: new Date().toISOString()
+        });
+        renderAdminModuleSurface('materias');
         setBanner('Submateria archivada.', 'success');
       }, {
         button,
@@ -5858,7 +6020,13 @@
           request_id: uid('SUBTOG')
         });
         state.materiasUi.selectedMateriaId = materiaId;
-        await refreshAdminModuleSurface('materias');
+        applyPatchedSubmateriaCatalogRow(submateriaId, {
+          estatus: nextStatus,
+          archivado_at: '',
+          archivado_por: '',
+          fecha_actualizacion: new Date().toISOString()
+        });
+        renderAdminModuleSurface('materias');
         setBanner(nextStatus === 'activa' ? 'Submateria activada.' : 'Submateria desactivada.', 'success');
       }, {
         button,
@@ -5878,7 +6046,13 @@
           request_id: uid('SUBREA')
         });
         state.materiasUi.selectedMateriaId = materiaId;
-        await refreshAdminModuleSurface('materias');
+        applyPatchedSubmateriaCatalogRow(submateriaId, {
+          estatus: 'activa',
+          archivado_at: '',
+          archivado_por: '',
+          fecha_actualizacion: new Date().toISOString()
+        });
+        renderAdminModuleSurface('materias');
         setBanner('Submateria reactivada.', 'success');
       }, {
         button,
@@ -5896,7 +6070,16 @@
           request_id: uid('SUBMOV')
         });
         state.materiasUi.selectedMateriaId = materiaId;
-        await refreshAdminModuleSurface('materias');
+        const visibleRows = getSubmateriasForMateria(materiaId).filter((item) => item.estatus !== 'archivada');
+        const currentIndex = visibleRows.findIndex((item) => item.submateria_id === String(submateriaId || '').trim());
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (currentIndex >= 0 && targetIndex >= 0 && targetIndex < visibleRows.length) {
+          const current = visibleRows[currentIndex];
+          const target = visibleRows[targetIndex];
+          applyPatchedSubmateriaCatalogRow(current.submateria_id, { orden: target.orden });
+          applyPatchedSubmateriaCatalogRow(target.submateria_id, { orden: current.orden });
+        }
+        renderAdminModuleSurface('materias');
       }, {
         button,
         key: buildActionKey('reordenarSubmateria', [submateriaId, direction]),
