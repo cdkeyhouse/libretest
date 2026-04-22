@@ -11682,7 +11682,6 @@
               '<button class="btn-ghost" type="button" onclick="removeOpenPlanDraftActivity(' + index + ')">Quitar</button>' +
             '</div>' +
           '</div>' +
-          '<label>Actividad</label>' +
           '<textarea onchange="updateOpenPlanDraftActivityField(' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
           '<div class="activity-inline-grid">' +
             '<div><label>Material</label><select id="activity-material-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'material_en_carpeta\', this.value)">' +
