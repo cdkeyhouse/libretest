@@ -3616,8 +3616,12 @@
       .plan-compact-cell-actions { grid-area: actions; align-self: center; }
       .plan-compact-cell-phrase {
         grid-area: phrase;
-        padding-top: 2px;
+        padding-top: 4px;
         border-top: 1px solid rgba(255,255,255,0.05);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
       }
 
       .plan-compact-label {
@@ -3651,10 +3655,10 @@
       }
 
       .plan-compact-phrase-copy {
-        display: block;
+        display: inline;
         color: var(--text);
-        font-size: 0.92rem;
-        font-weight: 600;
+        font-size: 0.95rem;
+        font-weight: 700;
         line-height: 1.28;
       }
 
@@ -3663,7 +3667,6 @@
         align-items: center;
         min-height: 28px;
         padding: 5px 10px;
-        margin-bottom: 8px;
         border-radius: 999px;
         background: rgba(29, 182, 193, 0.14);
         border: 1px solid rgba(29, 182, 193, 0.26);
@@ -3771,58 +3774,42 @@
       }
 
       .plan-focus-shell {
-        display: grid;
-        gap: 12px;
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 10px;
       }
 
       .plan-focus-bar {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 12px 14px;
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 16px;
-        background: rgba(16, 22, 30, 0.78);
+        justify-content: flex-start;
+        gap: 0;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
       }
 
       .plan-focus-copy {
-        display: grid;
-        gap: 2px;
-        min-width: 0;
-      }
-
-      .plan-focus-copy strong {
-        font-size: 0.96rem;
-      }
-
-      .plan-focus-copy span {
-        color: var(--muted);
-        font-size: 0.84rem;
+        display: none;
       }
 
       .plan-focus-back-btn {
         white-space: nowrap;
+        min-height: 42px;
+        padding: 10px 18px;
+        border-radius: 14px;
+        border: 1px solid rgba(232, 51, 116, 0.34);
+        background: linear-gradient(135deg, #e83374, #f06aa1);
+        color: #fff7fb;
+        font-weight: 900;
+        box-shadow: 0 10px 22px rgba(232, 51, 116, 0.22);
       }
 
       @media (min-width: 901px) {
-        .plan-focus-bar {
-          justify-content: flex-end;
-        }
-
-        .plan-focus-copy {
-          display: none;
-        }
-
         .plan-focus-back-btn {
-          min-height: 42px;
-          padding: 10px 18px;
-          border-radius: 14px;
-          border: 1px solid rgba(255, 168, 32, 0.34);
-          background: linear-gradient(135deg, #ffbf24, #ff951f);
-          color: #1c1408;
-          font-weight: 900;
-          box-shadow: 0 10px 22px rgba(255, 155, 26, 0.22);
+          min-height: 40px;
+          padding: 9px 16px;
         }
       }
 
@@ -4023,9 +4010,17 @@
       }
 
       @media (max-width: 720px) {
+        .plan-focus-shell {
+          margin-bottom: 12px;
+        }
+
         .plan-focus-bar {
-          flex-direction: column;
-          align-items: stretch;
+          width: auto;
+        }
+
+        .plan-focus-back-btn {
+          min-height: 40px;
+          padding: 9px 16px;
         }
 
         .plan-multigroup-header {
@@ -4890,10 +4885,6 @@
             <div id="planBuilderBody" class="stack" hidden>
               <div id="planBuilderFocusBar" class="plan-focus-shell" hidden>
                 <div class="plan-focus-bar">
-                  <div class="plan-focus-copy">
-                    <strong>Crear planeación</strong>
-                    <span>Editor en modo enfoque</span>
-                  </div>
                   <button class="btn-ghost plan-focus-back-btn" type="button" onclick="closePlanBuilder()">Volver a la lista</button>
                 </div>
               </div>
@@ -4952,7 +4943,7 @@
         </div>
 
         <article id="planeacionesListCard" class="card planeaciones-shell-card">
-          <div class="card-head">
+          <div id="planeacionesListHead" class="card-head">
             <div>
               <h2 id="planeacionesSectionTitle">Planeaciones abiertas</h2>
               <p id="planeacionesSectionCopy" class="subtle">Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.</p>
@@ -11737,6 +11728,7 @@
 
     function renderPlaneacionesList() {
       const host = $('planeacionesList');
+      const listHead = $('planeacionesListHead');
       const role = state.session && state.session.usuario ? state.session.usuario.rol : '';
       const visibleEntries = getVisiblePlaneacionEntries();
       const visiblePlans = visibleEntries.flatMap((entry) => entry.plans || []);
@@ -11748,6 +11740,7 @@
         ? visibleEntries.find((entry) => (entry.plans || []).some((item) => item.planeacion_id === state.openPlanId))
         : null;
       const entriesToRender = focusedEntry ? [focusedEntry] : visibleEntries;
+      if (listHead) listHead.hidden = !!focusedEntry;
 
       if (!entriesToRender.length) {
         host.innerHTML = '<div class="empty">Todavía no hay planeaciones para los filtros actuales.</div>';
@@ -11767,29 +11760,12 @@
 
       let focusBar = '';
       if (focusedEntry) {
-        const focusedPlan = getOpenPlaneacionEntry(focusedEntry) || focusedEntry.representative;
-        if (focusedPlan) {
-          const focusedGrupo = focusedEntry.isMulti
-            ? getPlaneacionEntryGroupLabels(focusedEntry).join(' · ')
-            : (() => {
-                const row = state.catalogos.grupos.find((item) => item.grupo_id === focusedPlan.grupo_id);
-                return row ? getGrupoDisplayName(row) : focusedPlan.grupo_id;
-              })();
-          const focusedMateria = getPlanMateriaDisplayLabel(
-            focusedPlan,
-            state.catalogos.materias.find((item) => item.materia_id === focusedPlan.materia_id)
-          );
-          focusBar =
-            '<div class="plan-focus-shell">' +
-              '<div class="plan-focus-bar">' +
-                '<div class="plan-focus-copy">' +
-                  '<strong>' + escapeHtml(focusedMateria) + '</strong>' +
-                  '<span>' + escapeHtml(focusedGrupo) + '</span>' +
-                '</div>' +
-                '<button class="btn-ghost plan-focus-back-btn" type="button" onclick="exitPlanFocus()">Volver a la lista</button>' +
-              '</div>' +
-            '</div>';
-        }
+        focusBar =
+          '<div class="plan-focus-shell">' +
+            '<div class="plan-focus-bar">' +
+              '<button class="btn-ghost plan-focus-back-btn" type="button" onclick="exitPlanFocus()">Volver a la lista</button>' +
+            '</div>' +
+          '</div>';
       }
 
       host.innerHTML = (focusedEntry ? focusBar : desktopHeader) + entriesToRender.map((entry) => {
