@@ -44,6 +44,8 @@
         linear-gradient(180deg, #fbfaf4 0%, #f1ede3 100%);
       color: var(--text);
       font-family: var(--font-body);
+      overflow-x: hidden;
+      overflow-x: clip;
     }
 
     body { padding: 28px; }
@@ -51,6 +53,9 @@
     .page {
       max-width: 1480px;
       margin: 0 auto;
+      width: 100%;
+      overflow-x: hidden;
+      overflow-x: clip;
     }
 
     .hero {
@@ -319,6 +324,13 @@
     }
 
     .workspace { display: grid; gap: 20px; }
+    .workspace,
+    #panel-planeaciones,
+    #planeacionesList,
+    .planeaciones-shell-card {
+      min-width: 0;
+      max-width: 100%;
+    }
     .card { padding: 22px; }
 
     #sessionCard {
