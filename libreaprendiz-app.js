@@ -1429,9 +1429,11 @@
       ensureLoggedIn();
       const surfaceCatalogBlocks = getPlaneacionesSurfaceCatalogBlocks();
       const hadLocalNotificaciones = Array.isArray(state.notificaciones) && state.notificaciones.length > 0;
+      const requestedOpenPlanId = String(state.openPlanId || '').trim();
       const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
         alert_limit: 20,
-        catalog_blocks: surfaceCatalogBlocks
+        catalog_blocks: surfaceCatalogBlocks,
+        open_plan_id: requestedOpenPlanId || ''
       }));
       if (bootData && bootData.catalogos && Object.keys(bootData.catalogos).length) {
         mergeCatalogosPayload(bootData.catalogos, surfaceCatalogBlocks);
@@ -1443,6 +1445,9 @@
       state.alertas = Array.isArray(bootData && bootData.alertas && bootData.alertas.rows)
         ? bootData.alertas.rows
         : [];
+      if (bootData && bootData.open_planeacion && bootData.open_planeacion.planeacion_id) {
+        upsertPlaneacionRow(bootData.open_planeacion);
+      }
       if (state.ui) {
         state.ui.planeacionesLoaded = true;
         state.ui.planeacionesLoading = false;
@@ -1466,7 +1471,9 @@
         if (state.openPlanId && Array.isArray(state.planeaciones) && state.planeaciones.some((plan) => plan && plan.planeacion_id === state.openPlanId)) {
           await scheduleAfterPaint(async () => {
             try {
-              await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+              if (!(bootData && bootData.open_planeacion && bootData.open_planeacion.planeacion_id === state.openPlanId && bootData.open_planeacion.detail_loaded)) {
+                await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+              }
               persistCurrentBootSnapshot('facilitador_boot_detail');
               renderPlaneacionesList();
             } catch (_) {}
