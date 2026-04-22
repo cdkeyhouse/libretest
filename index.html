@@ -5520,7 +5520,8 @@
 
   <script>
     const STORAGE_KEYS = {
-      session: 'la_v8_session'
+      session: 'la_v8_session',
+      bootSnapshot: 'la_v8_boot_snapshot'
     };
 
     function createEmptyAlumnoEditorState() {
@@ -6377,6 +6378,96 @@
       renderPeriodSelects();
     }
 
+    function getCurrentUserSnapshotKey() {
+      const user = state.session && state.session.usuario ? state.session.usuario : null;
+      if (!user) return '';
+      return [String(user.rol || '').trim(), String(user.facilitador_id || '').trim()].filter(Boolean).join('::');
+    }
+
+    function readBootSnapshotStore() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.bootSnapshot);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writeBootSnapshotStore(store) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.bootSnapshot, JSON.stringify(store || {}));
+      } catch (_) {}
+    }
+
+    function buildBootSnapshotCatalogos(blocks) {
+      const normalized = normalizeCatalogBlocks(blocks);
+      return normalized.reduce((acc, block) => {
+        acc[block] = Array.isArray(state.catalogos && state.catalogos[block])
+          ? state.catalogos[block]
+          : [];
+        return acc;
+      }, {});
+    }
+
+    function persistCurrentBootSnapshot(kind) {
+      const userKey = getCurrentUserSnapshotKey();
+      if (!userKey) return;
+      const store = readBootSnapshotStore();
+      const role = getCurrentRole();
+      const payload = {
+        kind: kind || role || 'unknown',
+        saved_at: new Date().toISOString(),
+        user_key: userKey,
+        dashboardStats: state.dashboardStats || {}
+      };
+      if (role === 'facilitador' && !canUseAdminShell()) {
+        payload.catalogos = buildBootSnapshotCatalogos(getPlaneacionesSurfaceCatalogBlocks());
+        payload.planeaciones = Array.isArray(state.planeaciones) ? state.planeaciones.slice(0, PLANEACIONES_PAGE_SIZE) : [];
+        payload.alertas = Array.isArray(state.alertas) ? state.alertas.slice(0, 20) : [];
+        payload.notificaciones = Array.isArray(state.notificaciones) ? state.notificaciones.slice(0, 20) : [];
+        payload.planeacionesMeta = {
+          loaded: !!(state.ui && state.ui.planeacionesLoaded),
+          hasMore: !!(state.ui && state.ui.planeacionesHasMore),
+          offset: Number(state.ui && state.ui.planeacionesOffset || 0)
+        };
+      } else if (canUseAdminShell()) {
+        payload.alertas = Array.isArray(state.alertas) ? state.alertas.slice(0, 20) : [];
+        payload.notificaciones = Array.isArray(state.notificaciones) ? state.notificaciones.slice(0, 20) : [];
+      }
+      store[userKey] = payload;
+      writeBootSnapshotStore(store);
+    }
+
+    function restoreBootSnapshot() {
+      const userKey = getCurrentUserSnapshotKey();
+      if (!userKey) return false;
+      const snapshot = readBootSnapshotStore()[userKey];
+      if (!snapshot || typeof snapshot !== 'object') return false;
+      if (snapshot.catalogos && typeof snapshot.catalogos === 'object') {
+        mergeCatalogosPayload(snapshot.catalogos, Object.keys(snapshot.catalogos));
+      }
+      if (snapshot.dashboardStats && typeof snapshot.dashboardStats === 'object') {
+        state.dashboardStats = Object.assign({}, state.dashboardStats || {}, snapshot.dashboardStats);
+      }
+      if (Array.isArray(snapshot.planeaciones)) {
+        state.planeaciones = snapshot.planeaciones;
+      }
+      if (Array.isArray(snapshot.alertas)) {
+        state.alertas = snapshot.alertas;
+      }
+      if (Array.isArray(snapshot.notificaciones)) {
+        state.notificaciones = snapshot.notificaciones;
+      }
+      if (snapshot.planeacionesMeta && state.ui) {
+        state.ui.planeacionesLoaded = !!snapshot.planeacionesMeta.loaded;
+        state.ui.planeacionesHasMore = !!snapshot.planeacionesMeta.hasMore;
+        state.ui.planeacionesOffset = Number(snapshot.planeacionesMeta.offset || state.planeaciones.length || 0);
+      }
+      return true;
+    }
+
     function loadSession() {
       const raw = localStorage.getItem(STORAGE_KEYS.session);
       if (!raw) return;
@@ -6557,6 +6648,9 @@
       if (!blocks.length) return state.catalogos;
       const data = await api('getCatalogos', { blocks });
       mergeCatalogosPayload(data, blocks);
+      if (blocks.some((block) => getPlaneacionesSurfaceCatalogBlocks().includes(block))) {
+        persistCurrentBootSnapshot('catalogos');
+      }
       return state.catalogos;
     }
 
@@ -6605,6 +6699,7 @@
           state.ui.planeacionesOffset = append ? (nextOffset + nextRows.length) : nextRows.length;
           state.ui.planeacionesHasMore = !!data.has_more;
         }
+        if (!append) persistCurrentBootSnapshot('planeaciones');
         if (!append && state.openPlanId && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
           await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
         }
@@ -6620,6 +6715,7 @@
       ensureLoggedIn();
       const data = await api('getAlertas', { limit: 20 });
       state.alertas = Array.isArray(data.rows) ? data.rows : [];
+      persistCurrentBootSnapshot('alertas');
     }
 
     async function refreshNotificaciones() {
@@ -6627,6 +6723,7 @@
       const limit = canUseAdminShell() ? 100 : 120;
       const data = await api('getNotificaciones', { limit });
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
+      persistCurrentBootSnapshot('notificaciones');
     }
 
     function shouldUseFastFacilitadorPlaneacionesBoot(options = {}) {
@@ -14517,6 +14614,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
       clearLoginInputs();
       refreshStaticConfigUi();
       if (state.session && state.session.token) {
+        restoreBootSnapshot();
         renderBootSurface();
         await handleAction('restore', () => refreshAll({ fastFacilitadorBoot: true }));
         return;
