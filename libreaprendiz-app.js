@@ -35,6 +35,7 @@
         search: '',
         filter: 'activos',
         grupo: '',
+        sourceRevision: 0,
         editorOpen: false,
         editorMode: 'new',
         selectedAlumnoId: '',
@@ -265,6 +266,11 @@
       materias: { revision: -1, result: [] },
       submaterias: { revision: -1, result: [] }
     };
+    const alumnoSourceMemo = {
+      signature: '',
+      rows: [],
+      byId: new Map()
+    };
 
     const $ = (id) => document.getElementById(id);
 
@@ -341,11 +347,20 @@
       return Number(state.catalogosMeta && state.catalogosMeta.revision || 0);
     }
 
+    function getAlumnosSourceRevision() {
+      return Number(state.alumnosUi && state.alumnosUi.sourceRevision || 0);
+    }
+
     function bumpCatalogosRevision() {
       if (!state.catalogosMeta || !Array.isArray(state.catalogosMeta.loadedBlocks)) {
         state.catalogosMeta = createEmptyCatalogosMeta();
       }
       state.catalogosMeta.revision = Number(state.catalogosMeta.revision || 0) + 1;
+    }
+
+    function bumpAlumnosSourceRevision() {
+      if (!state.alumnosUi) state.alumnosUi = createEmptyAlumnosUiState();
+      state.alumnosUi.sourceRevision = Number(state.alumnosUi.sourceRevision || 0) + 1;
     }
 
     function getCatalogBlockKeys() {
@@ -2744,6 +2759,13 @@
     }
 
     function buildAlumnoSourceRows() {
+      const signature = [
+        getCatalogosRevision(),
+        getAlumnosSourceRevision()
+      ].join(':');
+      if (alumnoSourceMemo.signature === signature) {
+        return alumnoSourceMemo.rows;
+      }
       const catalogRows = Array.isArray(state.catalogos.alumnos) ? state.catalogos.alumnos : [];
       const shadowRows = Object.values((state.alumnosUi && state.alumnosUi.archivedShadow) || {});
       const mockRows = Array.isArray(state.alumnosUi && state.alumnosUi.mockRows) ? state.alumnosUi.mockRows : [];
@@ -2760,12 +2782,18 @@
         const normalized = normalizeAlumnoRowForAdmin(row, 'mock');
         if (normalized.alumno_id && !byId.has(normalized.alumno_id)) byId.set(normalized.alumno_id, normalized);
       });
-      return Array.from(byId.values());
+      const rows = Array.from(byId.values());
+      alumnoSourceMemo.signature = signature;
+      alumnoSourceMemo.rows = rows;
+      alumnoSourceMemo.byId = byId;
+      return rows;
     }
 
     function getAlumnoById(alumnoId) {
       const id = String(alumnoId || '').trim();
-      return buildAlumnoSourceRows().find((row) => row.alumno_id === id) || null;
+      if (!id) return null;
+      buildAlumnoSourceRows();
+      return alumnoSourceMemo.byId.get(id) || null;
     }
 
     function upsertCatalogEntityRow(collectionKey, idField, row, options = {}) {
@@ -3033,6 +3061,7 @@
         const savedAlumno = response && response.alumno ? response.alumno : null;
         if (savedId) {
           state.alumnosUi.notesByAlumno[savedId] = String(editor.notas_internas || '').trim();
+          bumpAlumnosSourceRevision();
           if (savedAlumno) applySavedAlumnoCatalogRow(savedAlumno);
           pushAlumnoHistory(
             savedId,
@@ -3093,6 +3122,7 @@
         });
         if (currentStatus === 'archivado' && targetStatus !== 'baja') {
           delete state.alumnosUi.archivedShadow[alumno.alumno_id];
+          bumpAlumnosSourceRevision();
         }
         if (targetStatus === 'baja') {
           state.alumnosUi.archivedShadow[alumno.alumno_id] = Object.assign({}, alumno, {
@@ -3101,6 +3131,7 @@
             fecha_baja: getTodayYmdLocal(),
             archivado_at: new Date().toISOString()
           });
+          bumpAlumnosSourceRevision();
         }
         pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
@@ -3174,6 +3205,7 @@
           fecha_baja: getTodayYmdLocal(),
           archivado_at: new Date().toISOString()
         });
+        bumpAlumnosSourceRevision();
         pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiró del listado activo del catálogo.', new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
