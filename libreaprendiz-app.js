@@ -1549,9 +1549,17 @@
         .then(() => {
           if (state.ui) state.ui.planeacionesCatalogosLoading = false;
           if (options.render !== false) {
-            renderAll();
+            renderBaseSelects({ planeaciones: true });
+            renderPlanBuilderVisibility();
+            if (isPlaneacionesSurfaceVisible()) {
+              renderPlaneacionesSurface({
+                includeStats: false,
+                includePlaneaciones: true,
+                includeAlertas: false
+              });
+            }
           } else if (isPlanBuilderExpanded() || isPlaneacionesSurfaceVisible()) {
-            renderBaseSelects();
+            renderBaseSelects({ planeaciones: true });
             renderPlanBuilderVisibility();
           }
           return state.catalogos;
@@ -4479,12 +4487,20 @@
 
     async function openFacilitadorPlaneaciones(facilitadorId, grupoId, materiaId) {
       activateAdminModule('planeaciones');
-      renderAll();
       if ($('filterFacilitador')) $('filterFacilitador').value = String(facilitadorId || '').trim();
       if ($('filterGrupo') && grupoId !== undefined) $('filterGrupo').value = String(grupoId || '').trim();
       if (state.ui) state.ui.planeacionesMateriaFilter = materiaId !== undefined ? String(materiaId || '').trim() : '';
+      renderPlaneacionesSurface({
+        includeStats: false,
+        includePlaneaciones: true,
+        includeAlertas: false
+      });
       await refreshPlaneaciones();
-      renderAll();
+      renderPlaneacionesSurface({
+        includeStats: false,
+        includePlaneaciones: true,
+        includeAlertas: false
+      });
       setBanner(
         state.ui && state.ui.planeacionesMateriaFilter
           ? 'Planeaciones filtradas por asignación del facilitador.'
