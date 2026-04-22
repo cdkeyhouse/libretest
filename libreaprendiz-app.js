@@ -524,7 +524,7 @@
         listo: 'Listo',
         obsoleto: 'Obsoleto',
         error: 'Error',
-        inexistente: 'Sin cachÃ©'
+        inexistente: 'Sin caché'
       })[String(status || '').trim().toLowerCase()] || (status || 'Sin estado');
     }
 
@@ -544,19 +544,19 @@
 
       if (!data) {
         return compact
-          ? '<div class="subtle">TodavÃ­a no hay una consulta de reporte.</div>'
-          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>AÃºn no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y perÃ­odo para generar o revisar el PDF.</div></div></div>';
+          ? '<div class="subtle">Todavía no hay una consulta de reporte.</div>'
+          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>Aún no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y período para generar o revisar el PDF.</div></div></div>';
       }
 
       const status = String(data.status || data.estado || '').trim().toLowerCase();
       const rows = [
-        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' Â· ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
-        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>PerÃ­odo</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
+        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' · ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
+        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Período</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
         data.url ? '<div class="admin-reporte-ciclo-result-row"><span>PDF</span><strong><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></strong></div>' : '',
-        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>VersiÃ³n de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
-        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>VersiÃ³n PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
+        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Versión de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
+        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>Versión PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
         data.started_at ? '<div class="admin-reporte-ciclo-result-row"><span>Inicio</span><strong>' + escapeHtml(formatFechaHumana(data.started_at)) + '</strong></div>' : '',
-        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>FinalizaciÃ³n</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
+        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>Finalización</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
         data.next_retry_at ? '<div class="admin-reporte-ciclo-result-row"><span>Reintento</span><strong>' + escapeHtml(formatFechaHumana(data.next_retry_at)) + '</strong></div>' : '',
         data.error_message ? '<div class="admin-reporte-ciclo-result-row"><span>Error</span><strong>' + escapeHtml(data.error_message) + '</strong></div>' : '',
         data._meta && data._meta.message ? '<div class="admin-reporte-ciclo-result-row"><span>Info</span><strong>' + escapeHtml(data._meta.message) + '</strong></div>' : '',
@@ -567,8 +567,8 @@
         return [
           '<div><strong>Estado:</strong> ' + escapeHtml(getReportStatusLabel(status)) + '</div>',
           data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
-          data && data.version_datos ? '<div><strong>VersiÃ³n datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
-          data && data.version_pdf ? '<div><strong>VersiÃ³n PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
+          data && data.version_datos ? '<div><strong>Versión datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
+          data && data.version_pdf ? '<div><strong>Versión PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
           data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
           data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
           Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
@@ -1056,7 +1056,7 @@
     }
 
     function ensureLoggedIn() {
-      if (!state.session || !state.session.token) throw new Error('Primero inicia sesiÃ³n.');
+      if (!state.session || !state.session.token) throw new Error('Primero inicia sesión.');
     }
 
     function formatApiError(err) {
@@ -1071,7 +1071,7 @@
     function isTruthyValue(value) {
       if (value === true) return true;
       const normalized = String(value == null ? '' : value).trim().toLowerCase();
-      return normalized === 'si' || normalized === 'sÃ­' || normalized === 'true' || normalized === '1' || normalized === 'x' || normalized === 'yes';
+      return normalized === 'si' || normalized === 'sí' || normalized === 'true' || normalized === '1' || normalized === 'x' || normalized === 'yes';
     }
 
     function canUseReportes() {
@@ -1090,7 +1090,7 @@
 
     function ensureCanUseReportes() {
       if (!canUseReportes()) {
-        throw new Error('Los reportes solo estÃ¡n disponibles para direcciÃ³n y admin.');
+        throw new Error('Los reportes solo están disponibles para dirección y admin.');
       }
     }
 
@@ -1114,7 +1114,7 @@
 
     function ensureBackendPeriodsReady() {
       if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
-        throw new Error('El backend no devolviÃ³ perÃ­odos activos. Revisa la hoja PERIODOS antes de continuar.');
+        throw new Error('El backend no devolvió períodos activos. Revisa la hoja PERIODOS antes de continuar.');
       }
     }
 
@@ -1155,8 +1155,8 @@
       const json = await response.json();
       if (!json.ok) throw new Error(json.error || 'Ping fallido');
       setBanner(
-        'ConexiÃ³n activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
-        ' | mÃ³dulo de reportes ' + (json.data && json.data.report_module || '-'),
+        'Conexión activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
+        ' | módulo de reportes ' + (json.data && json.data.report_module || '-'),
         'success'
       );
     }
@@ -1189,7 +1189,7 @@
         clearLoginInputs();
         renderAll();
         saveSession(null);
-        setBanner('No habÃ­a una sesiÃ³n activa.', 'info');
+        setBanner('No había una sesión activa.', 'info');
         return;
       }
       try {
@@ -1199,7 +1199,7 @@
       clearLoadedData();
       clearLoginInputs();
       renderAll();
-      setBanner('SesiÃ³n cerrada.', 'success');
+      setBanner('Sesión cerrada.', 'success');
     }
 
     async function refreshCatalogos(options = {}) {
@@ -1502,7 +1502,7 @@
       }
       renderAll();
       if (requestedCatalogBlocks.includes('periodos') && (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length)) {
-        setBanner('Faltan perÃ­odos activos en el backend. Revisa la hoja PERIODOS.', 'error');
+        setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
         return;
       }
     }
@@ -1630,12 +1630,12 @@
         case 'planeaciones':
           return {
             title: 'Cargando planeaciones',
-            body: 'Preparamos filtros y herramientas del mÃ³dulo sin frenar la vista principal.'
+            body: 'Preparamos filtros y herramientas del módulo sin frenar la vista principal.'
           };
         case 'alumnos':
           return {
             title: 'Cargando alumnos',
-            body: 'Se estÃ¡n hidratando grupos y fichas base para que el listado responda mÃ¡s rÃ¡pido.'
+            body: 'Se están hidratando grupos y fichas base para que el listado responda más rápido.'
           };
         case 'facilitadores':
           return {
@@ -1645,27 +1645,27 @@
         case 'materias':
           return {
             title: 'Cargando materias',
-            body: 'Se estÃ¡n organizando materias base y variantes activas.'
+            body: 'Se están organizando materias base y variantes activas.'
           };
         case 'talleres':
           return {
             title: 'Cargando talleres',
-            body: 'Preparamos catÃ¡logo base y relaciones activas sin congelar la navegaciÃ³n.'
+            body: 'Preparamos catálogo base y relaciones activas sin congelar la navegación.'
           };
         case 'notificaciones':
           return {
             title: 'Cargando notificaciones',
-            body: 'Se estÃ¡ preparando la bandeja activa y el editor institucional.'
+            body: 'Se está preparando la bandeja activa y el editor institucional.'
           };
         case 'reporte-ciclo':
           return {
             title: 'Cargando reporte de ciclo',
-            body: 'Se estÃ¡n preparando alumnos y periodos para este mÃ³dulo.'
+            body: 'Se están preparando alumnos y periodos para este módulo.'
           };
         default:
           return {
-            title: 'Cargando mÃ³dulo',
-            body: 'Preparamos la informaciÃ³n necesaria para mostrar este panel.'
+            title: 'Cargando módulo',
+            body: 'Preparamos la información necesaria para mostrar este panel.'
           };
       }
     }
@@ -1767,9 +1767,9 @@
       const workspaceSessionCopy = $('workspaceSessionCopy');
       const user = state.session && state.session.usuario ? state.session.usuario : null;
       if (!user) {
-        badge.textContent = 'Sin sesiÃ³n';
+        badge.textContent = 'Sin sesión';
         badge.className = 'pill';
-        info.textContent = 'AÃºn no hay una sesiÃ³n activa.';
+        info.textContent = 'Aún no hay una sesión activa.';
         if (workspaceSessionCopy) {
           workspaceSessionCopy.innerHTML = '<strong>Sin sesion</strong><span class="mini">Libre Aprendiz</span>';
         }
@@ -1783,7 +1783,7 @@
       badge.className = 'pill brand';
       info.innerHTML =
         '<strong>' + escapeHtml(user.nombre) + '</strong><br>' +
-        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' Â· ' +
+        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' · ' +
         escapeHtml(user.rol) + '</span>';
       if (workspaceSessionCopy) {
         workspaceSessionCopy.innerHTML =
@@ -1825,7 +1825,7 @@
 
     async function loadMorePlaneaciones(button) {
       if (!state.ui || state.ui.planeacionesLoadingMore || !state.ui.planeacionesHasMore) return;
-      await handleAction('cargar mÃ¡s planeaciones', async () => {
+      await handleAction('cargar más planeaciones', async () => {
         await refreshPlaneaciones({ append: true });
         renderPlaneacionesList();
       }, {
@@ -1937,7 +1937,7 @@
         $('adminShellTitle').textContent = 'Centro de control' + (user ? ' de ' + (user.nombre || user.nombre_mostrado || user.facilitador_id || '') : '');
       }
       if ($('adminRolePill')) {
-        $('adminRolePill').textContent = user ? (user.rol === 'admin' ? 'Admin' : 'Directora') : 'AdministraciÃ³n';
+        $('adminRolePill').textContent = user ? (user.rol === 'admin' ? 'Admin' : 'Directora') : 'Administración';
       }
       if ($('adminKpiOpenPlans')) $('adminKpiOpenPlans').textContent = String(openPlans);
       if ($('adminKpiClosedPlans')) $('adminKpiClosedPlans').textContent = String(closedPlans);
@@ -2003,7 +2003,7 @@
         const row = (state.catalogos.facilitadores || []).find((item) => item.facilitador_id === id);
         return row ? (row.nombre_mostrado || row.nombre_completo || row.facilitador_id) : id;
       }).filter(Boolean);
-      return names.length ? names.join(', ') : 'Facilitadores especÃ­ficos';
+      return names.length ? names.join(', ') : 'Facilitadores específicos';
     }
 
     function setNotificationEditorExpanded(next) {
@@ -2077,18 +2077,18 @@
       const diff = Math.round((today.getTime() - target.getTime()) / 86400000);
       if (diff <= 0) return 'Hoy';
       if (diff === 1) return 'Ayer';
-      return 'Hace ' + diff + ' dÃ­as';
+      return 'Hace ' + diff + ' días';
     }
 
     function getNotificationActionMessage(action, status) {
-      if (action === 'publicarNotificacion') return 'NotificaciÃ³n publicada.';
-      if (action === 'despublicarNotificacion') return 'La notificaciÃ³n volviÃ³ a borrador.';
-      if (action === 'cerrarNotificacion') return 'NotificaciÃ³n cerrada.';
-      if (action === 'archivarNotificacion') return 'NotificaciÃ³n archivada.';
-      if (action === 'duplicarNotificacion') return 'Se creÃ³ una copia en borrador.';
-      if (status === 'publicada') return 'NotificaciÃ³n publicada.';
+      if (action === 'publicarNotificacion') return 'Notificación publicada.';
+      if (action === 'despublicarNotificacion') return 'La notificación volvió a borrador.';
+      if (action === 'cerrarNotificacion') return 'Notificación cerrada.';
+      if (action === 'archivarNotificacion') return 'Notificación archivada.';
+      if (action === 'duplicarNotificacion') return 'Se creó una copia en borrador.';
+      if (status === 'publicada') return 'Notificación publicada.';
       if (status === 'borrador') return 'Borrador guardado.';
-      return 'NotificaciÃ³n actualizada.';
+      return 'Notificación actualizada.';
     }
 
     function getNotificationBusyText(action) {
@@ -2145,7 +2145,7 @@
       if (start) start.value = state.notificationEditor.fecha_inicio || '';
       if (end) end.value = state.notificationEditor.fecha_cierre || '';
       if (audience) audience.value = state.notificationEditor.visible_para || 'todos';
-      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificaciÃ³n' : 'Nueva notificaciÃ³n';
+      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificación' : 'Nueva notificación';
       if (listTitle) listTitle.textContent = getNotificationFilterTitle();
       const filter = (state.ui && state.ui.notificationFilter) || 'activas';
       if (activeBtn) activeBtn.classList.toggle('is-active', filter === 'activas');
@@ -2157,17 +2157,17 @@
       if (!list) return;
       const rows = getFilteredAdminNotifications();
       if (!rows.length) {
-        list.innerHTML = '<div class="empty">TodavÃ­a no hay notificaciones en esta vista.</div>';
+        list.innerHTML = '<div class="empty">Todavía no hay notificaciones en esta vista.</div>';
         return;
       }
       list.innerHTML = '<div class="admin-notification-list-table">' +
         '<div class="admin-notification-list-header">' +
-          '<div>TÃ­tulo</div>' +
+          '<div>Título</div>' +
           '<div>Estado</div>' +
           '<div>Vigencia</div>' +
           '<div>Prioridad</div>' +
           '<div>Audiencia</div>' +
-          '<div>Ãšltima actualizaciÃ³n</div>' +
+          '<div>Última actualización</div>' +
           '<div>Acciones</div>' +
         '</div>' +
         rows.map((row) => {
@@ -2190,7 +2190,7 @@
         }
         return '<article class="admin-notification-row' + (high ? ' is-high' : '') + '">' +
           '<div class="admin-notification-title">' +
-            '<strong>' + escapeHtml(row.titulo || 'Sin tÃ­tulo') + '</strong>' +
+            '<strong>' + escapeHtml(row.titulo || 'Sin título') + '</strong>' +
             '<div class="admin-notification-message mini">' + escapeHtml(row.mensaje || '') + '</div>' +
           '</div>' +
           '<div class="admin-notification-meta-stack">' +
@@ -2293,7 +2293,7 @@
             : 'borrador';
           const saved = await api('guardarNotificacion', buildNotificationPayload(saveStatus));
           const notificationId = (saved && saved.notificacion_id) || state.notificationEditor.notificacion_id || '';
-          if (!notificationId) throw new Error('No se pudo preparar la notificaciÃ³n para publicar.');
+          if (!notificationId) throw new Error('No se pudo preparar la notificación para publicar.');
           await api('publicarNotificacion', {
             notificacion_id: notificationId,
             request_id: uid('NOTIP')
@@ -2310,7 +2310,7 @@
         });
         setBanner(
           targetStatus === 'publicada'
-            ? (isEditing ? 'NotificaciÃ³n actualizada y publicada.' : 'NotificaciÃ³n publicada.')
+            ? (isEditing ? 'Notificación actualizada y publicada.' : 'Notificación publicada.')
             : (isEditing ? 'Cambios del borrador guardados.' : 'Borrador guardado. Puedes verlo en Ver borradores / archivadas.'),
           'success'
         );
@@ -2515,7 +2515,7 @@
           entry_id: 'seed-alta-' + alumno.alumno_id,
           tipo: 'alta',
           titulo: 'Alta de alumno',
-          detalle: 'Registro inicial del alumno en el catÃ¡logo.',
+          detalle: 'Registro inicial del alumno en el catálogo.',
           fecha: alumno.fecha_alta
         });
       }
@@ -2524,7 +2524,7 @@
           entry_id: 'seed-archivado-' + alumno.alumno_id,
           tipo: 'archivado',
           titulo: 'Alumno archivado',
-          detalle: 'Se marcÃ³ como archivado dentro del catÃ¡logo escolar.',
+          detalle: 'Se marcó como archivado dentro del catálogo escolar.',
           fecha: alumno.archivado_at || alumno.fecha_baja
         });
       }
@@ -2534,7 +2534,7 @@
           entry_id: 'seed-pausa-' + alumno.alumno_id,
           tipo: 'pausa',
           titulo: 'Alumno en pausa',
-          detalle: 'El alumno quedÃ³ en pausa dentro del catÃ¡logo.',
+          detalle: 'El alumno quedó en pausa dentro del catálogo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -2543,7 +2543,7 @@
           entry_id: 'seed-inactivo-' + alumno.alumno_id,
           tipo: 'inactivo',
           titulo: 'Alumno inactivo',
-          detalle: 'El alumno quedÃ³ marcado como inactivo en el catÃ¡logo.',
+          detalle: 'El alumno quedó marcado como inactivo en el catálogo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -2552,7 +2552,7 @@
           entry_id: 'seed-egresado-' + alumno.alumno_id,
           tipo: 'egresado',
           titulo: 'Alumno egresado',
-          detalle: 'El alumno quedÃ³ registrado como egresado.',
+          detalle: 'El alumno quedó registrado como egresado.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -2714,7 +2714,7 @@
       ensureLoggedIn();
       const editor = state.alumnosUi.editor || createEmptyAlumnoEditorState();
       const fullName = composeAlumnoNombreCompleto(editor.nombres, editor.apellidos);
-      if (!String(editor.matricula || '').trim()) throw new Error('Captura la matrÃ­cula del alumno.');
+      if (!String(editor.matricula || '').trim()) throw new Error('Captura la matrícula del alumno.');
       if (!fullName) throw new Error('Captura el nombre del alumno.');
       if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
       const editing = state.alumnosUi.editorMode === 'edit';
@@ -2722,7 +2722,7 @@
       const existingAlumno = editing ? getAlumnoById(existingId) : null;
       const previousStatus = existingAlumno ? getAlumnoStatusVisual(existingAlumno) : 'activo';
       const nextStatus = getAlumnoStatusVisual({ estatus: String(editor.estatus || 'activo').trim() });
-      if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasarÃ¡ a pausa y seguirÃ¡ visible dentro del catÃ¡logo administrativo.')) return;
+      if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasará a pausa y seguirá visible dentro del catálogo administrativo.')) return;
       await handleAction('guardarAlumno', async () => {
         const payload = {
           alumno_id: existingId,
@@ -2742,7 +2742,7 @@
             savedId,
             editing ? 'edicion' : 'alta',
             editing ? 'Ficha actualizada' : 'Alta de alumno',
-            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agregÃ³ un nuevo alumno al catÃ¡logo.',
+            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agregó un nuevo alumno al catálogo.',
             new Date().toISOString()
           );
           invalidateAlumnoHistorialCache(savedId);
@@ -2774,7 +2774,7 @@
     async function updateAlumnoStatus(alumnoId, nextStatus, button, options) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
       const currentStatus = getAlumnoStatusVisual(alumno);
       const targetStatus = String(nextStatus || '').trim().toLowerCase();
       const meta = Object.assign({
@@ -2782,7 +2782,7 @@
         actionKey: 'guardarAlumno:estatus',
         historyType: targetStatus || 'estado',
         historyTitle: 'Estado actualizado',
-        historyDetail: 'Se actualizÃ³ el estatus del alumno.',
+        historyDetail: 'Se actualizó el estatus del alumno.',
         successMessage: 'Estatus actualizado.'
       }, options || {});
       if (meta.confirmText && !confirm(meta.confirmText)) return;
@@ -2816,11 +2816,11 @@
 
     function pauseAlumno(alumnoId, button) {
       return updateAlumnoStatus(alumnoId, 'pausa', button, {
-        confirmText: 'El alumno quedarÃ¡ en pausa y seguirÃ¡ visible dentro del catÃ¡logo administrativo.',
+        confirmText: 'El alumno quedará en pausa y seguirá visible dentro del catálogo administrativo.',
         actionKey: 'guardarAlumno:pausa',
         historyType: 'pausa',
         historyTitle: 'Alumno en pausa',
-        historyDetail: 'Se pausÃ³ temporalmente al alumno dentro del catÃ¡logo.',
+        historyDetail: 'Se pausó temporalmente al alumno dentro del catálogo.',
         successMessage: 'Alumno en pausa.'
       });
     }
@@ -2829,7 +2829,7 @@
       ensureLoggedIn();
       const cambio = state.alumnosUi.cambioGrupo || createEmptyAlumnoCambioState();
       const alumno = getAlumnoById(cambio.alumno_id);
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
       if (!String(cambio.nuevo_grupo_id || '').trim()) throw new Error('Selecciona el nuevo grupo.');
       if (String(cambio.nuevo_grupo_id || '').trim() === String(alumno.grupo_id || '').trim()) {
         throw new Error('Selecciona un grupo diferente al actual.');
@@ -2848,7 +2848,7 @@
           alumno.alumno_id,
           'grupo',
           'Cambio de grupo',
-          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' Â· ' + String(cambio.motivo || '').trim() : ''),
+          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' · ' + String(cambio.motivo || '').trim() : ''),
           new Date().toISOString()
         );
         invalidateAlumnoHistorialCache(alumno.alumno_id);
@@ -2868,8 +2868,8 @@
       if (alumno && getAlumnoStatusVisual(alumno) === 'activo') {
         throw new Error('Primero pausa o cambia el estatus del alumno antes de archivarlo.');
       }
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
-      if (!confirm('El alumno pasarÃ¡ a archivados y saldrÃ¡ de las vistas activas.')) return;
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      if (!confirm('El alumno pasará a archivados y saldrá de las vistas activas.')) return;
       await handleAction('archivarAlumno', async () => {
         await api('archivarAlumno', { alumno_id: alumno.alumno_id });
         state.alumnosUi.archivedShadow[alumno.alumno_id] = Object.assign({}, alumno, {
@@ -2878,7 +2878,7 @@
           fecha_baja: getTodayYmdLocal(),
           archivado_at: new Date().toISOString()
         });
-        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retirÃ³ del listado activo del catÃ¡logo.', new Date().toISOString());
+        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiró del listado activo del catálogo.', new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
@@ -2890,18 +2890,18 @@
     async function reactivateAlumno(alumnoId, button) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
       if (!String(alumno.grupo_id || '').trim()) {
         openCambioGrupo(alumnoId);
         setBanner('Selecciona primero un grupo para reactivar al alumno.', 'info');
         return;
       }
       return updateAlumnoStatus(alumnoId, 'activo', button, {
-        confirmText: 'El alumno volverÃ¡ al catÃ¡logo activo.',
+        confirmText: 'El alumno volverá al catálogo activo.',
         actionKey: 'reactivarAlumno',
         historyType: 'reactivado',
         historyTitle: 'Alumno reactivado',
-        historyDetail: 'Se devolviÃ³ al alumno al catÃ¡logo activo.',
+        historyDetail: 'Se devolvió al alumno al catálogo activo.',
         successMessage: 'Alumno reactivado.'
       });
     }
@@ -2986,7 +2986,7 @@
       const remoteFailed = !!(state.alumnosUi.remoteHistoryFailedByAlumno && state.alumnosUi.remoteHistoryFailedByAlumno[alumnoId]);
       if ($('adminAlumnoHistorialLabel')) {
         $('adminAlumnoHistorialLabel').textContent = alumno
-          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' Â· ' + (alumno.matricula || alumno.alumno_id))
+          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ' + (alumno.matricula || alumno.alumno_id))
           : 'Seguimiento del alumno.';
       }
       const historyFoot = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('.admin-alumnos-history-foot') : null;
@@ -3001,7 +3001,7 @@
       }
       const rows = getAlumnoHistorial(state.alumnosUi.historialAlumnoId);
       if (!rows.length) {
-        host.innerHTML = '<div class="admin-alumnos-empty">TodavÃ­a no hay movimientos registrados para este alumno.</div>';
+        host.innerHTML = '<div class="admin-alumnos-empty">Todavía no hay movimientos registrados para este alumno.</div>';
         return;
       }
       host.innerHTML = rows.map((row) => {
@@ -3057,13 +3057,13 @@
         '<article class="admin-toolbar admin-alumnos-module">',
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
-              '<h3>CatÃ¡logo de alumnos</h3>',
-              '<p class="subtle">Administra altas, ediciÃ³n, cambios de grupo y estatus del catÃ¡logo escolar.</p>',
+              '<h3>Catálogo de alumnos</h3>',
+              '<p class="subtle">Administra altas, edición, cambios de grupo y estatus del catálogo escolar.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminAlumnosSearch">',
                 '<span>Buscar</span>',
-                '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matrÃ­cula o nombre">',
+                '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matrícula o nombre">',
               '</label>',
               '<button id="adminAlumnoNewBtn" class="btn-primary" type="button">Nuevo alumno</button>',
             '</div>',
@@ -3087,7 +3087,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminAlumnosListTitle">Alumnos activos</h4>',
-                  '<div id="adminAlumnosListMeta" class="subtle">Listado del catÃ¡logo escolar.</div>',
+                  '<div id="adminAlumnosListMeta" class="subtle">Listado del catálogo escolar.</div>',
                 '</div>',
               '</div>',
               '<div id="adminAlumnosList" class="admin-alumnos-list"></div>',
@@ -3103,7 +3103,7 @@
                 '<div id="adminAlumnoQuickActions" class="actions compact admin-alumnos-panel-actions" hidden></div>',
                 '<div class="admin-alumnos-editor-grid">',
                   '<label class="field">',
-                    '<span>MatrÃ­cula</span>',
+                    '<span>Matrícula</span>',
                     '<input id="adminAlumnoMatricula" type="text" maxlength="50" placeholder="Ej. A-1024">',
                   '</label>',
                   '<label class="field">',
@@ -3132,8 +3132,8 @@
                     '</select>',
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
-                    '<span>ObservaciÃ³n administrativa</span>',
-                    '<textarea id="adminAlumnoNotas" rows="4" placeholder="Notas internas para administraciÃ³n"></textarea>',
+                    '<span>Observación administrativa</span>',
+                    '<textarea id="adminAlumnoNotas" rows="4" placeholder="Notas internas para administración"></textarea>',
                   '</label>',
                 '</div>',
                 '<div class="actions compact admin-alumnos-panel-actions">',
@@ -3150,7 +3150,7 @@
                 '</div>',
                 '<div class="admin-alumnos-mini-grid">',
                   '<div class="admin-alumnos-readonly">',
-                    '<span>MatrÃ­cula</span>',
+                    '<span>Matrícula</span>',
                     '<strong id="adminAlumnoCambioMatricula">-</strong>',
                   '</div>',
                   '<div class="admin-alumnos-readonly">',
@@ -3466,23 +3466,23 @@
 
     function getFacilitadorMatrixCellState(facilitadorId, asignacion, semana) {
       if (!isAssignmentActiveForSemana(asignacion, semana)) {
-        return { code: 'na', label: 'â€”', title: 'Sin asignaciÃ³n activa en esta semana' };
+        return { code: 'na', label: '—', title: 'Sin asignación activa en esta semana' };
       }
       const plan = getFacilitadorPlanForCell(facilitadorId, asignacion, semana.semana_id);
       if (!plan) {
-        return { code: 'missing', label: 'Falta', title: 'No existe una planeaciÃ³n registrada para esta asignaciÃ³n en la semana.' };
+        return { code: 'missing', label: 'Falta', title: 'No existe una planeación registrada para esta asignación en la semana.' };
       }
       if (getFacilitadorPlanAlertCount(plan.planeacion_id)) {
-        return { code: 'alert', label: 'Alerta', title: 'La planeaciÃ³n tiene alertas abiertas.' };
+        return { code: 'alert', label: 'Alerta', title: 'La planeación tiene alertas abiertas.' };
       }
       const status = String(plan.estado || '').trim();
       if (status === 'cierre_pendiente') {
-        return { code: 'pending', label: 'Cierre', title: 'La planeaciÃ³n quedÃ³ en cierre pendiente.' };
+        return { code: 'pending', label: 'Cierre', title: 'La planeación quedó en cierre pendiente.' };
       }
       if (status === 'cerrada' || status === 'archivada') {
-        return { code: 'closed', label: 'Cerrada', title: 'La planeaciÃ³n ya cerrÃ³ su ciclo operativo.' };
+        return { code: 'closed', label: 'Cerrada', title: 'La planeación ya cerró su ciclo operativo.' };
       }
-      return { code: 'ok', label: 'Lista', title: 'La planeaciÃ³n estÃ¡ registrada y operativa.' };
+      return { code: 'ok', label: 'Lista', title: 'La planeación está registrada y operativa.' };
     }
 
     function buildFacilitadorPulse(facilitadorId) {
@@ -3526,7 +3526,7 @@
       if (pulse.faltantes) parts.push(pulse.faltantes + ' faltante(s)');
       if (pulse.cierresPendientes) parts.push(pulse.cierresPendientes + ' cierre(s)');
       if (pulse.alertasAbiertas) parts.push(pulse.alertasAbiertas + ' alerta(s)');
-      return parts.join(' Â· ') || 'Sin pendientes crÃ­ticos';
+      return parts.join(' · ') || 'Sin pendientes críticos';
     }
 
     function closeFacilitadorEditor() {
@@ -3563,7 +3563,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Facilitadores</h3>',
-              '<p class="subtle">Administra accesos, asignaciones y pulso semanal del equipo acadÃ©mico.</p>',
+              '<p class="subtle">Administra accesos, asignaciones y pulso semanal del equipo académico.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminFacilitadoresSearch">',
@@ -3634,7 +3634,7 @@
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
                     '<span>PIN temporal</span>',
-                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar Â· requerido al crear">',
+                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar · requerido al crear">',
                   '</label>',
                 '</div>',
                 '<div class="actions compact admin-alumnos-panel-actions">',
@@ -3725,7 +3725,7 @@
       if (!host) return;
       const facilitador = getFacilitadorById(state.facilitadoresUi.selectedFacilitadorId);
       if (!facilitador) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">AquÃ­ aparecerÃ¡n sus asignaciones, pulso semanal y accesos rÃ¡pidos.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">Aquí aparecerán sus asignaciones, pulso semanal y accesos rápidos.</div></div></div>';
         return;
       }
       const visualStatus = getFacilitadorVisualStatus(facilitador);
@@ -3740,7 +3740,7 @@
           '<div class="admin-facilitadores-identity">',
             '<div>',
               '<strong>' + escapeHtml(facilitador.nombre_mostrado || facilitador.nombre_completo || facilitador.facilitador_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' Â· ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
+              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' · ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
             '</div>',
             '<span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span>',
           '</div>',
@@ -3755,7 +3755,7 @@
           '</div>',
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Alta</span><strong>' + escapeHtml(facilitador.fecha_alta ? formatFechaHumana(facilitador.fecha_alta) : 'Sin fecha') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Ãšltima actividad</span><strong>' + escapeHtml(getFacilitadorUpdatedLabel(facilitador)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Última actividad</span><strong>' + escapeHtml(getFacilitadorUpdatedLabel(facilitador)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Asignaciones activas</span><strong>' + escapeHtml(String(asignaciones.filter((item) => item.activa && !item.archivado_at).length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Estado operativo</span><strong>' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</strong></div>',
           '</div>',
@@ -3767,8 +3767,8 @@
             '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.alertasAbiertas)) + '</strong><span>Alertas</span></div>',
           '</div>',
           (pinOpen && canManage ? renderFacilitadorPinBlock() : ''),
-          '<div class="admin-alumnos-section-head"><div><h4>Asignaciones</h4><div class="subtle">RelaciÃ³n grupo + materia que se espera de este facilitador.</div></div>' +
-            '<div class="actions compact">' + (canUseAdminShell() ? '<button class="btn-primary" type="button" onclick="openFacilitadorAsignacionEditor(\'new\')">Nueva asignaciÃ³n</button>' : '') + '</div></div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Asignaciones</h4><div class="subtle">Relación grupo + materia que se espera de este facilitador.</div></div>' +
+            '<div class="actions compact">' + (canUseAdminShell() ? '<button class="btn-primary" type="button" onclick="openFacilitadorAsignacionEditor(\'new\')">Nueva asignación</button>' : '') + '</div></div>',
           '<div class="admin-facilitadores-assignment-list">' + renderFacilitadorAssignmentsList(facilitador.facilitador_id) + '</div>',
           (asignacionOpen ? renderFacilitadorAsignacionEditor() : ''),
           '<div class="admin-alumnos-section-head"><div><h4>Pulso semanal</h4><div class="subtle">Semanas recientes cruzadas con asignaciones activas y planeaciones existentes.</div></div></div>',
@@ -3787,11 +3787,11 @@
         const periodo = [
           row.fecha_inicio ? ('Desde ' + formatFechaHumana(row.fecha_inicio)) : '',
           row.fecha_fin ? ('Hasta ' + formatFechaHumana(row.fecha_fin)) : ''
-        ].filter(Boolean).join(' Â· ') || 'Sin vigencia cerrada';
+        ].filter(Boolean).join(' · ') || 'Sin vigencia cerrada';
         return [
           '<article class="admin-facilitadores-assignment-item">',
             '<div class="admin-facilitadores-assignment-copy">',
-              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' Â· ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
+              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
               '<div class="mini">' + escapeHtml(periodo) + '</div>',
             '</div>',
             '<div class="admin-facilitadores-assignment-actions">',
@@ -3827,7 +3827,7 @@
       const asign = state.facilitadoresUi.asignacion || createEmptyFacilitadorAsignacionState();
       return [
         '<section class="admin-alumnos-panel">',
-          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignaciÃ³n' : 'Nueva asignaciÃ³n') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignación' : 'Nueva asignación') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
               '<span>Grupo</span>',
@@ -3848,7 +3848,7 @@
           '</div>',
           '<div class="actions compact admin-alumnos-panel-actions">',
             '<button class="btn-ghost" type="button" onclick="closeFacilitadorAsignacionPanel()">Cancelar</button>',
-            '<button class="btn-primary" type="button" onclick="saveFacilitadorAsignacion(this)">Guardar asignaciÃ³n</button>',
+            '<button class="btn-primary" type="button" onclick="saveFacilitadorAsignacion(this)">Guardar asignación</button>',
           '</div>',
         '</section>'
       ].join('');
@@ -3858,19 +3858,19 @@
       const semanas = getFacilitadorRecentWeeks();
       const asignaciones = getFacilitadorAsignaciones(facilitadorId).filter((row) => row.activa);
       if (!semanas.length || !asignaciones.length) {
-        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todavÃ­a.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignaciÃ³n activa.</div></div></div>';
+        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todavía.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignación activa.</div></div></div>';
       }
       return [
         '<div class="admin-facilitadores-matrix-table">',
           '<div class="admin-facilitadores-matrix-header">',
-            '<div class="admin-facilitadores-matrix-label">AsignaciÃ³n</div>',
+            '<div class="admin-facilitadores-matrix-label">Asignación</div>',
             semanas.map((semana) => '<div class="admin-facilitadores-matrix-cell">' + escapeHtml(formatSemanaLabel(semana)) + '</div>').join(''),
           '</div>',
           asignaciones.map((asignacion) => {
             const materia = (state.catalogos.materias || []).find((item) => item.materia_id === asignacion.materia_id);
             return [
               '<div class="admin-facilitadores-matrix-row">',
-                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' Â· ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
+                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
                 semanas.map((semana) => {
                   const cell = getFacilitadorMatrixCellState(facilitadorId, asignacion, semana);
                   const css = cell.code === 'ok' ? 'is-ok' :
@@ -4073,7 +4073,7 @@
       if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede archivar facilitadores.');
       const row = getFacilitadorById(facilitadorId);
       if (!row) throw new Error('Facilitador no encontrado.');
-      if (!confirm('Esto archivarÃ¡ al facilitador y cerrarÃ¡ sus accesos operativos.')) return;
+      if (!confirm('Esto archivará al facilitador y cerrará sus accesos operativos.')) return;
       await handleAction('archivarFacilitador', async () => {
         await api('archivarFacilitador', {
           facilitador_id: row.facilitador_id,
@@ -4164,7 +4164,7 @@
         await api('guardarFacilitadorAsignacion', payload);
         closeFacilitadorAsignacionEditor();
         await refreshAdminModuleSurface('facilitadores');
-        setBanner('AsignaciÃ³n guardada.', 'success');
+        setBanner('Asignación guardada.', 'success');
       }, {
         button,
         key: buildActionKey('guardarFacilitadorAsignacion', [facilitadorId, payload.grupo_id, payload.materia_id, payload.asignacion_id || 'new']),
@@ -4173,7 +4173,7 @@
     }
 
     async function archiveFacilitadorAsignacion(button, asignacionId) {
-      if (!confirm('Esta asignaciÃ³n dejarÃ¡ de contar para el pulso semanal del facilitador.')) return;
+      if (!confirm('Esta asignación dejará de contar para el pulso semanal del facilitador.')) return;
       await handleAction('archivarFacilitadorAsignacion', async () => {
         await api('archivarFacilitadorAsignacion', {
           asignacion_id: asignacionId,
@@ -4181,7 +4181,7 @@
         });
         closeFacilitadorAsignacionEditor();
         await refreshAdminModuleSurface('facilitadores');
-        setBanner('AsignaciÃ³n retirada del pulso semanal.', 'success');
+        setBanner('Asignación retirada del pulso semanal.', 'success');
       }, {
         button,
         key: buildActionKey('archivarFacilitadorAsignacion', [asignacionId]),
@@ -4199,7 +4199,7 @@
       renderAll();
       setBanner(
         state.ui && state.ui.planeacionesMateriaFilter
-          ? 'Planeaciones filtradas por asignaciÃ³n del facilitador.'
+          ? 'Planeaciones filtradas por asignación del facilitador.'
           : 'Planeaciones filtradas por facilitador.',
         'info'
       );
@@ -4416,7 +4416,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Talleres</h3>',
-              '<p class="subtle">Administra el catÃ¡logo base de talleres antes de asignar alumnos o crear planeaciones por taller.</p>',
+              '<p class="subtle">Administra el catálogo base de talleres antes de asignar alumnos o crear planeaciones por taller.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminTalleresSearch">',
@@ -4445,7 +4445,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminTalleresListTitle">Talleres activos</h4>',
-                  '<div id="adminTalleresListMeta" class="subtle">CatÃ¡logo operativo base para futuros grupos mixtos.</div>',
+                  '<div id="adminTalleresListMeta" class="subtle">Catálogo operativo base para futuros grupos mixtos.</div>',
                 '</div>',
               '</div>',
               '<div id="adminTalleresList" class="admin-alumnos-list"></div>',
@@ -4527,7 +4527,7 @@
       if ($('adminTalleresListTitle')) $('adminTalleresListTitle').textContent = filter === 'todos' ? 'Todos los talleres' : (filter === 'archivados' ? 'Talleres archivados' : (filter === 'inactivos' ? 'Talleres inactivos' : 'Talleres activos'));
       if ($('adminTalleresListMeta')) $('adminTalleresListMeta').textContent = rows.length + ' taller(es) visibles en esta vista.';
       if (!rows.length) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay talleres para mostrar.</strong><div class="subtle">Crea el catÃ¡logo base del taller para pasar despuÃ©s a inscripciones y planeaciones.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay talleres para mostrar.</strong><div class="subtle">Crea el catálogo base del taller para pasar después a inscripciones y planeaciones.</div></div></div>';
         return;
       }
       host.innerHTML = [
@@ -4547,7 +4547,7 @@
             return [
               '<article class="admin-talleres-row' + (selected ? ' is-selected' : '') + '" onclick="selectTaller(\'' + escapeJsAttrValue(row.taller_id) + '\')">',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.taller_id) + '</div></div>',
-                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos despuÃ©s') + '</div></div>',
+                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos después') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</div></div>',
                 '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getTallerStatusBadgeClass(row.estatus) + '">' + escapeHtml(getTallerStatusLabel(row.estatus)) + '</span></div>',
@@ -4564,7 +4564,7 @@
       if (!host) return;
       const taller = getTallerById(state.talleresUi.selectedTallerId);
       if (!taller) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">AquÃ­ verÃ¡s su materia base, responsable y el acceso rÃ¡pido para editar el catÃ¡logo.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">Aquí verás su materia base, responsable y el acceso rápido para editar el catálogo.</div></div></div>';
         return;
       }
       const materia = (state.catalogos.materias || []).find((item) => item.materia_id === taller.materia_id);
@@ -4595,7 +4595,7 @@
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Materia base</span><strong>' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Responsable</span><strong>' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Ãšltima actualizaciÃ³n</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Última actualización</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Alumnos inscritos</span><strong>' + escapeHtml(String(activeMembers.length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Grupos mezclados</span><strong>' + escapeHtml(representedGroups.length ? String(representedGroups.length) : '0') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Siguiente paso</span><strong>Inscribir alumnos</strong></div>',
@@ -4617,12 +4617,12 @@
                     const alumno = row.alumno || {};
                     return '<span class="admin-taller-member-chip"><span>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || row.alumno_id) + '</span><span class="mini">' + escapeHtml(getGrupoNombre(alumno.grupo_id)) + '</span></span>';
                   }).join('') + '</div>'
-                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso rÃ¡pido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
+                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso rápido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
             '</div>',
             (membershipOpen
               ? '<div class="admin-taller-membership-head">' +
                   '<div class="admin-taller-membership-tools">' +
-                    '<label class="field" for="adminTallerMembershipSearch"><span>Buscar alumno</span><input id="adminTallerMembershipSearch" type="search" placeholder="Nombre, matrÃ­cula o grupo"></label>' +
+                    '<label class="field" for="adminTallerMembershipSearch"><span>Buscar alumno</span><input id="adminTallerMembershipSearch" type="search" placeholder="Nombre, matrícula o grupo"></label>' +
                     '<label class="field" for="adminTallerMembershipGroup"><span>Grupo</span><select id="adminTallerMembershipGroup"></select></label>' +
                   '</div>' +
                   '<div class="admin-taller-membership-actions">' +
@@ -4637,10 +4637,10 @@
                       const alumnoId = String(row.alumno_id || '').trim();
                       return '<label class="admin-taller-membership-candidate">' +
                         '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedIds.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
-                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matrÃ­cula') + ' Â· ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
+                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matrícula') + ' · ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
                       '</label>';
                     }).join('') + '</div>'
-                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta bÃºsqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta búsqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
               : ''),
           '</div>',
         '</div>'
@@ -4786,7 +4786,7 @@
     }
 
     async function archiveTaller(button, tallerId) {
-      if (!window.confirm('Esto archivarÃ¡ el taller del catÃ¡logo base.')) return;
+      if (!window.confirm('Esto archivará el taller del catálogo base.')) return;
       await handleAction('archivarTaller', async () => {
         await api('archivarTaller', {
           taller_id: tallerId,
@@ -5027,7 +5027,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Materias</h3>',
-              '<p class="subtle">Administra el catÃ¡logo base y sus variantes operativas.</p>',
+              '<p class="subtle">Administra el catálogo base y sus variantes operativas.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminMateriasSearch">',
@@ -5056,7 +5056,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminMateriasListTitle">Materias activas</h4>',
-                  '<div id="adminMateriasListMeta" class="subtle">CatÃ¡logo base, estructura y orden visual.</div>',
+                  '<div id="adminMateriasListMeta" class="subtle">Catálogo base, estructura y orden visual.</div>',
                 '</div>',
               '</div>',
               '<div id="adminMateriasList" class="admin-alumnos-list"></div>',
@@ -5067,7 +5067,7 @@
                 '<div class="admin-alumnos-panel-head">',
                   '<div>',
                     '<h4 id="adminMateriaEditorTitle">Nueva materia</h4>',
-                    '<div class="subtle">Define catÃ¡logo base, estructura y estatus operativo.</div>',
+                    '<div class="subtle">Define catálogo base, estructura y estatus operativo.</div>',
                   '</div>',
                 '</div>',
                 '<div class="admin-alumnos-editor-grid">',
@@ -5162,8 +5162,8 @@
             const subRows = getSubmateriasForMateria(row.materia_id);
             const actions = [
               '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); openMateriaEditor(\'edit\', \'' + escapeJsAttrValue(row.materia_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'up\')">â†‘</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'down\')">â†“</button>',
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'up\')">↑</button>',
+              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'down\')">↓</button>',
               '<button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectMateria(\'' + escapeJsAttrValue(row.materia_id) + '\')">Ver panel</button>'
             ];
             return [
@@ -5186,7 +5186,7 @@
       if (!host) return;
       const materia = getSelectedMateria();
       if (!materia) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">AquÃ­ aparecerÃ¡ su estructura, variantes y acciones operativas.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">Aquí aparecerá su estructura, variantes y acciones operativas.</div></div></div>';
         return;
       }
       const subRows = getSubmateriasForMateria(materia.materia_id);
@@ -5197,7 +5197,7 @@
           '<div class="admin-materias-identity">',
             '<div>',
               '<strong>' + escapeHtml(materia.nombre || materia.materia_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(materia.materia_id) + ' Â· ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
+              '<div class="mini">' + escapeHtml(materia.materia_id) + ' · ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
             '</div>',
             '<div class="admin-materias-structure">',
               '<span class="admin-alumnos-badge">' + escapeHtml(getMateriaStructureLabel(materia)) + '</span>',
@@ -5218,7 +5218,7 @@
             '<div class="admin-alumnos-readonly"><span>Estructura</span><strong>' + escapeHtml(getMateriaStructureLabel(materia)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Variantes registradas</span><strong>' + escapeHtml(String(subRows.length)) + '</strong></div>',
           '</div>',
-          '<div class="admin-alumnos-section-head"><div><h4>Variantes</h4><div class="subtle">' + escapeHtml(materiaHasVariants(materia) ? 'Submaterias de operaciÃ³n para esta materia base.' : 'Materia simple sin variantes registradas.') + '</div></div></div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Variantes</h4><div class="subtle">' + escapeHtml(materiaHasVariants(materia) ? 'Submaterias de operación para esta materia base.' : 'Materia simple sin variantes registradas.') + '</div></div></div>',
           (materiaHasVariants(materia) ? renderMateriaVariantsList(materia) : '<div class="admin-alumnos-empty" style="min-height:136px;"><div><strong>Materia simple.</strong><div class="subtle">Esta materia no usa submaterias operativas en este momento.</div></div></div>'),
           (state.materiasUi.subEditorOpen && String(state.materiasUi.subEditor.materia_id || '').trim() === materia.materia_id ? renderSubmateriaEditor() : ''),
         '</div>'
@@ -5228,15 +5228,15 @@
     function renderMateriaVariantsList(materia) {
       const subRows = getSubmateriasForMateria(materia.materia_id);
       if (!subRows.length) {
-        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin variantes registradas.</strong><div class="subtle">Agrega submaterias para especializar la operaciÃ³n sin duplicar la materia base.</div></div></div>';
+        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin variantes registradas.</strong><div class="subtle">Agrega submaterias para especializar la operación sin duplicar la materia base.</div></div></div>';
       }
       return [
         '<div class="admin-materias-variants">',
           subRows.map((row) => {
             const actions = [
               '<button class="btn-ghost" type="button" onclick="openSubmateriaEditor(\'edit\', \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'up\')">â†‘</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'down\')">â†“</button>',
+              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'up\')">↑</button>',
+              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'down\')">↓</button>',
               (row.estatus === 'activa'
                 ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Desactivar</button>'
                 : (row.estatus === 'inactiva'
@@ -5250,7 +5250,7 @@
               '<article class="admin-materias-variant-item">',
                 '<div class="admin-materias-variant-copy">',
                   '<strong>' + escapeHtml(row.nombre || row.submateria_id) + '</strong>',
-                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' Â· ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' Â· Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
+                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' · ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' · Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
                 '</div>',
                 '<div class="admin-materias-variant-actions">' + actions.join('') + '</div>',
               '</article>'
@@ -5281,7 +5281,7 @@
       const editor = state.materiasUi.subEditor || createEmptySubmateriaEditorState();
       return [
         '<section class="admin-alumnos-panel">',
-          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">MantÃ©n la materia base limpia y administra sus variantes aquÃ­.</div></div></div>',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">Mantén la materia base limpia y administra sus variantes aquí.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
               '<span>Submateria ID</span>',
@@ -5411,7 +5411,7 @@
     }
 
     async function archiveMateria(button, materiaId) {
-      if (!window.confirm('Esto archivarÃ¡ la materia base y retirarÃ¡ sus variantes operativas visibles.')) return;
+      if (!window.confirm('Esto archivará la materia base y retirará sus variantes operativas visibles.')) return;
       await handleAction('archivarMateria', async () => {
         await api('archivarMateria', {
           materia_id: materiaId,
@@ -5429,7 +5429,7 @@
     async function toggleMateriaStatus(button, materiaId) {
       const row = getMateriaBaseRows().find((item) => item.materia_id === String(materiaId || '').trim());
       if (!row) throw new Error('Materia no encontrada.');
-      if (row.estatus === 'archivada') throw new Error('Usa la acciÃ³n de reactivar para una materia archivada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acción de reactivar para una materia archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleMateriaStatus', async () => {
         await api('guardarMateria', {
@@ -5475,12 +5475,12 @@
       }, {
         button,
         key: buildActionKey('reordenarMateria', [materiaId, direction]),
-        busyText: direction === 'up' ? 'â†‘' : 'â†“'
+        busyText: direction === 'up' ? '↑' : '↓'
       });
     }
 
     async function archiveSubmateria(button, materiaId, submateriaId) {
-      if (!window.confirm('Esta variante dejarÃ¡ de estar disponible en el catÃ¡logo operativo.')) return;
+      if (!window.confirm('Esta variante dejará de estar disponible en el catálogo operativo.')) return;
       await handleAction('archivarSubmateria', async () => {
         await api('archivarSubmateria', {
           submateria_id: submateriaId,
@@ -5499,7 +5499,7 @@
     async function toggleSubmateriaStatus(button, materiaId, submateriaId) {
       const row = getSubmateriasForMateria(materiaId).find((item) => item.submateria_id === String(submateriaId || '').trim());
       if (!row) throw new Error('Submateria no encontrada.');
-      if (row.estatus === 'archivada') throw new Error('Usa la acciÃ³n de reactivar para una submateria archivada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acción de reactivar para una submateria archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleSubmateriaStatus', async () => {
         await api('guardarSubmateria', {
@@ -5551,7 +5551,7 @@
       }, {
         button,
         key: buildActionKey('reordenarSubmateria', [submateriaId, direction]),
-        busyText: direction === 'up' ? 'â†‘' : 'â†“'
+        busyText: direction === 'up' ? '↑' : '↓'
       });
     }
 
@@ -5601,7 +5601,7 @@
     function renderPeriodSelects() {
       const periods = getAvailablePeriods();
       ['obsPeriodo', 'evaPeriodo', 'notaPeriodo', 'repPeriodo'].forEach((id) => {
-        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona perÃ­odo');
+        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona período');
       });
       const reportUi = getReportSelectionState();
       if ($('repPeriodo') && reportUi.periodo_id) $('repPeriodo').value = reportUi.periodo_id;
@@ -5636,14 +5636,14 @@
     function normalizeMaterialStatus(value) {
       const raw = String(value == null ? '' : value).trim().toLowerCase();
       if (!raw) return 'no_requiere';
-      if (['listo', 'si', 'sÃ­', 'true', '1'].includes(raw)) return 'listo';
+      if (['listo', 'si', 'sí', 'true', '1'].includes(raw)) return 'listo';
       if (['no_listo', 'no', 'false', '0'].includes(raw)) return 'no_listo';
       return 'no_requiere';
     }
 
     function normalizeRealizadaStatus(value) {
       const raw = String(value == null ? '' : value).trim().toLowerCase();
-      if (['si', 'sÃ­', 'true', '1'].includes(raw)) return 'si';
+      if (['si', 'sí', 'true', '1'].includes(raw)) return 'si';
       if (['no', 'false', '0'].includes(raw)) return 'no';
       return '';
     }
@@ -5756,7 +5756,7 @@
     function getPlanStatusLabel(status) {
       return ({
         borrador: 'Borrador',
-        borrador_pendiente_aprobacion: 'Pendiente de aprobaciÃ³n',
+        borrador_pendiente_aprobacion: 'Pendiente de aprobación',
         rechazada: 'Rechazada',
         activa: 'Activa',
         cierre_pendiente: 'Cierre pendiente',
@@ -5795,8 +5795,8 @@
       }
       if ($('planeacionesSectionCopy')) {
         $('planeacionesSectionCopy').textContent = canUseAdminShell()
-          ? 'Consulta histÃ³rico, filtra y corrige cualquier planeaciÃ³n del sistema.'
-          : 'AquÃ­ puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
+          ? 'Consulta histórico, filtra y corrige cualquier planeación del sistema.'
+          : 'Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
       }
     }
 
@@ -5946,7 +5946,7 @@
         grupo ? getGrupoDisplayName(grupo) : plan.grupo_id,
         getPlanMateriaDisplayLabel(plan, materia),
         semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id
-      ].join(' Â· ');
+      ].join(' · ');
     }
 
     function getPlanSubmateriasForMateria(materiaId) {
@@ -5974,7 +5974,7 @@
       const submateriaLabel = submateria
         ? (submateria.nombre || submateria.submateria_id)
         : (plan && plan.submateria_nombre ? String(plan.submateria_nombre).trim() : '');
-      return submateriaLabel ? (materiaLabel + ' Â· ' + submateriaLabel) : materiaLabel;
+      return submateriaLabel ? (materiaLabel + ' · ' + submateriaLabel) : materiaLabel;
     }
 
     function syncPlanSubmateriaSelect(preferredValue) {
@@ -6245,7 +6245,7 @@
         limit: 1
       });
       const rows = Array.isArray(fallback && fallback.rows) ? fallback.rows : [];
-      if (!rows.length) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!rows.length) throw new Error('Planeación no encontrada.');
       return rows[0];
     }
 
@@ -6281,7 +6281,7 @@
       const week = getWeekByDateOrDraft(resolvedDate);
       const hint = week ? getSemanaHintText(week) : '';
       host.textContent = week
-        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' Â· ')
+        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' · ')
         : 'Selecciona una fecha.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
@@ -6395,7 +6395,7 @@
         const seguimientoHtml = showSeguimientoFields
           ? '<div class="activity-inline-grid">' +
               '<div><label>Material</label><select onchange="updateEditorActivityField(' + index + ', \'material_en_carpeta\', this.value)"><option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option><option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option><option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option></select></div>' +
-              '<div><label>Â¿Se realizÃ³ esta actividad?</label><select onchange="updateEditorActivityField(' + index + ', \'realizada\', this.value)"><option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option><option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option><option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option></select></div>' +
+              '<div><label>¿Se realizó esta actividad?</label><select onchange="updateEditorActivityField(' + index + ', \'realizada\', this.value)"><option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option><option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option><option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option></select></div>' +
               '<div><label>Comentario</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateEditorActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>' +
             '</div>'
           : '<div class="activity-inline-grid">' +
@@ -6466,12 +6466,12 @@
       fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
       fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => getGrupoDisplayName(g), 'Todos los grupos');
       fillSelect($('filterFacilitador'), state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)), (f) => f.facilitador_id, (f) => f.nombre_mostrado || f.nombre_completo || f.facilitador_id, 'Todos los facilitadores');
-      fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
-      fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
-      fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
       if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
       fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
-      fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeaciÃ³n');
+      fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
       renderPlanEditor();
     }
 
@@ -6542,7 +6542,7 @@
           nombre: alumno ? (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) : (pa.nombre_snapshot || pa.alumno_id)
         };
       });
-      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' · ' + a.alumno_id, 'Selecciona alumno');
     }
 
     function renderEvaluationDependencies() {
@@ -6562,7 +6562,7 @@
         .map((alumno) => {
           const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
             .filter(Boolean)
-            .join(' Â· ');
+            .join(' · ');
           return { id: alumno.alumno_id, label };
         })
         .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
@@ -6585,7 +6585,7 @@
       const match = state.catalogos.alumnos.find((alumno) => {
         const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
           .filter(Boolean)
-          .join(' Â· ')
+          .join(' · ')
           .toLowerCase();
         return label === query;
       });
@@ -6737,9 +6737,9 @@
               '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
             '</select></div>' +
             (showSeguimientoFields
-              ? '<div><label>Â¿Se realizÃ³ esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
+              ? '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
                   '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(activity.actividad_id) + '" type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>'
@@ -6789,7 +6789,7 @@
         '<div class="plan-open-editor plan-open-editor-group">' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selecciÃ³n solo afecta al grupo actual.</p>') + '</div>' +
+              '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selección solo afecta al grupo actual.</p>') + '</div>' +
             '</div>' +
             '<div class="stack">' + allStudentBlocks + '</div>' +
           '</div>' +
@@ -6828,9 +6828,9 @@
                   '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
                   '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
                 '</select></div>' +
-                '<div><label>Â¿Se realizÃ³?</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
+                '<div><label>¿Se realizó?</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
                   '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario compartido</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'comentario_cierre\', this.value)"></div>' +
@@ -6856,7 +6856,7 @@
         '<div class="plan-multigroup-shared">' +
           '<div class="plan-multigroup-header">' +
             '<div>' +
-              '<div class="plan-multigroup-title">PlaneaciÃ³n multigrupo</div>' +
+              '<div class="plan-multigroup-title">Planeación multigrupo</div>' +
               '<div class="plan-multigroup-groups">' + getPlaneacionEntryGroupLabels(entry).map((label) => '<span class="plan-multigroup-chip">' + escapeHtml(label) + '</span>').join('') + '</div>' +
             '</div>' +
             '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
@@ -6910,9 +6910,9 @@
               '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
             '</select></div>' +
             (showSeguimientoFields
-              ? '<div><label>Â¿Se realizÃ³ esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
+              ? '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
                   '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(activity.actividad_id) + '" type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>'
@@ -6994,7 +6994,7 @@
       }
 
       if (!entriesToRender.length) {
-        host.innerHTML = '<div class="empty">TodavÃ­a no hay planeaciones para los filtros actuales.</div>';
+        host.innerHTML = '<div class="empty">Todavía no hay planeaciones para los filtros actuales.</div>';
         return;
       }
 
@@ -7023,7 +7023,7 @@
         ? (
             '<div class="plan-list-more">' +
               '<button class="btn-ghost" type="button" onclick="loadMorePlaneaciones(this)"' + ((state.ui && state.ui.planeacionesLoadingMore) ? ' disabled' : '') + '>' +
-                ((state.ui && state.ui.planeacionesLoadingMore) ? 'Cargando...' : 'Cargar mÃ¡s') +
+                ((state.ui && state.ui.planeacionesLoadingMore) ? 'Cargando...' : 'Cargar más') +
               '</button>' +
             '</div>'
           )
@@ -7036,7 +7036,7 @@
         const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
         const groupLabel = entry.isMulti
-          ? getPlaneacionEntryGroupLabels(entry).join(' Â· ')
+          ? getPlaneacionEntryGroupLabels(entry).join(' · ')
           : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
         const materiaLabel = getPlanMateriaDisplayLabel(plan, materia);
         const weekLabel = getWeekLabelForPlan(plan, semana);
@@ -7077,7 +7077,7 @@
           ? (
               '<div class="plan-compact-summary-meta">' +
                 (hasMaterialAlert ? '<span class="plan-alert-chip">Material pendiente</span>' : '') +
-                (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">HistÃ³rico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
+                (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">Histórico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
                 (entry.isMulti ? '<span class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</span>' : '') +
               '</div>'
             )
@@ -7095,15 +7095,15 @@
                   '<option value="listo"' + (material === 'listo' ? ' selected' : '') + '>Listo</option>' +
                   '<option value="no_listo"' + (material === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
                 '</select></div>' +
-                '<div><label>Â¿Se realizÃ³ esta actividad?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
+                '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
                   '<option value=""' + (!realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
               '</div>' +
               ((hasAdminPower || editableSeguimiento)
-                ? '<div class="mini">Los cambios de seguimiento se guardan con el botÃ³n Guardar cambios.</div>'
+                ? '<div class="mini">Los cambios de seguimiento se guardan con el botón Guardar cambios.</div>'
                 : '') +
             '</div>'
           );
@@ -7130,7 +7130,7 @@
                 '</div>'
               );
             }).join('') + '</div>'
-          : '<div class="mini">No hay alumnos ligados a esta planeaciÃ³n.</div>';
+          : '<div class="mini">No hay alumnos ligados a esta planeación.</div>';
         const buttons = [];
         if (plan.estado === 'borrador') {
           buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
@@ -7140,7 +7140,7 @@
           buttons.push('<button class="btn-secondary" type="button" onclick="rejectPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Rechazar</button>');
         }
         if (plan.estado === 'rechazada') {
-          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Reenviar aprobaciÃ³n</button>');
+          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Reenviar aprobación</button>');
         }
         if (allowClose) {
           buttons.push('<button class="btn-accent" type="button" onclick="confirmClosePlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Cerrar semana</button>');
@@ -7160,13 +7160,13 @@
                   '<div>' +
                     '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                     '<div class="subtle">' + escapeHtml(groupLabel) +
-                    ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                    ' · ' + escapeHtml(weekLabel) + '</div>' +
                   '</div>' +
                   '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
                 '</div>' +
                 '<div class="meta-grid">' +
                   '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) Â· ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' Â· ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
+                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
                 '</div>' +
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
                 materialHistoryHtml +
@@ -7193,7 +7193,7 @@
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-cell-summary">' +
                     '<span class="plan-compact-label">Resumen</span>' +
-                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) Â· ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
                     summaryMetaHtml +
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-status plan-compact-cell-status">' +
@@ -7222,17 +7222,17 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
                 '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
               '<div class="plan-loading-note">' +
-                '<strong>Abriendo planeaciÃ³n...</strong>' +
-                '<div class="mini">Se estÃ¡n cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
+                '<strong>Abriendo planeación...</strong>' +
+                '<div class="mini">Se están cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
                 '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
                   '<span class="plan-loading-pill">Alumnos</span>' +
@@ -7250,16 +7250,16 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
               '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
             '</div>' +
             '<div class="meta-grid">' +
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
             '</div>' +
             (plan.estado === 'borrador'
-              ? '<div class="plan-quick-actions"><button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar planeaciÃ³n</button></div>'
+              ? '<div class="plan-quick-actions"><button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar planeación</button></div>'
               : '') +
             (hasMaterialAlert
               ? (
@@ -7299,17 +7299,17 @@
               '<div><strong>Observaciones generales</strong></div>' +
               obsGeneralesHtml +
               '<div class="actions compact">' +
-                '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observaciÃ³n general para administraciÃ³n"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
-                (allowGeneralObs ? '' : '<span class="mini">Solo administraciÃ³n puede agregar observaciones en semana cerrada.</span>') +
+                '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
+                (allowGeneralObs ? '' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="stack">' +
-              '<div><strong>ObservaciÃ³n final por alumno' + (entry.isMulti ? ' Â· todos los grupos' : '') + '</strong></div>' +
+              '<div><strong>Observación final por alumno' + (entry.isMulti ? ' · todos los grupos' : '') + '</strong></div>' +
               obsAlumnoHtml +
               '<div class="actions obs-final-actions">' +
                 (allowAlumnoObs
                   ? ''
-                  : '<span class="mini">Solo administraciÃ³n puede editar en semana cerrada.</span>') +
+                  : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
@@ -7339,7 +7339,7 @@
           '<div class="plan-collapsed-mobile">' +
             '<div class="plan-top">' +
               '<div>' +
-                '<h3>Cargando planeaciÃ³n...</h3>' +
+                '<h3>Cargando planeación...</h3>' +
                 '<div class="subtle">Preparando fecha, grupo y materia</div>' +
               '</div>' +
               '<span class="plan-loading-badge">Cargando</span>' +
@@ -7357,7 +7357,7 @@
               '<div class="plan-compact-cell plan-compact-cell-date">' +
                 '<span class="plan-compact-label">Fecha</span>' +
                 '<span class="plan-loading-line primary">Cargando fecha...</span>' +
-                '<span class="plan-loading-line secondary">Semana en preparaciÃ³n</span>' +
+                '<span class="plan-loading-line secondary">Semana en preparación</span>' +
               '</div>' +
               '<div class="plan-compact-cell plan-compact-cell-group">' +
                 '<span class="plan-compact-label">Grupo</span>' +
@@ -7382,7 +7382,7 @@
               '<div class="plan-compact-cell plan-compact-cell-phrase">' +
                 '<span class="plan-compact-label">Frase</span>' +
                 '<span class="plan-loading-phrase-chip">Frase de la semana</span>' +
-                '<span class="plan-loading-line secondary">Preparando el contenido de la planeaciÃ³n...</span>' +
+                '<span class="plan-loading-line secondary">Preparando el contenido de la planeación...</span>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -7397,8 +7397,8 @@
 
     function getAlertTypeLabel(tipo) {
       return ({
-        planeacion_semana_cerrada_aprobacion: 'AprobaciÃ³n pendiente',
-        planeacion_rechazada: 'PlaneaciÃ³n rechazada',
+        planeacion_semana_cerrada_aprobacion: 'Aprobación pendiente',
+        planeacion_rechazada: 'Planeación rechazada',
         material_pendiente: 'Material pendiente',
         material_inicio_semana_pendiente: 'Material pendiente'
       })[String(tipo || '').trim()] || String(tipo || 'Alerta');
@@ -7408,7 +7408,7 @@
       const tipo = String((alerta && alerta.tipo_alerta) || '').trim();
       const descripcion = String((alerta && alerta.descripcion) || '').trim();
       if (tipo === 'material_pendiente' && descripcion.indexOf('Material no confirmado en carpetas') === 0) {
-        const nombre = descripcion.split('Ã¢â‚¬â€').slice(1).join('Ã¢â‚¬â€').trim();
+        const nombre = descripcion.split('—').slice(1).join('—').trim();
         return nombre
           ? ('Falta confirmar el material en carpetas para ' + nombre)
           : 'Falta confirmar el material en carpetas.';
@@ -7419,14 +7419,14 @@
     function getAlertStatusLabel(status) {
       return ({
         abierta: 'Abierta',
-        en_revision: 'En revisiÃ³n',
+        en_revision: 'En revisión',
         resuelta: 'Resuelta'
       })[String(status || '').trim()] || String(status || 'Sin estado');
     }
 
     function isOperationalAlert(alerta) {
       const tipo = String(alerta && alerta.tipo_alerta || '').trim().toLowerCase();
-      return !/(obs|observacion|observaciÃ³n|nota|seguimiento)/.test(tipo);
+      return !/(obs|observacion|observación|nota|seguimiento)/.test(tipo);
     }
 
     function isOpenMaterialAlert(alerta) {
@@ -7553,7 +7553,7 @@
         card.hidden = (adminMode && state.activeAdminModule !== 'dashboard') || !visibleAlertas.length;
       }
       if (!visibleAlertas.length) {
-        host.innerHTML = '<div class="empty">TodavÃ­a no hay alertas visibles para esta sesiÃ³n.</div>';
+        host.innerHTML = '<div class="empty">Todavía no hay alertas visibles para esta sesión.</div>';
         return;
       }
 
@@ -7566,7 +7566,7 @@
           grupo ? getGrupoDisplayName(grupo) : '',
           materia ? (materia.nombre || materia.materia_id) : '',
           semana ? (semana.nombre_visible || semana.semana_id) : ''
-        ].filter(Boolean).join(' Â· ') : '';
+        ].filter(Boolean).join(' · ') : '';
         const metaParts = [];
         if (contexto) metaParts.push(contexto);
         if (alerta.fecha_creacion) metaParts.push('Creada ' + formatFechaHumana(alerta.fecha_creacion));
@@ -7578,7 +7578,7 @@
                 '<div class="alert-status ' + escapeHtml(String(alerta.estado || '').trim()) + '">' + escapeHtml(getAlertStatusLabel(alerta.estado)) + '</div>' +
               '</div>' +
               '<div class="alert-summary">' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
-              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' Â· ')) + '</div>' : '') +
+              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>' : '') +
             '</div>' +
         (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button" onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
           '</div>'
@@ -7604,11 +7604,11 @@
       const selectedPeriodo = getSelectedReportePeriodoRow();
 
       if (adminAlumno) {
-        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' Â· ' + row.alumno_id, 'Selecciona alumno');
+        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' · ' + row.alumno_id, 'Selecciona alumno');
         if (ui.alumno_id) adminAlumno.value = ui.alumno_id;
       }
       if (adminPeriodo) {
-        fillSelect(adminPeriodo, periodos, (row) => row.id, (row) => row.id + ' - ' + row.name, 'Selecciona perÃ­odo');
+        fillSelect(adminPeriodo, periodos, (row) => row.id, (row) => row.id + ' - ' + row.name, 'Selecciona período');
         if (ui.periodo_id) adminPeriodo.value = ui.periodo_id;
       }
       if ($('repAlumno') && ui.alumno_id) $('repAlumno').value = ui.alumno_id;
@@ -7620,9 +7620,9 @@
 
       if ($('adminReportSelectionSummary')) {
         $('adminReportSelectionSummary').innerHTML = [
-          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selecciÃ³n') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matrÃ­cula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' Â· ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>PerÃ­odo</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selecciÃ³n') + '</strong></div>'
+          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selección') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matrícula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' · ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Período</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selección') + '</strong></div>'
         ].join('');
       }
       if ($('adminReportPreviewAlumno')) {
@@ -7630,11 +7630,11 @@
       }
       if ($('adminReportPreviewMeta')) {
         $('adminReportPreviewMeta').textContent = selectedAlumno
-          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' Â· MatrÃ­cula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' Â· Documento acadÃ©mico familiar')
-          : 'Grupo, matrÃ­cula y facilitadora se resolverÃ¡n aquÃ­.';
+          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' · Matrícula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' · Documento académico familiar')
+          : 'Grupo, matrícula y facilitadora se resolverán aquí.';
       }
       if ($('adminReportPreviewPeriodo')) {
-        $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'PerÃ­odo') : 'PerÃ­odo';
+        $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'Período') : 'Período';
       }
 
       const adminHost = $('adminReportResult');
@@ -7682,11 +7682,11 @@
         : [
             { key: 'planeaciones', label: 'Planeaciones y actividades', description: 'Limpia planeaciones, relaciones y actividades.', default_selected: true },
             { key: 'seguimiento', label: 'Seguimiento, alertas y notas', description: 'Limpia observaciones, alertas y notas.', default_selected: true },
-            { key: 'evaluaciones', label: 'Evaluaciones acadÃ©micas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
+            { key: 'evaluaciones', label: 'Evaluaciones académicas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
             { key: 'reportes', label: 'Cache y artefactos de reportes', description: 'Limpia cache y permite mover PDFs/docs a papelera.', default_selected: true },
             { key: 'comunicacion', label: 'Notificaciones internas', description: 'Limpia avisos y notificaciones.', default_selected: false },
-            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar catÃ¡logos base.', default_selected: false },
-            { key: 'bitacora', label: 'BitÃ¡cora operativa', description: 'Limpia historial de acciones.', default_selected: false }
+            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar catálogos base.', default_selected: false },
+            { key: 'bitacora', label: 'Bitácora operativa', description: 'Limpia historial de acciones.', default_selected: false }
           ];
       return available;
     }
@@ -7708,7 +7708,7 @@
       const ui = getMaintenanceUi();
       const rows = ui.preview && Array.isArray(ui.preview.per_sheet) ? ui.preview.per_sheet : [];
       if (!rows.length) {
-        return '<div class="admin-alumnos-empty"><div><strong>Sin datos cargados.</strong><div class="subtle">Usa â€œActualizar vista previaâ€ para revisar quÃ© se limpiarÃ­a.</div></div></div>';
+        return '<div class="admin-alumnos-empty"><div><strong>Sin datos cargados.</strong><div class="subtle">Usa “Actualizar vista previa” para revisar qué se limpiaría.</div></div></div>';
       }
       return '<div class="admin-config-sheet-list">' + rows.map((row) => (
         '<div class="admin-config-sheet-row"><strong>' + escapeHtml(row.sheet) + '</strong><span class="mini">' + escapeHtml(String(row.rows || 0)) + ' fila(s)</span></div>'
@@ -7719,7 +7719,7 @@
       const ui = getMaintenanceUi();
       const audit = ui.audit || null;
       if (!audit) {
-        return '<div class="admin-alumnos-empty"><div><strong>AuditorÃ­a pendiente.</strong><div class="subtle">Ejecuta la auditorÃ­a para revisar duplicados, referencias huÃ©rfanas y estados invÃ¡lidos.</div></div></div>';
+        return '<div class="admin-alumnos-empty"><div><strong>Auditoría pendiente.</strong><div class="subtle">Ejecuta la auditoría para revisar duplicados, referencias huérfanas y estados inválidos.</div></div></div>';
       }
       const issues = Array.isArray(audit.issues) ? audit.issues : [];
       const warnings = Array.isArray(audit.warnings) ? audit.warnings : [];
@@ -7732,7 +7732,7 @@
         '</div>',
         items.length
           ? ('<div class="admin-config-audit-list">' + items.map((item) => '<div class="admin-config-audit-item admin-config-note">' + escapeHtml(item) + '</div>').join('') + '</div>')
-          : '<div class="admin-note">La auditorÃ­a no detectÃ³ hallazgos en esta corrida.</div>'
+          : '<div class="admin-note">La auditoría no detectó hallazgos en esta corrida.</div>'
       ].join('');
     }
 
@@ -7746,21 +7746,21 @@
         '<div class="admin-config-module">',
           '<article class="admin-placeholder">',
             '<div>',
-              '<h3>ConfiguraciÃ³n y mantenimiento</h3>',
-              '<p>Zona tÃ©cnica para auditar el entorno online de pruebas y limpiar solo datos transaccionales, sin borrar hojas ni headers.</p>',
+              '<h3>Configuración y mantenimiento</h3>',
+              '<p>Zona técnica para auditar el entorno online de pruebas y limpiar solo datos transaccionales, sin borrar hojas ni headers.</p>',
             '</div>',
             '<div class="admin-config-pills">',
               '<span class="admin-config-pill">Preserva estructura</span>',
               '<span class="admin-config-pill">Preview antes de reset</span>',
-              '<span class="admin-config-pill">AuditorÃ­a final</span>',
+              '<span class="admin-config-pill">Auditoría final</span>',
             '</div>',
             lastReset
-              ? ('<div class="admin-note">Ãšltimo reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
-              : '<div class="admin-note">AÃºn no hay un reset tÃ©cnico registrado en este entorno.</div>',
+              ? ('<div class="admin-note">Último reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
+              : '<div class="admin-note">Aún no hay un reset técnico registrado en este entorno.</div>',
           '</article>',
           '<div class="admin-config-grid">',
             '<section class="admin-config-card">',
-              '<div class="admin-config-card-head"><div><h3>Reset seguro del entorno</h3><div class="subtle">Selecciona quÃ© capas operativas quieres limpiar.</div></div></div>',
+              '<div class="admin-config-card-head"><div><h3>Reset seguro del entorno</h3><div class="subtle">Selecciona qué capas operativas quieres limpiar.</div></div></div>',
               '<div class="admin-config-categories">',
                 categories.map((item) => (
                   '<label class="admin-config-category">' +
@@ -7775,17 +7775,17 @@
               getMaintenanceSummaryMarkup(),
               '<div class="actions compact">',
                 '<button id="maintenancePreviewBtn" class="btn-secondary" type="button">Actualizar vista previa</button>',
-                '<button id="maintenanceAuditBtn" class="btn-ghost" type="button">Ejecutar auditorÃ­a</button>',
+                '<button id="maintenanceAuditBtn" class="btn-ghost" type="button">Ejecutar auditoría</button>',
                 canReset
                   ? '<button id="maintenanceResetBtn" class="btn-primary" type="button">Resetear entorno de pruebas</button>'
                   : '<button class="btn-primary" type="button" disabled>Reset solo para admin</button>',
               '</div>',
-              '<div class="admin-config-danger"><strong>ProtecciÃ³n activa:</strong> este reset solo limpia datos operativos. CatÃ¡logos maestros, semanas, perÃ­odos, facilitadores, alumnos, materias, submaterias y configuraciÃ³n base se conservan.</div>',
+              '<div class="admin-config-danger"><strong>Protección activa:</strong> este reset solo limpia datos operativos. Catálogos maestros, semanas, períodos, facilitadores, alumnos, materias, submaterias y configuración base se conservan.</div>',
             '</section>',
             '<section class="admin-config-card">',
               '<div class="admin-config-card-head"><div><h4>Vista previa</h4><div class="subtle">Conteo por hoja antes de ejecutar el reset.</div></div></div>',
               renderMaintenanceSheetRows(),
-              '<div class="admin-config-card-head"><div><h4>AuditorÃ­a</h4><div class="subtle">Chequeo rÃ¡pido de consistencia estructural y operativa.</div></div></div>',
+              '<div class="admin-config-card-head"><div><h4>Auditoría</h4><div class="subtle">Chequeo rápido de consistencia estructural y operativa.</div></div></div>',
               renderMaintenanceAuditBlock(),
             '</section>',
           '</div>',
@@ -7834,8 +7834,8 @@
         renderAdminConfiguracionModule();
         setBanner(
           ((audit && audit.summary && audit.summary.issues) || 0) > 0
-            ? 'AuditorÃ­a completada con hallazgos. RevÃ­salos antes del reset.'
-            : 'AuditorÃ­a completada sin problemas crÃ­ticos detectados.',
+            ? 'Auditoría completada con hallazgos. Revísalos antes del reset.'
+            : 'Auditoría completada sin problemas críticos detectados.',
           ((audit && audit.summary && audit.summary.issues) || 0) > 0 ? 'warning' : 'success'
         );
       }, { button, key: 'auditarEntornoPruebas' });
@@ -7844,17 +7844,17 @@
     async function resetMaintenanceEnvironment(button) {
       if (!canResetTestEnvironment()) throw new Error('Solo admin puede resetear el entorno de pruebas.');
       const ui = getMaintenanceUi();
-      if (!ui.selectedCategories.length) throw new Error('Selecciona al menos una categorÃ­a.');
+      if (!ui.selectedCategories.length) throw new Error('Selecciona al menos una categoría.');
       if (!ui.preview) {
         await loadMaintenancePreview({ keepAudit: true });
       }
       const preview = ui.preview || { total_rows: 0, per_sheet: [] };
       const confirmation = [
-        'Se limpiarÃ¡n ' + String(preview.total_rows || 0) + ' filas en ' + String((preview.per_sheet || []).length || 0) + ' hojas.',
-        'CategorÃ­as: ' + ui.selectedCategories.join(', ') + '.',
-        ui.trashReportFiles ? 'Los PDFs/docs asociados en REPORTES_CACHE tambiÃ©n se mandarÃ¡n a papelera si existen.' : 'Los archivos fÃ­sicos de reportes se conservarÃ¡n.',
+        'Se limpiarán ' + String(preview.total_rows || 0) + ' filas en ' + String((preview.per_sheet || []).length || 0) + ' hojas.',
+        'Categorías: ' + ui.selectedCategories.join(', ') + '.',
+        ui.trashReportFiles ? 'Los PDFs/docs asociados en REPORTES_CACHE también se mandarán a papelera si existen.' : 'Los archivos físicos de reportes se conservarán.',
         'La estructura del spreadsheet se mantiene.',
-        'Â¿Deseas continuar?'
+        '¿Deseas continuar?'
       ].join('\n');
       if (!window.confirm(confirmation)) return;
 
@@ -7976,7 +7976,7 @@
         : getSelectedGroupIds();
       if (!grupoIds.length) throw new Error('Selecciona al menos un grupo.');
       if (editorMode === 'edit' && hasAdminPower && grupoIds.length !== 1) {
-        throw new Error('AdministraciÃ³n debe seleccionar exactamente un grupo al editar una planeaciÃ³n.');
+        throw new Error('Administración debe seleccionar exactamente un grupo al editar una planeación.');
       }
       const alumnosIds = getSelectedPlanAlumnos();
       if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
@@ -7995,7 +7995,7 @@
       if (includeSeguimientoOnEditor) {
         actividades.forEach((activity, index) => {
           if (activity.realizada === 'no' && !activity.comentario_cierre) {
-            throw new Error('La actividad ' + (index + 1) + ' necesita comentario porque no se realizÃ³.');
+            throw new Error('La actividad ' + (index + 1) + ' necesita comentario porque no se realizó.');
           }
         });
       }
@@ -8061,7 +8061,7 @@
       setBanner(
         responseData && responseData._meta && responseData._meta.message
           ? responseData._meta.message
-          : (editorMode === 'edit' ? 'PlaneaciÃ³n actualizada.' : 'PlaneaciÃ³n guardada.'),
+          : (editorMode === 'edit' ? 'Planeación actualizada.' : 'Planeación guardada.'),
         'success'
       );
     }
@@ -8069,10 +8069,10 @@
     async function saveObservation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
-      if (!$('obsPlan').value) throw new Error('Selecciona una planeaciÃ³n.');
+      if (!$('obsPlan').value) throw new Error('Selecciona una planeación.');
       if (!$('obsAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('obsPeriodo').value) throw new Error('Selecciona un perÃ­odo.');
-      if (!$('obsNota').value.trim()) throw new Error('Escribe la observaciÃ³n.');
+      if (!$('obsPeriodo').value) throw new Error('Selecciona un período.');
+      if (!$('obsNota').value.trim()) throw new Error('Escribe la observación.');
       await api('crearObsAlumno', {
         planeacion_id: $('obsPlan').value,
         alumno_id: $('obsAlumno').value,
@@ -8086,14 +8086,14 @@
       });
       $('obsNota').value = '';
       $('obsRevision').checked = false;
-      setBanner('ObservaciÃ³n guardada.', 'success');
+      setBanner('Observación guardada.', 'success');
     }
 
     async function saveEvaluation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
       if (!$('evaAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('evaPeriodo').value) throw new Error('Selecciona un perÃ­odo.');
+      if (!$('evaPeriodo').value) throw new Error('Selecciona un período.');
       if (!$('evaMateria').value) throw new Error('Selecciona una materia.');
       const data = await api('guardarEvaluacion', {
         alumno_id: $('evaAlumno').value,
@@ -8107,7 +8107,7 @@
         request_id: uid('EVA')
       });
       $('evaComentario').value = '';
-      setBanner('EvaluaciÃ³n guardada (' + data.evaluacion_id + ').', 'success');
+      setBanner('Evaluación guardada (' + data.evaluacion_id + ').', 'success');
     }
 
     async function saveNote() {
@@ -8116,7 +8116,7 @@
       if (!$('notaAlumno').value) throw new Error('Selecciona un alumno.');
       if (!$('notaTexto').value.trim()) throw new Error('Escribe el texto de la nota.');
       if ($('notaAlcance').value === 'periodo' && !$('notaPeriodo').value) {
-        throw new Error('Selecciona un perÃ­odo para la nota.');
+        throw new Error('Selecciona un período para la nota.');
       }
       await api('crearNotaDirectora', {
         alumno_id: $('notaAlumno').value,
@@ -8128,7 +8128,7 @@
         request_id: uid('NTA')
       });
       $('notaTexto').value = '';
-      setBanner('Nota de direcciÃ³n guardada.', 'success');
+      setBanner('Nota de dirección guardada.', 'success');
     }
 
     async function generateReportNow() {
@@ -8138,7 +8138,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un perÃ­odo.');
+      if (!periodoId) throw new Error('Selecciona un período.');
       const data = await api('requestReporteAlumno', {
         alumno_id: alumnoId,
         periodo_id: periodoId,
@@ -8150,7 +8150,7 @@
         setBanner('El reporte ya estaba vigente y listo para abrir.', 'success');
         return;
       }
-      setBanner('Solicitud registrada. El worker generarÃ¡ o actualizarÃ¡ el reporte en segundo plano.', 'success');
+      setBanner('Solicitud registrada. El worker generará o actualizará el reporte en segundo plano.', 'success');
     }
 
     async function requestReport() {
@@ -8160,7 +8160,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un perÃ­odo.');
+      if (!periodoId) throw new Error('Selecciona un período.');
       const data = await api('regenerarReporteAlumno', {
         alumno_id: alumnoId,
         periodo_id: periodoId,
@@ -8168,7 +8168,7 @@
       });
       data._selection = { alumno_id: alumnoId, periodo_id: periodoId };
       renderReportResult(data);
-      setBanner('RegeneraciÃ³n forzada registrada. El worker armarÃ¡ una nueva versiÃ³n del PDF.', 'success');
+      setBanner('Regeneración forzada registrada. El worker armará una nueva versión del PDF.', 'success');
     }
 
     async function checkReportStatus() {
@@ -8178,7 +8178,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un perÃ­odo.');
+      if (!periodoId) throw new Error('Selecciona un período.');
       const data = await api('getReporteAlumnoStatus', {
         alumno_id: alumnoId,
         periodo_id: periodoId
@@ -8206,7 +8206,7 @@
         } catch (err) {
           if (err && err.code === 'INVALID_SESSION') {
             clearSessionScopedState();
-            setBanner('Tu sesiÃ³n expirÃ³ o ya no es vÃ¡lida. Vuelve a iniciar sesiÃ³n.', 'error', { anchor: feedbackAnchor });
+            setBanner('Tu sesión expiró o ya no es válida. Vuelve a iniciar sesión.', 'error', { anchor: feedbackAnchor });
             return;
           }
           const handled = typeof options.onError === 'function'
@@ -8242,8 +8242,8 @@
         }
         setBanner(
           action === 'activarPlaneacion'
-            ? 'La planeaciÃ³n ya estÃ¡ activa y lista para trabajarse.'
-            : ('AcciÃ³n completada: ' + action),
+            ? 'La planeación ya está activa y lista para trabajarse.'
+            : ('Acción completada: ' + action),
           'success'
         );
       }, { button, key: buildActionKey(action, [planId]) });
@@ -8290,23 +8290,23 @@
     async function saveGeneralObservation(button, planId) {
       const input = $('obs-general-' + planId);
       const texto = input ? input.value.trim() : '';
-      if (!texto) throw new Error('Escribe la observaciÃ³n general.');
+      if (!texto) throw new Error('Escribe la observación general.');
       await handleAction('crearObsSemana', async () => {
         await persistGeneralObservation(planId, texto);
         if (input) input.value = '';
         await refreshPlaneacionesSurface({ includeAlertas: false });
-        setBanner('ObservaciÃ³n general guardada.', 'success');
+        setBanner('Observación general guardada.', 'success');
       }, { button, key: buildActionKey('crearObsSemana', [planId, texto.slice(0, 40)]) });
     }
 
     async function saveAlumnoFinalObservation(button, planId, alumnoId) {
       const input = $('obs-final-' + planId + '-' + alumnoId);
       const nota = input ? input.value.trim() : '';
-      if (!nota) throw new Error('Escribe la observaciÃ³n final del alumno.');
+      if (!nota) throw new Error('Escribe la observación final del alumno.');
       await handleAction('guardarObsAlumnoFinal', async () => {
         await persistAlumnoFinalObservation(planId, alumnoId, nota);
         await refreshPlaneacionesSurface({ includeAlertas: false });
-        setBanner('ObservaciÃ³n final por alumno guardada.', 'success');
+        setBanner('Observación final por alumno guardada.', 'success');
       }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
     }
 
@@ -8318,10 +8318,10 @@
 
     async function saveAllAlumnoFinalObservations(button, planId) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeación no encontrada.');
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       const payloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
-      if (!payloads.length) throw new Error('Escribe al menos una observaciÃ³n final.');
+      if (!payloads.length) throw new Error('Escribe al menos una observación final.');
 
       await handleAction('guardarObsAlumnoFinalLote', async () => {
         await persistAlumnoFinalObservationBatch(planId, payloads);
@@ -8347,7 +8347,7 @@
         key: buildActionKey('editPlanLoad', [planId]),
         busyText: 'Abriendo...'
       });
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeación no encontrada.');
       loadPlanIntoEditor(plan);
       activateTab('planeaciones');
     }
@@ -8355,7 +8355,7 @@
     function buildOpenPlanSaveRequest(plan, draft) {
       const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha vÃ¡lida.');
+      if (!semana) throw new Error('Selecciona una fecha válida.');
       const materiaId = String((draft && draft.materia_id) || (plan && plan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
       const submateriaId = String((draft && draft.submateria_id) || '').trim();
@@ -8387,9 +8387,9 @@
 
     async function persistOpenPlanDraft(button, planId, draft, options = {}) {
       const plan = getPlanById(planId);
-      if (!plan || !draft) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan || !draft) throw new Error('Planeación no encontrada.');
       const request = buildOpenPlanSaveRequest(plan, draft);
-      const successMessage = options.successMessage || 'PlaneaciÃ³n actualizada.';
+      const successMessage = options.successMessage || 'Planeación actualizada.';
       const actionLabel = options.actionLabel || 'guardarPlaneacionCompletaInline';
       const actionKey = options.actionKey || buildActionKey(actionLabel, [planId, request.fallbackDate, request.alumnosIds.join(',')]);
       await handleAction(actionLabel, async () => {
@@ -8415,14 +8415,14 @@
       const plan = getPlanById(planId);
       const draft = getOpenPlanDraft(plan);
       await persistOpenPlanDraft(button, planId, draft, {
-        successMessage: 'PlaneaciÃ³n actualizada.',
+        successMessage: 'Planeación actualizada.',
         actionLabel: 'guardarPlaneacionCompletaInline'
       });
     }
 
     async function saveMultiGroupShared(button, entryKey) {
       const entry = getPlaneacionEntryByKey(entryKey);
-      if (!entry || !entry.isMulti) throw new Error('PlaneaciÃ³n multigrupo no encontrada.');
+      if (!entry || !entry.isMulti) throw new Error('Planeación multigrupo no encontrada.');
       const draft = getMultiGroupSharedDraft(entry);
       await handleAction('guardarPlaneacionMultigrupo', async () => {
         await persistMultiGroupSharedApi(entry, draft);
@@ -8498,7 +8498,7 @@
 
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
       const plan = providedPlan || getPlanById(planId);
-      if (!plan || !draft) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan || !draft) throw new Error('Planeación no encontrada.');
       const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
       return await api('guardarPlaneacionCompleta', {
         planeacion_id: planId,
@@ -8557,12 +8557,12 @@
     }
 
     function buildMultiGroupSharedSavePayload(entry, draft) {
-      if (!entry || !entry.isMulti) throw new Error('PlaneaciÃ³n multigrupo no encontrada.');
+      if (!entry || !entry.isMulti) throw new Error('Planeación multigrupo no encontrada.');
       if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
       const selectedPlan = getOpenPlaneacionEntry(entry) || entry.representative || null;
       const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha vÃ¡lida para el multigrupo.');
+      if (!semana) throw new Error('Selecciona una fecha válida para el multigrupo.');
       const materiaId = String((draft && draft.materia_id) || (selectedPlan && selectedPlan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
       const submateriaId = String(((draft && draft.submateria_id) || '')).trim();
@@ -8603,7 +8603,7 @@
 
     async function savePlanChanges(button, planId, entryKey) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeación no encontrada.');
       const entry = entryKey ? getPlaneacionEntryByKey(entryKey) : null;
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
@@ -8626,7 +8626,7 @@
           await persistGeneralObservation(planId, generalText);
           const generalInput = $('obs-general-' + planId);
           if (generalInput) generalInput.value = '';
-          savedParts.push('observaciÃ³n general');
+          savedParts.push('observación general');
         }
         if (finalPayloads.length) {
           await persistAlumnoFinalObservationBatch(planId, finalPayloads);
@@ -8634,7 +8634,7 @@
         }
         if (shouldSavePlan) {
           savedPlanResponse = await persistOpenPlanDraftApi(planId, planDraft, plan);
-          savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeaciÃ³n');
+          savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
         }
         if (shouldSaveShared) {
           const freshEntry = getPlaneacionEntryByKey(entryKey) || entry;
@@ -8673,16 +8673,16 @@
     }
 
     async function markPlanMaterialReady(button, planId) {
-      if (!window.confirm('Esto marcarÃ¡ como listo el material pendiente de esta planeaciÃ³n.')) return;
+      if (!window.confirm('Esto marcará como listo el material pendiente de esta planeación.')) return;
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeación no encontrada.');
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       if (entry && entry.isMulti) {
         const draft = getMultiGroupSharedDraft(entry);
-        if (!draft) throw new Error('PlaneaciÃ³n multigrupo no encontrada.');
+        if (!draft) throw new Error('Planeación multigrupo no encontrada.');
         const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
         if (!pendingActivities.length) {
-          setBanner('Ya no hay material pendiente en esta planeaciÃ³n multigrupo.', 'info', { button });
+          setBanner('Ya no hay material pendiente en esta planeación multigrupo.', 'info', { button });
           return;
         }
         pendingActivities.forEach((activity) => {
@@ -8702,10 +8702,10 @@
         return;
       }
       const draft = getOpenPlanDraft(plan);
-      if (!draft) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!draft) throw new Error('Planeación no encontrada.');
       const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
       if (!pendingActivities.length) {
-        setBanner('Ya no hay material pendiente en esta planeaciÃ³n.', 'info', { button });
+        setBanner('Ya no hay material pendiente en esta planeación.', 'info', { button });
         return;
       }
       pendingActivities.forEach((activity) => {
@@ -8723,7 +8723,7 @@
       await handleAction('aprobarPlaneacionPendiente', async () => {
         await api('aprobarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('APP') });
         await refreshPlaneacionesSurface();
-        setBanner('PlaneaciÃ³n aprobada.', 'success');
+        setBanner('Planeación aprobada.', 'success');
       }, { button, key: buildActionKey('aprobarPlaneacionPendiente', [planId]) });
     }
 
@@ -8737,7 +8737,7 @@
           request_id: uid('REJ')
         });
         await refreshPlaneacionesSurface();
-        setBanner('PlaneaciÃ³n rechazada.', 'success');
+        setBanner('Planeación rechazada.', 'success');
       }, { button, key: buildActionKey('rechazarPlaneacionPendiente', [planId, comentario.trim().slice(0, 30)]) });
     }
 
@@ -8745,7 +8745,7 @@
       await handleAction('reenviarPlaneacionPendiente', async () => {
         await api('reenviarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('REAPP') });
         await refreshPlaneacionesSurface();
-        setBanner('PlaneaciÃ³n reenviada a aprobaciÃ³n.', 'success');
+        setBanner('Planeación reenviada a aprobación.', 'success');
       }, { button, key: buildActionKey('reenviarPlaneacionPendiente', [planId]) });
     }
 
@@ -8798,13 +8798,13 @@
 
     function buildClosePlanPayload(planId, fallbackPlan) {
       const currentPlan = getPlanById(planId) || fallbackPlan;
-      if (!currentPlan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!currentPlan) throw new Error('Planeación no encontrada.');
       const draft = getOpenPlanDraft(currentPlan);
       const activityRows = Array.isArray(draft && draft.activities) && draft.activities.length
         ? draft.activities
         : (Array.isArray(currentPlan.actividades) ? currentPlan.actividades : []);
       if (!activityRows.length) {
-        throw new Error('No puedes cerrar una planeaciÃ³n sin actividades.');
+        throw new Error('No puedes cerrar una planeación sin actividades.');
       }
       const actividades = [];
       for (const item of activityRows) {
@@ -8818,12 +8818,12 @@
         const material = materialNode ? materialNode.value : normalizeMaterialStatus(item.material_en_carpeta);
         const comentario = comentarioNode ? comentarioNode.value.trim() : String(item.comentario_cierre || '').trim();
         if (!['si', 'no'].includes(realizada)) {
-          const error = new Error('Debes confirmar si se realizÃ³ la actividad ' + String(item.orden || '?') + '.');
+          const error = new Error('Debes confirmar si se realizó la actividad ' + String(item.orden || '?') + '.');
           error.focusTargetId = realizadaFieldId;
           throw error;
         }
         if (realizada === 'no' && !comentario) {
-          const error = new Error('La actividad ' + String(item.orden || '?') + ' necesita comentario porque no se realizÃ³.');
+          const error = new Error('La actividad ' + String(item.orden || '?') + ' necesita comentario porque no se realizó.');
           error.focusTargetId = comentarioFieldId;
           throw error;
         }
@@ -8840,7 +8840,7 @@
 
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeación no encontrada.');
       try {
         buildClosePlanPayload(planId, plan);
       } catch (err) {
@@ -8857,7 +8857,7 @@
       const planId = modal ? String(modal.dataset.planId || '').trim() : '';
       if (!planId) return;
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeación no encontrada.');
       const obs = input ? input.value.trim() : '';
       clearClosePlanModalError();
       let closePayload = null;
