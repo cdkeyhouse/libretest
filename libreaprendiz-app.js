@@ -265,6 +265,15 @@
 
     const $ = (id) => document.getElementById(id);
 
+    function ensureAdminShellMarkupLoaded() {
+      if ($('adminShell')) return true;
+      const mount = $('adminShellMount');
+      const template = $('adminShellTemplate');
+      if (!mount || !template || !template.content) return false;
+      mount.replaceChildren(template.content.cloneNode(true));
+      return !!$('adminShell');
+    }
+
     function tryShowDatePicker(input) {
       if (!input || input.disabled || input.readOnly) return;
       if (typeof input.showPicker !== 'function') return;
@@ -1182,6 +1191,7 @@
       const data = await api('login', { facilitador_id: facilitadorId, pin });
       saveSession({ token: data.token, usuario: data.usuario });
       if (canUseAdminShell()) {
+        ensureAdminShellMarkupLoaded();
         bindWindowActionGroup('admin');
         bindAdminUiEventsOnce();
       }
@@ -1600,6 +1610,7 @@
 
     function renderActiveAdminModule(moduleName = state.activeAdminModule) {
       if (!canUseAdminShell()) return;
+      ensureAdminShellMarkupLoaded();
       const normalized = String(moduleName || '').trim();
       if (isAdminModuleLoading(normalized)) {
         renderAdminModulePlaceholder(normalized);
@@ -1867,6 +1878,7 @@
 
     function activateAdminModule(moduleName) {
       if (!canUseAdminShell()) return;
+      ensureAdminShellMarkupLoaded();
       bindWindowActionGroup('admin');
       const nextModule = moduleName || 'dashboard';
       if (nextModule !== 'notificaciones' && state.ui && state.ui.notificationEditorExpanded) {
@@ -1944,12 +1956,15 @@
     }
 
     function renderAdminShell() {
-      const adminShell = $('adminShell');
-      if (!adminShell) return;
       if (!canUseAdminShell()) {
+        const adminShell = $('adminShell');
+        if (!adminShell) return;
         adminShell.style.display = 'none';
         return;
       }
+      if (!ensureAdminShellMarkupLoaded()) return;
+      const adminShell = $('adminShell');
+      if (!adminShell) return;
       const user = state.session && state.session.usuario ? state.session.usuario : null;
       const openPlans = Number(state.dashboardStats && state.dashboardStats.planeaciones_abiertas || state.planeaciones.filter((plan) => ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente'].includes(String(plan.estado || '').trim())).length || 0);
       const closedPlans = Number(state.dashboardStats && state.dashboardStats.planeaciones_cerradas || state.planeaciones.filter((plan) => ['cerrada', 'archivada'].includes(String(plan.estado || '').trim())).length || 0);
@@ -9010,6 +9025,7 @@
 
     function bindAdminUiEventsOnce() {
       if (!canUseAdminShell() || !state.ui || state.ui.adminUiEventsBound) return;
+      if (!ensureAdminShellMarkupLoaded()) return;
       if ($('repAlumno')) $('repAlumno').addEventListener('change', (event) => {
         setReporteSelection('alumno_id', event.currentTarget.value);
         renderAdminReporteCicloModule();
@@ -9277,6 +9293,7 @@
       loadSession();
       bindWindowActionGroup('core');
       if (state.session && state.session.token && canUseAdminShell()) {
+        ensureAdminShellMarkupLoaded();
         bindWindowActionGroup('admin');
         bindAdminUiEventsOnce();
       }
