@@ -3080,6 +3080,7 @@
       display: flex;
       justify-content: flex-start;
       margin-top: 10px;
+      margin-bottom: 16px;
     }
     .plan-activities-add-btn {
       min-height: 36px;
@@ -11538,13 +11539,10 @@
           const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === groupPlan.grupo_id);
           const grupo = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
           const grupoLabel = grupo ? getGrupoDisplayName(grupo) : groupPlan.grupo_id;
-          const helperText = isMulti
-            ? ''
-            : 'Selecciona en un solo lugar a quiénes aplica esta planeación.';
           return (
             '<div class="group-block">' +
               '<div class="group-block-head">' +
-                '<div><strong>' + escapeHtml(grupoLabel) + '</strong>' + (helperText ? '<div class="subtle">' + escapeHtml(helperText) + '</div>' : '') + '</div>' +
+                '<div><strong>' + escapeHtml(grupoLabel) + '</strong></div>' +
                 (isActiveGroup
                   ? '<div class="actions compact">' +
                       '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
@@ -11591,7 +11589,7 @@
       return (
         '<div>' +
           '<div class="card-head inline-head">' +
-            '<div><label>Actividades</label><p class="subtle">La estructura compartida se aplica igual a todos los grupos del lote.</p></div>' +
+            '<div><label>Actividades</label></div>' +
           '</div>' +
           '<div class="stack">' + (draft.activities || []).map((activity, index) => (
             '<div class="activity-editor">' +
@@ -11726,7 +11724,7 @@
           '</div>' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<div><label>Alumnos</label><p class="subtle">Selecciona en un solo lugar a quiénes aplica esta planeación.</p></div>' +
+              '<div><label>Alumnos</label></div>' +
               '<div class="actions compact">' +
                 '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
                 '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(false)">Limpiar</button>' +
@@ -11743,7 +11741,7 @@
           '</div>' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<div><label>Actividades</label><p class="subtle">Mantén la secuencia y agrega otra actividad al final cuando haga falta.</p></div>' +
+              '<div><label>Actividades</label></div>' +
             '</div>' +
             '<div class="stack">' + activitiesHtml + '</div>' +
             '<div class="plan-activities-add-wrap">' +
@@ -12075,7 +12073,7 @@
               obsAlumnoHtml +
               '<div class="actions obs-final-actions">' +
                 (allowAlumnoObs
-                  ? '<span class="mini">Se guardarán al pulsar Guardar cambios.</span>'
+                  ? ''
                   : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
