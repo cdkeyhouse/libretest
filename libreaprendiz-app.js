@@ -6025,6 +6025,15 @@
       return state.planeaciones.find((plan) => plan.planeacion_id === planId) || null;
     }
 
+    function getPlanByActivityId(activityId) {
+      const normalizedActivityId = String(activityId || '').trim();
+      if (!normalizedActivityId) return null;
+      return (state.planeaciones || []).find((plan) =>
+        Array.isArray(plan && plan.actividades) &&
+        plan.actividades.some((actividad) => String((actividad && actividad.actividad_id) || '').trim() === normalizedActivityId)
+      ) || null;
+    }
+
     function getPlanAlumnoCount(plan) {
       if (!plan) return 0;
       if (Array.isArray(plan.alumnos) && plan.alumnos.length) return plan.alumnos.length;
@@ -8280,6 +8289,8 @@
       const material = $('activity-material-' + actividadId).value;
       const comentario = $('activity-comment-' + actividadId).value.trim();
       await handleAction('actualizarActividad', async () => {
+        const targetPlan = (state.openPlanId && getPlanById(state.openPlanId)) || getPlanByActivityId(actividadId);
+        const targetPlanId = targetPlan && targetPlan.planeacion_id ? targetPlan.planeacion_id : String(state.openPlanId || '').trim();
         const draftActivity = state.openPlanDraft && Array.isArray(state.openPlanDraft.activities)
           ? state.openPlanDraft.activities.find((item) => item.actividad_id === actividadId)
           : null;
@@ -8296,19 +8307,10 @@
           draftActivity.material_en_carpeta = material;
           draftActivity.comentario_cierre = comentario;
         }
-        await refreshPlaneacionesSurface();
-        if (state.openPlanDraft && state.openPlanId && state.openPlanDraft.planId === state.openPlanId) {
-          const freshPlan = getPlanById(state.openPlanId);
-          if (freshPlan) {
-            state.openPlanDraft.lastKnownUpdatedAt = freshPlan.fecha_actualizacion || state.openPlanDraft.lastKnownUpdatedAt || '';
-            state.openPlanDraft.lastKnownActivitiesVersion = freshPlan.actividades_version_actual || state.openPlanDraft.lastKnownActivitiesVersion || '';
-            const freshActivity = (freshPlan.actividades || []).find((item) => item.actividad_id === actividadId);
-            if (draftActivity && freshActivity) {
-              draftActivity.last_known_updated_at = freshActivity.fecha_actualizacion || draftActivity.last_known_updated_at || '';
-            }
-          }
-        }
-        renderPlaneacionesSurface();
+        await refreshSinglePlaneacionSurface(targetPlanId, {
+          activityIds: [actividadId],
+          snapshotKind: 'actividad_actualizada'
+        });
         setBanner('Actividad actualizada.', 'success');
       }, { button, key: buildActionKey('actualizarActividad', [actividadId, realizada, material, comentario.slice(0, 20)]) });
     }
@@ -8320,7 +8322,9 @@
       await handleAction('crearObsSemana', async () => {
         await persistGeneralObservation(planId, texto);
         if (input) input.value = '';
-        await refreshPlaneacionesSurface({ includeAlertas: false });
+        await refreshSinglePlaneacionSurface(planId, {
+          snapshotKind: 'obs_general'
+        });
         setBanner('Observación general guardada.', 'success');
       }, { button, key: buildActionKey('crearObsSemana', [planId, texto.slice(0, 40)]) });
     }
@@ -8331,7 +8335,9 @@
       if (!nota) throw new Error('Escribe la observación final del alumno.');
       await handleAction('guardarObsAlumnoFinal', async () => {
         await persistAlumnoFinalObservation(planId, alumnoId, nota);
-        await refreshPlaneacionesSurface({ includeAlertas: false });
+        await refreshSinglePlaneacionSurface(planId, {
+          snapshotKind: 'obs_final_alumno'
+        });
         setBanner('Observación final por alumno guardada.', 'success');
       }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
     }
@@ -8351,7 +8357,9 @@
 
       await handleAction('guardarObsAlumnoFinalLote', async () => {
         await persistAlumnoFinalObservationBatch(planId, payloads);
-        await refreshPlaneacionesSurface({ includeAlertas: false });
+        await refreshSinglePlaneacionSurface(planId, {
+          snapshotKind: 'obs_final_lote'
+        });
         payloads.forEach((row) => {
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
@@ -8520,6 +8528,41 @@
           request_id: uid('OAFL')
         })));
       }
+    }
+
+    function syncInlineSavedPlanDraft(planId, updatedPlan, options = {}) {
+      if (!updatedPlan || !state.openPlanDraft || state.openPlanDraft.planId !== planId) return;
+      state.openPlanDraft.lastKnownUpdatedAt = updatedPlan.fecha_actualizacion || state.openPlanDraft.lastKnownUpdatedAt || '';
+      state.openPlanDraft.lastKnownActivitiesVersion = updatedPlan.actividades_version_actual || state.openPlanDraft.lastKnownActivitiesVersion || '';
+      const activityIds = Array.isArray(options.activityIds) ? options.activityIds.filter(Boolean) : [];
+      if (!activityIds.length || !Array.isArray(state.openPlanDraft.activities)) return;
+      activityIds.forEach((activityId) => {
+        const draftActivity = state.openPlanDraft.activities.find((item) => item.actividad_id === activityId);
+        const freshActivity = Array.isArray(updatedPlan.actividades)
+          ? updatedPlan.actividades.find((item) => item.actividad_id === activityId)
+          : null;
+        if (!draftActivity || !freshActivity) return;
+        draftActivity.realizada = normalizeRealizadaStatus(freshActivity.realizada);
+        draftActivity.material_en_carpeta = normalizeMaterialStatus(freshActivity.material_en_carpeta);
+        draftActivity.comentario_cierre = freshActivity.comentario_cierre || '';
+        draftActivity.last_known_updated_at = freshActivity.fecha_actualizacion || draftActivity.last_known_updated_at || '';
+      });
+    }
+
+    async function refreshSinglePlaneacionSurface(planId, options = {}) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) throw new Error('Planeación no encontrada.');
+      const updatedPlan = await fetchPlaneacionDetalle(normalizedPlanId);
+      if (!updatedPlan || !updatedPlan.planeacion_id) throw new Error('No se pudo recargar la planeación.');
+      upsertPlaneacionRow(updatedPlan);
+      syncInlineSavedPlanDraft(normalizedPlanId, updatedPlan, options);
+      persistCurrentBootSnapshot(options.snapshotKind || 'planeacion_inline_save');
+      renderPlaneacionesSurface({
+        includeStats: options.includeStats === true,
+        includePlaneaciones: true,
+        includeAlertas: options.includeAlertas === true
+      });
+      return updatedPlan;
     }
 
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
