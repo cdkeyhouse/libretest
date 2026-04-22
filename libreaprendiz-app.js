@@ -1511,6 +1511,15 @@
               }
               persistCurrentBootSnapshot('facilitador_boot_detail');
               renderPlaneacionesList();
+              scheduleAfterPaint(() => {
+                if (state.openPlanId !== requestedOpenPlanId) return null;
+                return ensurePlaneacionObservacionesLoaded(state.openPlanId, { silent: true })
+                  .then(() => {
+                    if (state.openPlanId !== requestedOpenPlanId) return;
+                    renderPlaneacionesList();
+                  })
+                  .catch(() => null);
+              }, 120);
             } catch (_) {}
           }, 120);
         }
@@ -6358,7 +6367,14 @@
         state.planeaciones.unshift(row);
         return row;
       }
-      state.planeaciones.splice(idx, 1, Object.assign({}, state.planeaciones[idx], row));
+      const existing = state.planeaciones[idx] || {};
+      const nextRow = Object.assign({}, existing, row);
+      if (row.obs_loaded === false && existing.obs_loaded) {
+        nextRow.obs_semana = Array.isArray(existing.obs_semana) ? existing.obs_semana : [];
+        nextRow.obs_alumno_final = Array.isArray(existing.obs_alumno_final) ? existing.obs_alumno_final : [];
+        nextRow.obs_loaded = true;
+      }
+      state.planeaciones.splice(idx, 1, nextRow);
       return state.planeaciones[idx];
     }
 
@@ -6387,7 +6403,7 @@
 
     async function fetchPlaneacionDetalle(planId) {
       try {
-        const data = await api('getPlaneacionDetalle', { planeacion_id: planId });
+        const data = await api('getPlaneacionDetalle', { planeacion_id: planId, include_observaciones: false });
         if (data && data.planeacion) return data.planeacion;
       } catch (err) {
         if (!err || err.code !== 'NOT_FOUND') throw err;
@@ -6402,11 +6418,45 @@
       return rows[0];
     }
 
+    async function fetchPlaneacionObservaciones(planId) {
+      const data = await api('getPlaneacionObservaciones', { planeacion_id: planId });
+      return {
+        planeacion_id: planId,
+        obs_semana: Array.isArray(data && data.obs_semana) ? data.obs_semana : [],
+        obs_alumno_final: Array.isArray(data && data.obs_alumno_final) ? data.obs_alumno_final : [],
+        obs_loaded: true
+      };
+    }
+
     async function ensurePlaneacionDetailLoaded(planId, options = {}) {
       const current = getPlanById(planId);
       if (current && current.detail_loaded) return current;
       const detail = await fetchPlaneacionDetalle(planId);
       return upsertPlaneacionRow(detail);
+    }
+
+    async function ensurePlaneacionObservacionesLoaded(planId, options = {}) {
+      const current = getPlanById(planId);
+      if (!current || !current.detail_loaded) return current;
+      if (current.obs_loaded) return current;
+      if (!state.ui.planObservacionesPromises) state.ui.planObservacionesPromises = {};
+      if (state.ui.planObservacionesPromises[planId]) {
+        return state.ui.planObservacionesPromises[planId];
+      }
+      const promise = fetchPlaneacionObservaciones(planId)
+        .then((payload) => {
+          const updated = upsertPlaneacionRow(payload);
+          if (!options.silent) renderPlaneacionesList();
+          persistCurrentBootSnapshot('planeacion_obs_hidratadas');
+          return updated;
+        })
+        .finally(() => {
+          if (state.ui && state.ui.planObservacionesPromises) {
+            delete state.ui.planObservacionesPromises[planId];
+          }
+        });
+      state.ui.planObservacionesPromises[planId] = promise;
+      return promise;
     }
 
     async function ensurePlaneacionEntryDetailsLoaded(entry, options = {}) {
@@ -6882,6 +6932,15 @@
         renderPlaneacionesList();
         scheduleAfterPaint(() => {
           if (state.openPlanId !== planId) return null;
+          return ensurePlaneacionObservacionesLoaded(planId, { silent: true })
+            .then(() => {
+              if (state.openPlanId !== planId) return;
+              renderPlaneacionesList();
+            })
+            .catch(() => null);
+        }, 120);
+        scheduleAfterPaint(() => {
+          if (state.openPlanId !== planId) return null;
           return ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
             .then(() => {
               if (state.openPlanId !== planId) return;
@@ -7330,6 +7389,9 @@
               );
             }).join('') + '</div>'
           : '<div class="mini">No hay alumnos ligados a esta planeación.</div>';
+        const observationsLoadingHint = !plan.obs_loaded
+          ? '<div class="mini">Se están cargando observaciones de esta planeación...</div>'
+          : '';
         const buttons = [];
         if (plan.estado === 'borrador') {
           buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
@@ -7785,6 +7847,15 @@
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
         persistCurrentBootSnapshot('planeacion_abierta_alerta');
         renderPlaneacionesList();
+        scheduleAfterPaint(() => {
+          if (state.openPlanId !== planId) return null;
+          return ensurePlaneacionObservacionesLoaded(planId, { silent: true })
+            .then(() => {
+              if (state.openPlanId !== planId) return;
+              renderPlaneacionesList();
+            })
+            .catch(() => null);
+        }, 120);
         scheduleAfterPaint(() => {
           if (state.openPlanId !== planId) return null;
           return ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
