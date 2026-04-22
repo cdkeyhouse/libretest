@@ -4,6 +4,7 @@
     };
     const BOOT_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 12;
     const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
+    const OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
     const OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
     const LOGIN_PRELOAD_CATALOG_BLOCKS = ['materias', 'semanas', 'grupos'];
 
@@ -1045,6 +1046,12 @@
       return String(state.ui.planObservacionesSavedAtByPlan[normalizedPlanId] || '').trim();
     }
 
+    function getOpenPlanDetailSnapshotSavedAt(planId = state.openPlanId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !state.ui || !state.ui.planDetailSavedAtByPlan) return '';
+      return String(state.ui.planDetailSavedAtByPlan[normalizedPlanId] || '').trim();
+    }
+
     function markAlertasFresh(savedAt = new Date().toISOString()) {
       if (!state.ui) return;
       state.ui.alertasSavedAt = String(savedAt || new Date().toISOString());
@@ -1060,6 +1067,13 @@
       if (!normalizedPlanId || !state.ui) return;
       if (!state.ui.planObservacionesSavedAtByPlan) state.ui.planObservacionesSavedAtByPlan = {};
       state.ui.planObservacionesSavedAtByPlan[normalizedPlanId] = String(savedAt || new Date().toISOString());
+    }
+
+    function markPlaneacionDetailFresh(planId, savedAt = new Date().toISOString()) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !state.ui) return;
+      if (!state.ui.planDetailSavedAtByPlan) state.ui.planDetailSavedAtByPlan = {};
+      state.ui.planDetailSavedAtByPlan[normalizedPlanId] = String(savedAt || new Date().toISOString());
     }
 
     function getSnapshotMetaForSession(sessionLike = state.session) {
@@ -1091,6 +1105,11 @@
           obs_loaded: true
         };
       }
+    }
+
+    function shouldPreserveSnapshotPlanDetail(planId = state.openPlanId) {
+      const savedAt = getOpenPlanDetailSnapshotSavedAt(planId);
+      return isTimestampFreshWithin(savedAt, OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS);
     }
 
     function shouldReuseFacilitadorFeedSnapshot(kind) {
@@ -1148,6 +1167,7 @@
         payload.meta = {
           alertas_saved_at: String((state.ui && state.ui.alertasSavedAt) || ''),
           notificaciones_saved_at: String((state.ui && state.ui.notificacionesSavedAt) || ''),
+          open_plan_detail_saved_at: getOpenPlanDetailSnapshotSavedAt(payload.openPlanId),
           open_plan_obs_saved_at: getOpenPlanObsSnapshotSavedAt(payload.openPlanId)
         };
       } else if (canUseAdminShell()) {
@@ -1180,6 +1200,12 @@
       }
       if (snapshot.openPlan && typeof snapshot.openPlan === 'object' && snapshot.openPlan.planeacion_id) {
         upsertPlaneacionRow(snapshot.openPlan);
+        if (snapshot.openPlan.detail_loaded) {
+          markPlaneacionDetailFresh(
+            snapshot.openPlan.planeacion_id,
+            snapshot.meta && snapshot.meta.open_plan_detail_saved_at ? snapshot.meta.open_plan_detail_saved_at : snapshot.saved_at
+          );
+        }
         if (snapshot.openPlan.obs_loaded) {
           markPlaneacionObservacionesFresh(
             snapshot.openPlan.planeacion_id,
@@ -1446,7 +1472,10 @@
         }
         if (!append) persistCurrentBootSnapshot('planeaciones');
         if (!append && state.openPlanId && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
-          await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+          const openPlan = getPlanById(state.openPlanId);
+          if (!(openPlan && openPlan.detail_loaded && shouldPreserveSnapshotPlanDetail(state.openPlanId))) {
+            await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+          }
         }
       } finally {
         if (state.ui) {
@@ -1585,8 +1614,10 @@
         ? bootData.notificaciones.rows
         : (Array.isArray(state.notificaciones) ? state.notificaciones : []);
       if (bootHasNotificaciones) markNotificacionesFresh();
+      let bootOpenPlan = null;
       if (bootData && bootData.open_planeacion && bootData.open_planeacion.planeacion_id) {
-        upsertPlaneacionRow(bootData.open_planeacion);
+        bootOpenPlan = upsertPlaneacionRow(bootData.open_planeacion);
+        if (bootOpenPlan && bootOpenPlan.detail_loaded) markPlaneacionDetailFresh(bootOpenPlan.planeacion_id);
         if (bootData.open_planeacion.obs_loaded) {
           markPlaneacionObservacionesFresh(bootData.open_planeacion.planeacion_id);
         }
@@ -1614,7 +1645,10 @@
         if (state.openPlanId && Array.isArray(state.planeaciones) && state.planeaciones.some((plan) => plan && plan.planeacion_id === state.openPlanId)) {
           await scheduleAfterPaint(async () => {
             try {
-              if (!(bootData && bootData.open_planeacion && bootData.open_planeacion.planeacion_id === state.openPlanId && bootData.open_planeacion.detail_loaded)) {
+              const currentOpenPlan = getPlanById(state.openPlanId);
+              const alreadyReadyFromBoot = !!(bootOpenPlan && bootOpenPlan.planeacion_id === state.openPlanId && bootOpenPlan.detail_loaded);
+              const canReuseFullSnapshot = !!(currentOpenPlan && currentOpenPlan.detail_loaded && shouldPreserveSnapshotPlanDetail(state.openPlanId));
+              if (!(alreadyReadyFromBoot || canReuseFullSnapshot)) {
                 await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
               }
               persistCurrentBootSnapshot('facilitador_boot_detail');
@@ -6477,6 +6511,11 @@
       }
       const existing = state.planeaciones[idx] || {};
       const nextRow = Object.assign({}, existing, row);
+      if (row.detail_loaded === false && existing.detail_loaded && shouldPreserveSnapshotPlanDetail(row.planeacion_id)) {
+        nextRow.detail_loaded = true;
+        nextRow.alumnos = Array.isArray(existing.alumnos) ? existing.alumnos : [];
+        nextRow.actividades = Array.isArray(existing.actividades) ? existing.actividades : [];
+      }
       if (row.obs_loaded === false && existing.obs_loaded) {
         nextRow.obs_semana = Array.isArray(existing.obs_semana) ? existing.obs_semana : [];
         nextRow.obs_alumno_final = Array.isArray(existing.obs_alumno_final) ? existing.obs_alumno_final : [];
@@ -6540,7 +6579,9 @@
       const current = getPlanById(planId);
       if (current && current.detail_loaded) return current;
       const detail = await fetchPlaneacionDetalle(planId);
-      return upsertPlaneacionRow(detail);
+      const updated = upsertPlaneacionRow(detail);
+      markPlaneacionDetailFresh(planId);
+      return updated;
     }
 
     async function ensurePlaneacionObservacionesLoaded(planId, options = {}) {
