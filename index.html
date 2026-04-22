@@ -10760,9 +10760,14 @@
 
     function getPlanMateriaDisplayLabel(plan, materiaRow) {
       const materia = materiaRow || state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
-      const materiaLabel = materia ? (materia.nombre || materia.materia_id) : (plan.materia_id || '-');
+      const materiaLabel = materia
+        ? (materia.nombre || materia.materia_id)
+        : (plan.materia_nombre || plan.materia_id || '-');
       const submateria = getSubmateriaById(plan && plan.submateria_id);
-      return submateria ? (materiaLabel + ' · ' + (submateria.nombre || submateria.submateria_id)) : materiaLabel;
+      const submateriaLabel = submateria
+        ? (submateria.nombre || submateria.submateria_id)
+        : (plan && plan.submateria_nombre ? String(plan.submateria_nombre).trim() : '');
+      return submateriaLabel ? (materiaLabel + ' · ' + submateriaLabel) : materiaLabel;
     }
 
     function syncPlanSubmateriaSelect(preferredValue) {
