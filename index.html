@@ -993,26 +993,42 @@
     }
     .plan-list-skeleton {
       display: grid;
-      gap: 14px;
+      gap: 10px;
+    }
+    .plan-list-skeleton-copy {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 2px 6px 4px;
+      color: rgba(245, 242, 234, 0.82);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+    .plan-list-skeleton-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--la-cyan, #1fb6e5);
+      box-shadow: 0 0 0 6px rgba(31, 182, 229, 0.08);
     }
     .plan-list-skeleton-card {
       display: grid;
-      gap: 14px;
-      padding: 20px 22px;
-      border-radius: 24px;
+      gap: 10px;
+      padding: 15px 18px;
+      border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.08);
       background: rgba(255, 255, 255, 0.03);
     }
     .plan-list-skeleton-row {
       display: grid;
       grid-template-columns: minmax(120px, 0.95fr) minmax(140px, 1fr) minmax(150px, 1.1fr) minmax(220px, 1.8fr) minmax(120px, 0.9fr) minmax(120px, 0.8fr);
-      gap: 16px;
+      gap: 14px;
       align-items: center;
     }
     .plan-list-skeleton-block {
       position: relative;
       overflow: hidden;
-      height: 16px;
+      height: 14px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.08);
     }
@@ -1029,6 +1045,9 @@
     }
     .plan-list-skeleton-block.tiny {
       width: 54%;
+    }
+    .plan-list-skeleton-block.micro {
+      width: 42%;
     }
     .plan-list-more {
       display: flex;
@@ -1084,6 +1103,14 @@
       .hero-feature-grid,
       .stats { grid-template-columns: 1fr; }
       .plan-list-skeleton-row { grid-template-columns: 1fr; }
+      .plan-list-skeleton-card {
+        padding: 13px 14px;
+        gap: 8px;
+      }
+      .plan-list-skeleton-copy {
+        padding: 0 2px 2px;
+        font-size: 0.88rem;
+      }
       .hero { margin-bottom: 16px; }
       .brand-copy {
         text-align: center;
@@ -12296,28 +12323,31 @@
       }).join('') + loadMoreHtml;
     }
 
-    function buildPlaneacionesListSkeleton(count = 4) {
+    function buildPlaneacionesListSkeleton(count = 3) {
       const cards = Array.from({ length: count }).map(() => (
         '<div class="plan-list-skeleton-card">' +
           '<div class="plan-list-skeleton-row">' +
             '<span class="plan-list-skeleton-block short"></span>' +
-            '<span class="plan-list-skeleton-block"></span>' +
-            '<span class="plan-list-skeleton-block"></span>' +
-            '<span class="plan-list-skeleton-block"></span>' +
             '<span class="plan-list-skeleton-block short"></span>' +
+            '<span class="plan-list-skeleton-block short"></span>' +
+            '<span class="plan-list-skeleton-block"></span>' +
             '<span class="plan-list-skeleton-block tiny"></span>' +
+            '<span class="plan-list-skeleton-block micro"></span>' +
           '</div>' +
           '<div class="plan-list-skeleton-row">' +
+            '<span class="plan-list-skeleton-block micro"></span>' +
+            '<span class="plan-list-skeleton-block tiny"></span>' +
             '<span class="plan-list-skeleton-block tiny"></span>' +
             '<span class="plan-list-skeleton-block short"></span>' +
-            '<span class="plan-list-skeleton-block short"></span>' +
-            '<span class="plan-list-skeleton-block"></span>' +
+            '<span class="plan-list-skeleton-block micro"></span>' +
             '<span class="plan-list-skeleton-block tiny"></span>' +
-            '<span class="plan-list-skeleton-block short"></span>' +
           '</div>' +
         '</div>'
       )).join('');
-      return '<div class="plan-list-skeleton">' + cards + '</div>';
+      return '<div class="plan-list-skeleton">' +
+        '<div class="plan-list-skeleton-copy"><span class="plan-list-skeleton-dot"></span><span>Cargando planeaciones...</span></div>' +
+        cards +
+      '</div>';
     }
 
     function getAlertTypeLabel(tipo) {
