@@ -3827,9 +3827,9 @@
         display: none;
       }
 
-      .plan-list-compact-head {
+    .plan-list-compact-head {
         display: grid;
-        grid-template-columns: 1.06fr 1fr 1.18fr 1.08fr 0.82fr 1.18fr;
+        grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr) minmax(0, 1.18fr) minmax(0, 1.08fr) minmax(0, 0.82fr) minmax(0, 1.18fr);
         gap: 10px;
         align-items: center;
         padding: 10px 12px;
@@ -3841,6 +3841,12 @@
         font-size: 0.76rem;
         font-weight: 700;
         letter-spacing: 0.02em;
+        max-width: 100%;
+        overflow: hidden;
+      }
+
+      .plan-list-compact-head > * {
+        min-width: 0;
       }
 
       .plan-collapsed-desktop {
@@ -3857,7 +3863,7 @@
 
       .plan-compact-grid {
         display: grid;
-        grid-template-columns: 1.06fr 1fr 1.18fr 1.08fr 0.82fr 1.18fr;
+        grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr) minmax(0, 1.18fr) minmax(0, 1.08fr) minmax(0, 0.82fr) minmax(0, 1.18fr);
         grid-template-areas:
           "date group materia summary status actions"
           "phrase phrase phrase phrase . .";
@@ -3865,6 +3871,8 @@
         align-items: start;
         min-height: 74px;
         padding: 10px 12px;
+        max-width: 100%;
+        overflow: hidden;
       }
 
       .plan-card.is-collapsed.plan-card-compact + .plan-card.is-collapsed.plan-card-compact {
