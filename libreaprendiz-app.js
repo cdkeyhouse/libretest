@@ -989,6 +989,36 @@
       }
     }
 
+    function getBootSnapshotOpenPlanById(planId, sessionLike = state.session) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const snapshot = getBootSnapshotForSession(sessionLike);
+      const openPlan = snapshot && snapshot.openPlan && String(snapshot.openPlan.planeacion_id || '').trim() === normalizedPlanId
+        ? snapshot.openPlan
+        : null;
+      if (!openPlan) return null;
+      try {
+        return JSON.parse(JSON.stringify(openPlan));
+      } catch (_) {
+        return Object.assign({}, openPlan);
+      }
+    }
+
+    function buildPlaneacionOpenPreviewRow(plan) {
+      if (!plan || !plan.planeacion_id) return null;
+      const snapshotOpenPlan = getBootSnapshotOpenPlanById(plan.planeacion_id);
+      const preview = Object.assign({}, plan, snapshotOpenPlan || {});
+      preview.detail_loaded = false;
+      preview.boot_detail_loaded = true;
+      preview.alumnos = Array.isArray(preview.alumnos) ? preview.alumnos : [];
+      preview.actividades = Array.isArray(preview.actividades) ? preview.actividades : [];
+      preview.obs_semana = Array.isArray(preview.obs_semana) ? preview.obs_semana : [];
+      preview.obs_alumno_final = Array.isArray(preview.obs_alumno_final) ? preview.obs_alumno_final : [];
+      preview.alumnos_count = Number(preview.alumnos_count || preview.alumnos.length || 0);
+      preview.actividades_count = Number(preview.actividades_count || preview.actividades.length || 0);
+      return preview;
+    }
+
     function buildBootSnapshotOpenPlanDraft() {
       const planId = String(state.openPlanId || '').trim();
       if (!planId || !state.openPlanDraft || state.openPlanDraft.planId !== planId) return null;
@@ -6825,6 +6855,8 @@
       if (state.ui) state.ui.openPlanLoadingId = planId;
       state.openPlanId = planId;
       state.openPlanDraft = null;
+      const previewPlan = buildPlaneacionOpenPreviewRow(currentPlan);
+      if (previewPlan) upsertPlaneacionRow(previewPlan);
       if (currentPlan) {
         const loteId = getPlanLoteId(currentPlan);
         if (loteId) setMultiGroupActivePlan(loteId, planId);
@@ -7382,6 +7414,87 @@
           );
         }
 
+        if (!plan.detail_loaded && plan.boot_detail_loaded) {
+          const previewAlumnosHtml = alumnosRows.length
+            ? (
+                '<div class="plan-student-chip-cloud">' +
+                  alumnosRows.map((alumnoRow) => {
+                    const alumnoDisplay = getAlumnoDisplaySnapshot(alumnoRow);
+                    return '<div class="plan-student-chip"><strong>' + escapeHtml(alumnoDisplay.nombre) + '</strong></div>';
+                  }).join('') +
+                '</div>'
+              )
+            : '<div class="mini">Preparando alumnos para esta planeación...</div>';
+          const previewActivitiesHtml = (plan.actividades || []).length
+            ? (
+                '<div class="stack">' +
+                  (plan.actividades || []).map((item, index) => (
+                    '<div class="activity-card">' +
+                      '<div><strong>' + escapeHtml(String(item.orden || (index + 1)) + '. ' + (item.texto || 'Actividad')) + '</strong></div>' +
+                      '<div class="mini">Cargando seguimiento completo...</div>' +
+                    '</div>'
+                  )).join('') +
+                '</div>'
+              )
+            : '<div class="mini">Preparando actividades para que puedas revisar enseguida...</div>';
+          const previewSharedHtml = entry.isMulti
+            ? (
+                '<div class="plan-multigroup-switcher">' +
+                  '<div class="plan-multigroup-switcher-list">' +
+                    (entry.plans || []).map((groupPlan) => {
+                      const groupRow = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
+                      const groupText = groupRow ? getGrupoDisplayName(groupRow) : groupPlan.grupo_id;
+                      const activeClass = groupPlan.planeacion_id === plan.planeacion_id ? ' is-active' : '';
+                      return '<button class="btn-ghost plan-multigroup-switch' + activeClass + '" type="button" onclick="switchMultiGroupPlan(\'' + escapeJsAttrValue(groupPlan.planeacion_id) + '\')">' + escapeHtml(groupText) + '</button>';
+                    }).join('') +
+                  '</div>' +
+                '</div>'
+              )
+            : '';
+          return (
+            '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card">' +
+              '<div class="plan-top">' +
+                '<div>' +
+                  '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
+                  '<div class="subtle">' + escapeHtml(groupLabel) +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
+                '</div>' +
+                '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+              '</div>' +
+              '<div class="meta-grid">' +
+                '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+              '</div>' +
+              previewSharedHtml +
+              '<div class="plan-loading-note">' +
+                '<strong>Actualizando detalle completo...</strong>' +
+                '<div class="mini">Ya puedes orientarte con esta vista base mientras terminan de llegar observaciones y seguimiento.</div>' +
+                '<div class="plan-loading-progress" aria-hidden="true"></div>' +
+                '<div class="plan-loading-pill-row">' +
+                  '<span class="plan-loading-pill">Alumnos</span>' +
+                  '<span class="plan-loading-pill">Actividades</span>' +
+                  '<span class="plan-loading-pill">Observaciones</span>' +
+                '</div>' +
+              '</div>' +
+              '<div class="stack">' +
+                '<div><strong>Alumnos</strong></div>' +
+                previewAlumnosHtml +
+              '</div>' +
+              '<div class="stack">' +
+                '<div><strong>Actividades</strong></div>' +
+                previewActivitiesHtml +
+              '</div>' +
+              '<div class="stack">' +
+                '<div><strong>Observaciones</strong></div>' +
+                '<div class="mini">Se están cargando observaciones generales y finales de esta planeación.</div>' +
+              '</div>' +
+              '<div class="actions" style="margin-top:14px;">' +
+                '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
+              '</div>' +
+            '</article>'
+          );
+        }
+
         if (!plan.detail_loaded) {
           return (
             '<article id="plan-card-' + escapeHtml(plan.planeacion_id) + '" class="plan-card">' +
@@ -7651,6 +7764,8 @@
       if (state.ui) state.ui.openPlanLoadingId = planId;
       state.openPlanId = planId;
       state.openPlanDraft = null;
+      const previewPlan = buildPlaneacionOpenPreviewRow(getPlanById(planId));
+      if (previewPlan) upsertPlaneacionRow(previewPlan);
       closePlanBuilder();
       renderPlaneacionesList();
       await handleAction('openPlanFromAlert', async () => {
