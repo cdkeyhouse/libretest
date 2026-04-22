@@ -957,6 +957,24 @@
       color: var(--muted);
       line-height: 1.45;
     }
+    .plan-loading-progress {
+      position: relative;
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .plan-loading-progress::after {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 -38%;
+      width: 38%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(29, 182, 193, 0.18), rgba(29, 182, 193, 0.95), rgba(159, 232, 241, 0.88));
+      box-shadow: 0 0 14px rgba(29, 182, 193, 0.26);
+      animation: planLoadingSweep 1.1s ease-in-out infinite;
+    }
     .plan-loading-pill-row {
       display: flex;
       flex-wrap: wrap;
@@ -972,6 +990,14 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--text-soft);
       font-size: 0.8rem;
+    }
+    @keyframes planLoadingSweep {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(360%);
+      }
     }
 
     @media (max-width: 1180px) {
@@ -11999,6 +12025,7 @@
               '<div class="plan-loading-note">' +
                 '<strong>Abriendo planeación...</strong>' +
                 '<div class="mini">Se están cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
+                '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
                   '<span class="plan-loading-pill">Alumnos</span>' +
                   '<span class="plan-loading-pill">Actividades</span>' +
