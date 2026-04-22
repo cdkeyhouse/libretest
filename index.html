@@ -5496,7 +5496,8 @@
         semanas: []
       },
       catalogosMeta: {
-        loadedBlocks: []
+        loadedBlocks: [],
+        revision: 0
       },
       planeaciones: [],
       alertas: [],
@@ -5555,6 +5556,10 @@
     const inFlightActions = new Map();
     const feedbackAnchors = [];
     let actionToastTimer = null;
+    const adminCatalogMemo = {
+      materias: { revision: -1, result: [] },
+      submaterias: { revision: -1, result: [] }
+    };
 
     const $ = (id) => document.getElementById(id);
 
@@ -5613,8 +5618,20 @@
 
     function createEmptyCatalogosMeta() {
       return {
-        loadedBlocks: []
+        loadedBlocks: [],
+        revision: 0
       };
+    }
+
+    function getCatalogosRevision() {
+      return Number(state.catalogosMeta && state.catalogosMeta.revision || 0);
+    }
+
+    function bumpCatalogosRevision() {
+      if (!state.catalogosMeta || !Array.isArray(state.catalogosMeta.loadedBlocks)) {
+        state.catalogosMeta = createEmptyCatalogosMeta();
+      }
+      state.catalogosMeta.revision = Number(state.catalogosMeta.revision || 0) + 1;
     }
 
     function getCatalogBlockKeys() {
@@ -5649,6 +5666,7 @@
         ? requestedBlocks
         : Object.keys(partial);
       markCatalogBlocksLoaded(loaded);
+      bumpCatalogosRevision();
     }
 
     function isCatalogBlockLoaded(blockKey) {
@@ -6404,7 +6422,8 @@
           if (options.render !== false) {
             renderAll();
           } else if (isPlanBuilderExpanded() || isPlaneacionesSurfaceVisible()) {
-            renderAll();
+            renderBaseSelects();
+            renderPlanBuilderVisibility();
           }
           return state.catalogos;
         })
@@ -6454,7 +6473,12 @@
       ];
 
       const deferredPromise = Promise.allSettled(deferredTasks).then((results) => {
-        renderAll();
+        renderPlaneacionesSurface({
+          includeStats: false,
+          includePlaneaciones: false,
+          includeAlertas: true
+        });
+        renderInstitutionalNotices();
       });
 
       if (state.ui) state.ui.fastPlaneacionesBootPromise = deferredPromise;
@@ -6485,7 +6509,8 @@
       const deferredPromise = Promise.allSettled([
         refreshNotificaciones()
       ]).then((results) => {
-        renderAll();
+        renderAdminShell();
+        if (state.activeAdminModule === 'notificaciones') renderNotificationsAdmin();
       });
 
       if (state.ui) state.ui.fastAdminBootPromise = deferredPromise;
@@ -7436,9 +7461,11 @@
       if (index === -1) {
         if (options.append) rows.push(row);
         else rows.unshift(row);
+        bumpCatalogosRevision();
         return row;
       }
       rows.splice(index, 1, Object.assign({}, rows[index], row));
+      bumpCatalogosRevision();
       return rows[index];
     }
 
@@ -7575,8 +7602,9 @@
     }
 
     function formatAlumnoUpdatedLabel(alumno) {
-      const historial = getAlumnoHistorial(alumno.alumno_id);
-      const latest = historial.length ? historial[0].fecha : (alumno.archivado_at || alumno.fecha_alta || '');
+      const latest = alumno
+        ? (alumno.fecha_actualizacion || alumno.archivado_at || alumno.fecha_alta || '')
+        : '';
       if (!latest) return 'Sin registro';
       return getNotificationRelativeUpdateLabel(latest);
     }
@@ -9803,10 +9831,14 @@
     }
 
     function getAdminMateriasCatalog() {
+      const revision = getCatalogosRevision();
+      if (adminCatalogMemo.materias.revision === revision) {
+        return adminCatalogMemo.materias.result;
+      }
       const rows = Array.isArray(state.catalogos.materias_admin) && state.catalogos.materias_admin.length
         ? state.catalogos.materias_admin
         : (state.catalogos.materias || []);
-      return rows.map((row) => {
+      const result = rows.map((row) => {
         const archived = String(row.archivado_at || '').trim();
         const rawStatus = String(row.estatus || '').trim().toLowerCase();
         const status = archived
@@ -9831,6 +9863,8 @@
         if (orderDiff) return orderDiff;
         return String(a.nombre || a.materia_id).localeCompare(String(b.nombre || b.materia_id), 'es');
       });
+      adminCatalogMemo.materias = { revision, result };
+      return result;
     }
 
     function applySavedMateriaCatalogRow(row) {
@@ -9841,10 +9875,14 @@
     }
 
     function getAdminSubmateriasCatalog() {
+      const revision = getCatalogosRevision();
+      if (adminCatalogMemo.submaterias.revision === revision) {
+        return adminCatalogMemo.submaterias.result;
+      }
       const rows = Array.isArray(state.catalogos.submaterias_admin) && state.catalogos.submaterias_admin.length
         ? state.catalogos.submaterias_admin
         : (state.catalogos.submaterias || []);
-      return rows.map((row) => {
+      const result = rows.map((row) => {
         const archived = String(row.archivado_at || '').trim();
         const rawStatus = String(row.estatus || '').trim().toLowerCase();
         const status = archived ? 'archivada' : (rawStatus === 'inactiva' ? 'inactiva' : 'activa');
@@ -9866,6 +9904,8 @@
         if (orderDiff) return orderDiff;
         return String(a.nombre || a.submateria_id).localeCompare(String(b.nombre || b.submateria_id), 'es');
       });
+      adminCatalogMemo.submaterias = { revision, result };
+      return result;
     }
 
     function getMateriaBaseRows() {
