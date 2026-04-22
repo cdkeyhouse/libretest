@@ -989,6 +989,28 @@
       }
     }
 
+    function buildBootSnapshotOpenPlanDraft() {
+      const planId = String(state.openPlanId || '').trim();
+      if (!planId || !state.openPlanDraft || state.openPlanDraft.planId !== planId) return null;
+      try {
+        return JSON.parse(JSON.stringify(state.openPlanDraft));
+      } catch (_) {
+        return Object.assign({}, state.openPlanDraft);
+      }
+    }
+
+    function persistOpenPlanSnapshotSoon(kind = 'planeacion_draft_local') {
+      if (!state.ui) return;
+      const timerKey = 'openPlanSnapshotPersist';
+      if (state.ui.debounceTimers && state.ui.debounceTimers[timerKey]) {
+        window.clearTimeout(state.ui.debounceTimers[timerKey]);
+      }
+      state.ui.debounceTimers[timerKey] = window.setTimeout(() => {
+        persistCurrentBootSnapshot(kind);
+        state.ui.debounceTimers[timerKey] = null;
+      }, 180);
+    }
+
     function persistCurrentBootSnapshot(kind) {
       const userKey = getCurrentUserSnapshotKey();
       if (!userKey) return;
@@ -1007,6 +1029,7 @@
         payload.notificaciones = Array.isArray(state.notificaciones) ? state.notificaciones.slice(0, 20) : [];
         payload.openPlanId = String(state.openPlanId || '').trim();
         payload.openPlan = buildBootSnapshotOpenPlan();
+        payload.openPlanDraft = buildBootSnapshotOpenPlanDraft();
         payload.planeacionesMeta = {
           loaded: !!(state.ui && state.ui.planeacionesLoaded),
           hasMore: !!(state.ui && state.ui.planeacionesHasMore),
@@ -1043,6 +1066,9 @@
       }
       if (snapshot.openPlanId && Array.isArray(snapshot.planeaciones) && snapshot.planeaciones.some((plan) => plan && plan.planeacion_id === snapshot.openPlanId)) {
         state.openPlanId = snapshot.openPlanId;
+      }
+      if (snapshot.openPlanDraft && typeof snapshot.openPlanDraft === 'object' && snapshot.openPlanDraft.planId) {
+        state.openPlanDraft = snapshot.openPlanDraft;
       }
       if (snapshot.planeacionesMeta && state.ui) {
         state.ui.planeacionesLoaded = !!snapshot.planeacionesMeta.loaded;
@@ -5957,6 +5983,7 @@
         const hasMatchingSubmateria = currentSubmateriaId && getPlanSubmateriasForMateria(nextMateriaId).some((item) => String(item.submateria_id || '').trim() === currentSubmateriaId);
         state.openPlanDraft.submateria_id = hasMatchingSubmateria ? currentSubmateriaId : '';
       }
+      persistOpenPlanSnapshotSoon('planeacion_draft_campo');
       if (rerender) renderPlaneacionesList();
     }
 
@@ -5965,22 +5992,26 @@
       const current = new Set(state.openPlanDraft.alumnos_ids || []);
       if (checked) current.add(alumnoId); else current.delete(alumnoId);
       state.openPlanDraft.alumnos_ids = Array.from(current);
+      persistOpenPlanSnapshotSoon('planeacion_draft_alumnos');
     }
 
     function updateOpenPlanDraftActivityField(index, field, value) {
       if (!state.openPlanDraft || !state.openPlanDraft.activities[index]) return;
       state.openPlanDraft.activities[index][field] = value;
+      persistOpenPlanSnapshotSoon('planeacion_draft_actividad');
     }
 
     function addOpenPlanDraftActivity() {
       if (!state.openPlanDraft) return;
       state.openPlanDraft.activities.push(createEmptyActivityDraft());
+      persistOpenPlanSnapshotSoon('planeacion_draft_actividad');
       renderPlaneacionesList();
     }
 
     function removeOpenPlanDraftActivity(index) {
       if (!state.openPlanDraft || state.openPlanDraft.activities.length <= 1) return;
       state.openPlanDraft.activities.splice(index, 1);
+      persistOpenPlanSnapshotSoon('planeacion_draft_actividad');
       renderPlaneacionesList();
     }
 
@@ -5993,6 +6024,7 @@
       copy[index] = copy[target];
       copy[target] = temp;
       state.openPlanDraft.activities = copy;
+      persistOpenPlanSnapshotSoon('planeacion_draft_actividad');
       renderPlaneacionesList();
     }
 
@@ -6004,6 +6036,7 @@
         .filter((alumno) => alumno.grupo_id === plan.grupo_id)
         .map((alumno) => alumno.alumno_id);
       state.openPlanDraft.alumnos_ids = checked ? alumnosGrupo : [];
+      persistOpenPlanSnapshotSoon('planeacion_draft_alumnos');
       renderPlaneacionesList();
     }
 
