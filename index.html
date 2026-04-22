@@ -3658,6 +3658,21 @@
         line-height: 1.28;
       }
 
+      .plan-compact-phrase-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 10px;
+        margin-bottom: 8px;
+        border-radius: 999px;
+        background: rgba(29, 182, 193, 0.14);
+        border: 1px solid rgba(29, 182, 193, 0.26);
+        color: #9fe8f1;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+
       .plan-compact-truncate {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -11924,6 +11939,7 @@
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-cell-phrase">' +
                     '<span class="plan-compact-label">Frase</span>' +
+                    '<span class="plan-compact-phrase-chip">Frase de la semana:</span>' +
                     '<span class="' + phraseCompactClass.replace('plan-compact-secondary', 'plan-compact-phrase-copy') + '"' + phraseCompactAttrs + '>' + escapeHtml(phraseText) + '</span>' +
                   '</div>' +
                 '</div>' +
