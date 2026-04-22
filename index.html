@@ -5731,9 +5731,11 @@
         planeacionesOffset: 0,
         planeacionesCatalogosLoading: false,
         planeacionesCatalogosPromise: null,
+        planeacionesCatalogosPendingBlocks: [],
         openPlanLoadingId: '',
         tallerMembershipCatalogosPromise: null,
         fastPlaneacionesBootPromise: null,
+        adminModuleLoading: {},
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
         planeacionesMateriaFilter: '',
@@ -5911,9 +5913,24 @@
     }
 
     function getCatalogBlocksForModule(moduleName) {
+      return getCatalogBlocksForModuleWithScope(moduleName);
+    }
+
+    function getPlaneacionesSurfaceCatalogBlocks() {
+      return canUseAdminShell()
+        ? ['facilitadores', 'grupos', 'materias', 'semanas']
+        : ['materias', 'semanas'];
+    }
+
+    function getPlaneacionesEditorCatalogBlocks() {
+      return ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas'];
+    }
+
+    function getCatalogBlocksForModuleWithScope(moduleName, options = {}) {
+      const scope = String(options && options.scope || '').trim();
       switch (String(moduleName || '').trim()) {
         case 'planeaciones':
-          return ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas'];
+          return scope === 'editor' ? getPlaneacionesEditorCatalogBlocks() : getPlaneacionesSurfaceCatalogBlocks();
         case 'alumnos':
           return ['alumnos', 'grupos'];
         case 'notificaciones':
@@ -5932,6 +5949,12 @@
         default:
           return [];
       }
+    }
+
+    function getAdminModuleCatalogBlocks(moduleName) {
+      const normalized = String(moduleName || '').trim();
+      if (normalized === 'planeaciones') return getCatalogBlocksForModuleWithScope(normalized, { scope: 'surface' });
+      return getCatalogBlocksForModuleWithScope(normalized);
     }
 
     function adminModuleNeedsCatalogos(moduleName) {
@@ -6626,12 +6649,20 @@
     }
 
     async function ensurePlaneacionesCatalogosAvailable(options = {}) {
-      const blocks = getMissingCatalogBlocks(getCatalogBlocksForModule('planeaciones'));
+      const scope = String(options && options.scope || 'editor').trim() || 'editor';
+      const blocks = getMissingCatalogBlocks(getCatalogBlocksForModuleWithScope('planeaciones', { scope }));
       if (!blocks.length) return state.catalogos;
       if (state.ui && state.ui.planeacionesCatalogosPromise) {
-        return state.ui.planeacionesCatalogosPromise;
+        const pendingBlocks = Array.isArray(state.ui.planeacionesCatalogosPendingBlocks)
+          ? state.ui.planeacionesCatalogosPendingBlocks
+          : [];
+        if (blocks.every((block) => pendingBlocks.includes(block))) {
+          return state.ui.planeacionesCatalogosPromise;
+        }
+        return state.ui.planeacionesCatalogosPromise.then(() => ensurePlaneacionesCatalogosAvailable(options));
       }
       if (state.ui) state.ui.planeacionesCatalogosLoading = true;
+      if (state.ui) state.ui.planeacionesCatalogosPendingBlocks = [...blocks];
       if (options.render !== false) renderPlanEditor();
       const promise = refreshCatalogos({ blocks })
         .then(() => {
@@ -6648,6 +6679,7 @@
           if (state.ui) {
             state.ui.planeacionesCatalogosPromise = null;
             state.ui.planeacionesCatalogosLoading = false;
+            state.ui.planeacionesCatalogosPendingBlocks = [];
           }
         });
       if (state.ui) state.ui.planeacionesCatalogosPromise = promise;
@@ -6676,17 +6708,24 @@
 
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
-      const silent = !!(options && options.silent);
       await refreshPlaneaciones();
       state.dashboardStats = Object.assign({}, state.dashboardStats || {}, {
         planeaciones_visibles: Array.isArray(state.planeaciones) ? state.planeaciones.length : 0
       });
-      renderAll();
+      renderSession();
+      renderStats();
+      renderPlaneacionesSurface({
+        includeStats: false,
+        includePlaneaciones: true,
+        includeAlertas: false
+      });
+      renderInstitutionalNotices();
+      syncRoleUi();
 
       const deferredTasks = [
         refreshAlertas(),
         refreshNotificaciones(),
-        ensurePlaneacionesCatalogosAvailable({ render: false })
+        ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'surface' })
       ];
 
       const deferredPromise = Promise.allSettled(deferredTasks).then((results) => {
@@ -6706,7 +6745,6 @@
 
     async function refreshAdminDashboardFastBoot(options = {}) {
       ensureLoggedIn();
-      const silent = !!(options && options.silent);
       const dashboard = await api('getDashboard', Object.assign({}, buildPlaneacionesPayload(), {
         alert_limit: 20,
         notification_limit: 20,
@@ -6721,7 +6759,12 @@
       state.notificaciones = Array.isArray(dashboard && dashboard.notificaciones && dashboard.notificaciones.rows)
         ? dashboard.notificaciones.rows
         : [];
-      renderAll();
+      renderSession();
+      renderStats();
+      renderAdminShell();
+      renderAlertas();
+      renderInstitutionalNotices();
+      syncRoleUi();
 
       const deferredPromise = Promise.allSettled([
         refreshNotificaciones()
@@ -6756,7 +6799,7 @@
       const shouldIncludePlaneaciones = currentViewNeedsPlaneaciones();
       try {
         const notificationLimit = canUseAdminShell() ? 100 : 120;
-        const dashboardCatalogBlocks = shouldIncludeCatalogos
+      const dashboardCatalogBlocks = shouldIncludeCatalogos
           ? (silent ? getMissingCatalogBlocks(requestedCatalogBlocks) : requestedCatalogBlocks)
           : [];
         const reuseCatalogos = shouldIncludeCatalogos && silent && dashboardCatalogBlocks.length === 0;
@@ -6871,7 +6914,16 @@
 
     function renderActiveAdminModule(moduleName = state.activeAdminModule) {
       if (!canUseAdminShell()) return;
-      switch (String(moduleName || '').trim()) {
+      const normalized = String(moduleName || '').trim();
+      if (isAdminModuleLoading(normalized)) {
+        renderAdminModulePlaceholder(normalized);
+        return;
+      }
+      if (adminModuleNeedsCatalogos(normalized) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(normalized))) {
+        renderAdminModulePlaceholder(normalized);
+        return;
+      }
+      switch (normalized) {
         case 'notificaciones':
           renderNotificationsAdmin();
           break;
@@ -6898,6 +6950,77 @@
       }
     }
 
+    function isAdminModuleLoading(moduleName) {
+      const key = String(moduleName || '').trim();
+      return !!(state.ui && state.ui.adminModuleLoading && state.ui.adminModuleLoading[key]);
+    }
+
+    function setAdminModuleLoading(moduleName, isLoading) {
+      const key = String(moduleName || '').trim();
+      if (!state.ui) return;
+      if (!state.ui.adminModuleLoading || typeof state.ui.adminModuleLoading !== 'object') {
+        state.ui.adminModuleLoading = {};
+      }
+      if (isLoading) state.ui.adminModuleLoading[key] = true;
+      else delete state.ui.adminModuleLoading[key];
+    }
+
+    function getAdminModulePlaceholderCopy(moduleName) {
+      switch (String(moduleName || '').trim()) {
+        case 'planeaciones':
+          return {
+            title: 'Cargando planeaciones',
+            body: 'Preparamos filtros y herramientas del módulo sin frenar la vista principal.'
+          };
+        case 'alumnos':
+          return {
+            title: 'Cargando alumnos',
+            body: 'Se están hidratando grupos y fichas base para que el listado responda más rápido.'
+          };
+        case 'facilitadores':
+          return {
+            title: 'Cargando facilitadores',
+            body: 'Preparamos accesos, asignaciones y panel lateral de trabajo.'
+          };
+        case 'materias':
+          return {
+            title: 'Cargando materias',
+            body: 'Se están organizando materias base y variantes activas.'
+          };
+        case 'talleres':
+          return {
+            title: 'Cargando talleres',
+            body: 'Preparamos catálogo base y relaciones activas sin congelar la navegación.'
+          };
+        case 'notificaciones':
+          return {
+            title: 'Cargando notificaciones',
+            body: 'Se está preparando la bandeja activa y el editor institucional.'
+          };
+        case 'reporte-ciclo':
+          return {
+            title: 'Cargando reporte de ciclo',
+            body: 'Se están preparando alumnos y periodos para este módulo.'
+          };
+        default:
+          return {
+            title: 'Cargando módulo',
+            body: 'Preparamos la información necesaria para mostrar este panel.'
+          };
+      }
+    }
+
+    function renderAdminModulePlaceholder(moduleName) {
+      const panel = $('admin-panel-' + String(moduleName || '').trim());
+      if (!panel) return;
+      const copy = getAdminModulePlaceholderCopy(moduleName);
+      panel.innerHTML =
+        '<article class="admin-placeholder">' +
+          '<h3>' + escapeHtml(copy.title) + '</h3>' +
+          '<p>' + escapeHtml(copy.body) + '</p>' +
+        '</article>';
+    }
+
     function renderAdminModuleSurface(moduleName = state.activeAdminModule, options = {}) {
       if (!canUseAdminShell()) return;
       if (options.includeStats !== false) renderStats();
@@ -6911,7 +7034,7 @@
       const targetModule = String(moduleName || state.activeAdminModule || '').trim();
       const tasks = [];
       if (options.refreshCatalogos !== false && adminModuleNeedsCatalogos(targetModule)) {
-        tasks.push(refreshCatalogos({ blocks: getCatalogBlocksForModule(targetModule) }));
+        tasks.push(refreshCatalogos({ blocks: getAdminModuleCatalogBlocks(targetModule) }));
       }
       if (options.refreshNotificaciones) tasks.push(refreshNotificaciones());
       if (options.refreshAlertas) tasks.push(refreshAlertas());
@@ -7058,6 +7181,7 @@
 
     function activateAdminModule(moduleName) {
       if (!canUseAdminShell()) return;
+      bindWindowActionGroup('admin');
       const nextModule = moduleName || 'dashboard';
       if (nextModule !== 'notificaciones' && state.ui && state.ui.notificationEditorExpanded) {
         resetNotificationEditor();
@@ -7090,18 +7214,37 @@
       renderAdminShell();
       if (nextModule === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
         refreshPlaneaciones()
-          .then(() => renderAll())
+          .then(() => renderPlaneacionesSurface({ includeStats: true, includePlaneaciones: true, includeAlertas: false }))
           .catch(() => {});
       }
-      if (adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getCatalogBlocksForModule(nextModule))) {
-        refreshCatalogos({ blocks: getMissingCatalogBlocks(getCatalogBlocksForModule(nextModule)) })
-          .then(() => renderAll())
-          .catch(() => {});
+      if (adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(nextModule))) {
+        setAdminModuleLoading(nextModule, true);
+        renderActiveAdminModule(nextModule);
+        refreshCatalogos({ blocks: getMissingCatalogBlocks(getAdminModuleCatalogBlocks(nextModule)) })
+          .then(() => {
+            setAdminModuleLoading(nextModule, false);
+            if (nextModule === 'planeaciones') {
+              renderBaseSelects();
+              renderPlaneacionesSurface({ includeStats: true, includePlaneaciones: false, includeAlertas: false });
+            } else {
+              renderAdminModuleSurface(nextModule, { includeStats: false });
+            }
+          })
+          .catch(() => {
+            setAdminModuleLoading(nextModule, false);
+          });
       }
       if (nextModule === 'configuracion' && !getMaintenanceUi().preview) {
+        setAdminModuleLoading(nextModule, true);
+        renderActiveAdminModule(nextModule);
         loadMaintenancePreview({ keepAudit: true })
-          .then(() => renderAll())
-          .catch(() => {});
+          .then(() => {
+            setAdminModuleLoading(nextModule, false);
+            renderAdminModuleSurface(nextModule, { includeStats: false });
+          })
+          .catch(() => {
+            setAdminModuleLoading(nextModule, false);
+          });
       }
       if (nextModule === 'planeaciones') {
         renderPlaneacionesList();
@@ -11870,7 +12013,10 @@
       closePlanBuilder();
       renderPlaneacionesList();
       await handleAction('togglePlanOpen', async () => {
-        const plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
+        const [plan] = await Promise.all([
+          ensurePlaneacionDetailLoaded(planId, { silent: true }),
+          ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' }).catch(() => state.catalogos)
+        ]);
         const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
         if (entry && entry.isMulti) {
           await ensurePlaneacionEntryDetailsLoaded(entry, { silent: true });
@@ -12673,7 +12819,10 @@
       closePlanBuilder();
       renderPlaneacionesList();
       await handleAction('openPlanFromAlert', async () => {
-        const plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
+        const [plan] = await Promise.all([
+          ensurePlaneacionDetailLoaded(planId, { silent: true }),
+          ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' }).catch(() => state.catalogos)
+        ]);
         state.openPlanId = planId;
         if (state.ui) state.ui.openPlanLoadingId = '';
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
@@ -13103,6 +13252,27 @@
       activateTab(state.activeTab);
     }
 
+    function renderBootSurface() {
+      refreshStaticCopy();
+      syncAuthMode();
+      renderSession();
+      renderStats();
+      renderAdminShell();
+      renderInstitutionalNotices();
+      if (canUseAdminShell()) {
+        if (state.activeAdminModule === 'dashboard') {
+          renderAlertas();
+        } else {
+          renderActiveAdminModule(state.activeAdminModule);
+        }
+      } else if (String(state.activeTab || '').trim() === 'planeaciones') {
+        renderPlaneacionesList();
+        renderPlanBuilderVisibility();
+      }
+      syncRoleUi();
+      activateTab(state.activeTab);
+    }
+
     async function savePlanEditor(targetStatusOverride) {
       ensureLoggedIn();
       if (state.ui && state.ui.planeacionesCatalogosLoading) {
@@ -13487,7 +13657,11 @@
     async function editPlan(button, planId) {
       let plan = null;
       await handleAction('editPlanLoad', async () => {
-        plan = await ensurePlaneacionDetailLoaded(planId, { silent: true });
+        const result = await Promise.all([
+          ensurePlaneacionDetailLoaded(planId, { silent: true }),
+          ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' }).catch(() => state.catalogos)
+        ]);
+        plan = result[0];
       }, {
         button,
         key: buildActionKey('editPlanLoad', [planId]),
@@ -14225,109 +14399,130 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
       });
     }
 
+    const windowActionGroups = {
+      core: {
+        planAction,
+        saveActivityProgress,
+        togglePlanOpen,
+        editPlan,
+        approvePlan,
+        rejectPlan,
+        resubmitPlan,
+        confirmClosePlan,
+        saveOpenPlan,
+        saveMultiGroupShared,
+        markPlanMaterialReady,
+        saveGeneralObservation,
+        saveAlumnoFinalObservation,
+        saveAllAlumnoFinalObservations,
+        autoGrowObsFinal,
+        openPlanFromAlert,
+        togglePlanAlumnosByGroup,
+        updateOpenPlanDraftField,
+        toggleOpenPlanDraftAlumno,
+        updateOpenPlanDraftActivityField,
+        addOpenPlanDraftActivity,
+        removeOpenPlanDraftActivity,
+        moveOpenPlanDraftActivity,
+        toggleAllOpenPlanDraftAlumnos,
+        exitPlanFocus,
+        savePlanChanges,
+        updateMultiGroupSharedField,
+        updateMultiGroupSharedActivityField,
+        addMultiGroupSharedActivity,
+        removeMultiGroupSharedActivity,
+        switchMultiGroupPlan,
+        updateEditorActivityField,
+        moveEditorActivity,
+        removeEditorActivity,
+        usePlanForActivities,
+        usePlanForObservation
+      },
+      admin: {
+        editNotification,
+        notificationAction,
+        toggleNotificationAudienceFacilitador,
+        openFacilitadorPanel,
+        openFacilitadorEditor,
+        openFacilitadorPin,
+        closeFacilitadorPinPanel,
+        saveFacilitadorPin,
+        toggleFacilitadorActivo,
+        archiveFacilitador,
+        reactivateFacilitador,
+        openFacilitadorAsignacionEditor,
+        closeFacilitadorAsignacionPanel,
+        saveFacilitadorAsignacion,
+        archiveFacilitadorAsignacion,
+        openFacilitadorPlaneaciones,
+        renderAdminTalleresModule,
+        selectTaller,
+        openTallerEditor,
+        saveTallerEditor,
+        toggleTallerStatus,
+        archiveTaller,
+        reactivateTaller,
+        openTallerMembershipEditor,
+        cancelTallerMembershipEditor,
+        toggleTallerAlumnoDraft,
+        toggleAllVisibleTallerAlumnos,
+        saveTallerMemberships,
+        renderAdminMateriasModule,
+        selectMateria,
+        openMateriaEditor,
+        closeMateriaEditor,
+        saveMateriaEditor,
+        openSubmateriaEditor,
+        closeSubmateriaEditor,
+        saveSubmateriaEditor,
+        archiveMateria,
+        reactivateMateria,
+        toggleMateriaStatus,
+        moveMateria,
+        archiveSubmateria,
+        reactivateSubmateria,
+        toggleSubmateriaStatus,
+        moveSubmateria,
+        openAlumnoEditor,
+        closeAlumnoEditor,
+        saveAlumnoEditor,
+        openCambioGrupo,
+        closeCambioGrupo,
+        confirmCambioGrupo,
+        pauseAlumno,
+        archiveAlumno,
+        reactivateAlumno,
+        openAlumnoHistorial,
+        closeAlumnoHistorial
+      }
+    };
+
+    const boundWindowActionGroups = new Set();
+
+    function bindWindowActionGroup(groupName) {
+      const key = String(groupName || '').trim();
+      if (!key || boundWindowActionGroups.has(key) || !windowActionGroups[key]) return;
+      Object.assign(window, windowActionGroups[key]);
+      boundWindowActionGroups.add(key);
+    }
+
     async function boot() {
       loadConfig();
       loadSession();
+      bindWindowActionGroup('core');
+      if (state.session && state.session.token && canUseAdminShell()) {
+        bindWindowActionGroup('admin');
+      }
       bindEvents();
       clearLoginInputs();
       refreshStaticConfigUi();
-      renderAll();
       if (state.session && state.session.token) {
+        renderBootSurface();
         await handleAction('restore', () => refreshAll({ fastFacilitadorBoot: true }));
+        return;
       }
+      renderAll();
     }
-
-    window.planAction = planAction;
-    window.saveActivityProgress = saveActivityProgress;
-    window.togglePlanOpen = togglePlanOpen;
-    window.editPlan = editPlan;
-    window.approvePlan = approvePlan;
-    window.rejectPlan = rejectPlan;
-    window.resubmitPlan = resubmitPlan;
-    window.confirmClosePlan = confirmClosePlan;
-    window.saveOpenPlan = saveOpenPlan;
-    window.saveMultiGroupShared = saveMultiGroupShared;
-    window.markPlanMaterialReady = markPlanMaterialReady;
-    window.saveGeneralObservation = saveGeneralObservation;
-    window.saveAlumnoFinalObservation = saveAlumnoFinalObservation;
-    window.saveAllAlumnoFinalObservations = saveAllAlumnoFinalObservations;
-    window.autoGrowObsFinal = autoGrowObsFinal;
-    window.openPlanFromAlert = openPlanFromAlert;
-    window.editNotification = editNotification;
-    window.notificationAction = notificationAction;
-    window.toggleNotificationAudienceFacilitador = toggleNotificationAudienceFacilitador;
-    window.openFacilitadorPanel = openFacilitadorPanel;
-    window.openFacilitadorEditor = openFacilitadorEditor;
-    window.openFacilitadorPin = openFacilitadorPin;
-    window.closeFacilitadorPinPanel = closeFacilitadorPinPanel;
-    window.saveFacilitadorPin = saveFacilitadorPin;
-    window.toggleFacilitadorActivo = toggleFacilitadorActivo;
-    window.archiveFacilitador = archiveFacilitador;
-    window.reactivateFacilitador = reactivateFacilitador;
-    window.openFacilitadorAsignacionEditor = openFacilitadorAsignacionEditor;
-    window.closeFacilitadorAsignacionPanel = closeFacilitadorAsignacionPanel;
-    window.saveFacilitadorAsignacion = saveFacilitadorAsignacion;
-    window.archiveFacilitadorAsignacion = archiveFacilitadorAsignacion;
-    window.openFacilitadorPlaneaciones = openFacilitadorPlaneaciones;
-    window.renderAdminTalleresModule = renderAdminTalleresModule;
-    window.selectTaller = selectTaller;
-    window.openTallerEditor = openTallerEditor;
-    window.saveTallerEditor = saveTallerEditor;
-    window.toggleTallerStatus = toggleTallerStatus;
-    window.archiveTaller = archiveTaller;
-    window.reactivateTaller = reactivateTaller;
-    window.openTallerMembershipEditor = openTallerMembershipEditor;
-    window.cancelTallerMembershipEditor = cancelTallerMembershipEditor;
-    window.toggleTallerAlumnoDraft = toggleTallerAlumnoDraft;
-    window.toggleAllVisibleTallerAlumnos = toggleAllVisibleTallerAlumnos;
-    window.saveTallerMemberships = saveTallerMemberships;
-    window.renderAdminMateriasModule = renderAdminMateriasModule;
-    window.selectMateria = selectMateria;
-    window.openMateriaEditor = openMateriaEditor;
-    window.closeMateriaEditor = closeMateriaEditor;
-    window.saveMateriaEditor = saveMateriaEditor;
-    window.openSubmateriaEditor = openSubmateriaEditor;
-    window.closeSubmateriaEditor = closeSubmateriaEditor;
-    window.saveSubmateriaEditor = saveSubmateriaEditor;
-    window.archiveMateria = archiveMateria;
-    window.reactivateMateria = reactivateMateria;
-    window.toggleMateriaStatus = toggleMateriaStatus;
-    window.moveMateria = moveMateria;
-    window.archiveSubmateria = archiveSubmateria;
-    window.reactivateSubmateria = reactivateSubmateria;
-    window.toggleSubmateriaStatus = toggleSubmateriaStatus;
-    window.moveSubmateria = moveSubmateria;
-    window.openAlumnoEditor = openAlumnoEditor;
-    window.closeAlumnoEditor = closeAlumnoEditor;
-    window.saveAlumnoEditor = saveAlumnoEditor;
-    window.openCambioGrupo = openCambioGrupo;
-    window.closeCambioGrupo = closeCambioGrupo;
-    window.confirmCambioGrupo = confirmCambioGrupo;
-    window.pauseAlumno = pauseAlumno;
-    window.archiveAlumno = archiveAlumno;
-    window.reactivateAlumno = reactivateAlumno;
-    window.openAlumnoHistorial = openAlumnoHistorial;
-    window.closeAlumnoHistorial = closeAlumnoHistorial;
-    window.togglePlanAlumnosByGroup = togglePlanAlumnosByGroup;
-    window.updateOpenPlanDraftField = updateOpenPlanDraftField;
-    window.toggleOpenPlanDraftAlumno = toggleOpenPlanDraftAlumno;
-    window.updateOpenPlanDraftActivityField = updateOpenPlanDraftActivityField;
-    window.addOpenPlanDraftActivity = addOpenPlanDraftActivity;
-    window.removeOpenPlanDraftActivity = removeOpenPlanDraftActivity;
-    window.moveOpenPlanDraftActivity = moveOpenPlanDraftActivity;
-    window.toggleAllOpenPlanDraftAlumnos = toggleAllOpenPlanDraftAlumnos;
-    window.exitPlanFocus = exitPlanFocus;
-    window.savePlanChanges = savePlanChanges;
-    window.updateMultiGroupSharedField = updateMultiGroupSharedField;
-    window.updateMultiGroupSharedActivityField = updateMultiGroupSharedActivityField;
-    window.addMultiGroupSharedActivity = addMultiGroupSharedActivity;
-    window.removeMultiGroupSharedActivity = removeMultiGroupSharedActivity;
-    window.switchMultiGroupPlan = switchMultiGroupPlan;
-    window.updateEditorActivityField = updateEditorActivityField;
-    window.moveEditorActivity = moveEditorActivity;
-    window.removeEditorActivity = removeEditorActivity;
-    window.usePlanForActivities = usePlanForActivities;
-    window.usePlanForObservation = usePlanForObservation;
 
     boot();
   </script>
