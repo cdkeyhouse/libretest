@@ -8096,20 +8096,22 @@
       resetPlanEditor();
       if (canApplyLocally) {
         upsertPlaneacionRow(updatedPlan);
-        await refreshAlertas();
         renderPlaneacionesSurface({
           includeStats: true,
           includePlaneaciones: true,
-          includeAlertas: true
+          includeAlertas: false
         });
+        persistCurrentBootSnapshot('planeacion_editor_guardada');
+        refreshPlaneacionesAlertsDeferred();
       } else if (canApplyCreateLocally) {
         upsertPlaneacionesRows(createdPlans);
-        await refreshAlertas();
         renderPlaneacionesSurface({
           includeStats: true,
           includePlaneaciones: true,
-          includeAlertas: true
+          includeAlertas: false
         });
+        persistCurrentBootSnapshot('planeacion_editor_creada');
+        refreshPlaneacionesAlertsDeferred();
       } else {
         await refreshPlaneacionesSurface();
       }
@@ -8451,7 +8453,13 @@
         const updatedPlan = response && response.planeacion ? response.planeacion : null;
         if (!shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
           applySavedPlaneacionDetail(planId, updatedPlan);
-          await refreshPlaneacionesSurface({ includePlaneaciones: false, includeAlertas: true });
+          persistCurrentBootSnapshot(options.snapshotKind || 'planeacion_inline_save');
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          refreshPlaneacionesAlertsDeferred();
         } else {
           state.openPlanId = planId;
           state.openPlanDraft = null;
@@ -8583,6 +8591,29 @@
         includeAlertas: options.includeAlertas === true
       });
       return updatedPlan;
+    }
+
+    function refreshPlaneacionesAlertsDeferred(options = {}) {
+      const includeStats = options.includeStats === true;
+      const includePlaneaciones = options.includePlaneaciones === true;
+      const delay = Number(options.delay || 140);
+      if (state.ui && state.ui.deferredPlaneacionesAlertRefreshPromise) {
+        return state.ui.deferredPlaneacionesAlertRefreshPromise;
+      }
+      const task = scheduleAfterPaint(async () => {
+        try {
+          await refreshAlertas();
+          renderPlaneacionesSurface({
+            includeStats,
+            includePlaneaciones,
+            includeAlertas: true
+          });
+        } finally {
+          if (state.ui) state.ui.deferredPlaneacionesAlertRefreshPromise = null;
+        }
+      }, delay);
+      if (state.ui) state.ui.deferredPlaneacionesAlertRefreshPromise = task;
+      return task;
     }
 
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
@@ -8734,13 +8765,22 @@
         }
         const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion ? savedPlanResponse.planeacion : null;
         const canPatchSimplePlanLocally = shouldSavePlan &&
-          !generalText &&
-          !finalPayloads.length &&
           !shouldSaveShared &&
           !(entry && entry.isMulti);
         if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
           applySavedPlaneacionDetail(planId, updatedPlan);
-          await refreshPlaneacionesSurface({ includePlaneaciones: false, includeAlertas: true });
+          persistCurrentBootSnapshot('guardar_cambios_local');
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          if (shouldSavePlan) refreshPlaneacionesAlertsDeferred();
+        } else if (!shouldSavePlan && !shouldSaveShared) {
+          await refreshSinglePlaneacionSurface(planId, {
+            includeAlertas: false,
+            snapshotKind: 'guardar_cambios_obs'
+          });
         } else {
           state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
           state.openPlanDraft = null;
