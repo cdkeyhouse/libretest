@@ -3694,8 +3694,15 @@
     }
 
     .planeaciones-shell-card .card-head {
+      display: grid;
+      grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+      align-items: start;
       gap: 12px;
       margin-bottom: 10px;
+    }
+
+    .planeaciones-shell-card .card-head > * {
+      min-width: 0;
     }
 
     #planeacionesSectionCopy {
@@ -3705,6 +3712,7 @@
 
     .planeaciones-filter-bar {
       gap: 8px;
+      min-width: 0;
     }
 
     .planeaciones-filter-bar select,
@@ -3717,6 +3725,12 @@
       min-height: 48px;
       padding-top: 10px;
       padding-bottom: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .planeaciones-shell-card .card-head {
+        grid-template-columns: 1fr;
+      }
     }
 
     .plan-card {
