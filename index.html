@@ -5519,7 +5519,8 @@
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
         planeacionesMateriaFilter: '',
-        multiGroupActiveChildByLote: {}
+        multiGroupActiveChildByLote: {},
+        debounceTimers: {}
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -5677,7 +5678,7 @@
     function getCatalogBlocksForModule(moduleName) {
       switch (String(moduleName || '').trim()) {
         case 'planeaciones':
-          return ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'habilidades', 'periodos', 'semanas'];
+          return ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas'];
         case 'alumnos':
           return ['alumnos', 'grupos'];
         case 'notificaciones':
@@ -6582,18 +6583,48 @@
       if (includeAlertas && isAlertasSurfaceVisible()) renderAlertas();
     }
 
+    function scheduleUiDebounce(key, fn, delay = 140) {
+      if (typeof fn !== 'function') return;
+      if (!state.ui) {
+        fn();
+        return;
+      }
+      if (!state.ui.debounceTimers) state.ui.debounceTimers = {};
+      const timers = state.ui.debounceTimers;
+      if (timers[key]) window.clearTimeout(timers[key]);
+      timers[key] = window.setTimeout(() => {
+        delete timers[key];
+        fn();
+      }, delay);
+    }
+
     async function refreshPlaneacionesSurface(options = {}) {
       const includePlaneaciones = options.includePlaneaciones !== false;
       const includeAlertas = options.includeAlertas !== false;
-      const tasks = [];
-      if (includePlaneaciones) tasks.push(refreshPlaneaciones());
-      if (includeAlertas) tasks.push(refreshAlertas());
-      if (tasks.length) await Promise.all(tasks);
-      renderPlaneacionesSurface({
-        includeStats: options.includeStats,
-        includePlaneaciones,
-        includeAlertas
-      });
+      if (includePlaneaciones) {
+        await refreshPlaneaciones();
+        renderPlaneacionesSurface({
+          includeStats: options.includeStats,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+      }
+      if (includeAlertas) {
+        await refreshAlertas();
+        renderPlaneacionesSurface({
+          includeStats: false,
+          includePlaneaciones: false,
+          includeAlertas: true
+        });
+        return;
+      }
+      if (!includePlaneaciones) {
+        renderPlaneacionesSurface({
+          includeStats: options.includeStats,
+          includePlaneaciones: false,
+          includeAlertas: false
+        });
+      }
     }
 
     function renderActiveAdminModule(moduleName = state.activeAdminModule) {
@@ -8159,7 +8190,7 @@
     function bindAdminAlumnosEvents() {
       if ($('adminAlumnosSearch')) $('adminAlumnosSearch').addEventListener('input', (event) => {
         state.alumnosUi.search = event.currentTarget.value;
-        renderAdminAlumnosModule();
+        scheduleUiDebounce('admin-alumnos-search', () => renderAdminAlumnosModule());
       });
       if ($('adminAlumnosGroupFilter')) $('adminAlumnosGroupFilter').addEventListener('change', (event) => {
         state.alumnosUi.grupo = event.currentTarget.value;
@@ -8831,7 +8862,7 @@
     function bindAdminFacilitadoresEvents() {
       if ($('adminFacilitadoresSearch')) $('adminFacilitadoresSearch').addEventListener('input', (event) => {
         state.facilitadoresUi.search = event.currentTarget.value;
-        renderAdminFacilitadoresModule();
+        scheduleUiDebounce('admin-facilitadores-search', () => renderAdminFacilitadoresModule());
       });
       if ($('adminFacilitadoresFilterAllBtn')) $('adminFacilitadoresFilterAllBtn').addEventListener('click', () => {
         state.facilitadoresUi.filter = 'todos';
@@ -9745,7 +9776,7 @@
     function bindAdminTalleresEvents() {
       if ($('adminTalleresSearch')) $('adminTalleresSearch').addEventListener('input', (event) => {
         state.talleresUi.search = event.currentTarget.value;
-        renderAdminTalleresModule();
+        scheduleUiDebounce('admin-talleres-search', () => renderAdminTalleresModule());
       });
       if ($('adminTalleresFilterAllBtn')) $('adminTalleresFilterAllBtn').addEventListener('click', () => {
         state.talleresUi.filter = 'todos';
@@ -10467,7 +10498,7 @@
     function bindAdminMateriasEvents() {
       if ($('adminMateriasSearch')) $('adminMateriasSearch').addEventListener('input', (event) => {
         state.materiasUi.search = event.currentTarget.value;
-        renderAdminMateriasModule();
+        scheduleUiDebounce('admin-materias-search', () => renderAdminMateriasModule());
       });
       if ($('adminMateriasFilterAllBtn')) $('adminMateriasFilterAllBtn').addEventListener('click', () => {
         state.materiasUi.filter = 'todas';
@@ -13298,13 +13329,15 @@
     }
 
     async function persistAlumnoFinalObservationBatch(planId, payloads) {
-      for (const row of payloads) {
-        await api('guardarObsAlumnoFinal', {
+      const concurrency = 3;
+      for (let index = 0; index < payloads.length; index += concurrency) {
+        const batch = payloads.slice(index, index + concurrency);
+        await Promise.all(batch.map((row) => api('guardarObsAlumnoFinal', {
           planeacion_id: row.planId || planId,
           alumno_id: row.alumnoId,
           nota: row.nota,
           request_id: uid('OAFL')
-        });
+        })));
       }
     }
 
