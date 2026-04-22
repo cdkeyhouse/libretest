@@ -9076,16 +9076,14 @@
     }
 
     async function persistAlumnoFinalObservationBatch(planId, payloads) {
-      const concurrency = 3;
-      for (let index = 0; index < payloads.length; index += concurrency) {
-        const batch = payloads.slice(index, index + concurrency);
-        await Promise.all(batch.map((row) => api('guardarObsAlumnoFinal', {
+      await api('guardarObsAlumnoFinalLote', {
+        items: payloads.map((row) => ({
           planeacion_id: row.planId || planId,
           alumno_id: row.alumnoId,
-          nota: row.nota,
-          request_id: uid('OAFL')
-        })));
-      }
+          nota: row.nota
+        })),
+        request_id: uid('OAFL')
+      });
     }
 
     function syncInlineSavedPlanDraft(planId, updatedPlan, options = {}) {
