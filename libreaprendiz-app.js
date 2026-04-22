@@ -222,7 +222,8 @@
         notificationFilter: 'activas',
         planeacionesMateriaFilter: '',
         multiGroupActiveChildByLote: {},
-        debounceTimers: {}
+        debounceTimers: {},
+        adminUiEventsBound: false
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -981,6 +982,7 @@
         payload.planeaciones = Array.isArray(state.planeaciones) ? state.planeaciones.slice(0, PLANEACIONES_PAGE_SIZE) : [];
         payload.alertas = Array.isArray(state.alertas) ? state.alertas.slice(0, 20) : [];
         payload.notificaciones = Array.isArray(state.notificaciones) ? state.notificaciones.slice(0, 20) : [];
+        payload.openPlanId = String(state.openPlanId || '').trim();
         payload.planeacionesMeta = {
           loaded: !!(state.ui && state.ui.planeacionesLoaded),
           hasMore: !!(state.ui && state.ui.planeacionesHasMore),
@@ -1011,6 +1013,9 @@
       }
       if (Array.isArray(snapshot.notificaciones)) {
         state.notificaciones = snapshot.notificaciones;
+      }
+      if (snapshot.openPlanId && Array.isArray(snapshot.planeaciones) && snapshot.planeaciones.some((plan) => plan && plan.planeacion_id === snapshot.openPlanId)) {
+        state.openPlanId = snapshot.openPlanId;
       }
       if (snapshot.planeacionesMeta && state.ui) {
         state.ui.planeacionesLoaded = !!snapshot.planeacionesMeta.loaded;
@@ -1176,7 +1181,10 @@
       primeLoginSnapshotCatalogos(facilitadorId);
       const data = await api('login', { facilitador_id: facilitadorId, pin });
       saveSession({ token: data.token, usuario: data.usuario });
-      if (canUseAdminShell()) bindWindowActionGroup('admin');
+      if (canUseAdminShell()) {
+        bindWindowActionGroup('admin');
+        bindAdminUiEventsOnce();
+      }
       restoreBootSnapshotForSession({ usuario: data.usuario });
       clearLoginInputs();
       renderBootSurface();
@@ -1365,34 +1373,52 @@
 
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
-      await refreshPlaneaciones();
-      state.dashboardStats = Object.assign({}, state.dashboardStats || {}, {
-        planeaciones_visibles: Array.isArray(state.planeaciones) ? state.planeaciones.length : 0
-      });
+      const surfaceCatalogBlocks = getPlaneacionesSurfaceCatalogBlocks();
+      const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
+        alert_limit: 20,
+        catalog_blocks: surfaceCatalogBlocks
+      }));
+      if (bootData && bootData.catalogos && Object.keys(bootData.catalogos).length) {
+        mergeCatalogosPayload(bootData.catalogos, surfaceCatalogBlocks);
+      }
+      state.dashboardStats = bootData && bootData.stats ? bootData.stats : {};
+      state.planeaciones = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
+        ? bootData.planeaciones.rows
+        : [];
+      state.alertas = Array.isArray(bootData && bootData.alertas && bootData.alertas.rows)
+        ? bootData.alertas.rows
+        : [];
+      if (state.ui) {
+        state.ui.planeacionesLoaded = true;
+        state.ui.planeacionesLoading = false;
+        state.ui.planeacionesLoadingMore = false;
+        state.ui.planeacionesOffset = state.planeaciones.length;
+        state.ui.planeacionesHasMore = !!(bootData && bootData.planeaciones && bootData.planeaciones.has_more);
+      }
+      persistCurrentBootSnapshot('facilitador_boot');
       renderSession();
       renderStats();
       renderPlaneacionesSurface({
         includeStats: false,
         includePlaneaciones: true,
-        includeAlertas: false
+        includeAlertas: true
       });
       renderInstitutionalNotices();
       syncRoleUi();
       const deferredPromise = scheduleAfterPaint(async () => {
-        await Promise.allSettled([
-          refreshAlertas(),
-          ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'surface' })
-        ]);
-        renderPlaneacionesSurface({
-          includeStats: false,
-          includePlaneaciones: false,
-          includeAlertas: true
-        });
         renderBaseSelects();
         renderPlanBuilderVisibility();
-        renderInstitutionalNotices();
+        if (state.openPlanId && Array.isArray(state.planeaciones) && state.planeaciones.some((plan) => plan && plan.planeacion_id === state.openPlanId)) {
+          await scheduleAfterPaint(async () => {
+            try {
+              await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+              renderPlaneacionesList();
+            } catch (_) {}
+          }, 120);
+        }
         await scheduleAfterPaint(async () => {
           await refreshNotificaciones();
+          persistCurrentBootSnapshot('notificaciones');
           renderInstitutionalNotices();
         }, 180);
       }, 80);
@@ -1799,7 +1825,7 @@
     function renderStats() {
       $('statAlumnos').textContent = String(canUseAdminShell()
         ? (getAdminAlumnosCount() || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0))
-        : (state.catalogos.alumnos.length || 0));
+        : (state.catalogos.alumnos.length || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0) || 0));
       $('statPlaneaciones').textContent = String(Number(state.dashboardStats && state.dashboardStats.planeaciones_visibles || 0) || state.planeaciones.length || 0);
       $('statSemanas').textContent = String(state.catalogos.semanas.length || 0);
       $('statMaterias').textContent = String(state.catalogos.materias.length || Number(state.dashboardStats && state.dashboardStats.materias_activas || 0) || 0);
@@ -8939,6 +8965,75 @@
       });
     }
 
+    function bindAdminUiEventsOnce() {
+      if (!canUseAdminShell() || !state.ui || state.ui.adminUiEventsBound) return;
+      if ($('repAlumno')) $('repAlumno').addEventListener('change', (event) => {
+        setReporteSelection('alumno_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      if ($('repPeriodo')) $('repPeriodo').addEventListener('change', (event) => {
+        setReporteSelection('periodo_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      if ($('adminReportAlumno')) $('adminReportAlumno').addEventListener('change', (event) => {
+        setReporteSelection('alumno_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      if ($('adminReportPeriodo')) $('adminReportPeriodo').addEventListener('change', (event) => {
+        setReporteSelection('periodo_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      $('generateNowBtn').addEventListener('click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
+        button: event.currentTarget,
+        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      $('requestReportBtn').addEventListener('click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
+        button: event.currentTarget,
+        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      $('statusReportBtn').addEventListener('click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
+        button: event.currentTarget,
+        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      if ($('adminGenerateNowBtn')) $('adminGenerateNowBtn').addEventListener('click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
+        button: event.currentTarget,
+        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      if ($('adminRequestReportBtn')) $('adminRequestReportBtn').addEventListener('click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
+        button: event.currentTarget,
+        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      if ($('adminStatusReportBtn')) $('adminStatusReportBtn').addEventListener('click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
+        button: event.currentTarget,
+        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      if ($('adminNotificationNewBtn')) $('adminNotificationNewBtn').addEventListener('click', () => openNotificationEditor());
+      if ($('adminNotificationFilterActiveBtn')) $('adminNotificationFilterActiveBtn').addEventListener('click', () => setNotificationFilter('activas'));
+      if ($('adminNotificationFilterScheduledBtn')) $('adminNotificationFilterScheduledBtn').addEventListener('click', () => setNotificationFilter('programadas'));
+      if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').addEventListener('click', () => setNotificationFilter('borradores'));
+      if ($('adminNotificationFilterClosedBtn')) $('adminNotificationFilterClosedBtn').addEventListener('click', () => setNotificationFilter('cerradas'));
+      if ($('adminNotificationTitle')) $('adminNotificationTitle').addEventListener('input', (event) => updateNotificationEditorField('titulo', event.currentTarget.value));
+      if ($('adminNotificationMessage')) $('adminNotificationMessage').addEventListener('input', (event) => updateNotificationEditorField('mensaje', event.currentTarget.value));
+      if ($('adminNotificationPriority')) $('adminNotificationPriority').addEventListener('change', (event) => updateNotificationEditorField('prioridad', event.currentTarget.value));
+      if ($('adminNotificationStart')) $('adminNotificationStart').addEventListener('change', (event) => updateNotificationEditorField('fecha_inicio', event.currentTarget.value));
+      if ($('adminNotificationEnd')) $('adminNotificationEnd').addEventListener('change', (event) => updateNotificationEditorField('fecha_cierre', event.currentTarget.value));
+      if ($('adminNotificationAudience')) $('adminNotificationAudience').addEventListener('change', (event) => updateNotificationEditorField('visible_para', event.currentTarget.value));
+      if ($('adminNotificationSaveDraftBtn')) $('adminNotificationSaveDraftBtn').addEventListener('click', (event) => saveNotificationEditor(event.currentTarget, 'borrador'));
+      if ($('adminNotificationPublishBtn')) $('adminNotificationPublishBtn').addEventListener('click', (event) => saveNotificationEditor(event.currentTarget, 'publicada'));
+      if ($('adminNotificationCancelBtn')) $('adminNotificationCancelBtn').addEventListener('click', () => {
+        resetNotificationEditor();
+        renderNotificationsAdmin();
+      });
+      bindAdminAlumnosEvents();
+      document.querySelectorAll('[data-admin-module]').forEach((btn) => {
+        btn.addEventListener('click', () => activateAdminModule(btn.dataset.adminModule));
+      });
+      document.querySelectorAll('[data-admin-module-launch]').forEach((btn) => {
+        btn.addEventListener('click', () => activateAdminModule(btn.dataset.adminModuleLaunch));
+      });
+      state.ui.adminUiEventsBound = true;
+    }
+
     function bindEvents() {
       bindHiddenPingShortcut();
       document.addEventListener('click', (event) => {
@@ -9001,46 +9096,6 @@
         button: event.currentTarget,
         key: buildActionKey('crearNotaDirectora', [$('notaAlumno').value, $('notaAlcance').value, $('notaPeriodo').value, $('notaTipo').value, $('notaTexto').value.trim().slice(0, 40)])
       }));
-      if ($('repAlumno')) $('repAlumno').addEventListener('change', (event) => {
-        setReporteSelection('alumno_id', event.currentTarget.value);
-        renderAdminReporteCicloModule();
-      });
-      if ($('repPeriodo')) $('repPeriodo').addEventListener('change', (event) => {
-        setReporteSelection('periodo_id', event.currentTarget.value);
-        renderAdminReporteCicloModule();
-      });
-      if ($('adminReportAlumno')) $('adminReportAlumno').addEventListener('change', (event) => {
-        setReporteSelection('alumno_id', event.currentTarget.value);
-        renderAdminReporteCicloModule();
-      });
-      if ($('adminReportPeriodo')) $('adminReportPeriodo').addEventListener('change', (event) => {
-        setReporteSelection('periodo_id', event.currentTarget.value);
-        renderAdminReporteCicloModule();
-      });
-      $('generateNowBtn').addEventListener('click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
-        button: event.currentTarget,
-        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
-      }));
-      $('requestReportBtn').addEventListener('click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
-        button: event.currentTarget,
-        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
-      }));
-      $('statusReportBtn').addEventListener('click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
-        button: event.currentTarget,
-        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
-      }));
-      if ($('adminGenerateNowBtn')) $('adminGenerateNowBtn').addEventListener('click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
-        button: event.currentTarget,
-        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
-      }));
-      if ($('adminRequestReportBtn')) $('adminRequestReportBtn').addEventListener('click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
-        button: event.currentTarget,
-        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
-      }));
-      if ($('adminStatusReportBtn')) $('adminStatusReportBtn').addEventListener('click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
-        button: event.currentTarget,
-        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
-      }));
       $('planFecha').addEventListener('change', renderPlanWeekResolved);
       $('planMateria').addEventListener('change', () => {
         state.planEditor.selectedSubmateriaId = '';
@@ -9060,34 +9115,11 @@
         clearPlaneacionesMateriaFilter();
         await refreshPlaneacionesSurface({ includeAlertas: false });
       }, { button: event.currentTarget }));
-      if ($('adminNotificationNewBtn')) $('adminNotificationNewBtn').addEventListener('click', () => openNotificationEditor());
-      if ($('adminNotificationFilterActiveBtn')) $('adminNotificationFilterActiveBtn').addEventListener('click', () => setNotificationFilter('activas'));
-if ($('adminNotificationFilterScheduledBtn')) $('adminNotificationFilterScheduledBtn').addEventListener('click', () => setNotificationFilter('programadas'));
-if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').addEventListener('click', () => setNotificationFilter('borradores'));
-      if ($('adminNotificationFilterClosedBtn')) $('adminNotificationFilterClosedBtn').addEventListener('click', () => setNotificationFilter('cerradas'));
-      if ($('adminNotificationTitle')) $('adminNotificationTitle').addEventListener('input', (event) => updateNotificationEditorField('titulo', event.currentTarget.value));
-      if ($('adminNotificationMessage')) $('adminNotificationMessage').addEventListener('input', (event) => updateNotificationEditorField('mensaje', event.currentTarget.value));
-      if ($('adminNotificationPriority')) $('adminNotificationPriority').addEventListener('change', (event) => updateNotificationEditorField('prioridad', event.currentTarget.value));
-      if ($('adminNotificationStart')) $('adminNotificationStart').addEventListener('change', (event) => updateNotificationEditorField('fecha_inicio', event.currentTarget.value));
-      if ($('adminNotificationEnd')) $('adminNotificationEnd').addEventListener('change', (event) => updateNotificationEditorField('fecha_cierre', event.currentTarget.value));
-      if ($('adminNotificationAudience')) $('adminNotificationAudience').addEventListener('change', (event) => updateNotificationEditorField('visible_para', event.currentTarget.value));
-      if ($('adminNotificationSaveDraftBtn')) $('adminNotificationSaveDraftBtn').addEventListener('click', (event) => saveNotificationEditor(event.currentTarget, 'borrador'));
-      if ($('adminNotificationPublishBtn')) $('adminNotificationPublishBtn').addEventListener('click', (event) => saveNotificationEditor(event.currentTarget, 'publicada'));
-      if ($('adminNotificationCancelBtn')) $('adminNotificationCancelBtn').addEventListener('click', () => {
-        resetNotificationEditor();
-        renderNotificationsAdmin();
-      });
-      bindAdminAlumnosEvents();
       $('notaAlcance').addEventListener('change', syncNotePeriodoState);
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
       });
-      document.querySelectorAll('[data-admin-module]').forEach((btn) => {
-        btn.addEventListener('click', () => activateAdminModule(btn.dataset.adminModule));
-      });
-      document.querySelectorAll('[data-admin-module-launch]').forEach((btn) => {
-        btn.addEventListener('click', () => activateAdminModule(btn.dataset.adminModuleLaunch));
-      });
+      if (canUseAdminShell()) bindAdminUiEventsOnce();
     }
 
     const windowActionGroups = {
@@ -9203,6 +9235,7 @@ if ($('adminNotificationFilterDraftBtn')) $('adminNotificationFilterDraftBtn').a
       bindWindowActionGroup('core');
       if (state.session && state.session.token && canUseAdminShell()) {
         bindWindowActionGroup('admin');
+        bindAdminUiEventsOnce();
       }
       bindEvents();
       clearLoginInputs();
