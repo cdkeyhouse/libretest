@@ -1435,7 +1435,7 @@
       renderInstitutionalNotices();
       syncRoleUi();
       const deferredPromise = scheduleAfterPaint(async () => {
-        renderBaseSelects();
+        renderBaseSelects({ planeaciones: true });
         renderPlanBuilderVisibility();
         if (state.openPlanId && Array.isArray(state.planeaciones) && state.planeaciones.some((plan) => plan && plan.planeacion_id === state.openPlanId)) {
           await scheduleAfterPaint(async () => {
@@ -6553,6 +6553,41 @@
       renderPlanEditor();
     }
 
+    function renderBaseSelects(options = {}) {
+      const shouldRenderPlaneaciones = options.planeaciones !== false && (
+        currentViewNeedsPlaneaciones() ||
+        isPlaneacionesSurfaceVisible() ||
+        isPlanBuilderExpanded() ||
+        !!state.openPlanId
+      );
+      const shouldRenderSeguimiento = !!options.seguimiento;
+      const shouldRenderReportes = !!options.reportes;
+
+      if (shouldRenderPlaneaciones) {
+        fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
+        syncPlanSubmateriaSelect();
+        fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
+        fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => getGrupoDisplayName(g), 'Todos los grupos');
+        if (canUseAdminShell()) {
+          fillSelect($('filterFacilitador'), state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)), (f) => f.facilitador_id, (f) => f.nombre_mostrado || f.nombre_completo || f.facilitador_id, 'Todos los facilitadores');
+        }
+        renderPlanEditor();
+      }
+
+      if (shouldRenderSeguimiento) {
+        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
+        fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
+      }
+
+      if (shouldRenderReportes) {
+        const reportUi = getReportSelectionState();
+        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+        if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
+      }
+    }
+
     function updateEditorActivityField(index, field, value) {
       if (!state.planEditor.activities[index]) return;
       state.planEditor.activities[index][field] = value;
@@ -8011,8 +8046,12 @@
       if (adminMode) renderActiveAdminModule(activeAdminModule);
       renderInstitutionalNotices();
       if (shouldRenderCatalogSelects) {
-        renderPeriodSelects();
-        renderBaseSelects();
+        if (shouldRenderReportes) renderPeriodSelects();
+        renderBaseSelects({
+          planeaciones: shouldRenderPlaneaciones,
+          seguimiento: shouldRenderSeguimiento,
+          reportes: shouldRenderReportes
+        });
       }
       if (shouldRenderSeguimiento) {
         renderObsAlumnoSelect();
