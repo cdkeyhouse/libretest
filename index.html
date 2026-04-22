@@ -3004,6 +3004,19 @@
     .activity-editor-top .actions.compact {
       margin: 0;
     }
+    .activity-remove-desktop {
+      display: inline-flex;
+    }
+    .activity-remove-mobile {
+      display: none;
+      margin-top: 10px;
+    }
+    .activity-remove-mobile .btn-ghost {
+      min-height: 34px;
+      padding: 7px 12px;
+      font-size: 0.84rem;
+      border-radius: 12px;
+    }
     .activity-chip {
       display: inline-flex;
       align-items: center;
@@ -4009,7 +4022,19 @@
         min-width: 0;
       }
 
-      @media (max-width: 720px) {
+    @media (max-width: 720px) {
+        .activity-editor-top {
+          align-items: flex-start;
+        }
+
+        .activity-remove-desktop {
+          display: none;
+        }
+
+        .activity-remove-mobile {
+          display: block;
+        }
+
         .plan-focus-shell {
           margin-bottom: 12px;
         }
@@ -11168,13 +11193,15 @@
           '<div class="activity-editor">' +
             '<div class="activity-editor-top">' +
               '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
-              '<div class="actions compact">' +
+              '<div class="actions compact activity-remove-desktop">' +
                 '<button class="btn-ghost" type="button" onclick="removeEditorActivity(' + index + ')">Quitar</button>' +
               '</div>' +
             '</div>' +
-            '<label>Actividad</label>' +
             '<textarea onchange="updateEditorActivityField(' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
             seguimientoHtml +
+            '<div class="activity-remove-mobile">' +
+              '<button class="btn-ghost" type="button" onclick="removeEditorActivity(' + index + ')">Quitar actividad</button>' +
+            '</div>' +
           '</div>'
         );
       }).join('');
