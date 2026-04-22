@@ -11080,7 +11080,9 @@
       try {
         const data = await api('getPlaneacionDetalle', { planeacion_id: planId });
         if (data && data.planeacion) return data.planeacion;
-      } catch (_) {}
+      } catch (err) {
+        if (!err || err.code !== 'NOT_FOUND') throw err;
+      }
       const fallback = await api('getPlaneaciones', {
         planeacion_id: planId,
         include_detail: true,
