@@ -1432,6 +1432,7 @@
       const requestedOpenPlanId = String(state.openPlanId || '').trim();
       const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
         alert_limit: 20,
+        notification_limit: 20,
         catalog_blocks: surfaceCatalogBlocks,
         open_plan_id: requestedOpenPlanId || ''
       }));
@@ -1445,6 +1446,10 @@
       state.alertas = Array.isArray(bootData && bootData.alertas && bootData.alertas.rows)
         ? bootData.alertas.rows
         : [];
+      const bootHasNotificaciones = !!(bootData && bootData.notificaciones && Array.isArray(bootData.notificaciones.rows));
+      state.notificaciones = bootHasNotificaciones
+        ? bootData.notificaciones.rows
+        : (Array.isArray(state.notificaciones) ? state.notificaciones : []);
       if (bootData && bootData.open_planeacion && bootData.open_planeacion.planeacion_id) {
         upsertPlaneacionRow(bootData.open_planeacion);
       }
@@ -1479,7 +1484,7 @@
             } catch (_) {}
           }, 120);
         }
-        if (!hadLocalNotificaciones) {
+        if (!bootHasNotificaciones && !hadLocalNotificaciones) {
           await scheduleAfterPaint(async () => {
             await refreshNotificaciones();
             persistCurrentBootSnapshot('notificaciones');
