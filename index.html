@@ -11106,7 +11106,11 @@
         .filter((plan) => !plan.detail_loaded)
         .map((plan) => plan.planeacion_id);
       if (!missingPlanIds.length) return entry;
-      await Promise.all(missingPlanIds.map((siblingPlanId) => ensurePlaneacionDetailLoaded(siblingPlanId, { silent: true })));
+      const concurrency = 2;
+      for (let index = 0; index < missingPlanIds.length; index += concurrency) {
+        const batch = missingPlanIds.slice(index, index + concurrency);
+        await Promise.all(batch.map((siblingPlanId) => ensurePlaneacionDetailLoaded(siblingPlanId, { silent: true })));
+      }
       const refreshedEntry = getPlaneacionEntryByKey(entry.key) || entry;
       if (!options.silent) renderPlaneacionesList();
       return refreshedEntry;
