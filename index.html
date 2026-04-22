@@ -1087,6 +1087,10 @@
     .plan-loading-line {
       display: block;
       min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       color: rgba(245, 242, 234, 0.92);
       line-height: 1.25;
     }
@@ -1102,6 +1106,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      max-width: 100%;
       min-height: 36px;
       padding: 6px 12px;
       border-radius: 999px;
@@ -1114,6 +1119,8 @@
       text-transform: uppercase;
     }
     .plan-loading-btn {
+      width: 100%;
+      max-width: 140px;
       min-height: 38px;
       padding: 9px 14px;
       border-radius: 14px;
@@ -1122,10 +1129,14 @@
       color: rgba(245, 242, 234, 0.82);
       font-weight: 800;
       cursor: wait;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .plan-loading-phrase-chip {
       display: inline-flex;
       align-items: center;
+      flex: 0 0 auto;
       min-height: 28px;
       padding: 6px 12px;
       border-radius: 999px;
@@ -3824,7 +3835,7 @@
       .plan-compact-cell-materia { grid-area: materia; }
       .plan-compact-cell-summary { grid-area: summary; align-self: center; }
       .plan-compact-cell-status { grid-area: status; align-self: center; }
-      .plan-compact-cell-actions { grid-area: actions; align-self: center; }
+    .plan-compact-cell-actions { grid-area: actions; align-self: center; }
       .plan-compact-cell-phrase {
         grid-area: phrase;
         padding-top: 4px;
@@ -3833,6 +3844,9 @@
         align-items: center;
         gap: 10px;
         flex-wrap: wrap;
+      }
+      .plan-compact-cell-phrase .plan-loading-line {
+        flex: 1 1 220px;
       }
 
       .plan-compact-label {
