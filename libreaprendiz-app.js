@@ -3,6 +3,8 @@
       bootSnapshot: 'la_v8_boot_snapshot'
     };
     const BOOT_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 12;
+    const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
+    const OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
     const LOGIN_PRELOAD_CATALOG_BLOCKS = ['materias', 'semanas', 'grupos'];
 
     function createEmptyAlumnoEditorState() {
@@ -901,6 +903,14 @@
       return (Date.now() - savedAtMs) <= BOOT_SNAPSHOT_MAX_AGE_MS;
     }
 
+    function isTimestampFreshWithin(isoString, maxAgeMs) {
+      const value = String(isoString || '').trim();
+      if (!value || !Number.isFinite(Number(maxAgeMs)) || Number(maxAgeMs) <= 0) return false;
+      const savedAtMs = Date.parse(value);
+      if (!Number.isFinite(savedAtMs)) return false;
+      return (Date.now() - savedAtMs) <= Number(maxAgeMs);
+    }
+
     function getBootSnapshotByUserKey(userKey) {
       if (!userKey) return null;
       const snapshot = readBootSnapshotStore()[userKey];
@@ -1029,6 +1039,76 @@
       }
     }
 
+    function getOpenPlanObsSnapshotSavedAt(planId = state.openPlanId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !state.ui || !state.ui.planObservacionesSavedAtByPlan) return '';
+      return String(state.ui.planObservacionesSavedAtByPlan[normalizedPlanId] || '').trim();
+    }
+
+    function markAlertasFresh(savedAt = new Date().toISOString()) {
+      if (!state.ui) return;
+      state.ui.alertasSavedAt = String(savedAt || new Date().toISOString());
+    }
+
+    function markNotificacionesFresh(savedAt = new Date().toISOString()) {
+      if (!state.ui) return;
+      state.ui.notificacionesSavedAt = String(savedAt || new Date().toISOString());
+    }
+
+    function markPlaneacionObservacionesFresh(planId, savedAt = new Date().toISOString()) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !state.ui) return;
+      if (!state.ui.planObservacionesSavedAtByPlan) state.ui.planObservacionesSavedAtByPlan = {};
+      state.ui.planObservacionesSavedAtByPlan[normalizedPlanId] = String(savedAt || new Date().toISOString());
+    }
+
+    function getSnapshotMetaForSession(sessionLike = state.session) {
+      const snapshot = getBootSnapshotForSession(sessionLike);
+      return snapshot && snapshot.meta && typeof snapshot.meta === 'object' ? snapshot.meta : {};
+    }
+
+    function getSnapshotOpenPlanObservaciones(planId, sessionLike = state.session) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const snapshot = getBootSnapshotForSession(sessionLike);
+      if (!snapshot || !snapshot.openPlan || String(snapshot.openPlan.planeacion_id || '').trim() !== normalizedPlanId) return null;
+      if (!snapshot.openPlan.obs_loaded) return null;
+      const meta = snapshot.meta && typeof snapshot.meta === 'object' ? snapshot.meta : {};
+      const obsSavedAt = String(meta.open_plan_obs_saved_at || snapshot.saved_at || '').trim();
+      if (!isTimestampFreshWithin(obsSavedAt, OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS)) return null;
+      try {
+        return {
+          planeacion_id: normalizedPlanId,
+          obs_semana: Array.isArray(snapshot.openPlan.obs_semana) ? JSON.parse(JSON.stringify(snapshot.openPlan.obs_semana)) : [],
+          obs_alumno_final: Array.isArray(snapshot.openPlan.obs_alumno_final) ? JSON.parse(JSON.stringify(snapshot.openPlan.obs_alumno_final)) : [],
+          obs_loaded: true
+        };
+      } catch (_) {
+        return {
+          planeacion_id: normalizedPlanId,
+          obs_semana: Array.isArray(snapshot.openPlan.obs_semana) ? snapshot.openPlan.obs_semana.slice() : [],
+          obs_alumno_final: Array.isArray(snapshot.openPlan.obs_alumno_final) ? snapshot.openPlan.obs_alumno_final.slice() : [],
+          obs_loaded: true
+        };
+      }
+    }
+
+    function shouldReuseFacilitadorFeedSnapshot(kind) {
+      if (canUseAdminShell() || getCurrentRole() !== 'facilitador') return false;
+      const meta = getSnapshotMetaForSession();
+      if (kind === 'alertas') {
+        if (!Array.isArray(state.alertas)) return false;
+        const savedAt = String((state.ui && state.ui.alertasSavedAt) || meta.alertas_saved_at || '').trim();
+        return isTimestampFreshWithin(savedAt, FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS);
+      }
+      if (kind === 'notificaciones') {
+        if (!Array.isArray(state.notificaciones)) return false;
+        const savedAt = String((state.ui && state.ui.notificacionesSavedAt) || meta.notificaciones_saved_at || '').trim();
+        return isTimestampFreshWithin(savedAt, FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS);
+      }
+      return false;
+    }
+
     function persistOpenPlanSnapshotSoon(kind = 'planeacion_draft_local') {
       if (!state.ui) return;
       const timerKey = 'openPlanSnapshotPersist';
@@ -1065,6 +1145,11 @@
           hasMore: !!(state.ui && state.ui.planeacionesHasMore),
           offset: Number(state.ui && state.ui.planeacionesOffset || 0)
         };
+        payload.meta = {
+          alertas_saved_at: String((state.ui && state.ui.alertasSavedAt) || ''),
+          notificaciones_saved_at: String((state.ui && state.ui.notificacionesSavedAt) || ''),
+          open_plan_obs_saved_at: getOpenPlanObsSnapshotSavedAt(payload.openPlanId)
+        };
       } else if (canUseAdminShell()) {
         payload.alertas = Array.isArray(state.alertas) ? state.alertas.slice(0, 20) : [];
         payload.notificaciones = Array.isArray(state.notificaciones) ? state.notificaciones.slice(0, 20) : [];
@@ -1087,12 +1172,20 @@
       }
       if (Array.isArray(snapshot.alertas)) {
         state.alertas = snapshot.alertas;
+        markAlertasFresh(snapshot.meta && snapshot.meta.alertas_saved_at ? snapshot.meta.alertas_saved_at : snapshot.saved_at);
       }
       if (Array.isArray(snapshot.notificaciones)) {
         state.notificaciones = snapshot.notificaciones;
+        markNotificacionesFresh(snapshot.meta && snapshot.meta.notificaciones_saved_at ? snapshot.meta.notificaciones_saved_at : snapshot.saved_at);
       }
       if (snapshot.openPlan && typeof snapshot.openPlan === 'object' && snapshot.openPlan.planeacion_id) {
         upsertPlaneacionRow(snapshot.openPlan);
+        if (snapshot.openPlan.obs_loaded) {
+          markPlaneacionObservacionesFresh(
+            snapshot.openPlan.planeacion_id,
+            snapshot.meta && snapshot.meta.open_plan_obs_saved_at ? snapshot.meta.open_plan_obs_saved_at : snapshot.saved_at
+          );
+        }
       }
       if (snapshot.openPlanId && Array.isArray(snapshot.planeaciones) && snapshot.planeaciones.some((plan) => plan && plan.planeacion_id === snapshot.openPlanId)) {
         state.openPlanId = snapshot.openPlanId;
@@ -1363,19 +1456,29 @@
       }
     }
 
-    async function refreshAlertas() {
+    async function refreshAlertas(options = {}) {
       ensureLoggedIn();
+      if (!options.force && shouldReuseFacilitadorFeedSnapshot('alertas')) {
+        return { rows: Array.isArray(state.alertas) ? state.alertas : [], reusedSnapshot: true };
+      }
       const data = await api('getAlertas', { limit: 20 });
       state.alertas = Array.isArray(data.rows) ? data.rows : [];
+      markAlertasFresh();
       persistCurrentBootSnapshot('alertas');
+      return data;
     }
 
-    async function refreshNotificaciones() {
+    async function refreshNotificaciones(options = {}) {
       ensureLoggedIn();
+      if (!options.force && shouldReuseFacilitadorFeedSnapshot('notificaciones')) {
+        return { rows: Array.isArray(state.notificaciones) ? state.notificaciones : [], reusedSnapshot: true };
+      }
       const limit = canUseAdminShell() ? 100 : 120;
       const data = await api('getNotificaciones', { limit });
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
+      markNotificacionesFresh();
       persistCurrentBootSnapshot('notificaciones');
+      return data;
     }
 
     function shouldUseFastFacilitadorPlaneacionesBoot(options = {}) {
@@ -1476,12 +1579,17 @@
       state.alertas = Array.isArray(bootData && bootData.alertas && bootData.alertas.rows)
         ? bootData.alertas.rows
         : [];
+      markAlertasFresh();
       const bootHasNotificaciones = !!(bootData && bootData.notificaciones && Array.isArray(bootData.notificaciones.rows));
       state.notificaciones = bootHasNotificaciones
         ? bootData.notificaciones.rows
         : (Array.isArray(state.notificaciones) ? state.notificaciones : []);
+      if (bootHasNotificaciones) markNotificacionesFresh();
       if (bootData && bootData.open_planeacion && bootData.open_planeacion.planeacion_id) {
         upsertPlaneacionRow(bootData.open_planeacion);
+        if (bootData.open_planeacion.obs_loaded) {
+          markPlaneacionObservacionesFresh(bootData.open_planeacion.planeacion_id);
+        }
       }
       if (state.ui) {
         state.ui.planeacionesLoaded = true;
@@ -1523,7 +1631,7 @@
             } catch (_) {}
           }, 120);
         }
-        if (!bootHasNotificaciones && !hadLocalNotificaciones) {
+        if (!bootHasNotificaciones && !hadLocalNotificaciones && !shouldReuseFacilitadorFeedSnapshot('notificaciones')) {
           await scheduleAfterPaint(async () => {
             await refreshNotificaciones();
             persistCurrentBootSnapshot('notificaciones');
@@ -6439,6 +6547,15 @@
       const current = getPlanById(planId);
       if (!current || !current.detail_loaded) return current;
       if (current.obs_loaded) return current;
+      if (!options.force) {
+        const snapshotObs = getSnapshotOpenPlanObservaciones(planId);
+        if (snapshotObs) {
+          const updatedFromSnapshot = upsertPlaneacionRow(snapshotObs);
+          markPlaneacionObservacionesFresh(planId);
+          if (!options.silent) renderPlaneacionesList();
+          return updatedFromSnapshot;
+        }
+      }
       if (!state.ui.planObservacionesPromises) state.ui.planObservacionesPromises = {};
       if (state.ui.planObservacionesPromises[planId]) {
         return state.ui.planObservacionesPromises[planId];
@@ -6446,6 +6563,7 @@
       const promise = fetchPlaneacionObservaciones(planId)
         .then((payload) => {
           const updated = upsertPlaneacionRow(payload);
+          markPlaneacionObservacionesFresh(planId);
           if (!options.silent) renderPlaneacionesList();
           persistCurrentBootSnapshot('planeacion_obs_hidratadas');
           return updated;
@@ -8907,6 +9025,14 @@
       const includeStats = options.includeStats === true;
       const includePlaneaciones = options.includePlaneaciones === true;
       const delay = Number(options.delay || 140);
+      if (!options.force && shouldReuseFacilitadorFeedSnapshot('alertas')) {
+        renderPlaneacionesSurface({
+          includeStats,
+          includePlaneaciones,
+          includeAlertas: true
+        });
+        return Promise.resolve();
+      }
       if (state.ui && state.ui.deferredPlaneacionesAlertRefreshPromise) {
         return state.ui.deferredPlaneacionesAlertRefreshPromise;
       }
