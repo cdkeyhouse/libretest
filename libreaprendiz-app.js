@@ -1391,7 +1391,7 @@
       if (bootData && bootData.catalogos && Object.keys(bootData.catalogos).length) {
         mergeCatalogosPayload(bootData.catalogos, surfaceCatalogBlocks);
       }
-      state.dashboardStats = bootData && bootData.stats ? bootData.stats : {};
+      state.dashboardStats = Object.assign({}, state.dashboardStats || {}, bootData && bootData.stats ? bootData.stats : {});
       state.planeaciones = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
         ? bootData.planeaciones.rows
         : [];
@@ -1834,9 +1834,14 @@
     }
 
     function renderStats() {
+      const adminAlumnosCount = getAdminAlumnosCount();
+      const dashboardAlumnoCount = state.dashboardStats && state.dashboardStats.alumnos_activos;
+      const facilitatorAlumnoCount = state.catalogos.alumnos.length
+        ? state.catalogos.alumnos.length
+        : (dashboardAlumnoCount != null ? Number(dashboardAlumnoCount) : null);
       $('statAlumnos').textContent = String(canUseAdminShell()
-        ? (getAdminAlumnosCount() || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0))
-        : (state.catalogos.alumnos.length || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0) || 0));
+        ? (adminAlumnosCount || Number(dashboardAlumnoCount || 0))
+        : (facilitatorAlumnoCount != null ? facilitatorAlumnoCount : '--'));
       $('statPlaneaciones').textContent = String(Number(state.dashboardStats && state.dashboardStats.planeaciones_visibles || 0) || state.planeaciones.length || 0);
       $('statSemanas').textContent = String(state.catalogos.semanas.length || 0);
       $('statMaterias').textContent = String(state.catalogos.materias.length || Number(state.dashboardStats && state.dashboardStats.materias_activas || 0) || 0);
