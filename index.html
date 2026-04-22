@@ -3649,16 +3649,30 @@
 
     .plan-date-detected-field {
       display: grid;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
+      align-content: start;
     }
 
-    .plan-date-detected-field .inline-note {
-      min-height: 44px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      font-size: 0.88rem;
-      line-height: 1.35;
+    .plan-date-inline-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .plan-date-inline-meta .inline-note {
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      line-height: 1.2;
+      min-width: 0;
+      flex: 1 1 220px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .plan-date-resolved-head {
@@ -3666,10 +3680,11 @@
       align-items: center;
       gap: 6px;
       color: var(--muted);
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       font-weight: 800;
       letter-spacing: 0.02em;
       text-transform: uppercase;
+      flex: 0 0 auto;
     }
 
     .planeaciones-shell-card .card-head {
@@ -5153,8 +5168,10 @@
                 <div class="plan-date-detected-field">
                   <label for="planFecha">Fecha de referencia</label>
                   <input id="planFecha" type="date">
-                  <div class="plan-date-resolved-head">Semana detectada</div>
-                  <div id="planSemanaResolved" class="inline-note">Selecciona una fecha para resolver la semana.</div>
+                  <div class="plan-date-inline-meta">
+                    <div class="plan-date-resolved-head">Semana detectada</div>
+                    <div id="planSemanaResolved" class="inline-note">Selecciona una fecha para resolver la semana.</div>
+                  </div>
                 </div>
                 <div>
                   <label for="planMateria">Materia</label>
@@ -11985,7 +12002,7 @@
             '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
           '</div>' +
           '<div class="grid-3">' +
-            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"><div class="plan-date-resolved-head">Semana detectada</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana detectada</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
             '<div><label>Materia</label><select onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
@@ -12047,7 +12064,7 @@
       return (
         '<div class="plan-open-editor">' +
           '<div class="grid-3">' +
-            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-resolved-head">Semana detectada</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana detectada</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
             '<div><label>Materia</label><select onchange="updateOpenPlanDraftField(\'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
