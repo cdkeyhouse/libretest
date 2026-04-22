@@ -264,7 +264,8 @@
     let actionToastTimer = null;
     const adminCatalogMemo = {
       materias: { revision: -1, result: [] },
-      submaterias: { revision: -1, result: [] }
+      submaterias: { revision: -1, result: [] },
+      talleres: { revision: -1, result: [], byId: new Map() }
     };
     const alumnoSourceMemo = {
       signature: '',
@@ -4546,10 +4547,14 @@
     }
 
     function getAdminTalleresCatalog() {
+      const revision = getCatalogosRevision();
+      if (adminCatalogMemo.talleres.revision === revision) {
+        return adminCatalogMemo.talleres.result;
+      }
       const rows = Array.isArray(state.catalogos.talleres_admin) && state.catalogos.talleres_admin.length
         ? state.catalogos.talleres_admin
         : (state.catalogos.talleres || []);
-      return rows.map((row) => ({
+      const result = rows.map((row) => ({
         taller_id: String(row.taller_id || '').trim(),
         nombre: String(row.nombre || '').trim(),
         materia_id: String(row.materia_id || '').trim(),
@@ -4560,11 +4565,19 @@
         archivado_at: String(row.archivado_at || '').trim(),
         archivado_por: String(row.archivado_por || '').trim()
       }));
+      adminCatalogMemo.talleres = {
+        revision,
+        result,
+        byId: new Map(result.map((row) => [row.taller_id, row]))
+      };
+      return result;
     }
 
     function getTallerById(tallerId) {
       const id = String(tallerId || '').trim();
-      return getAdminTalleresCatalog().find((row) => row.taller_id === id) || null;
+      if (!id) return null;
+      getAdminTalleresCatalog();
+      return adminCatalogMemo.talleres.byId.get(id) || null;
     }
 
     function applySavedTallerCatalogRow(row) {
