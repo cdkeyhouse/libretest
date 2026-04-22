@@ -411,11 +411,13 @@
     function getPlaneacionesSurfaceCatalogBlocks() {
       return canUseAdminShell()
         ? ['facilitadores', 'grupos', 'materias', 'semanas']
-        : ['materias', 'semanas'];
+        : ['grupos', 'materias', 'submaterias', 'semanas'];
     }
 
     function getPlaneacionesEditorCatalogBlocks() {
-      return ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas'];
+      return canUseAdminShell()
+        ? ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas']
+        : ['alumnos'];
     }
 
     function getCatalogBlocksForModuleWithScope(moduleName, options = {}) {
@@ -975,6 +977,18 @@
       }, {});
     }
 
+    function buildBootSnapshotOpenPlan() {
+      const planId = String(state.openPlanId || '').trim();
+      if (!planId) return null;
+      const plan = getPlanById(planId);
+      if (!plan || !plan.detail_loaded) return null;
+      try {
+        return JSON.parse(JSON.stringify(plan));
+      } catch (_) {
+        return Object.assign({}, plan);
+      }
+    }
+
     function persistCurrentBootSnapshot(kind) {
       const userKey = getCurrentUserSnapshotKey();
       if (!userKey) return;
@@ -992,6 +1006,7 @@
         payload.alertas = Array.isArray(state.alertas) ? state.alertas.slice(0, 20) : [];
         payload.notificaciones = Array.isArray(state.notificaciones) ? state.notificaciones.slice(0, 20) : [];
         payload.openPlanId = String(state.openPlanId || '').trim();
+        payload.openPlan = buildBootSnapshotOpenPlan();
         payload.planeacionesMeta = {
           loaded: !!(state.ui && state.ui.planeacionesLoaded),
           hasMore: !!(state.ui && state.ui.planeacionesHasMore),
@@ -1022,6 +1037,9 @@
       }
       if (Array.isArray(snapshot.notificaciones)) {
         state.notificaciones = snapshot.notificaciones;
+      }
+      if (snapshot.openPlan && typeof snapshot.openPlan === 'object' && snapshot.openPlan.planeacion_id) {
+        upsertPlaneacionRow(snapshot.openPlan);
       }
       if (snapshot.openPlanId && Array.isArray(snapshot.planeaciones) && snapshot.planeaciones.some((plan) => plan && plan.planeacion_id === snapshot.openPlanId)) {
         state.openPlanId = snapshot.openPlanId;
@@ -1384,6 +1402,7 @@
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
       const surfaceCatalogBlocks = getPlaneacionesSurfaceCatalogBlocks();
+      const hadLocalNotificaciones = Array.isArray(state.notificaciones) && state.notificaciones.length > 0;
       const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
         alert_limit: 20,
         catalog_blocks: surfaceCatalogBlocks
@@ -1422,15 +1441,18 @@
           await scheduleAfterPaint(async () => {
             try {
               await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
+              persistCurrentBootSnapshot('facilitador_boot_detail');
               renderPlaneacionesList();
             } catch (_) {}
           }, 120);
         }
-        await scheduleAfterPaint(async () => {
-          await refreshNotificaciones();
-          persistCurrentBootSnapshot('notificaciones');
-          renderInstitutionalNotices();
-        }, 180);
+        if (!hadLocalNotificaciones) {
+          await scheduleAfterPaint(async () => {
+            await refreshNotificaciones();
+            persistCurrentBootSnapshot('notificaciones');
+            renderInstitutionalNotices();
+          }, 180);
+        }
       }, 80);
 
       if (state.ui) state.ui.fastPlaneacionesBootPromise = deferredPromise;
@@ -1851,6 +1873,7 @@
       state.openPlanId = '';
       state.openPlanDraft = null;
       if (state.ui) state.ui.openPlanLoadingId = '';
+      persistCurrentBootSnapshot('planeacion_cerrada');
     }
 
     function exitPlanFocus() {
@@ -6714,6 +6737,7 @@
         state.openPlanId = '';
         state.openPlanDraft = null;
         if (state.ui) state.ui.openPlanLoadingId = '';
+        persistCurrentBootSnapshot('planeacion_cerrada');
         renderPlaneacionesList();
         return;
       }
@@ -6729,7 +6753,6 @@
       renderPlaneacionesList();
       await handleAction('togglePlanOpen', async () => {
         const detailPromise = ensurePlaneacionDetailLoaded(planId, { silent: true });
-        const editorCatalogsPromise = ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' }).catch(() => state.catalogos);
         const plan = await detailPromise;
         const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
         if (entry && entry.isMulti) {
@@ -6737,16 +6760,25 @@
             if (state.openPlanId !== planId) return;
             const refreshedPlan = getPlanById(planId) || plan;
             state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+            persistCurrentBootSnapshot('planeacion_abierta_multigrupo');
             renderPlaneacionesList();
           }).catch(() => {});
         }
         if (state.ui) state.ui.openPlanLoadingId = '';
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
+        persistCurrentBootSnapshot('planeacion_abierta');
         renderPlaneacionesList();
-        await editorCatalogsPromise;
-        if (state.openPlanId !== planId) return;
-        const refreshedPlan = getPlanById(planId) || plan;
-        state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+        scheduleAfterPaint(() => {
+          if (state.openPlanId !== planId) return null;
+          return ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
+            .then(() => {
+              if (state.openPlanId !== planId) return;
+              const refreshedPlan = getPlanById(planId) || plan;
+              state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+              renderPlaneacionesList();
+            })
+            .catch(() => state.catalogos);
+        }, 140);
       }, {
         button,
         key: buildActionKey('togglePlanOpen', [planId]),
@@ -7543,7 +7575,6 @@
       renderPlaneacionesList();
       await handleAction('openPlanFromAlert', async () => {
         const detailPromise = ensurePlaneacionDetailLoaded(planId, { silent: true });
-        const editorCatalogsPromise = ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' }).catch(() => state.catalogos);
         const plan = await detailPromise;
         const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
         if (entry && entry.isMulti) {
@@ -7551,16 +7582,25 @@
             if (state.openPlanId !== planId) return;
             const refreshedPlan = getPlanById(planId) || plan;
             state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+            persistCurrentBootSnapshot('planeacion_abierta_alerta_multigrupo');
             renderPlaneacionesList();
           }).catch(() => {});
         }
         if (state.ui) state.ui.openPlanLoadingId = '';
         state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
+        persistCurrentBootSnapshot('planeacion_abierta_alerta');
         renderPlaneacionesList();
-        await editorCatalogsPromise;
-        if (state.openPlanId !== planId) return;
-        const refreshedPlan = getPlanById(planId) || plan;
-        state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+        scheduleAfterPaint(() => {
+          if (state.openPlanId !== planId) return null;
+          return ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
+            .then(() => {
+              if (state.openPlanId !== planId) return;
+              const refreshedPlan = getPlanById(planId) || plan;
+              state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+              renderPlaneacionesList();
+            })
+            .catch(() => state.catalogos);
+        }, 140);
       }, {
         button,
         key: buildActionKey('openPlanFromAlert', [planId]),
