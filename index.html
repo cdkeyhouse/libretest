@@ -11097,9 +11097,7 @@
       const current = getPlanById(planId);
       if (current && current.detail_loaded) return current;
       const detail = await fetchPlaneacionDetalle(planId);
-      const merged = upsertPlaneacionRow(detail);
-      if (!options.silent) renderPlaneacionesList();
-      return merged;
+      return upsertPlaneacionRow(detail);
     }
 
     async function ensurePlaneacionEntryDetailsLoaded(entry, options = {}) {
