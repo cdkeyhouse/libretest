@@ -3647,6 +3647,31 @@
       min-height: 74px;
     }
 
+    .plan-date-detected-field {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .plan-date-detected-field .inline-note {
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .plan-date-resolved-head {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
     .planeaciones-shell-card .card-head {
       gap: 12px;
       margin-bottom: 10px;
@@ -5125,12 +5150,10 @@
                 <div class="mini">Puedes ver el editor desde ahora, pero estos campos se habilitan en cuanto termine la carga.</div>
               </div>
               <div class="grid-3">
-                <div>
+                <div class="plan-date-detected-field">
                   <label for="planFecha">Fecha de referencia</label>
                   <input id="planFecha" type="date">
-                </div>
-                <div>
-                  <label>Semana detectada</label>
+                  <div class="plan-date-resolved-head">Semana detectada</div>
                   <div id="planSemanaResolved" class="inline-note">Selecciona una fecha para resolver la semana.</div>
                 </div>
                 <div>
@@ -11962,8 +11985,7 @@
             '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
           '</div>' +
           '<div class="grid-3">' +
-            '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"></div>' +
-            '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"><div class="plan-date-resolved-head">Semana detectada</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
             '<div><label>Materia</label><select onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
@@ -12025,8 +12047,7 @@
       return (
         '<div class="plan-open-editor">' +
           '<div class="grid-3">' +
-            '<div><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"></div>' +
-            '<div><label>Semana detectada</label><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-resolved-head">Semana detectada</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div>' +
             '<div><label>Materia</label><select onchange="updateOpenPlanDraftField(\'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
