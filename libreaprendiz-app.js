@@ -6627,6 +6627,7 @@
         materia_id: plan.materia_id || '',
         submateria_id: plan.submateria_id || '',
         alumnos_ids: (plan.alumnos || []).map((row) => row.alumno_id),
+        original_alumnos_ids: (plan.alumnos || []).map((row) => row.alumno_id),
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
           key: actividad.actividad_id || uid('ACTOPEN'),
           actividad_id: actividad.actividad_id || '',
@@ -9852,7 +9853,11 @@
       if (!targetSemanaId || targetSemanaId !== currentSemanaId) return false;
       if (targetMateriaId !== currentMateriaId) return false;
       if (targetSubmateriaId !== currentSubmateriaId) return false;
-      const currentAlumnoIds = normalizeIdList(Array.isArray(plan.alumnos) ? plan.alumnos.map((row) => row && row.alumno_id) : []);
+      const currentAlumnoIds = normalizeIdList(
+        Array.isArray(plan.alumnos) && plan.alumnos.length
+          ? plan.alumnos.map((row) => row && row.alumno_id)
+          : (Array.isArray(draft.original_alumnos_ids) ? draft.original_alumnos_ids : [])
+      );
       const nextAlumnoIds = normalizeIdList(request.alumnosIds);
       if (!currentAlumnoIds.length) return false;
       return JSON.stringify(currentAlumnoIds) === JSON.stringify(nextAlumnoIds);
