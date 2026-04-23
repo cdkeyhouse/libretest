@@ -6732,7 +6732,7 @@
       if (localState === 'sync_error') {
         return {
           className: ('is-local-pending ' + baseClass).trim(),
-          label: 'Pendiente sync'
+          label: 'Pendiente'
         };
       }
       return {
@@ -6745,18 +6745,21 @@
       const message = String((plan && plan._local_save_message) || '').trim();
       if (!message) return '';
       const localState = getPlanLocalSaveState(plan);
-      const title = ({
-        creating: String((plan && plan.estado) || '').trim() === 'activa' ? 'Activando semana...' : 'Creando planeación...',
-        saving: 'Guardando cambios...',
-        saved: 'Listo',
-        activating: 'Activando planeación...'
-      })[localState] || 'Actualizando...';
-      const resolvedTitle = localState === 'sync_error' ? 'Pendiente de sincronizar' : title;
-      const toneClass = localState === 'saved' ? 'is-success' : 'is-pending';
+      const compactLabel = ({
+        creating: 'Creando',
+        saving: 'Sincronizando',
+        saved: 'Sincronizada',
+        activating: 'Activando',
+        sync_error: 'Pendiente'
+      })[localState] || 'Actualizando';
+      const toneClass = localState === 'saved'
+        ? 'is-success'
+        : (localState === 'sync_error' ? 'is-warning' : 'is-pending');
       return (
         '<div class="plan-inline-feedback ' + toneClass + '">' +
-          '<strong>' + escapeHtml(resolvedTitle) + '</strong>' +
-          '<span>' + escapeHtml(message) + '</span>' +
+          '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
+          '<span class="plan-inline-feedback-label">' + escapeHtml(compactLabel) + '</span>' +
+          '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>' +
         '</div>'
       );
     }
