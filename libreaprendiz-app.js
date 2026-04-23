@@ -847,6 +847,10 @@
     function setButtonBusy(button, busy, busyText = 'Procesando...') {
       if (!button) return;
       if (busy) {
+        if (button._flashButtonLabelTimer) {
+          window.clearTimeout(button._flashButtonLabelTimer);
+          button._flashButtonLabelTimer = null;
+        }
         if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
         if (!button.dataset.originalWidth) button.dataset.originalWidth = String(button.offsetWidth || 0);
         button.disabled = true;
@@ -871,6 +875,26 @@
       if (button.dataset.originalWidth) {
         delete button.dataset.originalWidth;
       }
+    }
+
+    function flashButtonLabel(button, label, duration = 1100) {
+      if (!button) return;
+      if (button._flashButtonLabelTimer) {
+        window.clearTimeout(button._flashButtonLabelTimer);
+        button._flashButtonLabelTimer = null;
+      }
+      const stableWidth = button.offsetWidth || Number(button.dataset.originalWidth || 0) || 0;
+      if (stableWidth) {
+        button.style.width = stableWidth + 'px';
+      }
+      button.textContent = String(label || '').trim() || button.textContent;
+      button._flashButtonLabelTimer = window.setTimeout(() => {
+        button._flashButtonLabelTimer = null;
+        if (button.dataset.originalText) {
+          button.textContent = button.dataset.originalText;
+        }
+        button.style.width = '';
+      }, Math.max(300, Number(duration || 0)));
     }
 
     function captureFeedbackAnchor(button) {
@@ -6744,21 +6768,10 @@
     function getPlanLocalFeedbackMarkup(plan) {
       const message = String((plan && plan._local_save_message) || '').trim();
       const localState = getPlanLocalSaveState(plan);
-      const planStatus = String((plan && plan.estado) || '').trim().toLowerCase();
       if (localState === 'activating') {
         return '';
       }
-      if (localState === 'saved' && planStatus === 'borrador') {
-        return '';
-      }
-      if (localState === 'saved') {
-        return (
-          '<div class="plan-inline-feedback is-success">' +
-            '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
-            '<span class="plan-inline-feedback-label">Guardado</span>' +
-          '</div>'
-        );
-      }
+      if (localState === 'saved') return '';
       if (!message) return '';
       const compactLabel = ({
         creating: 'Creando',
@@ -6778,15 +6791,13 @@
 
     function getPlanActionStatusMarkup(plan) {
       const localState = getPlanLocalSaveState(plan);
-      const planStatus = String((plan && plan.estado) || '').trim().toLowerCase();
-      if (localState === 'saved' && planStatus === 'borrador') return '';
+      if (localState === 'saved') return '';
       const label = ({
         saving: 'Guardando...',
-        saved: 'Guardado',
         sync_error: 'Pendiente'
       })[localState] || '';
       if (!label) return '';
-      const toneClass = localState === 'sync_error' ? 'is-warning' : (localState === 'saved' ? 'is-success' : 'is-pending');
+      const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
       return (
         '<span class="plan-action-status ' + toneClass + '">' +
           '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
@@ -11200,6 +11211,7 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
+          flashButtonLabel(button, 'Guardado');
           setBanner('Guardado local. Sincronizando en segundo plano...', 'success');
           return;
         }
@@ -11303,6 +11315,7 @@
         const successText = savedParts.length > 1
           ? 'Cambios guardados.'
           : ((savedParts[0] || 'Cambios') + ' guardados.');
+        flashButtonLabel(button, 'Guardado');
         setBanner(successText, 'success');
       }, {
         button,
