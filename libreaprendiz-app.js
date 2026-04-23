@@ -221,6 +221,7 @@
         openPlanLoadingId: '',
         tallerMembershipCatalogosPromise: null,
         fastPlaneacionesBootPromise: null,
+        planeacionesRestoreLock: false,
         adminModuleLoading: {},
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
@@ -487,6 +488,17 @@
     function currentViewNeedsPlaneaciones() {
       if (canUseAdminShell()) return String(state.activeAdminModule || '').trim() === 'planeaciones';
       return String(state.activeTab || '').trim() === 'planeaciones';
+    }
+
+    function setPlaneacionesRestoreLock(isLocked) {
+      if (state.ui) state.ui.planeacionesRestoreLock = !!isLocked;
+    }
+
+    function shouldSkipPlaneacionesTabBootRefresh() {
+      return !!(
+        state.ui &&
+        (state.ui.planeacionesRestoreLock || state.ui.fastPlaneacionesBootPromise)
+      );
     }
 
     function getMaintenanceUi() {
@@ -1450,6 +1462,9 @@
         bindAdminUiEventsOnce();
       }
       restoreBootSnapshotForSession({ usuario: data.usuario });
+      if (!canUseAdminShell() && String(state.activeTab || '').trim() === 'planeaciones') {
+        setPlaneacionesRestoreLock(true);
+      }
       clearLoginInputs();
       renderBootSurface();
       await refreshAll({ fastFacilitadorBoot: true });
@@ -1747,6 +1762,7 @@
       deferredPromise.finally(() => {
         if (state.ui) state.ui.fastPlaneacionesBootPromise = null;
       });
+      setPlaneacionesRestoreLock(false);
     }
 
     async function refreshAdminDashboardFastBoot(options = {}) {
@@ -1791,7 +1807,9 @@
         try {
           await refreshFacilitadorPlaneacionesFastBoot(options);
           return;
-        } catch (_) {}
+        } catch (_) {
+          setPlaneacionesRestoreLock(false);
+        }
       }
       if (shouldUseFastAdminDashboardBoot(options)) {
         try {
@@ -9065,6 +9083,7 @@
         panel.classList.toggle('is-active', panel.id === 'panel-' + tabName);
       });
       if (tabName === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
+        if (shouldSkipPlaneacionesTabBootRefresh()) return;
         refreshPlaneaciones()
           .then(() => renderPlaneacionesSurface({
             includeStats: true,
@@ -10721,6 +10740,9 @@
       refreshStaticConfigUi();
       if (state.session && state.session.token) {
         restoreBootSnapshot();
+        if (!canUseAdminShell() && String(state.activeTab || '').trim() === 'planeaciones') {
+          setPlaneacionesRestoreLock(true);
+        }
         renderBootSurface();
         await handleAction('restore', () => refreshAll({ fastFacilitadorBoot: true }));
         return;
