@@ -1119,7 +1119,6 @@
       const obsSavedAt = String(meta.open_plan_obs_saved_at || snapshot.saved_at || '').trim();
       if (!isTimestampFreshWithin(obsSavedAt, OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS)) return null;
       try {
-        const isActiveTarget = String(options.targetStatus || '').trim() === 'activa';
         return {
           planeacion_id: normalizedPlanId,
           obs_semana: Array.isArray(snapshot.openPlan.obs_semana) ? JSON.parse(JSON.stringify(snapshot.openPlan.obs_semana)) : [],
@@ -1674,6 +1673,7 @@
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
       const surfaceCatalogBlocks = getPlaneacionesSurfaceCatalogBlocks();
+      const hadLocalNotificaciones = Array.isArray(state.notificaciones) && state.notificaciones.length > 0;
       const requestedOpenPlanId = String(state.openPlanId || '').trim();
       const shouldReuseAlertas = shouldReuseFacilitadorFeedSnapshot('alertas');
       const shouldReuseNotificaciones = shouldReuseFacilitadorFeedSnapshot('notificaciones');
@@ -7233,7 +7233,7 @@
       const current = getPlanById(planId);
       if (!current || !current.detail_loaded) return current;
       if (current.obs_loaded) return current;
-      if (!options.force && getPlaneacionLocalSaveState(current) === 'saving') return current;
+      if (!options.force && getPlanLocalSaveState(current) === 'saving') return current;
       if (!options.force) {
         const snapshotObs = getSnapshotOpenPlanObservaciones(planId);
         if (snapshotObs) {
