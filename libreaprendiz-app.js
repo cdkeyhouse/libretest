@@ -813,7 +813,7 @@
       body.hidden = !expanded;
       if (focusBar) focusBar.hidden = !createFocus;
       if (listCard) listCard.hidden = createFocus;
-      btn.textContent = expanded ? 'Ocultar editor' : 'Crear nueva planeacion';
+      btn.textContent = expanded ? 'Ocultar editor' : 'Crear nueva planeación';
       btn.className = expanded
         ? 'btn-ghost plan-builder-launch-btn is-open'
         : 'btn-accent plan-builder-launch-btn is-collapsed';
@@ -1801,7 +1801,7 @@
       if (!options.force && shouldReuseFacilitadorFeedSnapshot('notificaciones')) {
         return { rows: Array.isArray(state.notificaciones) ? state.notificaciones : [], reusedSnapshot: true };
       }
-      const defaultLimit = canUseAdminShell() ? 100 : 120;
+      const defaultLimit = canUseAdminShell() ? 100 : 20;
       const limit = Math.max(1, Number(options.limit) || defaultLimit);
       const data = await api('getNotificaciones', { limit });
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
@@ -7769,7 +7769,7 @@
       const primarySaveBtn = $('savePlanBtn');
       const draftSaveBtn = $('savePlanDraftBtn');
       const activeSaveBtn = $('savePlanActiveBtn');
-      $('planEditorTitle').textContent = isEdit ? 'Editar planeacion' : 'Plan';
+      $('planEditorTitle').textContent = isEdit ? 'Editar planeación' : 'Plan';
       if (primarySaveBtn) {
         primarySaveBtn.hidden = !isEdit;
         primarySaveBtn.textContent = 'Guardar cambios';
@@ -8024,7 +8024,7 @@
       }
       const currentPlan = getPlanById(planId);
       if (isPlaneacionPendingCreation(currentPlan)) {
-        setBanner('La planeacion se esta creando todavia. Espera un momento para abrirla.', 'info', { button });
+        setBanner('La planeación se está creando. Espera un momento para abrirla.', 'info', { button });
         return;
       }
       if (state.ui) state.ui.openPlanLoadingId = planId;
