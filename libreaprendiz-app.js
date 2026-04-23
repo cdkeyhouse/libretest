@@ -9508,6 +9508,7 @@
       const alumnosIds = getSelectedPlanAlumnos();
       if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
       const includeSeguimientoOnEditor = canUseAdminShell() && editorMode === 'edit';
+      const usePlaneacionOutboxFeedback = !hasAdminPower && isPlaneacionOutboxEnabled();
       const actividades = state.planEditor.activities
         .map((activity) => ({
           actividad_id: activity.actividad_id || '',
@@ -9574,10 +9575,17 @@
               actividades
             },
             localState: 'saving',
-            localMessage: 'Guardando en segundo plano...'
+            localMessage: usePlaneacionOutboxFeedback
+              ? 'Guardado local. Sincronizando...'
+              : 'Guardando en segundo plano...'
           })
         : null;
       const optimisticCreatedIds = optimisticCreatedPlans.map((plan) => plan.planeacion_id);
+      if (usePlaneacionOutboxFeedback && optimisticCreatedPlans.length) {
+        optimisticCreatedPlans.forEach((plan) => {
+          plan._local_save_message = 'Guardada localmente. Sincronizando creación...';
+        });
+      }
       const shouldRollbackCreate = optimisticCreatedIds.length > 0;
       if (optimisticUpdatedPlan) {
         upsertPlaneacionRow(optimisticUpdatedPlan);
@@ -10819,7 +10827,9 @@
             generalText,
             finalPayloads,
             localState: 'saving',
-            localMessage: 'Guardando en segundo plano...'
+            localMessage: shouldUsePlaneacionOutbox
+              ? 'Guardado local. Sincronizando...'
+              : 'Guardando en segundo plano...'
           })
         : null;
       if (!generalText && !finalPayloads.length && !shouldSavePlan && !shouldSaveShared) {
@@ -10837,7 +10847,12 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
-          setBanner('Guardando cambios en segundo plano...', 'info');
+          setBanner(
+            shouldUsePlaneacionOutbox
+              ? 'Guardado local. Sincronizando en segundo plano...'
+              : 'Guardando cambios en segundo plano...',
+            shouldUsePlaneacionOutbox ? 'success' : 'info'
+          );
         }
         if (shouldUsePlaneacionOutbox) {
           if (generalText) {
