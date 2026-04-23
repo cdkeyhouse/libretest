@@ -273,6 +273,18 @@
       rows: [],
       byId: new Map()
     };
+    const catalogIndexMemo = {
+      revision: -1,
+      alumnosById: new Map(),
+      alumnosByGroupId: new Map(),
+      gruposById: new Map(),
+      materiasById: new Map()
+    };
+    const planeacionesIndexMemo = {
+      signature: '',
+      byId: new Map(),
+      latestByFacilitadorId: new Map()
+    };
 
     const $ = (id) => document.getElementById(id);
 
@@ -347,6 +359,71 @@
 
     function getCatalogosRevision() {
       return Number(state.catalogosMeta && state.catalogosMeta.revision || 0);
+    }
+
+    function getCatalogIndex() {
+      const revision = getCatalogosRevision();
+      if (catalogIndexMemo.revision === revision) return catalogIndexMemo;
+
+      const alumnosById = new Map();
+      const alumnosByGroupId = new Map();
+      const gruposById = new Map();
+      const materiasById = new Map();
+
+      (state.catalogos.alumnos || []).forEach((alumno) => {
+        const alumnoId = String(alumno && alumno.alumno_id || '').trim();
+        const grupoId = String(alumno && alumno.grupo_id || '').trim();
+        if (alumnoId) alumnosById.set(alumnoId, alumno);
+        if (grupoId) {
+          if (!alumnosByGroupId.has(grupoId)) alumnosByGroupId.set(grupoId, []);
+          alumnosByGroupId.get(grupoId).push(alumno);
+        }
+      });
+      (state.catalogos.grupos || []).forEach((grupo) => {
+        const grupoId = String(grupo && grupo.grupo_id || '').trim();
+        if (grupoId) gruposById.set(grupoId, grupo);
+      });
+      (state.catalogos.materias || []).forEach((materia) => {
+        const materiaId = String(materia && materia.materia_id || '').trim();
+        if (materiaId) materiasById.set(materiaId, materia);
+      });
+
+      catalogIndexMemo.revision = revision;
+      catalogIndexMemo.alumnosById = alumnosById;
+      catalogIndexMemo.alumnosByGroupId = alumnosByGroupId;
+      catalogIndexMemo.gruposById = gruposById;
+      catalogIndexMemo.materiasById = materiasById;
+      return catalogIndexMemo;
+    }
+
+    function getPlaneacionesIndex() {
+      const rows = Array.isArray(state.planeaciones) ? state.planeaciones : [];
+      const signature = rows.map((plan) => [
+        plan && plan.planeacion_id,
+        plan && plan.facilitador_id,
+        plan && (plan.fecha_actualizacion || plan.fecha_creacion || '')
+      ].join('|')).join('::');
+      if (planeacionesIndexMemo.signature === signature) return planeacionesIndexMemo;
+
+      const byId = new Map();
+      const latestByFacilitadorId = new Map();
+      rows.forEach((plan) => {
+        const planId = String(plan && plan.planeacion_id || '').trim();
+        if (planId) byId.set(planId, plan);
+        const facilitadorId = String(plan && plan.facilitador_id || '').trim();
+        if (!facilitadorId) return;
+        const currentValue = String(plan.fecha_actualizacion || plan.fecha_creacion || '').trim();
+        const previous = latestByFacilitadorId.get(facilitadorId);
+        const previousValue = previous ? String(previous.fecha_actualizacion || previous.fecha_creacion || '').trim() : '';
+        if (!previous || currentValue.localeCompare(previousValue) > 0) {
+          latestByFacilitadorId.set(facilitadorId, plan);
+        }
+      });
+
+      planeacionesIndexMemo.signature = signature;
+      planeacionesIndexMemo.byId = byId;
+      planeacionesIndexMemo.latestByFacilitadorId = latestByFacilitadorId;
+      return planeacionesIndexMemo;
     }
 
     function getAlumnosSourceRevision() {
@@ -2762,9 +2839,17 @@
       return String(group.nombre_grupo || group.grupo_id || '').trim() || String(group.grupo_id || '').trim();
     }
 
+    function getGrupoById(grupoId) {
+      return getCatalogIndex().gruposById.get(String(grupoId || '').trim()) || null;
+    }
+
+    function getMateriaById(materiaId) {
+      return getCatalogIndex().materiasById.get(String(materiaId || '').trim()) || null;
+    }
+
     function getGrupoNombre(grupoId) {
       if (!grupoId) return 'Sin grupo';
-      const row = (state.catalogos.grupos || []).find((item) => String(item.grupo_id || '').trim() === String(grupoId || '').trim());
+      const row = getGrupoById(grupoId);
       return row ? getGrupoDisplayName(row) : grupoId;
     }
 
@@ -3953,9 +4038,7 @@
 
     function getFacilitadorUpdatedLabel(facilitador) {
       if (!facilitador) return 'Sin registro';
-      const latestPlan = (state.planeaciones || [])
-        .filter((plan) => String(plan.facilitador_id || '').trim() === String(facilitador.facilitador_id || '').trim())
-        .sort((a, b) => String(b.fecha_actualizacion || b.fecha_creacion || '').localeCompare(String(a.fecha_actualizacion || a.fecha_creacion || '')))[0];
+      const latestPlan = getPlaneacionesIndex().latestByFacilitadorId.get(String(facilitador.facilitador_id || '').trim());
       const latestValue = latestPlan
         ? (latestPlan.fecha_actualizacion || latestPlan.fecha_creacion || '')
         : (facilitador.archivado_at || facilitador.fecha_baja || facilitador.fecha_alta || '');
@@ -6633,8 +6716,8 @@
     }
 
     function formatPlanShort(plan) {
-      const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
-      const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
+      const materia = getMateriaById(plan.materia_id);
+      const grupo = getGrupoById(plan.grupo_id);
       const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
       return [
         grupo ? getGrupoDisplayName(grupo) : plan.grupo_id,
@@ -6660,7 +6743,7 @@
     }
 
     function getPlanMateriaDisplayLabel(plan, materiaRow) {
-      const materia = materiaRow || state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
+      const materia = materiaRow || getMateriaById(plan.materia_id);
       const materiaLabel = materia
         ? (materia.nombre || materia.materia_id)
         : (plan.materia_nombre || plan.materia_id || '-');
@@ -6690,7 +6773,7 @@
     }
 
     function getPlanById(planId) {
-      return state.planeaciones.find((plan) => plan.planeacion_id === planId) || null;
+      return getPlaneacionesIndex().byId.get(String(planId || '').trim()) || null;
     }
 
     function getPlanByActivityId(activityId) {
@@ -6788,7 +6871,7 @@
 
     function getPlaneacionEntryGroupLabels(entry) {
       return (entry && entry.plans || []).map((plan) => {
-        const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
+        const grupo = getGrupoById(plan.grupo_id);
         return grupo ? getGrupoDisplayName(grupo) : plan.grupo_id;
       });
     }
@@ -7333,12 +7416,12 @@
     }
 
     function getAlumnosByGroupId(groupId) {
-      return (state.catalogos.alumnos || []).filter((alumno) => String(alumno.grupo_id || '').trim() === String(groupId || '').trim());
+      return getCatalogIndex().alumnosByGroupId.get(String(groupId || '').trim()) || [];
     }
 
     function getAlumnoDisplaySnapshot(alumnoRow) {
       const alumnoId = String(alumnoRow && alumnoRow.alumno_id || '').trim();
-      const catalogAlumno = (state.catalogos.alumnos || []).find((row) => String(row.alumno_id || '').trim() === alumnoId);
+      const catalogAlumno = getCatalogIndex().alumnosById.get(alumnoId);
       return {
         nombre: catalogAlumno
           ? (catalogAlumno.nombre_mostrado || catalogAlumno.nombre_completo || catalogAlumno.alumno_id)
@@ -7372,7 +7455,7 @@
         return;
       }
       host.innerHTML = groupIds.map((groupId) => {
-        const group = state.catalogos.grupos.find((row) => row.grupo_id === groupId);
+        const group = getCatalogIndex().gruposById.get(String(groupId || '').trim());
         const alumnos = getAlumnosByGroupId(groupId);
         return (
             '<div class="group-block">' +
@@ -7669,7 +7752,7 @@
 
     function getPlaneacionEntryAlumnoRows(entry) {
       return (entry && entry.plans || []).flatMap((plan) => {
-        const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
+        const grupo = getGrupoById(plan.grupo_id);
         const grupoLabel = grupo ? getGrupoDisplayName(grupo) : plan.grupo_id;
         return (Array.isArray(plan.alumnos) ? plan.alumnos : []).map((row) => Object.assign({}, row, {
           planeacion_id: plan.planeacion_id,
@@ -7816,8 +7899,8 @@
               ? (groupDraft && groupDraft.alumnos_ids || [])
               : ((Array.isArray(groupPlan.alumnos) ? groupPlan.alumnos : []).map((row) => row.alumno_id))
           );
-          const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === groupPlan.grupo_id);
-          const grupo = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
+          const alumnosGrupo = getAlumnosByGroupId(groupPlan.grupo_id);
+          const grupo = getGrupoById(groupPlan.grupo_id);
           const grupoLabel = grupo ? getGrupoDisplayName(grupo) : groupPlan.grupo_id;
           return (
             '<div class="group-block">' +
@@ -8093,8 +8176,8 @@
       host.innerHTML = (focusedEntry ? focusBar : desktopHeader) + entriesToRender.map((entry) => {
         const plan = getOpenPlaneacionEntry(entry) || entry.representative;
         if (!plan) return '';
-        const grupo = state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id);
-        const materia = state.catalogos.materias.find((item) => item.materia_id === plan.materia_id);
+        const grupo = getGrupoById(plan.grupo_id);
+        const materia = getMateriaById(plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
         const groupLabel = entry.isMulti
           ? getPlaneacionEntryGroupLabels(entry).join(' · ')
@@ -8317,7 +8400,7 @@
                 '<div class="plan-multigroup-switcher">' +
                   '<div class="plan-multigroup-switcher-list">' +
                     (entry.plans || []).map((groupPlan) => {
-                      const groupRow = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
+                      const groupRow = getGrupoById(groupPlan.grupo_id);
                       const groupText = groupRow ? getGrupoDisplayName(groupRow) : groupPlan.grupo_id;
                       const activeClass = groupPlan.planeacion_id === plan.planeacion_id ? ' is-active' : '';
                       return '<button class="btn-ghost plan-multigroup-switch' + activeClass + '" type="button" onclick="switchMultiGroupPlan(\'' + escapeJsAttrValue(groupPlan.planeacion_id) + '\')">' + escapeHtml(groupText) + '</button>';
@@ -8436,7 +8519,7 @@
                   '<div class="plan-multigroup-switcher">' +
                     '<div class="plan-multigroup-switcher-list">' +
                       (entry.plans || []).map((groupPlan) => {
-                        const groupRow = state.catalogos.grupos.find((item) => item.grupo_id === groupPlan.grupo_id);
+                        const groupRow = getGrupoById(groupPlan.grupo_id);
                         const groupText = groupRow ? getGrupoDisplayName(groupRow) : groupPlan.grupo_id;
                         const activeClass = groupPlan.planeacion_id === plan.planeacion_id ? ' is-active' : '';
                         return '<button class="btn-ghost plan-multigroup-switch' + activeClass + '" type="button" onclick="switchMultiGroupPlan(\'' + escapeJsAttrValue(groupPlan.planeacion_id) + '\')">' + escapeHtml(groupText) + '</button>';
@@ -8760,9 +8843,9 @@
       }
 
       host.innerHTML = visibleAlertas.map((alerta) => {
-        const plan = state.planeaciones.find((item) => item.planeacion_id === alerta.planeacion_id);
-        const grupo = plan ? state.catalogos.grupos.find((item) => item.grupo_id === plan.grupo_id) : null;
-        const materia = plan ? state.catalogos.materias.find((item) => item.materia_id === plan.materia_id) : null;
+        const plan = getPlanById(alerta.planeacion_id);
+        const grupo = plan ? getGrupoById(plan.grupo_id) : null;
+        const materia = plan ? getMateriaById(plan.materia_id) : null;
         const semana = plan ? state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id) : null;
         const contexto = plan ? [
           grupo ? getGrupoDisplayName(grupo) : '',
