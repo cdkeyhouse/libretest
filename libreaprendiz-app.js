@@ -1756,11 +1756,18 @@
       const hadLocalNotificaciones = Array.isArray(state.notificaciones) && state.notificaciones.length > 0;
       const requestedOpenPlanId = String(state.openPlanId || '').trim();
       const canReuseSnapshotOpenPlanDetail = requestedOpenPlanId && shouldPreserveSnapshotPlanDetail(requestedOpenPlanId);
+      const canReusePlaneacionesSnapshot =
+        shouldReuseFacilitadorFeedSnapshot('planeaciones') &&
+        !hasActivePlaneacionesFilters() &&
+        Array.isArray(state.planeaciones) &&
+        (!!state.planeaciones.length || !!(state.ui && state.ui.planeacionesLoaded));
+      const shouldRequestPlaneaciones = !canReusePlaneacionesSnapshot;
       const shouldReuseAlertas = shouldReuseFacilitadorFeedSnapshot('alertas');
       const shouldReuseNotificaciones = shouldReuseFacilitadorFeedSnapshot('notificaciones');
       const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
         alert_limit: 20,
         notification_limit: 20,
+        include_planeaciones: shouldRequestPlaneaciones,
         include_alertas: !shouldReuseAlertas,
         include_notificaciones: !shouldReuseNotificaciones,
         include_catalogos: shouldRequestSurfaceCatalogs,
@@ -1771,9 +1778,11 @@
         mergeCatalogosPayload(bootData.catalogos, shouldRequestSurfaceCatalogs ? missingSurfaceCatalogBlocks : surfaceCatalogBlocks);
       }
       state.dashboardStats = Object.assign({}, state.dashboardStats || {}, bootData && bootData.stats ? bootData.stats : {});
-      state.planeaciones = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
-        ? bootData.planeaciones.rows
-        : [];
+      if (shouldRequestPlaneaciones) {
+        state.planeaciones = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
+          ? bootData.planeaciones.rows
+          : [];
+      }
       const bootHasAlertas = !!(bootData && bootData.alertas && Array.isArray(bootData.alertas.rows));
       state.alertas = bootHasAlertas
         ? bootData.alertas.rows
@@ -1793,11 +1802,15 @@
         }
       }
       if (state.ui) {
-        state.ui.planeacionesLoaded = true;
+        state.ui.planeacionesLoaded = shouldRequestPlaneaciones
+          ? true
+          : !!(state.ui.planeacionesLoaded || canReusePlaneacionesSnapshot);
         state.ui.planeacionesLoading = false;
         state.ui.planeacionesLoadingMore = false;
-        state.ui.planeacionesOffset = state.planeaciones.length;
-        state.ui.planeacionesHasMore = !!(bootData && bootData.planeaciones && bootData.planeaciones.has_more);
+        if (shouldRequestPlaneaciones) {
+          state.ui.planeacionesOffset = state.planeaciones.length;
+          state.ui.planeacionesHasMore = !!(bootData && bootData.planeaciones && bootData.planeaciones.has_more);
+        }
       }
       persistCurrentBootSnapshot('facilitador_boot');
       renderSession();
@@ -1812,6 +1825,16 @@
       const deferredPromise = scheduleAfterPaint(async () => {
         renderBaseSelects({ planeaciones: true });
         renderPlanBuilderVisibility();
+        if (!shouldRequestPlaneaciones) {
+          await scheduleAfterPaint(async () => {
+            await refreshPlaneaciones();
+            renderPlaneacionesSurface({
+              includeStats: true,
+              includePlaneaciones: true,
+              includeAlertas: false
+            });
+          }, 90);
+        }
         if (state.openPlanId && Array.isArray(state.planeaciones) && state.planeaciones.some((plan) => plan && plan.planeacion_id === state.openPlanId)) {
           await scheduleAfterPaint(async () => {
             try {
