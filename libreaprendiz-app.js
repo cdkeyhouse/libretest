@@ -1537,12 +1537,16 @@
         bindWindowActionGroup('admin');
         bindAdminUiEventsOnce();
       }
-      restoreBootSnapshotForSession({ usuario: data.usuario });
+      const restoredSnapshot = restoreBootSnapshotForSession({ usuario: data.usuario });
       if (!canUseAdminShell() && String(state.activeTab || '').trim() === 'planeaciones') {
         setPlaneacionesRestoreLock(true);
       }
       clearLoginInputs();
       renderBootSurface();
+      if (shouldDeferFacilitadorRestoreRefresh(restoredSnapshot, { usuario: data.usuario })) {
+        scheduleDeferredRestoreRefresh();
+        return;
+      }
       await refreshAll({ fastFacilitadorBoot: true });
     }
 
@@ -1680,6 +1684,28 @@
         canUseAdminShell() &&
         String(state.activeAdminModule || '').trim() === 'dashboard'
       );
+    }
+
+    function shouldDeferFacilitadorRestoreRefresh(restoredSnapshot, sessionLike = state.session) {
+      const role = sessionLike && sessionLike.usuario ? String(sessionLike.usuario.rol || '').trim() : getCurrentRole();
+      if (!restoredSnapshot || role !== 'facilitador' || canUseAdminShell()) return false;
+      if (String(state.activeTab || '').trim() !== 'planeaciones') return false;
+      return shouldReuseFacilitadorFeedSnapshot('planeaciones');
+    }
+
+    function scheduleDeferredRestoreRefresh() {
+      const promise = scheduleAfterPaint(() => refreshAll({ fastFacilitadorBoot: true }), 40)
+        .catch((error) => {
+          setPlaneacionesRestoreLock(false);
+          setBanner(formatApiError(error), 'error');
+        });
+      if (state.ui) state.ui.fastPlaneacionesBootPromise = promise;
+      promise.finally(() => {
+        if (state.ui && state.ui.fastPlaneacionesBootPromise === promise) {
+          state.ui.fastPlaneacionesBootPromise = null;
+        }
+      });
+      return promise;
     }
 
     async function ensurePlaneacionesCatalogosAvailable(options = {}) {
@@ -10969,11 +10995,15 @@
       clearLoginInputs();
       refreshStaticConfigUi();
       if (state.session && state.session.token) {
-        restoreBootSnapshot();
+        const restoredSnapshot = restoreBootSnapshot();
         if (!canUseAdminShell() && String(state.activeTab || '').trim() === 'planeaciones') {
           setPlaneacionesRestoreLock(true);
         }
         renderBootSurface();
+        if (shouldDeferFacilitadorRestoreRefresh(restoredSnapshot)) {
+          scheduleDeferredRestoreRefresh();
+          return;
+        }
         await handleAction('restore', () => refreshAll({ fastFacilitadorBoot: true }));
         return;
       }
