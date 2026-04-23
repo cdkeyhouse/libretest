@@ -6743,9 +6743,16 @@
 
     function getPlanLocalFeedbackMarkup(plan) {
       const message = String((plan && plan._local_save_message) || '').trim();
-      if (!message) return '';
       const localState = getPlanLocalSaveState(plan);
-      if (localState === 'saved') return '';
+      if (localState === 'saved') {
+        return (
+          '<div class="plan-inline-feedback is-success">' +
+            '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
+            '<span class="plan-inline-feedback-label">Guardado</span>' +
+          '</div>'
+        );
+      }
+      if (!message) return '';
       const compactLabel = ({
         creating: 'Creando',
         saving: 'Sincronizando',
@@ -7511,7 +7518,7 @@
       });
     }
 
-    function scheduleClearLocalPlaneacionFeedback(planIds, delay = 2200) {
+    function scheduleClearLocalPlaneacionFeedback(planIds, delay = 1400) {
       const ids = (Array.isArray(planIds) ? planIds : [planIds]).map((planId) => String(planId || '').trim()).filter(Boolean);
       if (!ids.length) return;
       scheduleUiDebounce('plan-feedback-clear:' + ids.join(','), () => {
@@ -11386,6 +11393,9 @@
       }
       const actividades = [];
       for (const item of activityRows) {
+        if (!String(item && item.actividad_id || '').trim()) {
+          throw new Error('Primero guarda la planeación antes de cerrar la semana.');
+        }
         const realizadaFieldId = 'activity-realizada-' + item.actividad_id;
         const materialFieldId = 'activity-material-' + item.actividad_id;
         const comentarioFieldId = 'activity-comment-' + item.actividad_id;
