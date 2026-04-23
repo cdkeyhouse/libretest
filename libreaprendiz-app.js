@@ -7154,6 +7154,12 @@
             });
           }
         } catch (_) {}
+        if (options.refreshObservaciones) {
+          try {
+            await ensurePlaneacionObservacionesLoaded(normalizedPlanId, { silent: true, force: true });
+            renderPlaneacionesList();
+          } catch (_) {}
+        }
         if (options.refreshAlertas) {
           refreshPlaneacionesAlertsDeferred({
             force: true,
@@ -7223,6 +7229,7 @@
       const current = getPlanById(planId);
       if (!current || !current.detail_loaded) return current;
       if (current.obs_loaded) return current;
+      if (!options.force && getPlaneacionLocalSaveState(current) === 'saving') return current;
       if (!options.force) {
         const snapshotObs = getSnapshotOpenPlanObservaciones(planId);
         if (snapshotObs) {
@@ -10181,6 +10188,7 @@
           if (shouldSavePlan) {
             queuePlaneacionPostSaveSync(planId, {
               refreshDetail: false,
+              refreshObservaciones: false,
               refreshAlertas: true,
               forceAlertas: shouldForceAlertasAfterSave
             });
@@ -10196,6 +10204,7 @@
           scheduleClearLocalPlaneacionFeedback(planId);
           queuePlaneacionPostSaveSync(planId, {
             refreshDetail: true,
+            refreshObservaciones: true,
             refreshAlertas: false,
             snapshotKind: 'guardar_cambios_obs'
           });
