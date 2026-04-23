@@ -1107,6 +1107,7 @@
       const obsSavedAt = String(meta.open_plan_obs_saved_at || snapshot.saved_at || '').trim();
       if (!isTimestampFreshWithin(obsSavedAt, OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS)) return null;
       try {
+        const isActiveTarget = String(options.targetStatus || '').trim() === 'activa';
         return {
           planeacion_id: normalizedPlanId,
           obs_semana: Array.isArray(snapshot.openPlan.obs_semana) ? JSON.parse(JSON.stringify(snapshot.openPlan.obs_semana)) : [],
@@ -1131,6 +1132,10 @@
     function shouldReuseFacilitadorFeedSnapshot(kind) {
       if (canUseAdminShell() || getCurrentRole() !== 'facilitador') return false;
       const meta = getSnapshotMetaForSession();
+      if (kind === 'planeaciones') {
+        const savedAt = String(meta.planeaciones_saved_at || '').trim();
+        return isTimestampFreshWithin(savedAt, FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS);
+      }
       if (kind === 'alertas') {
         if (!Array.isArray(state.alertas)) return false;
         const savedAt = String((state.ui && state.ui.alertasSavedAt) || meta.alertas_saved_at || '').trim();
@@ -1168,19 +1173,29 @@
         dashboardStats: state.dashboardStats || {}
       };
       if (role === 'facilitador' && !canUseAdminShell()) {
+        const snapshotPlaneaciones = Array.isArray(state.planeaciones)
+          ? state.planeaciones.filter((plan) => !isPlaneacionPendingCreation(plan))
+          : [];
+        const snapshotOpenPlanId = String(state.openPlanId || '').trim();
+        const snapshotOpenPlanAllowed =
+          !!snapshotOpenPlanId &&
+          snapshotPlaneaciones.some((plan) => String((plan && plan.planeacion_id) || '').trim() === snapshotOpenPlanId);
         payload.catalogos = buildBootSnapshotCatalogos(getPlaneacionesSurfaceCatalogBlocks());
-        payload.planeaciones = Array.isArray(state.planeaciones) ? state.planeaciones.slice(0, PLANEACIONES_PAGE_SIZE) : [];
+        payload.planeaciones = snapshotPlaneaciones.slice(0, PLANEACIONES_PAGE_SIZE);
         payload.alertas = Array.isArray(state.alertas) ? state.alertas.slice(0, 20) : [];
         payload.notificaciones = Array.isArray(state.notificaciones) ? state.notificaciones.slice(0, 20) : [];
-        payload.openPlanId = String(state.openPlanId || '').trim();
-        payload.openPlan = buildBootSnapshotOpenPlan();
-        payload.openPlanDraft = buildBootSnapshotOpenPlanDraft();
+        payload.openPlanId = snapshotOpenPlanAllowed ? snapshotOpenPlanId : '';
+        payload.openPlan = snapshotOpenPlanAllowed ? buildBootSnapshotOpenPlan() : null;
+        payload.openPlanDraft = snapshotOpenPlanAllowed ? buildBootSnapshotOpenPlanDraft() : null;
         payload.planeacionesMeta = {
           loaded: !!(state.ui && state.ui.planeacionesLoaded),
           hasMore: !!(state.ui && state.ui.planeacionesHasMore),
-          offset: Number(state.ui && state.ui.planeacionesOffset || 0)
+          offset: Number(
+            state.ui && state.ui.planeacionesOffset || payload.planeaciones.length || 0
+          )
         };
         payload.meta = {
+          planeaciones_saved_at: payload.saved_at,
           alertas_saved_at: String((state.ui && state.ui.alertasSavedAt) || ''),
           notificaciones_saved_at: String((state.ui && state.ui.notificacionesSavedAt) || ''),
           open_plan_detail_saved_at: getOpenPlanDetailSnapshotSavedAt(payload.openPlanId),
@@ -1197,14 +1212,24 @@
     function restoreBootSnapshotForSession(sessionLike = state.session) {
       const snapshot = getBootSnapshotForSession(sessionLike);
       if (!snapshot || typeof snapshot !== 'object') return false;
+      const canReusePlaneacionesSnapshot =
+        !(sessionLike && String((sessionLike.rol || getCurrentRole() || '')).trim() === 'facilitador')
+        || isTimestampFreshWithin(
+          String(
+            (snapshot.meta && snapshot.meta.planeaciones_saved_at)
+            || snapshot.saved_at
+            || ''
+          ).trim(),
+          FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS
+        );
       if (snapshot.catalogos && typeof snapshot.catalogos === 'object') {
         mergeCatalogosPayload(snapshot.catalogos, Object.keys(snapshot.catalogos));
       }
       if (snapshot.dashboardStats && typeof snapshot.dashboardStats === 'object') {
         state.dashboardStats = Object.assign({}, state.dashboardStats || {}, snapshot.dashboardStats);
       }
-      if (Array.isArray(snapshot.planeaciones)) {
-        state.planeaciones = snapshot.planeaciones;
+      if (canReusePlaneacionesSnapshot && Array.isArray(snapshot.planeaciones)) {
+        state.planeaciones = snapshot.planeaciones.filter((plan) => !isPlaneacionPendingCreation(plan));
       }
       if (Array.isArray(snapshot.alertas)) {
         state.alertas = snapshot.alertas;
@@ -1214,7 +1239,12 @@
         state.notificaciones = snapshot.notificaciones;
         markNotificacionesFresh(snapshot.meta && snapshot.meta.notificaciones_saved_at ? snapshot.meta.notificaciones_saved_at : snapshot.saved_at);
       }
-      if (snapshot.openPlan && typeof snapshot.openPlan === 'object' && snapshot.openPlan.planeacion_id) {
+      if (
+        snapshot.openPlan &&
+        typeof snapshot.openPlan === 'object' &&
+        snapshot.openPlan.planeacion_id &&
+        !isPlaneacionPendingCreation(snapshot.openPlan)
+      ) {
         upsertPlaneacionRow(snapshot.openPlan);
         if (snapshot.openPlan.detail_loaded) {
           markPlaneacionDetailFresh(
@@ -1229,13 +1259,28 @@
           );
         }
       }
-      if (snapshot.openPlanId && Array.isArray(snapshot.planeaciones) && snapshot.planeaciones.some((plan) => plan && plan.planeacion_id === snapshot.openPlanId)) {
+      if (
+        canReusePlaneacionesSnapshot &&
+        snapshot.openPlanId &&
+        Array.isArray(snapshot.planeaciones) &&
+        snapshot.planeaciones.some(
+          (plan) =>
+            plan &&
+            !isPlaneacionPendingCreation(plan) &&
+            plan.planeacion_id === snapshot.openPlanId
+        )
+      ) {
         state.openPlanId = snapshot.openPlanId;
       }
-      if (snapshot.openPlanDraft && typeof snapshot.openPlanDraft === 'object' && snapshot.openPlanDraft.planId) {
+      if (
+        snapshot.openPlanDraft &&
+        typeof snapshot.openPlanDraft === 'object' &&
+        snapshot.openPlanDraft.planId &&
+        !/^tmppla/i.test(String(snapshot.openPlanDraft.planId || '').trim())
+      ) {
         state.openPlanDraft = snapshot.openPlanDraft;
       }
-      if (snapshot.planeacionesMeta && state.ui) {
+      if (canReusePlaneacionesSnapshot && snapshot.planeacionesMeta && state.ui) {
         state.ui.planeacionesLoaded = !!snapshot.planeacionesMeta.loaded;
         state.ui.planeacionesHasMore = !!snapshot.planeacionesMeta.hasMore;
         state.ui.planeacionesOffset = Number(snapshot.planeacionesMeta.offset || state.planeaciones.length || 0);
@@ -6297,6 +6342,94 @@
       })[String(status || '').trim()] || String(status || 'Sin estado');
     }
 
+    function getPlanLocalSaveState(plan) {
+      return String((plan && plan._local_save_state) || '').trim().toLowerCase();
+    }
+
+    function isPlaneacionLocalSavePending(plan) {
+      return ['creating', 'saving', 'activating'].includes(getPlanLocalSaveState(plan));
+    }
+
+    function getPlanStatusBadgeMeta(plan) {
+      const localState = getPlanLocalSaveState(plan);
+      const baseClass = String((plan && plan.estado) || '').trim();
+      if (localState === 'creating') {
+        const isActiveTarget = String((plan && plan.estado) || '').trim() === 'activa';
+        return {
+          className: ('is-local-pending ' + baseClass).trim(),
+          label: isActiveTarget ? 'Activando...' : 'Creando...'
+        };
+      }
+      if (localState === 'saving') {
+        return {
+          className: ('is-local-pending ' + baseClass).trim(),
+          label: 'Guardando...'
+        };
+      }
+      if (localState === 'activating') {
+        return {
+          className: ('is-local-pending ' + baseClass).trim(),
+          label: 'Activando...'
+        };
+      }
+      return {
+        className: baseClass,
+        label: getPlanStatusLabel(plan && plan.estado)
+      };
+    }
+
+    function getPlanLocalFeedbackMarkup(plan) {
+      const message = String((plan && plan._local_save_message) || '').trim();
+      if (!message) return '';
+      const localState = getPlanLocalSaveState(plan);
+      const title = ({
+        creating: String((plan && plan.estado) || '').trim() === 'activa' ? 'Activando semana...' : 'Creando planeación...',
+        saving: 'Guardando cambios...',
+        saved: 'Listo',
+        activating: 'Activando planeación...'
+      })[localState] || 'Actualizando...';
+      const toneClass = localState === 'saved' ? 'is-success' : 'is-pending';
+      return (
+        '<div class="plan-inline-feedback ' + toneClass + '">' +
+          '<strong>' + escapeHtml(title) + '</strong>' +
+          '<span>' + escapeHtml(message) + '</span>' +
+        '</div>'
+      );
+    }
+
+    function isPlaneacionPendingCreation(plan) {
+      if (!plan) return false;
+      const localState = getPlanLocalSaveState(plan);
+      const planId = String((plan && plan.planeacion_id) || '').trim();
+      return localState === 'creating' || /^tmppla/i.test(planId);
+    }
+
+    function focusPlaneacionCardSoon(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return;
+      window.requestAnimationFrame(() => {
+        const card = $('plan-card-' + normalizedPlanId);
+        if (!card || typeof card.scrollIntoView !== 'function') return;
+        document.querySelectorAll('.plan-card.is-alert-focus').forEach((item) => {
+          item.classList.remove('is-alert-focus');
+          if (item._alertFocusTimer) {
+            window.clearTimeout(item._alertFocusTimer);
+            item._alertFocusTimer = null;
+          }
+        });
+        card.classList.add('is-alert-focus');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card._alertFocusTimer = window.setTimeout(() => {
+          card.classList.remove('is-alert-focus');
+          card._alertFocusTimer = null;
+        }, 2200);
+      });
+    }
+
+    function getCurrentUserId() {
+      return String((state.session && state.session.usuario && state.session.usuario.facilitador_id) || '').trim();
+    }
+
     function getSelectedGroupIds() {
       const host = $('planGruposChecklist');
       if (!host) return [];
@@ -6774,6 +6907,246 @@
       return rows.map((row) => upsertPlaneacionRow(row)).filter(Boolean);
     }
 
+    function removePlaneacionRows(planIds) {
+      const ids = new Set((Array.isArray(planIds) ? planIds : [planIds]).map((item) => String(item || '').trim()).filter(Boolean));
+      if (!ids.size) return;
+      state.planeaciones = (state.planeaciones || []).filter((plan) => !ids.has(String((plan && plan.planeacion_id) || '').trim()));
+      if (state.openPlanId && ids.has(String(state.openPlanId || '').trim())) {
+        state.openPlanId = '';
+        state.openPlanDraft = null;
+      }
+    }
+
+    function cloneJsonSafe(value, fallback) {
+      try {
+        return JSON.parse(JSON.stringify(value));
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function buildPlanAlumnoSnapshotsByIds(alumnosIds, groupId, existingRows = []) {
+      const existingMap = new Map((Array.isArray(existingRows) ? existingRows : []).map((row) => [String((row && row.alumno_id) || '').trim(), row]));
+      return (Array.isArray(alumnosIds) ? alumnosIds : []).map((alumnoId) => {
+        const normalizedId = String(alumnoId || '').trim();
+        const existing = existingMap.get(normalizedId) || null;
+        const alumno = getAlumnoById(normalizedId);
+        return {
+          alumno_id: normalizedId,
+          grupo_snapshot: String((alumno && alumno.grupo_id) || (existing && existing.grupo_snapshot) || groupId || '').trim(),
+          nombre_snapshot: String(
+            (alumno && (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id)) ||
+            (existing && existing.nombre_snapshot) ||
+            normalizedId
+          ).trim()
+        };
+      });
+    }
+
+    function mergeOptimisticAlumnoFinalRows(plan, payloads) {
+      const byAlumnoId = {};
+      (Array.isArray(plan && plan.obs_alumno_final) ? plan.obs_alumno_final : []).forEach((row) => {
+        byAlumnoId[String((row && row.alumno_id) || '').trim()] = Object.assign({}, row);
+      });
+      (Array.isArray(payloads) ? payloads : []).forEach((row) => {
+        const alumnoId = String((row && row.alumnoId) || '').trim();
+        if (!alumnoId) return;
+        byAlumnoId[alumnoId] = Object.assign({}, byAlumnoId[alumnoId] || {}, {
+          alumno_id: alumnoId,
+          nota: String((row && row.nota) || '').trim(),
+          fecha: getTodayYmdLocal(),
+          fecha_creacion: new Date().toISOString()
+        });
+      });
+      return Object.keys(byAlumnoId).map((alumnoId) => byAlumnoId[alumnoId]);
+    }
+
+    function buildOptimisticPlaneacionSavePreview(plan, options = {}) {
+      if (!plan || !plan.planeacion_id) return null;
+      const nextPlan = cloneJsonSafe(plan, Object.assign({}, plan)) || Object.assign({}, plan);
+      const nowIso = new Date().toISOString();
+      const draft = options.draft || null;
+      const request = draft ? (options.request || buildOpenPlanSaveRequest(plan, draft)) : null;
+      if (draft && request) {
+        const fallbackWeekId = String((request.semana && request.semana.semana_id) || '').trim() || ('SEM_' + String(draft.fecha_planeacion || request.fallbackDate || '').replace(/-/g, ''));
+        nextPlan.semana_id = request.semana && !request.semana.draft ? request.semana.semana_id : fallbackWeekId;
+        nextPlan.materia_id = request.materiaId;
+        nextPlan.submateria_id = request.submateriaId;
+        nextPlan.frase_semana = String(draft.frase_semana || '').trim();
+        nextPlan.alumnos = buildPlanAlumnoSnapshotsByIds(request.alumnosIds, plan.grupo_id, plan.alumnos);
+        nextPlan.alumnos_count = nextPlan.alumnos.length;
+        nextPlan.actividades = request.actividades.map((activity, index) => ({
+          actividad_id: String((draft.activities && draft.activities[index] && draft.activities[index].actividad_id) || '').trim(),
+          orden: index + 1,
+          texto: String((activity && activity.texto) || '').trim(),
+          material_en_carpeta: normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'),
+          realizada: normalizeRealizadaStatus((activity && activity.realizada) || ''),
+          comentario_cierre: String((activity && activity.comentario_cierre) || '').trim(),
+          fecha_actualizacion: nowIso
+        }));
+        nextPlan.actividades_count = nextPlan.actividades.length;
+        nextPlan.detail_loaded = true;
+        nextPlan.boot_detail_loaded = true;
+        nextPlan.fecha_actualizacion = nowIso;
+      }
+      if (String(options.generalText || '').trim()) {
+        const current = Array.isArray(nextPlan.obs_semana) ? nextPlan.obs_semana.slice() : [];
+        current.push({
+          obs_semana_id: uid('TMPOS'),
+          planeacion_id: plan.planeacion_id,
+          fecha: getTodayYmdLocal(),
+          fecha_creacion: nowIso,
+          texto: String(options.generalText || '').trim(),
+          autor_id: getCurrentUserId()
+        });
+        nextPlan.obs_semana = current;
+        nextPlan.obs_loaded = true;
+      }
+      if (Array.isArray(options.finalPayloads) && options.finalPayloads.length) {
+        nextPlan.obs_alumno_final = mergeOptimisticAlumnoFinalRows(nextPlan, options.finalPayloads);
+        nextPlan.obs_loaded = true;
+      }
+      nextPlan._local_save_state = String(options.localState || 'saving').trim();
+      nextPlan._local_save_message = String(options.localMessage || 'Guardando cambios...').trim();
+      return nextPlan;
+    }
+
+    function buildOptimisticCreatedPlaneaciones(options = {}) {
+      const groupIds = Array.isArray(options.groupIds) ? options.groupIds.map((item) => String(item || '').trim()).filter(Boolean) : [];
+      if (!groupIds.length) return [];
+      const nowIso = new Date().toISOString();
+      const materiaId = String(options.materiaId || '').trim();
+      const submateriaId = String(options.submateriaId || '').trim();
+      const semanaId = String((options.semana && options.semana.semana_id) || '').trim() || ('SEM_' + String(options.fechaPlaneacion || '').replace(/-/g, ''));
+      const loteId = groupIds.length > 1 ? uid('TMPLTE') : '';
+      const materiaRow = (state.catalogos.materias || []).find((item) => String(item.materia_id || '').trim() === materiaId) || null;
+      const submateriaRow = getSubmateriaById(submateriaId);
+      const facilitadorId = String((state.session && state.session.usuario && state.session.usuario.facilitador_id) || '').trim();
+      return groupIds.map((groupId) => {
+        const alumnosIds = (Array.isArray(options.alumnosIds) ? options.alumnosIds : []).filter((alumnoId) => {
+          const alumno = getAlumnoById(alumnoId);
+          return !alumno || String(alumno.grupo_id || '').trim() === groupId;
+        });
+        return {
+          planeacion_id: uid('TMPPLA'),
+          planeacion_lote_id: loteId,
+          semana_id: semanaId,
+          fecha_planeacion: String(options.fechaPlaneacion || '').trim(),
+          facilitador_id: facilitadorId,
+          grupo_id: groupId,
+          materia_id: materiaId,
+          submateria_id: submateriaId,
+          materia_nombre: materiaRow ? (materiaRow.nombre || materiaId) : materiaId,
+          submateria_nombre: submateriaRow ? (submateriaRow.nombre || submateriaId) : '',
+          frase_semana: String(options.fraseSemana || '').trim(),
+          estado: String(options.targetStatus || 'borrador').trim() || 'borrador',
+          fecha_creacion: nowIso,
+          fecha_actualizacion: nowIso,
+          actividades_version_actual: '',
+          actividades_count: Array.isArray(options.activities) ? options.activities.length : 0,
+          alumnos_count: alumnosIds.length,
+          alumnos: buildPlanAlumnoSnapshotsByIds(alumnosIds, groupId),
+          actividades: (Array.isArray(options.activities) ? options.activities : []).map((activity, index) => ({
+            actividad_id: '',
+            orden: index + 1,
+            texto: String((activity && activity.texto) || '').trim(),
+            material_en_carpeta: normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'),
+            realizada: normalizeRealizadaStatus((activity && activity.realizada) || ''),
+            comentario_cierre: String((activity && activity.comentario_cierre) || '').trim(),
+            fecha_actualizacion: nowIso
+          })),
+          detail_loaded: false,
+          boot_detail_loaded: true,
+          obs_loaded: false,
+          _local_save_state: 'creating',
+          _local_save_message: 'Creando planeación...'
+        };
+      });
+    }
+
+    function applyLocalPlaneacionFeedback(planIds, stateName, message) {
+      (Array.isArray(planIds) ? planIds : [planIds]).forEach((planId) => {
+        const normalizedId = String(planId || '').trim();
+        if (!normalizedId) return;
+        const current = getPlanById(normalizedId);
+        if (!current) return;
+        upsertPlaneacionRow({
+          planeacion_id: normalizedId,
+          _local_save_state: String(stateName || '').trim(),
+          _local_save_message: String(message || '').trim()
+        });
+      });
+    }
+
+    function scheduleClearLocalPlaneacionFeedback(planIds, delay = 2200) {
+      const ids = (Array.isArray(planIds) ? planIds : [planIds]).map((planId) => String(planId || '').trim()).filter(Boolean);
+      if (!ids.length) return;
+      scheduleUiDebounce('plan-feedback-clear:' + ids.join(','), () => {
+        ids.forEach((planId) => {
+          const current = getPlanById(planId);
+          if (!current) return;
+          upsertPlaneacionRow({
+            planeacion_id: planId,
+            _local_save_state: '',
+            _local_save_message: ''
+          });
+        });
+        if (isPlaneacionesSurfaceVisible()) renderPlaneacionesList();
+      }, delay);
+    }
+
+    function restorePlanEditorFromSnapshot(snapshot) {
+      if (!snapshot) return;
+      state.planEditor = cloneJsonSafe(snapshot, snapshot) || snapshot;
+      if (state.ui) state.ui.planBuilderExpanded = true;
+      renderPlanEditor();
+      renderPlanBuilderVisibility();
+    }
+
+    function restorePendingPlanObservationInputs(planId, generalText, finalPayloads) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return;
+      window.requestAnimationFrame(() => {
+        if (String(generalText || '').trim()) {
+          const generalInput = $('obs-general-' + normalizedPlanId);
+          if (generalInput) generalInput.value = String(generalText || '').trim();
+        }
+        (Array.isArray(finalPayloads) ? finalPayloads : []).forEach((row) => {
+          const alumnoId = String((row && row.alumnoId) || '').trim();
+          if (!alumnoId) return;
+          const input = $('obs-final-' + normalizedPlanId + '-' + alumnoId);
+          if (input) {
+            input.value = String((row && row.nota) || '').trim();
+            autoGrowObsFinal(input);
+          }
+        });
+      });
+    }
+
+    function queuePlaneacionPostSaveSync(planId, options = {}) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return;
+      const delay = Number(options.delay || 520);
+      scheduleUiDebounce('plan-post-save-sync:' + normalizedPlanId, async () => {
+        try {
+          if (options.refreshDetail !== false) {
+            await refreshSinglePlaneacionSurface(normalizedPlanId, {
+              includeAlertas: false,
+              snapshotKind: options.snapshotKind || 'planeacion_post_save_sync'
+            });
+          }
+        } catch (_) {}
+        if (options.refreshAlertas) {
+          refreshPlaneacionesAlertsDeferred({
+            force: true,
+            includeStats: false,
+            includePlaneaciones: false,
+            delay: 120
+          }).catch(() => {});
+        }
+      }, delay);
+    }
+
     function appendPlaneacionesRows(rows) {
       if (!Array.isArray(rows) || !rows.length) return;
       const existingById = new Map((state.planeaciones || []).map((plan) => [plan.planeacion_id, plan]));
@@ -6891,6 +7264,13 @@
         : 'Selecciona una fecha.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
+    }
+
+    function handlePlanFechaChanged(event) {
+      const input = event && event.currentTarget ? event.currentTarget : $('planFecha');
+      if (!input) return;
+      if ($('planFecha') && $('planFecha') !== input) $('planFecha').value = input.value || '';
+      renderPlanWeekResolved();
     }
 
     function renderPlanGroupChecklist() {
@@ -7305,6 +7685,10 @@
         return;
       }
       const currentPlan = getPlanById(planId);
+      if (isPlaneacionPendingCreation(currentPlan)) {
+        setBanner('La planeacion se esta creando todavia. Espera un momento para abrirla.', 'info', { button });
+        return;
+      }
       if (state.ui) state.ui.openPlanLoadingId = planId;
       state.openPlanId = planId;
       state.openPlanDraft = null;
@@ -7523,7 +7907,7 @@
             '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
           '</div>' +
           '<div class="grid-3">' +
-            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha:</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" oninput="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
             '<div><label>Materia</label><select onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
@@ -7585,7 +7969,7 @@
       return (
         '<div class="plan-open-editor">' +
           '<div class="grid-3">' +
-            '<div class="plan-date-detected-field"><label>Fecha de referencia</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha:</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" oninput="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
             '<div><label>Materia</label><select onchange="updateOpenPlanDraftField(\'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
@@ -7650,7 +8034,10 @@
       if (listHead) listHead.hidden = !!focusedEntry;
 
       if (planeacionesLoading && !planeacionesLoaded && !entriesToRender.length) {
-        host.innerHTML = buildPlaneacionesListSkeleton();
+        const previewCount = getPlaneacionesLoadingPreviewCount();
+        host.innerHTML = previewCount > 0
+          ? buildPlaneacionesListSkeleton(previewCount)
+          : buildPlaneacionesLoadingEmptyState();
         return;
       }
 
@@ -7734,6 +8121,9 @@
         const phraseCompactAttrs = phraseNeedsTooltip
           ? ' tabindex="0" data-tooltip="' + escapeHtml(phraseText) + '"'
           : '';
+        const localFeedbackHtml = getPlanLocalFeedbackMarkup(plan);
+        const badgeMeta = getPlanStatusBadgeMeta(plan);
+        const badgeHtml = '<span class="badge ' + escapeHtml(badgeMeta.className) + '">' + escapeHtml(badgeMeta.label) + '</span>';
         const summaryMetaHtml = ((hasMaterialAlert || latestResolvedMaterialAlert)
           ? (
               '<div class="plan-compact-summary-meta">' +
@@ -7814,7 +8204,12 @@
         }
 
         if (!isOpen) {
-          const quickActivateButton = plan.estado === 'borrador'
+          const isPendingCreation = isPlaneacionPendingCreation(plan);
+          const localPending = isPlaneacionLocalSavePending(plan);
+          const openButtonHtml = isPendingCreation
+            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Creando...</button>'
+            : '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
+          const quickActivateButton = !localPending && plan.estado === 'borrador'
             ? '<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>'
             : '';
           return (
@@ -7826,17 +8221,18 @@
                     '<div class="subtle">' + escapeHtml(groupLabel) +
                     ' · ' + escapeHtml(weekLabel) + '</div>' +
                   '</div>' +
-                  '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+                  badgeHtml +
                 '</div>' +
                 '<div class="meta-grid">' +
                   '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
                   '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
                 '</div>' +
+                localFeedbackHtml +
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
                 materialHistoryHtml +
                 '<div class="actions" style="margin-top:14px;">' +
                   quickActivateButton +
-                  '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>' +
+                  openButtonHtml +
                 '</div>' +
               '</div>' +
               '<div class="plan-collapsed-desktop">' +
@@ -7859,14 +8255,15 @@
                     '<span class="plan-compact-label">Resumen</span>' +
                     '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
                     summaryMetaHtml +
+                    localFeedbackHtml +
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-status plan-compact-cell-status">' +
                     '<span class="plan-compact-label">Estado</span>' +
-                    '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+                    badgeHtml +
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-actions plan-compact-cell-actions">' +
               quickActivateButton +
-              '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>' +
+              openButtonHtml +
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-cell-phrase">' +
                     '<span class="plan-compact-label">Frase</span>' +
@@ -7924,12 +8321,13 @@
                   '<div class="subtle">' + escapeHtml(groupLabel) +
                   ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
-                '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+                badgeHtml +
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
                 '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
+              localFeedbackHtml +
               previewSharedHtml +
               '<div class="plan-loading-note">' +
                 '<strong>Actualizando detalle completo...</strong>' +
@@ -7969,12 +8367,13 @@
                   '<div class="subtle">' + escapeHtml(groupLabel) +
                   ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
-                '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+                badgeHtml +
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
                 '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
+              localFeedbackHtml +
               '<div class="plan-loading-note">' +
                 '<strong>Abriendo planeación...</strong>' +
                 '<div class="mini">Se están cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
@@ -7997,12 +8396,13 @@
                   '<div class="subtle">' + escapeHtml(groupLabel) +
                   ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
-              '<span class="badge ' + escapeHtml(plan.estado) + '">' + escapeHtml(getPlanStatusLabel(plan.estado)) + '</span>' +
+              badgeHtml +
             '</div>' +
             '<div class="meta-grid">' +
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
               '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
             '</div>' +
+            localFeedbackHtml +
             (plan.estado === 'borrador'
               ? '<div class="plan-quick-actions"><button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar planeación</button></div>'
               : '') +
@@ -8137,6 +8537,31 @@
         '<div class="plan-list-loading-copy"><span>Cargando planeaciones...</span></div>' +
         desktopHeader +
         cards +
+      '</div>';
+    }
+
+    function getPlaneacionesLoadingPreviewCount() {
+      const currentRows = Array.isArray(state.planeaciones)
+        ? state.planeaciones.filter((plan) => !isPlaneacionPendingCreation(plan))
+        : [];
+      if (currentRows.length) return Math.max(1, Math.min(currentRows.length, 3));
+      if (!canUseAdminShell()) {
+        return 0;
+      }
+      const stats = state.dashboardStats || {};
+      const knownCount = Number(
+        stats.planeaciones_visibles != null ? stats.planeaciones_visibles : NaN
+      );
+      if (Number.isFinite(knownCount) && knownCount >= 0) {
+        return Math.max(0, Math.min(knownCount, 3));
+      }
+      return 3;
+    }
+
+    function buildPlaneacionesLoadingEmptyState() {
+      return '<div class="plan-list-loading-shell">' +
+        '<div class="plan-list-loading-copy"><span>Revisando si tienes planeaciones activas...</span></div>' +
+        '<div class="empty">Si no tienes planeaciones abiertas, en un momento verás el estado vacío real.</div>' +
       '</div>';
     }
 
@@ -8734,9 +9159,11 @@
       const fechaPlaneacion = $('planFecha').value || fallbackDate;
       const semana = getWeekByDateOrDraft(fechaPlaneacion);
       if (!semana) throw new Error('Selecciona una fecha valida para construir la semana.');
-      if (!$('planMateria').value) throw new Error('Selecciona una materia.');
+      const materiaId = String($('planMateria').value || '').trim();
+      const fraseSemana = $('planFrase').value.trim();
+      if (!materiaId) throw new Error('Selecciona una materia.');
       const selectedSubmateriaId = $('planSubmateria') ? $('planSubmateria').value : '';
-      if (materiaRequiresPlanSubmateria($('planMateria').value) && !selectedSubmateriaId) {
+      if (materiaRequiresPlanSubmateria(materiaId) && !selectedSubmateriaId) {
         throw new Error('Selecciona una submateria.');
       }
       const grupoIds = state.planEditor.mode === 'edit'
@@ -8769,36 +9196,134 @@
       }
 
       const previousPlan = editorMode === 'edit' ? getPlanById(state.planEditor.planId) : null;
+      const planEditorSnapshot = cloneJsonSafe(state.planEditor, state.planEditor);
+      const targetStatus = editorMode === 'edit'
+        ? String((previousPlan && previousPlan.estado) || 'borrador').trim()
+        : (String(targetStatusOverride || '').trim() === 'activa' ? 'activa' : 'borrador');
+      const optimisticCreatedPlans = editorMode !== 'edit'
+        ? buildOptimisticCreatedPlaneaciones({
+            fechaPlaneacion,
+            semana,
+            groupIds: grupoIds,
+            materiaId,
+            submateriaId: selectedSubmateriaId,
+            fraseSemana,
+            alumnosIds,
+            activities: actividades,
+            targetStatus
+          })
+        : [];
+      const shouldForceAlertasAfterSave = actividades.some((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
+      const optimisticUpdatedPlan = editorMode === 'edit' && previousPlan
+        ? buildOptimisticPlaneacionSavePreview(previousPlan, {
+            draft: {
+              fecha_planeacion: fechaPlaneacion,
+              frase_semana: fraseSemana,
+              materia_id: materiaId,
+              submateria_id: selectedSubmateriaId,
+              alumnos_ids: alumnosIds,
+              activities: actividades.map((activity) => ({
+                actividad_id: activity.actividad_id || '',
+                texto: activity.texto,
+                material_en_carpeta: activity.material_en_carpeta,
+                realizada: activity.realizada,
+                comentario_cierre: activity.comentario_cierre,
+                last_known_updated_at: activity.last_known_updated_at || ''
+              })),
+              lastKnownUpdatedAt: state.planEditor.lastKnownUpdatedAt,
+              lastKnownActivitiesVersion: state.planEditor.lastKnownActivitiesVersion
+            },
+            request: {
+              semana,
+              fallbackDate,
+              materiaId,
+              submateriaId: selectedSubmateriaId,
+              alumnosIds,
+              actividades
+            },
+            localState: 'saving',
+            localMessage: 'Guardando en segundo plano...'
+          })
+        : null;
+      const optimisticCreatedIds = optimisticCreatedPlans.map((plan) => plan.planeacion_id);
+      const shouldRollbackCreate = optimisticCreatedIds.length > 0;
+      if (optimisticUpdatedPlan) {
+        upsertPlaneacionRow(optimisticUpdatedPlan);
+        state.openPlanId = optimisticUpdatedPlan.planeacion_id;
+        state.openPlanDraft = buildOpenPlanDraft(optimisticUpdatedPlan);
+        persistCurrentBootSnapshot('planeacion_editor_guardando');
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        setBanner('Guardando planeación en segundo plano...', 'info');
+      } else if (optimisticCreatedPlans.length) {
+        upsertPlaneacionesRows(optimisticCreatedPlans);
+        resetPlanEditor();
+        state.openPlanId = optimisticCreatedIds[0] || '';
+        state.openPlanDraft = null;
+        persistCurrentBootSnapshot('planeacion_editor_creando');
+        focusPlaneacionCardSoon(optimisticCreatedIds[0]);
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        setBanner('Creando planeación...', 'info');
+      }
       let responseData = null;
-      if (editorMode === 'edit') {
-        responseData = await api('guardarPlaneacionCompleta', {
-          planeacion_id: state.planEditor.planId,
-          fecha_planeacion: fechaPlaneacion,
-          semana_id: semana.draft ? '' : semana.semana_id,
-          grupo_id: grupoIds[0],
-          materia_id: $('planMateria').value,
-          submateria_id: selectedSubmateriaId,
-          frase_semana: $('planFrase').value.trim(),
-          alumnos_ids: alumnosIds,
-          actividades,
-          last_known_updated_at: state.planEditor.lastKnownUpdatedAt,
-          last_known_activities_version: state.planEditor.lastKnownActivitiesVersion,
-          request_id: uid('PLAUPD')
-        });
-      } else {
-        const targetStatus = String(targetStatusOverride || '').trim() === 'activa' ? 'activa' : 'borrador';
-        responseData = await api('crearPlaneacion', {
-          fecha_planeacion: fechaPlaneacion,
-          semana_id: semana.draft ? '' : semana.semana_id,
-          grupo_ids: grupoIds,
-          estado_inicial: targetStatus,
-          materia_id: $('planMateria').value,
-          submateria_id: selectedSubmateriaId,
-          frase_semana: $('planFrase').value.trim(),
-          alumnos_ids: alumnosIds,
-          actividades,
-          request_id: uid('PLA')
-        });
+      try {
+        if (editorMode === 'edit') {
+          responseData = await api('guardarPlaneacionCompleta', {
+            planeacion_id: state.planEditor.planId,
+            fecha_planeacion: fechaPlaneacion,
+            semana_id: semana.draft ? '' : semana.semana_id,
+            grupo_id: grupoIds[0],
+            materia_id: materiaId,
+            submateria_id: selectedSubmateriaId,
+            frase_semana: fraseSemana,
+            alumnos_ids: alumnosIds,
+            actividades,
+            last_known_updated_at: state.planEditor.lastKnownUpdatedAt,
+            last_known_activities_version: state.planEditor.lastKnownActivitiesVersion,
+            request_id: uid('PLAUPD')
+          });
+        } else {
+          responseData = await api('crearPlaneacion', {
+            fecha_planeacion: fechaPlaneacion,
+            semana_id: semana.draft ? '' : semana.semana_id,
+            grupo_ids: grupoIds,
+            estado_inicial: targetStatus,
+            materia_id: materiaId,
+            submateria_id: selectedSubmateriaId,
+            frase_semana: fraseSemana,
+            alumnos_ids: alumnosIds,
+            actividades,
+            request_id: uid('PLA')
+          });
+        }
+      } catch (err) {
+        if (optimisticUpdatedPlan && previousPlan) {
+          upsertPlaneacionRow(previousPlan);
+          state.openPlanId = previousPlan.planeacion_id;
+          state.openPlanDraft = buildOpenPlanDraft(previousPlan);
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+        }
+        if (shouldRollbackCreate) {
+          removePlaneacionRows(optimisticCreatedIds);
+          restorePlanEditorFromSnapshot(planEditorSnapshot);
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+        }
+        throw err;
       }
       const updatedPlan = responseData && responseData.planeacion ? responseData.planeacion : null;
       const createdPlans = Array.isArray(responseData && responseData.planeaciones)
@@ -8806,27 +9331,49 @@
         : (updatedPlan && updatedPlan.planeacion_id ? [updatedPlan] : []);
       const canApplyLocally = editorMode === 'edit' && updatedPlan && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan);
       const canApplyCreateLocally = editorMode !== 'edit' && createdPlans.length;
-      resetPlanEditor();
+      if (editorMode !== 'edit' && !optimisticCreatedPlans.length) {
+        resetPlanEditor();
+      }
+      if (optimisticCreatedIds.length) removePlaneacionRows(optimisticCreatedIds);
       if (canApplyLocally) {
-        upsertPlaneacionRow(updatedPlan);
+        upsertPlaneacionRow(Object.assign({}, updatedPlan, {
+          _local_save_state: 'saved',
+          _local_save_message: 'Planeación guardada.'
+        }));
+        state.openPlanId = updatedPlan.planeacion_id;
+        state.openPlanDraft = buildOpenPlanDraft(getPlanById(updatedPlan.planeacion_id) || updatedPlan);
         renderPlaneacionesSurface({
           includeStats: true,
           includePlaneaciones: true,
           includeAlertas: false
         });
         persistCurrentBootSnapshot('planeacion_editor_guardada');
-        refreshPlaneacionesAlertsDeferred();
+        scheduleClearLocalPlaneacionFeedback(updatedPlan.planeacion_id);
+        refreshPlaneacionesAlertsDeferred({
+          force: shouldForceAlertasAfterSave
+        });
       } else if (canApplyCreateLocally) {
-        upsertPlaneacionesRows(createdPlans);
+        const appliedPlans = upsertPlaneacionesRows(createdPlans.map((plan) => Object.assign({}, plan, {
+          _local_save_state: 'saved',
+          _local_save_message: 'Planeación creada.'
+        })));
         renderPlaneacionesSurface({
           includeStats: true,
           includePlaneaciones: true,
           includeAlertas: false
         });
         persistCurrentBootSnapshot('planeacion_editor_creada');
-        refreshPlaneacionesAlertsDeferred();
+        scheduleClearLocalPlaneacionFeedback(appliedPlans.map((plan) => plan.planeacion_id));
+        refreshPlaneacionesAlertsDeferred({
+          force: shouldForceAlertasAfterSave
+        });
       } else {
-        await refreshPlaneacionesSurface();
+        await refreshPlaneacionesSurface({ includeAlertas: false });
+        refreshPlaneacionesAlertsDeferred({
+          force: shouldForceAlertasAfterSave,
+          includeStats: false,
+          includePlaneaciones: false
+        }).catch(() => {});
       }
       setBanner(
         responseData && responseData._meta && responseData._meta.message
@@ -8998,12 +9545,36 @@
 
     async function planAction(button, planId, action) {
       await handleAction(action, async () => {
-        const shouldCloseOpenCard = action === 'activarPlaneacion' && state.openPlanId === planId;
+        const shouldCloseOpenCard = false;
+        const previousPlan = getPlanById(planId);
+        const previousPlanSnapshot = previousPlan ? cloneJsonSafe(previousPlan, previousPlan) : null;
+        if (action === 'activarPlaneacion' && previousPlan) {
+          upsertPlaneacionRow(Object.assign({}, previousPlan, {
+            estado: 'activa',
+            _local_save_state: 'activating',
+            _local_save_message: 'La semana ya está visible mientras termina de activarse.'
+          }));
+          if (state.openPlanId === planId) {
+            state.openPlanDraft = null;
+          }
+          renderPlaneacionesList();
+          focusPlaneacionCardSoon(planId);
+          setBanner('Activando semana en segundo plano...', 'info');
+        }
         if (shouldCloseOpenCard) {
           state.openPlanId = '';
           state.openPlanDraft = null;
         }
-        const response = await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
+        let response = null;
+        try {
+          response = await api(action, { planeacion_id: planId, request_id: uid('PLAN') });
+        } catch (err) {
+          if (action === 'activarPlaneacion' && previousPlanSnapshot) {
+            upsertPlaneacionRow(previousPlanSnapshot);
+            renderPlaneacionesList();
+          }
+          throw err;
+        }
         const updatedPlan = response && response.planeacion ? response.planeacion : null;
         const appliedLocally = !hasActivePlaneacionesFilters() &&
           await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
@@ -9172,11 +9743,20 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
-          refreshPlaneacionesAlertsDeferred();
+          refreshPlaneacionesAlertsDeferred({
+            force: !!options.forceAlertas
+          });
         } else {
           state.openPlanId = planId;
           state.openPlanDraft = null;
           await refreshPlaneacionesSurface();
+          if (options.forceAlertas) {
+            refreshPlaneacionesAlertsDeferred({
+              force: true,
+              includeStats: false,
+              includePlaneaciones: false
+            }).catch(() => {});
+          }
         }
         setBanner(successMessage, 'success');
       }, {
@@ -9191,7 +9771,8 @@
       const draft = getOpenPlanDraft(plan);
       await persistOpenPlanDraft(button, planId, draft, {
         successMessage: 'Planeación actualizada.',
-        actionLabel: 'guardarPlaneacionCompletaInline'
+        actionLabel: 'guardarPlaneacionCompletaInline',
+        forceAlertas: planDraftAffectsMaterialAlerts(draft)
       });
     }
 
@@ -9316,12 +9897,12 @@
         });
         return Promise.resolve();
       }
-      if (state.ui && state.ui.deferredPlaneacionesAlertRefreshPromise) {
+      if (!options.force && state.ui && state.ui.deferredPlaneacionesAlertRefreshPromise) {
         return state.ui.deferredPlaneacionesAlertRefreshPromise;
       }
       const task = scheduleAfterPaint(async () => {
         try {
-          await refreshAlertas();
+          await refreshAlertas({ force: !!options.force });
           renderPlaneacionesSurface({
             includeStats,
             includePlaneaciones,
@@ -9333,6 +9914,17 @@
       }, delay);
       if (state.ui) state.ui.deferredPlaneacionesAlertRefreshPromise = task;
       return task;
+    }
+
+    function planDraftAffectsMaterialAlerts(draftLike) {
+      return !!(
+        draftLike &&
+        Array.isArray(draftLike.activities) &&
+        draftLike.activities.some((activity) => {
+          const status = normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere');
+          return status === 'no_listo' || status === 'listo';
+        })
+      );
     }
 
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
@@ -9376,9 +9968,9 @@
 
     function applySavedPlaneacionDetail(planId, updatedPlan) {
       if (!updatedPlan || !updatedPlan.planeacion_id) return;
-      upsertPlaneacionRow(updatedPlan);
+      const mergedPlan = upsertPlaneacionRow(updatedPlan) || updatedPlan;
       state.openPlanId = planId;
-      state.openPlanDraft = buildOpenPlanDraft(updatedPlan);
+      state.openPlanDraft = buildOpenPlanDraft(mergedPlan);
     }
 
     async function applySavedPlaneacionTransition(planId, updatedPlan, options = {}) {
@@ -9454,13 +10046,40 @@
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
       const shouldSavePlan = !!planDraft;
       const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
+      const shouldForceAlertasAfterSave =
+        (shouldSavePlan && planDraftAffectsMaterialAlerts(planDraft)) ||
+        (shouldSaveShared && planDraftAffectsMaterialAlerts(sharedDraft));
+      const previousPlanSnapshot = cloneJsonSafe(plan, plan);
+      const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
+      const optimisticPlan = canOptimisticallyRender
+        ? buildOptimisticPlaneacionSavePreview(plan, {
+            draft: shouldSavePlan ? planDraft : null,
+            generalText,
+            finalPayloads,
+            localState: 'saving',
+            localMessage: 'Guardando en segundo plano...'
+          })
+        : null;
       if (!generalText && !finalPayloads.length && !shouldSavePlan && !shouldSaveShared) {
         throw new Error('No hay cambios para guardar.');
       }
 
       await handleAction('guardarCambiosPlaneacion', async () => {
+        if (optimisticPlan) {
+          upsertPlaneacionRow(optimisticPlan);
+          state.openPlanId = planId;
+          state.openPlanDraft = buildOpenPlanDraft(optimisticPlan);
+          persistCurrentBootSnapshot('guardar_cambios_optimistic');
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          setBanner('Guardando cambios en segundo plano...', 'info');
+        }
         const savedParts = [];
         let savedPlanResponse = null;
+        try {
         if (generalText) {
           await persistGeneralObservation(planId, generalText);
           const generalInput = $('obs-general-' + planId);
@@ -9482,28 +10101,68 @@
           state.openPlanDraft = null;
           savedParts.push('base multigrupo');
         }
+        } catch (err) {
+          if (optimisticPlan && previousPlanSnapshot) {
+            upsertPlaneacionRow(previousPlanSnapshot);
+            state.openPlanId = planId;
+            state.openPlanDraft = buildOpenPlanDraft(previousPlanSnapshot);
+            renderPlaneacionesSurface({
+              includeStats: true,
+              includePlaneaciones: true,
+              includeAlertas: false
+            });
+            restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          }
+          throw err;
+        }
         const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion ? savedPlanResponse.planeacion : null;
         const canPatchSimplePlanLocally = shouldSavePlan &&
           !shouldSaveShared &&
           !(entry && entry.isMulti);
         if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
-          applySavedPlaneacionDetail(planId, updatedPlan);
+          applySavedPlaneacionDetail(planId, Object.assign({}, updatedPlan, {
+            _local_save_state: 'saved',
+            _local_save_message: 'Cambios guardados.'
+          }));
           persistCurrentBootSnapshot('guardar_cambios_local');
           renderPlaneacionesSurface({
             includeStats: true,
             includePlaneaciones: true,
             includeAlertas: false
           });
-          if (shouldSavePlan) refreshPlaneacionesAlertsDeferred();
+          scheduleClearLocalPlaneacionFeedback(planId);
+          if (shouldSavePlan) {
+            queuePlaneacionPostSaveSync(planId, {
+              refreshDetail: false,
+              refreshAlertas: true,
+              forceAlertas: shouldForceAlertasAfterSave
+            });
+          }
         } else if (!shouldSavePlan && !shouldSaveShared) {
-          await refreshSinglePlaneacionSurface(planId, {
-            includeAlertas: false,
+          applyLocalPlaneacionFeedback(planId, 'saved', 'Cambios guardados.');
+          persistCurrentBootSnapshot('guardar_cambios_obs_local');
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          scheduleClearLocalPlaneacionFeedback(planId);
+          queuePlaneacionPostSaveSync(planId, {
+            refreshDetail: true,
+            refreshAlertas: false,
             snapshotKind: 'guardar_cambios_obs'
           });
         } else {
           state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
           state.openPlanDraft = null;
-          await refreshPlaneacionesSurface({ includeAlertas: shouldSavePlan || shouldSaveShared });
+          await refreshPlaneacionesSurface({ includeAlertas: false });
+          if (shouldSavePlan || shouldSaveShared) {
+            refreshPlaneacionesAlertsDeferred({
+              force: shouldForceAlertasAfterSave,
+              includeStats: false,
+              includePlaneaciones: false
+            }).catch(() => {});
+          }
         }
         finalPayloads.forEach((row) => {
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
@@ -9563,7 +10222,8 @@
         successMessage: 'Material marcado como listo.',
         actionLabel: 'marcarMaterialListo',
         actionKey: buildActionKey('marcarMaterialListo', [planId, String(pendingActivities.length)]),
-        busyText: 'Marcando...'
+        busyText: 'Marcando...',
+        forceAlertas: true
       });
     }
 
@@ -9919,7 +10579,8 @@
         button: event.currentTarget,
         key: buildActionKey('crearNotaDirectora', [$('notaAlumno').value, $('notaAlcance').value, $('notaPeriodo').value, $('notaTipo').value, $('notaTexto').value.trim().slice(0, 40)])
       }));
-      $('planFecha').addEventListener('change', renderPlanWeekResolved);
+      $('planFecha').addEventListener('input', handlePlanFechaChanged);
+      $('planFecha').addEventListener('change', handlePlanFechaChanged);
       $('planMateria').addEventListener('change', () => {
         state.planEditor.selectedSubmateriaId = '';
         syncPlanSubmateriaSelect('');

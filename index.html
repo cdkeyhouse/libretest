@@ -972,6 +972,34 @@
       color: var(--muted);
       line-height: 1.45;
     }
+    .plan-inline-feedback {
+      display: grid;
+      gap: 4px;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(31, 182, 229, 0.18);
+      background: rgba(31, 182, 229, 0.08);
+      color: var(--text-soft);
+    }
+    .plan-inline-feedback strong {
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .plan-inline-feedback span {
+      color: var(--muted);
+      font-size: 0.83rem;
+      line-height: 1.4;
+    }
+    .plan-inline-feedback.is-success {
+      border-color: rgba(140, 197, 63, 0.2);
+      background: rgba(140, 197, 63, 0.1);
+    }
+    .badge.is-local-pending {
+      background: rgba(31, 182, 229, 0.18);
+      color: #8fe8f1;
+      border-color: rgba(31, 182, 229, 0.32);
+    }
     .plan-loading-progress {
       position: relative;
       height: 8px;
@@ -5215,7 +5243,7 @@
               </div>
               <div class="grid-3">
                 <div class="plan-date-detected-field">
-                  <label for="planFecha">Fecha de referencia</label>
+                  <label for="planFecha">Fecha:</label>
                   <input id="planFecha" type="date">
                   <div class="plan-date-inline-meta">
                     <div class="plan-date-resolved-head">Semana:</div>
