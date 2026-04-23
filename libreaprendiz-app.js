@@ -9082,7 +9082,11 @@
       });
       if (tabName === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
         refreshPlaneaciones()
-          .then(() => renderAll())
+          .then(() => renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: true
+          }))
           .catch(() => {});
       }
     }
@@ -9624,14 +9628,20 @@
     async function saveGeneralObservation(button, planId) {
       const input = $('obs-general-' + planId);
       const texto = input ? input.value.trim() : '';
-      if (!texto) throw new Error('Escribe la observación general.');
+      if (!texto) throw new Error('Escribe la observaci?n general.');
       await handleAction('crearObsSemana', async () => {
-        await persistGeneralObservation(planId, texto);
+        const previousValue = input ? input.value : '';
         if (input) input.value = '';
-        await refreshSinglePlaneacionSurface(planId, {
-          snapshotKind: 'obs_general'
-        });
-        setBanner('Observación general guardada.', 'success');
+        try {
+          await persistGeneralObservation(planId, texto);
+          await refreshSinglePlaneacionSurface(planId, {
+            snapshotKind: 'obs_general'
+          });
+          setBanner('Observaci?n general guardada.', 'success');
+        } catch (error) {
+          if (input) input.value = previousValue;
+          throw error;
+        }
       }, { button, key: buildActionKey('crearObsSemana', [planId, texto.slice(0, 40)]) });
     }
 
