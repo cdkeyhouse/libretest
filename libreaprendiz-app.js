@@ -6772,6 +6772,23 @@
       );
     }
 
+    function getPlanActionStatusMarkup(plan) {
+      const localState = getPlanLocalSaveState(plan);
+      const label = ({
+        saving: 'Guardando...',
+        saved: 'Guardado',
+        sync_error: 'Pendiente'
+      })[localState] || '';
+      if (!label) return '';
+      const toneClass = localState === 'sync_error' ? 'is-warning' : (localState === 'saved' ? 'is-success' : 'is-pending');
+      return (
+        '<span class="plan-action-status ' + toneClass + '">' +
+          '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
+          '<span>' + escapeHtml(label) + '</span>' +
+        '</span>'
+      );
+    }
+
     function isPlaneacionPendingCreation(plan) {
       if (!plan) return false;
       const localState = getPlanLocalSaveState(plan);
@@ -8632,6 +8649,7 @@
         const observationsLoadingHint = !plan.obs_loaded
           ? '<div class="mini">Se están cargando observaciones de esta planeación...</div>'
           : '';
+        const actionStatusHtml = getPlanActionStatusMarkup(plan);
         const buttons = [];
         if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
           buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
@@ -8900,6 +8918,7 @@
               ((allowStructureEdit || allowGeneralObs || allowAlumnoObs)
                 ? '<button class="btn-primary" type="button" onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">Guardar cambios</button>'
                 : '') +
+              actionStatusHtml +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
               buttons.join('') +
             '</div>' +
