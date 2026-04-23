@@ -9983,7 +9983,7 @@
       if (!currentActivities.length || currentActivities.length !== nextActivities.length) return true;
       const currentMaterialConfirmado = String(plan.material_confirmado || '').trim().toLowerCase() === 'si';
       const nextMaterialConfirmado = nextActivities.every((activity) =>
-        materialStatusReady(normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'))
+        normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere') !== 'no_listo'
       );
       if (currentMaterialConfirmado !== nextMaterialConfirmado) return true;
       return currentActivities.some((activity, index) => {
