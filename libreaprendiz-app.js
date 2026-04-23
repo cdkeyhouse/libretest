@@ -1674,11 +1674,14 @@
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
       const surfaceCatalogBlocks = getPlaneacionesSurfaceCatalogBlocks();
-      const hadLocalNotificaciones = Array.isArray(state.notificaciones) && state.notificaciones.length > 0;
       const requestedOpenPlanId = String(state.openPlanId || '').trim();
+      const shouldReuseAlertas = shouldReuseFacilitadorFeedSnapshot('alertas');
+      const shouldReuseNotificaciones = shouldReuseFacilitadorFeedSnapshot('notificaciones');
       const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
         alert_limit: 20,
         notification_limit: 20,
+        include_alertas: !shouldReuseAlertas,
+        include_notificaciones: !shouldReuseNotificaciones,
         catalog_blocks: surfaceCatalogBlocks,
         open_plan_id: requestedOpenPlanId || ''
       }));
@@ -1689,10 +1692,11 @@
       state.planeaciones = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
         ? bootData.planeaciones.rows
         : [];
-      state.alertas = Array.isArray(bootData && bootData.alertas && bootData.alertas.rows)
+      const bootHasAlertas = !!(bootData && bootData.alertas && Array.isArray(bootData.alertas.rows));
+      state.alertas = bootHasAlertas
         ? bootData.alertas.rows
-        : [];
-      markAlertasFresh();
+        : (Array.isArray(state.alertas) ? state.alertas : []);
+      if (bootHasAlertas) markAlertasFresh();
       const bootHasNotificaciones = !!(bootData && bootData.notificaciones && Array.isArray(bootData.notificaciones.rows));
       state.notificaciones = bootHasNotificaciones
         ? bootData.notificaciones.rows
