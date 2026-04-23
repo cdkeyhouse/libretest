@@ -674,8 +674,31 @@
       gap: 2px;
     }
 
+    .workspace-session-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
     .workspace-session-copy strong {
       color: var(--text-strong);
+    }
+
+    .workspace-session-sync-chip {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(86, 180, 223, 0.12);
+      border: 1px solid rgba(86, 180, 223, 0.22);
+      color: var(--brand-deep);
+      font-size: 0.73rem;
+      font-weight: 700;
+      line-height: 1.1;
+      white-space: nowrap;
     }
 
     .plan-card .badge {

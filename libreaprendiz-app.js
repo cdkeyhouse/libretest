@@ -231,6 +231,7 @@
         multiGroupActiveChildByLote: {},
         debounceTimers: {},
         adminUiEventsBound: false,
+        restoreSnapshotSyncing: false,
         planeacionOutboxProcessing: false,
         planeacionOutboxRetryTimer: null
       },
@@ -748,6 +749,7 @@
         state.ui.notificationFilter = 'activas';
         state.ui.planeacionesMateriaFilter = '';
         state.ui.multiGroupActiveChildByLote = {};
+        state.ui.restoreSnapshotSyncing = false;
         state.ui.planeacionOutboxProcessing = false;
       }
       state.notificationEditor = {
@@ -1690,6 +1692,7 @@
         scheduleDeferredRestoreRefresh();
         return;
       }
+      setRestoreSnapshotSyncing(false);
       await refreshAll({ fastFacilitadorBoot: true });
     }
 
@@ -1702,14 +1705,17 @@
         setBanner('No había una sesión activa.', 'info');
         return;
       }
+      let remoteLogoutFailed = false;
       try {
         await api('logout', {});
-      } catch (_) {}
+      } catch (_) {
+        remoteLogoutFailed = true;
+      }
       saveSession(null);
       clearLoadedData();
       clearLoginInputs();
       renderAll();
-      setBanner('Sesión cerrada.', 'success');
+      setBanner(remoteLogoutFailed ? 'Sesión local cerrada.' : 'Sesión cerrada.', remoteLogoutFailed ? 'info' : 'success');
     }
 
     async function refreshCatalogos(options = {}) {
@@ -1836,7 +1842,16 @@
       return shouldReuseFacilitadorFeedSnapshot('planeaciones');
     }
 
+    function setRestoreSnapshotSyncing(isActive) {
+      if (!state.ui) return;
+      const nextValue = !!isActive;
+      if (state.ui.restoreSnapshotSyncing === nextValue) return;
+      state.ui.restoreSnapshotSyncing = nextValue;
+      renderSession();
+    }
+
     function scheduleDeferredRestoreRefresh() {
+      setRestoreSnapshotSyncing(true);
       const promise = scheduleAfterPaint(() => refreshAll({ fastFacilitadorBoot: true }), 40)
         .catch((error) => {
           setPlaneacionesRestoreLock(false);
@@ -1847,6 +1862,7 @@
         if (state.ui && state.ui.fastPlaneacionesBootPromise === promise) {
           state.ui.fastPlaneacionesBootPromise = null;
         }
+        setRestoreSnapshotSyncing(false);
       });
       return promise;
     }
@@ -2440,9 +2456,12 @@
         '<span class="mini">' + escapeHtml(user.facilitador_id) + ' · ' +
         escapeHtml(user.rol) + '</span>';
       if (workspaceSessionCopy) {
+        const restoreChip = state.ui && state.ui.restoreSnapshotSyncing
+          ? '<span class="workspace-session-sync-chip" title="Datos restaurados mientras sincroniza en segundo plano">Restaurado · Sync</span>'
+          : '';
         workspaceSessionCopy.innerHTML =
-          '<strong>' + escapeHtml(user.nombre) + '</strong><span class="mini">' +
-          escapeHtml(user.facilitador_id) + ' | ' + escapeHtml(user.rol) + '</span>';
+          '<strong>' + escapeHtml(user.nombre) + '</strong><div class="workspace-session-meta"><span class="mini">' +
+          escapeHtml(user.facilitador_id) + ' | ' + escapeHtml(user.rol) + '</span>' + restoreChip + '</div>';
       }
       if (logoutBtn) logoutBtn.hidden = false;
       if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = false;
@@ -11610,6 +11629,7 @@
           scheduleDeferredRestoreRefresh();
           return;
         }
+        setRestoreSnapshotSyncing(false);
         await handleAction('restore', () => refreshAll({ fastFacilitadorBoot: true }));
         return;
       }
