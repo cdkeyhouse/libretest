@@ -9976,6 +9976,23 @@
       );
     }
 
+    function didOpenPlanMaterialStateChange(plan, request) {
+      if (!plan || !request) return true;
+      const currentActivities = Array.isArray(plan.actividades) ? plan.actividades : [];
+      const nextActivities = Array.isArray(request.actividades) ? request.actividades : [];
+      if (!currentActivities.length || currentActivities.length !== nextActivities.length) return true;
+      const currentMaterialConfirmado = String(plan.material_confirmado || '').trim().toLowerCase() === 'si';
+      const nextMaterialConfirmado = nextActivities.every((activity) =>
+        materialStatusReady(normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'))
+      );
+      if (currentMaterialConfirmado !== nextMaterialConfirmado) return true;
+      return currentActivities.some((activity, index) => {
+        const currentStatus = normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere');
+        const nextStatus = normalizeMaterialStatus((nextActivities[index] && nextActivities[index].material_en_carpeta) || 'no_requiere');
+        return currentStatus !== nextStatus;
+      });
+    }
+
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
       const plan = providedPlan || getPlanById(planId);
       if (!plan || !draft) throw new Error('Planeación no encontrada.');
@@ -9992,6 +10009,7 @@
         actividades: request.actividades,
         last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
         last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
+        skip_material_sync: !didOpenPlanMaterialStateChange(plan, request),
         request_id: uid('PLAOPEN')
       };
       const shouldUseLiteSave = shouldUseLightOpenPlanSave(plan, draft, request);
@@ -10104,8 +10122,12 @@
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
       const shouldSavePlan = !!planDraft;
       const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
+      const planSaveRequest = shouldSavePlan ? buildOpenPlanSaveRequest(plan, planDraft) : null;
+      const shouldRefreshMaterialAlertas = shouldSavePlan
+        ? didOpenPlanMaterialStateChange(plan, planSaveRequest)
+        : false;
       const shouldForceAlertasAfterSave =
-        (shouldSavePlan && planDraftAffectsMaterialAlerts(planDraft)) ||
+        (shouldSavePlan && shouldRefreshMaterialAlertas && planDraftAffectsMaterialAlerts(planDraft)) ||
         (shouldSaveShared && planDraftAffectsMaterialAlerts(sharedDraft));
       const previousPlanSnapshot = cloneJsonSafe(plan, plan);
       const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
@@ -10149,7 +10171,7 @@
           savedParts.push('observaciones finales');
         }
         if (shouldSavePlan) {
-          savedPlanResponse = await persistOpenPlanDraftApi(planId, planDraft, plan);
+          savedPlanResponse = await persistOpenPlanDraftApi(planId, planDraft, plan, planSaveRequest);
           savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
         }
         if (shouldSaveShared) {
@@ -10193,7 +10215,7 @@
             queuePlaneacionPostSaveSync(planId, {
               refreshDetail: false,
               refreshObservaciones: false,
-              refreshAlertas: true,
+              refreshAlertas: shouldRefreshMaterialAlertas,
               forceAlertas: shouldForceAlertasAfterSave
             });
           }
