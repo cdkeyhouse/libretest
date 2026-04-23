@@ -1761,12 +1761,18 @@
         !hasActivePlaneacionesFilters() &&
         Array.isArray(state.planeaciones) &&
         (!!state.planeaciones.length || !!(state.ui && state.ui.planeacionesLoaded));
+      const canReuseStatsSnapshot =
+        canReusePlaneacionesSnapshot &&
+        state.dashboardStats &&
+        typeof state.dashboardStats === 'object' &&
+        Object.keys(state.dashboardStats).length > 0;
       const shouldRequestPlaneaciones = !canReusePlaneacionesSnapshot;
       const shouldReuseAlertas = shouldReuseFacilitadorFeedSnapshot('alertas');
       const shouldReuseNotificaciones = shouldReuseFacilitadorFeedSnapshot('notificaciones');
       const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
         alert_limit: 20,
         notification_limit: 20,
+        include_stats: !canReuseStatsSnapshot,
         include_planeaciones: shouldRequestPlaneaciones,
         include_alertas: !shouldReuseAlertas,
         include_notificaciones: !shouldReuseNotificaciones,
