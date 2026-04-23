@@ -9738,6 +9738,31 @@
       };
     }
 
+    function normalizeIdList(values) {
+      return Array.from(new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean))).sort();
+    }
+
+    function shouldUseLightOpenPlanSave(plan, draft, request) {
+      if (!plan || !draft || !request) return false;
+      const targetSemanaId = String((request.semana && request.semana.semana_id) || '').trim();
+      const currentSemanaId = String(plan.semana_id || '').trim();
+      const targetMateriaId = String(request.materiaId || '').trim();
+      const currentMateriaId = String(plan.materia_id || '').trim();
+      const targetSubmateriaId = String(request.submateriaId || '').trim();
+      const currentSubmateriaId = String(plan.submateria_id || '').trim();
+      if (!targetSemanaId || targetSemanaId !== currentSemanaId) return false;
+      if (targetMateriaId !== currentMateriaId) return false;
+      if (targetSubmateriaId !== currentSubmateriaId) return false;
+      const currentAlumnoIds = normalizeIdList(Array.isArray(plan.alumnos) ? plan.alumnos.map((row) => row && row.alumno_id) : []);
+      const nextAlumnoIds = normalizeIdList(request.alumnosIds);
+      if (!currentAlumnoIds.length) return false;
+      return JSON.stringify(currentAlumnoIds) === JSON.stringify(nextAlumnoIds);
+    }
+
+    function isFullSaveRequiredError(error) {
+      return !!(error && error.code === 'FULL_SAVE_REQUIRED');
+    }
+
     async function persistOpenPlanDraft(button, planId, draft, options = {}) {
       const plan = getPlanById(planId);
       if (!plan || !draft) throw new Error('Planeación no encontrada.');
@@ -9944,7 +9969,7 @@
       const plan = providedPlan || getPlanById(planId);
       if (!plan || !draft) throw new Error('Planeación no encontrada.');
       const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
-      return await api('guardarPlaneacionCompleta', {
+      const payload = {
         planeacion_id: planId,
         fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
         semana_id: request.semana.draft ? '' : request.semana.semana_id,
@@ -9957,7 +9982,16 @@
         last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
         last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
         request_id: uid('PLAOPEN')
-      });
+      };
+      const shouldUseLiteSave = shouldUseLightOpenPlanSave(plan, draft, request);
+      try {
+        return await api(shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta', payload);
+      } catch (error) {
+        if (shouldUseLiteSave && isFullSaveRequiredError(error)) {
+          return await api('guardarPlaneacionCompleta', payload);
+        }
+        throw error;
+      }
     }
 
     function hasActivePlaneacionesFilters() {
