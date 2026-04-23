@@ -1,6 +1,7 @@
     const STORAGE_KEYS = {
       session: 'la_v8_session',
-      bootSnapshot: 'la_v8_boot_snapshot'
+      bootSnapshot: 'la_v8_boot_snapshot',
+      planeacionOutbox: 'la_v8_planeacion_outbox'
     };
     const BOOT_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 12;
     const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
@@ -202,6 +203,7 @@
         loadedBlocks: [],
         revision: 0
       },
+      planeacionOutbox: [],
       planeaciones: [],
       alertas: [],
       notificaciones: [],
@@ -228,7 +230,9 @@
         planeacionesMateriaFilter: '',
         multiGroupActiveChildByLote: {},
         debounceTimers: {},
-        adminUiEventsBound: false
+        adminUiEventsBound: false,
+        planeacionOutboxProcessing: false,
+        planeacionOutboxRetryTimer: null
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -715,6 +719,11 @@
     }
 
     function clearLoadedData() {
+      if (state.ui && state.ui.planeacionOutboxRetryTimer) {
+        window.clearTimeout(state.ui.planeacionOutboxRetryTimer);
+        state.ui.planeacionOutboxRetryTimer = null;
+      }
+      state.planeacionOutbox = [];
       state.planeaciones = [];
       state.alertas = [];
       state.notificaciones = [];
@@ -739,6 +748,7 @@
         state.ui.notificationFilter = 'activas';
         state.ui.planeacionesMateriaFilter = '';
         state.ui.multiGroupActiveChildByLote = {};
+        state.ui.planeacionOutboxProcessing = false;
       }
       state.notificationEditor = {
         notificacion_id: '',
@@ -1380,6 +1390,128 @@
       return restoreBootSnapshotForSession(state.session);
     }
 
+    function getPlaneacionOutboxOwnerKey(sessionLike = state.session) {
+      const usuario = sessionLike && sessionLike.usuario ? sessionLike.usuario : {};
+      const role = String((usuario && usuario.rol) || (sessionLike && sessionLike.rol) || '').trim().toLowerCase();
+      const facilitadorId = String((usuario && usuario.facilitador_id) || (sessionLike && sessionLike.facilitador_id) || '').trim();
+      if (role !== 'facilitador' || !facilitadorId) return '';
+      return role + ':' + facilitadorId;
+    }
+
+    function isPlaneacionOutboxEnabled(sessionLike = state.session) {
+      return !!(sessionLike && sessionLike.token && getPlaneacionOutboxOwnerKey(sessionLike));
+    }
+
+    function readPlaneacionOutboxStore() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.planeacionOutbox);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writePlaneacionOutboxStore(store) {
+      try {
+        const nextStore = store && typeof store === 'object' ? store : {};
+        if (Object.keys(nextStore).length) {
+          localStorage.setItem(STORAGE_KEYS.planeacionOutbox, JSON.stringify(nextStore));
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.planeacionOutbox);
+        }
+      } catch (_) {}
+    }
+
+    function setPlaneacionOutboxItems(items, ownerKey = getPlaneacionOutboxOwnerKey()) {
+      const normalizedItems = Array.isArray(items) ? items.filter(Boolean) : [];
+      state.planeacionOutbox = normalizedItems;
+      if (!ownerKey) return;
+      const store = readPlaneacionOutboxStore();
+      if (normalizedItems.length) {
+        store[ownerKey] = normalizedItems;
+      } else {
+        delete store[ownerKey];
+      }
+      writePlaneacionOutboxStore(store);
+    }
+
+    function hydratePlaneacionOutboxForSession(sessionLike = state.session) {
+      const ownerKey = getPlaneacionOutboxOwnerKey(sessionLike);
+      if (!ownerKey) {
+        state.planeacionOutbox = [];
+        return [];
+      }
+      const store = readPlaneacionOutboxStore();
+      const items = Array.isArray(store[ownerKey]) ? store[ownerKey] : [];
+      state.planeacionOutbox = items;
+      return items;
+    }
+
+    function getPlaneacionOutboxPlanIds(item) {
+      if (!item || typeof item !== 'object') return [];
+      if (Array.isArray(item.tempPlanIds) && item.tempPlanIds.length) {
+        return item.tempPlanIds.map((planId) => String(planId || '').trim()).filter(Boolean);
+      }
+      return [String(item.planId || '').trim()].filter(Boolean);
+    }
+
+    function getPlaneacionOutboxLocalState(item) {
+      if (!item || typeof item !== 'object') return '';
+      if (String(item.status || '').trim() === 'error') return 'sync_error';
+      if (String(item.kind || '').trim() === 'editor_create') return 'creating';
+      return String(item.localState || 'saving').trim() || 'saving';
+    }
+
+    function getPlaneacionOutboxLocalMessage(item) {
+      if (!item || typeof item !== 'object') return '';
+      if (String(item.status || '').trim() === 'error') {
+        if (item.retryable === false) return 'No se pudo sincronizar. Revisa y vuelve a guardar.';
+        if (String(item.lastErrorCode || '').trim() === 'INVALID_SESSION') {
+          return 'Pendiente de sincronizar. Vuelve a iniciar sesión para terminar.';
+        }
+        return 'Guardado local pendiente. Reintentaremos en segundo plano.';
+      }
+      return String(item.localMessage || 'Guardado local. Sincronizando...').trim();
+    }
+
+    function applyPlaneacionOutboxVisualState(item) {
+      if (!item || typeof item !== 'object') return;
+      const localState = getPlaneacionOutboxLocalState(item);
+      const localMessage = getPlaneacionOutboxLocalMessage(item);
+      if (String(item.kind || '').trim() === 'editor_create') {
+        upsertPlaneacionesRows((item.optimisticPlans || []).map((plan) => Object.assign({}, plan, {
+          _local_save_state: localState,
+          _local_save_message: localMessage,
+          _local_queue_id: item.id
+        })));
+        return;
+      }
+      const optimisticPlan = item.optimisticPlan && typeof item.optimisticPlan === 'object'
+        ? Object.assign({}, item.optimisticPlan, {
+            _local_save_state: localState,
+            _local_save_message: localMessage,
+            _local_queue_id: item.id
+          })
+        : null;
+      if (!optimisticPlan || !optimisticPlan.planeacion_id) return;
+      upsertPlaneacionRow(optimisticPlan);
+      if (state.openPlanId === optimisticPlan.planeacion_id && item.draft && typeof item.draft === 'object') {
+        state.openPlanDraft = cloneJsonSafe(item.draft, item.draft) || item.draft;
+      }
+    }
+
+    function reapplyPlaneacionOutboxState() {
+      (state.planeacionOutbox || []).forEach((item) => applyPlaneacionOutboxVisualState(item));
+    }
+
+    function activatePlaneacionOutboxForSession(sessionLike = state.session) {
+      hydratePlaneacionOutboxForSession(sessionLike);
+      reapplyPlaneacionOutboxState();
+      schedulePlaneacionOutboxProcessing(140);
+    }
+
     function loadSession() {
       const raw = localStorage.getItem(STORAGE_KEYS.session);
       if (!raw) return;
@@ -1538,6 +1670,7 @@
         bindAdminUiEventsOnce();
       }
       const restoredSnapshot = restoreBootSnapshotForSession({ usuario: data.usuario });
+      activatePlaneacionOutboxForSession(state.session);
       if (!canUseAdminShell() && String(state.activeTab || '').trim() === 'planeaciones') {
         setPlaneacionesRestoreLock(true);
       }
@@ -6538,7 +6671,7 @@
     }
 
     function isPlaneacionLocalSavePending(plan) {
-      return ['creating', 'saving', 'activating'].includes(getPlanLocalSaveState(plan));
+      return ['creating', 'saving', 'activating', 'sync_error'].includes(getPlanLocalSaveState(plan));
     }
 
     function getPlanStatusBadgeMeta(plan) {
@@ -6563,6 +6696,12 @@
           label: 'Activando...'
         };
       }
+      if (localState === 'sync_error') {
+        return {
+          className: ('is-local-pending ' + baseClass).trim(),
+          label: 'Pendiente sync'
+        };
+      }
       return {
         className: baseClass,
         label: getPlanStatusLabel(plan && plan.estado)
@@ -6579,10 +6718,11 @@
         saved: 'Listo',
         activating: 'Activando planeación...'
       })[localState] || 'Actualizando...';
+      const resolvedTitle = localState === 'sync_error' ? 'Pendiente de sincronizar' : title;
       const toneClass = localState === 'saved' ? 'is-success' : 'is-pending';
       return (
         '<div class="plan-inline-feedback ' + toneClass + '">' +
-          '<strong>' + escapeHtml(title) + '</strong>' +
+          '<strong>' + escapeHtml(resolvedTitle) + '</strong>' +
           '<span>' + escapeHtml(message) + '</span>' +
         '</div>'
       );
@@ -9464,6 +9604,58 @@
         });
         setBanner('Creando planeación...', 'info');
       }
+      if (!hasAdminPower && isPlaneacionOutboxEnabled()) {
+        if (editorMode === 'edit' && optimisticUpdatedPlan) {
+          enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('editor_edit', {
+            mergeKey: 'plan:' + String(state.planEditor.planId || '').trim(),
+            planId: String(state.planEditor.planId || '').trim(),
+            previousPlanSnapshot: previousPlan,
+            optimisticPlan: optimisticUpdatedPlan,
+            forceAlertas: shouldForceAlertasAfterSave,
+            localMessage: 'Guardado local. Sincronizando...',
+            requestAction: 'guardarPlaneacionCompleta',
+            requestPayload: {
+              planeacion_id: state.planEditor.planId,
+              fecha_planeacion: fechaPlaneacion,
+              semana_id: semana.draft ? '' : semana.semana_id,
+              grupo_id: grupoIds[0],
+              materia_id: materiaId,
+              submateria_id: selectedSubmateriaId,
+              frase_semana: fraseSemana,
+              alumnos_ids: alumnosIds,
+              actividades,
+              last_known_updated_at: state.planEditor.lastKnownUpdatedAt,
+              last_known_activities_version: state.planEditor.lastKnownActivitiesVersion,
+              request_id: uid('PLAUPD')
+            }
+          }));
+          setBanner('Guardado local. Sincronizando en segundo plano...', 'success');
+          return;
+        }
+        if (editorMode !== 'edit' && optimisticCreatedPlans.length) {
+          enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('editor_create', {
+            tempPlanIds: optimisticCreatedIds,
+            optimisticPlans: optimisticCreatedPlans,
+            forceAlertas: shouldForceAlertasAfterSave,
+            localMessage: 'Guardada localmente. Sincronizando creación...',
+            requestAction: 'crearPlaneacion',
+            requestPayload: {
+              fecha_planeacion: fechaPlaneacion,
+              semana_id: semana.draft ? '' : semana.semana_id,
+              grupo_ids: grupoIds,
+              estado_inicial: targetStatus,
+              materia_id: materiaId,
+              submateria_id: selectedSubmateriaId,
+              frase_semana: fraseSemana,
+              alumnos_ids: alumnosIds,
+              actividades,
+              request_id: uid('PLA')
+            }
+          }));
+          setBanner('Guardada localmente. Sincronizando creación en segundo plano...', 'success');
+          return;
+        }
+      }
       let responseData = null;
       try {
         if (editorMode === 'edit') {
@@ -10079,6 +10271,314 @@
       });
     }
 
+    function buildPlaneacionOutboxItem(kind, payload = {}) {
+      const createdAt = new Date().toISOString();
+      return Object.assign({
+        id: uid('PLOUT'),
+        kind: String(kind || '').trim(),
+        ownerKey: getPlaneacionOutboxOwnerKey(),
+        mergeKey: '',
+        status: 'pending',
+        retryable: true,
+        attempts: 0,
+        created_at: createdAt,
+        updated_at: createdAt,
+        nextAttemptAt: ''
+      }, payload);
+    }
+
+    function markPlaneacionOutboxItem(itemId, patch = {}) {
+      const normalizedId = String(itemId || '').trim();
+      if (!normalizedId) return null;
+      let updatedItem = null;
+      const items = (state.planeacionOutbox || []).map((item) => {
+        if (!item || String(item.id || '').trim() !== normalizedId) return item;
+        updatedItem = Object.assign({}, item, patch, {
+          updated_at: new Date().toISOString()
+        });
+        return updatedItem;
+      });
+      setPlaneacionOutboxItems(items);
+      return updatedItem;
+    }
+
+    function removePlaneacionOutboxItem(itemId) {
+      const normalizedId = String(itemId || '').trim();
+      if (!normalizedId) return;
+      const items = (state.planeacionOutbox || []).filter((item) => String((item && item.id) || '').trim() !== normalizedId);
+      setPlaneacionOutboxItems(items);
+    }
+
+    function enqueuePlaneacionOutboxItem(item) {
+      if (!item || !item.id) return null;
+      const nextItem = Object.assign({}, item, {
+        ownerKey: item.ownerKey || getPlaneacionOutboxOwnerKey(),
+        updated_at: new Date().toISOString()
+      });
+      const items = Array.isArray(state.planeacionOutbox) ? state.planeacionOutbox.slice() : [];
+      const mergeKey = String(nextItem.mergeKey || '').trim();
+      const existingIndex = mergeKey
+        ? items.findIndex((row) => row && row.mergeKey === mergeKey && String(row.status || '').trim() !== 'syncing')
+        : -1;
+      if (existingIndex >= 0) {
+        items.splice(existingIndex, 1, nextItem);
+      } else {
+        items.push(nextItem);
+      }
+      setPlaneacionOutboxItems(items);
+      applyPlaneacionOutboxVisualState(nextItem);
+      persistCurrentBootSnapshot('planeacion_outbox_enqueue');
+      schedulePlaneacionOutboxProcessing(90);
+      return nextItem;
+    }
+
+    function clearPlaneacionOutboxRetryTimer() {
+      if (!state.ui || !state.ui.planeacionOutboxRetryTimer) return;
+      window.clearTimeout(state.ui.planeacionOutboxRetryTimer);
+      state.ui.planeacionOutboxRetryTimer = null;
+    }
+
+    function getNextPlaneacionOutboxItem() {
+      const now = Date.now();
+      return (state.planeacionOutbox || []).find((item) => {
+        if (!item || !item.id) return false;
+        const status = String(item.status || '').trim();
+        if (status === 'pending') return true;
+        if (status !== 'error' || item.retryable === false) return false;
+        if (!item.nextAttemptAt) return true;
+        const retryAt = Date.parse(item.nextAttemptAt);
+        return Number.isFinite(retryAt) && retryAt <= now;
+      }) || null;
+    }
+
+    function isPlaneacionOutboxRetryableError(error) {
+      const code = String((error && error.code) || '').trim().toUpperCase();
+      if (!code) return true;
+      return ![
+        'VALIDATION_ERROR',
+        'FULL_SAVE_REQUIRED',
+        'NOT_FOUND',
+        'NO_ACCESS',
+        'FORBIDDEN',
+        'CONFLICT',
+        'DUPLICATE'
+      ].includes(code);
+    }
+
+    function schedulePlaneacionOutboxProcessing(delay = 120) {
+      if (!isPlaneacionOutboxEnabled() || !Array.isArray(state.planeacionOutbox) || !state.planeacionOutbox.length) return;
+      clearPlaneacionOutboxRetryTimer();
+      if (!state.ui) return;
+      state.ui.planeacionOutboxRetryTimer = window.setTimeout(() => {
+        state.ui.planeacionOutboxRetryTimer = null;
+        processPlaneacionOutboxQueue().catch(() => {});
+      }, Math.max(40, Number(delay || 0)));
+    }
+
+    async function performOpenPlanSaveRequest(action, payload) {
+      try {
+        return await api(action, payload);
+      } catch (error) {
+        if (String(action || '').trim() === 'guardarPlaneacionLigera' && isFullSaveRequiredError(error)) {
+          return await api('guardarPlaneacionCompleta', payload);
+        }
+        throw error;
+      }
+    }
+
+    async function processPlaneacionOutboxEditorCreate(item) {
+      const responseData = await api(item.requestAction || 'crearPlaneacion', item.requestPayload || {});
+      const createdPlans = Array.isArray(responseData && responseData.planeaciones)
+        ? responseData.planeaciones.filter((plan) => plan && plan.planeacion_id)
+        : [];
+      if (Array.isArray(item.tempPlanIds) && item.tempPlanIds.length) {
+        removePlaneacionRows(item.tempPlanIds);
+      }
+      if (createdPlans.length) {
+        const appliedPlans = upsertPlaneacionesRows(createdPlans.map((plan) => Object.assign({}, plan, {
+          _local_save_state: 'saved',
+          _local_save_message: 'Planeación sincronizada.'
+        })));
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        persistCurrentBootSnapshot('planeacion_outbox_create_synced');
+        scheduleClearLocalPlaneacionFeedback(appliedPlans.map((plan) => plan.planeacion_id));
+        refreshPlaneacionesAlertsDeferred({
+          force: !!item.forceAlertas
+        }).catch(() => {});
+        if (appliedPlans[0] && appliedPlans[0].planeacion_id) {
+          focusPlaneacionCardSoon(appliedPlans[0].planeacion_id);
+        }
+      }
+    }
+
+    async function processPlaneacionOutboxEditorEdit(item) {
+      const responseData = await api(item.requestAction || 'guardarPlaneacionCompleta', item.requestPayload || {});
+      const previousPlan = item.previousPlanSnapshot || getPlanById(item.planId);
+      const updatedPlan = responseData && responseData.planeacion
+        ? Object.assign({}, previousPlan || {}, responseData.planeacion)
+        : null;
+      if (updatedPlan && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan)) {
+        upsertPlaneacionRow(Object.assign({}, updatedPlan, {
+          _local_save_state: 'saved',
+          _local_save_message: 'Planeación sincronizada.'
+        }));
+        if (state.openPlanId === updatedPlan.planeacion_id) {
+          state.openPlanDraft = buildOpenPlanDraft(getPlanById(updatedPlan.planeacion_id) || updatedPlan);
+        }
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        persistCurrentBootSnapshot('planeacion_outbox_edit_synced');
+        scheduleClearLocalPlaneacionFeedback(updatedPlan.planeacion_id);
+        refreshPlaneacionesAlertsDeferred({
+          force: !!item.forceAlertas
+        }).catch(() => {});
+        return;
+      }
+      await refreshPlaneacionesSurface({ includeAlertas: false });
+      refreshPlaneacionesAlertsDeferred({
+        force: !!item.forceAlertas,
+        includeStats: false,
+        includePlaneaciones: false
+      }).catch(() => {});
+    }
+
+    async function processPlaneacionOutboxOpenSave(item) {
+      const requests = item.requests && typeof item.requests === 'object' ? item.requests : {};
+      if (requests.generalObservation) {
+        await api('crearObsSemana', requests.generalObservation);
+      }
+      if (requests.finalObservationBatch) {
+        await api('guardarObsAlumnoFinalLote', requests.finalObservationBatch);
+      }
+      let savedPlanResponse = null;
+      if (requests.planSave) {
+        savedPlanResponse = await performOpenPlanSaveRequest(item.planSaveAction || 'guardarPlaneacionCompleta', requests.planSave);
+      }
+      const previousPlan = item.previousPlanSnapshot || getPlanById(item.planId);
+      const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion
+        ? Object.assign({}, previousPlan || {}, savedPlanResponse.planeacion)
+        : null;
+      const canPatchSimplePlanLocally = !!(item.shouldSavePlan && !item.shouldSaveShared && updatedPlan);
+      if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan)) {
+        applySavedPlaneacionDetail(item.planId, Object.assign({}, updatedPlan, {
+          _local_save_state: 'saved',
+          _local_save_message: 'Cambios sincronizados.'
+        }));
+        persistCurrentBootSnapshot('planeacion_outbox_open_save_local');
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        scheduleClearLocalPlaneacionFeedback(item.planId);
+        if (item.shouldSavePlan) {
+          queuePlaneacionPostSaveSync(item.planId, {
+            refreshDetail: false,
+            refreshObservaciones: false,
+            refreshAlertas: !!item.shouldRefreshMaterialAlertas
+          });
+        }
+        refreshPlaneacionesAlertsDeferred({
+          force: !!item.shouldForceAlertasAfterSave
+        }).catch(() => {});
+        return;
+      }
+      if (!item.shouldSavePlan && !item.shouldSaveShared) {
+        applyLocalPlaneacionFeedback(item.planId, 'saved', 'Cambios sincronizados.');
+        persistCurrentBootSnapshot('planeacion_outbox_open_obs_local');
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        scheduleClearLocalPlaneacionFeedback(item.planId);
+        queuePlaneacionPostSaveSync(item.planId, {
+          refreshDetail: true,
+          refreshObservaciones: true,
+          refreshAlertas: false,
+          snapshotKind: 'planeacion_outbox_open_obs'
+        });
+        return;
+      }
+      state.openPlanId = item.shouldSavePlan ? item.planId : state.openPlanId;
+      if (state.openPlanId !== item.planId) state.openPlanDraft = null;
+      await refreshPlaneacionesSurface({ includeAlertas: false });
+      refreshPlaneacionesAlertsDeferred({
+        force: !!item.shouldForceAlertasAfterSave,
+        includeStats: false,
+        includePlaneaciones: false
+      }).catch(() => {});
+    }
+
+    function handlePlaneacionOutboxFailure(item, error) {
+      const retryable = isPlaneacionOutboxRetryableError(error);
+      const attempts = Number(item && item.attempts || 0) + 1;
+      const nextDelay = retryable ? Math.min(30000, 1200 * attempts) : 0;
+      const updatedItem = markPlaneacionOutboxItem(item.id, {
+        status: 'error',
+        retryable,
+        attempts,
+        lastErrorCode: String((error && error.code) || '').trim(),
+        lastErrorMessage: formatApiError(error),
+        nextAttemptAt: retryable ? new Date(Date.now() + nextDelay).toISOString() : ''
+      });
+      if (updatedItem) {
+        applyPlaneacionOutboxVisualState(updatedItem);
+        persistCurrentBootSnapshot('planeacion_outbox_error');
+      }
+      if (retryable) {
+        setBanner(
+          String((error && error.code) || '').trim() === 'INVALID_SESSION'
+            ? 'Hay cambios guardados localmente pendientes de sincronizar. Vuelve a iniciar sesión.'
+            : 'Hay cambios guardados localmente pendientes de sincronizar. Seguiremos intentando.',
+          'info'
+        );
+      } else {
+        setBanner(formatApiError(error), 'error');
+      }
+      renderPlaneacionesSurface({
+        includeStats: true,
+        includePlaneaciones: true,
+        includeAlertas: false
+      });
+      if (retryable) schedulePlaneacionOutboxProcessing(nextDelay + 120);
+      else schedulePlaneacionOutboxProcessing(120);
+    }
+
+    async function processPlaneacionOutboxQueue() {
+      if (!isPlaneacionOutboxEnabled() || !state.ui || state.ui.planeacionOutboxProcessing) return;
+      const item = getNextPlaneacionOutboxItem();
+      if (!item) return;
+      state.ui.planeacionOutboxProcessing = true;
+      const syncingItem = markPlaneacionOutboxItem(item.id, {
+        status: 'syncing',
+        nextAttemptAt: ''
+      }) || item;
+      applyPlaneacionOutboxVisualState(syncingItem);
+      try {
+        if (syncingItem.kind === 'editor_create') {
+          await processPlaneacionOutboxEditorCreate(syncingItem);
+        } else if (syncingItem.kind === 'editor_edit') {
+          await processPlaneacionOutboxEditorEdit(syncingItem);
+        } else if (syncingItem.kind === 'open_save') {
+          await processPlaneacionOutboxOpenSave(syncingItem);
+        }
+        removePlaneacionOutboxItem(syncingItem.id);
+        schedulePlaneacionOutboxProcessing(80);
+      } catch (error) {
+        handlePlaneacionOutboxFailure(syncingItem, error);
+      } finally {
+        state.ui.planeacionOutboxProcessing = false;
+      }
+    }
+
     function syncInlineSavedPlanDraft(planId, updatedPlan, options = {}) {
       if (!updatedPlan || !state.openPlanDraft || state.openPlanDraft.planId !== planId) return;
       state.openPlanDraft.lastKnownUpdatedAt = updatedPlan.fecha_actualizacion || state.openPlanDraft.lastKnownUpdatedAt || '';
@@ -10198,14 +10698,10 @@
         minimal_response: shouldUseLiteSave,
         request_id: uid('PLAOPEN')
       };
-      try {
-        return await api(shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta', payload);
-      } catch (error) {
-        if (shouldUseLiteSave && isFullSaveRequiredError(error)) {
-          return await api('guardarPlaneacionCompleta', payload);
-        }
-        throw error;
-      }
+      return await performOpenPlanSaveRequest(
+        shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta',
+        payload
+      );
     }
 
     function hasActivePlaneacionesFilters() {
@@ -10316,6 +10812,7 @@
         (shouldSaveShared && planDraftAffectsMaterialAlerts(sharedDraft));
       const previousPlanSnapshot = cloneJsonSafe(plan, plan);
       const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
+      const shouldUsePlaneacionOutbox = !canUseAdminShell() && canOptimisticallyRender && !shouldSaveShared && isPlaneacionOutboxEnabled();
       const optimisticPlan = canOptimisticallyRender
         ? buildOptimisticPlaneacionSavePreview(plan, {
             draft: shouldSavePlan ? planDraft : null,
@@ -10341,6 +10838,76 @@
             includeAlertas: false
           });
           setBanner('Guardando cambios en segundo plano...', 'info');
+        }
+        if (shouldUsePlaneacionOutbox) {
+          if (generalText) {
+            const generalInput = $('obs-general-' + planId);
+            if (generalInput) generalInput.value = '';
+          }
+          finalPayloads.forEach((row) => {
+            const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
+            if (input) {
+              input.value = '';
+              autoGrowObsFinal(input);
+            }
+          });
+          const shouldUseLiteSave = !!(shouldSavePlan && shouldUseLightOpenPlanSave(plan, planDraft, planSaveRequest));
+          const outboxPlanPayload = shouldSavePlan ? {
+            planeacion_id: planId,
+            fecha_planeacion: planDraft.fecha_planeacion || planSaveRequest.fallbackDate,
+            semana_id: planSaveRequest.semana.draft ? '' : planSaveRequest.semana.semana_id,
+            grupo_id: plan.grupo_id,
+            materia_id: planSaveRequest.materiaId,
+            submateria_id: planSaveRequest.submateriaId,
+            frase_semana: String(planDraft.frase_semana || '').trim(),
+            alumnos_ids: planSaveRequest.alumnosIds,
+            actividades: planSaveRequest.actividades,
+            activities_unchanged: shouldUseLiteSave && planDraft.activitiesDirty !== true,
+            activities_changed: shouldUseLiteSave && planDraft.activitiesDirty === true,
+            last_known_updated_at: planDraft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
+            last_known_activities_version: planDraft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
+            skip_material_sync: !didOpenPlanMaterialStateChange(plan, planSaveRequest),
+            minimal_response: shouldUseLiteSave,
+            request_id: uid('PLAOPEN')
+          } : null;
+          enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('open_save', {
+            mergeKey: 'plan:' + String(planId || '').trim(),
+            planId: String(planId || '').trim(),
+            previousPlanSnapshot,
+            optimisticPlan,
+            draft: planDraft,
+            shouldSavePlan,
+            shouldSaveShared: false,
+            shouldRefreshMaterialAlertas,
+            shouldForceAlertasAfterSave,
+            localState: 'saving',
+            localMessage: 'Guardado local. Sincronizando...',
+            planSaveAction: shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta',
+            requests: {
+              generalObservation: generalText ? {
+                planeacion_id: planId,
+                texto: generalText,
+                request_id: uid('OSG')
+              } : null,
+              finalObservationBatch: finalPayloads.length ? {
+                items: finalPayloads.map((row) => ({
+                  planeacion_id: row.planId || planId,
+                  alumno_id: row.alumnoId,
+                  nota: row.nota
+                })),
+                request_id: uid('OAFL')
+              } : null,
+              planSave: outboxPlanPayload
+            }
+          }));
+          persistCurrentBootSnapshot('guardar_cambios_outbox_local');
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          setBanner('Guardado local. Sincronizando en segundo plano...', 'success');
+          return;
         }
         const savedParts = [];
         let savedPlanResponse = null;
@@ -10868,6 +11435,12 @@
         clearPlaneacionesMateriaFilter();
         await refreshPlaneacionesSurface({ includeAlertas: false });
       }, { button: event.currentTarget }));
+      window.addEventListener('online', () => {
+        schedulePlaneacionOutboxProcessing(120);
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) schedulePlaneacionOutboxProcessing(120);
+      });
       $('notaAlcance').addEventListener('change', syncNotePeriodoState);
       document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
@@ -10996,6 +11569,7 @@
       refreshStaticConfigUi();
       if (state.session && state.session.token) {
         const restoredSnapshot = restoreBootSnapshot();
+        activatePlaneacionOutboxForSession(state.session);
         if (!canUseAdminShell() && String(state.activeTab || '').trim() === 'planeaciones') {
           setPlaneacionesRestoreLock(true);
         }
