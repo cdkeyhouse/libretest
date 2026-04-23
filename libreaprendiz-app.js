@@ -6744,7 +6744,11 @@
     function getPlanLocalFeedbackMarkup(plan) {
       const message = String((plan && plan._local_save_message) || '').trim();
       const localState = getPlanLocalSaveState(plan);
+      const planStatus = String((plan && plan.estado) || '').trim().toLowerCase();
       if (localState === 'activating') {
+        return '';
+      }
+      if (localState === 'saved' && planStatus === 'borrador') {
         return '';
       }
       if (localState === 'saved') {
@@ -6774,6 +6778,8 @@
 
     function getPlanActionStatusMarkup(plan) {
       const localState = getPlanLocalSaveState(plan);
+      const planStatus = String((plan && plan.estado) || '').trim().toLowerCase();
+      if (localState === 'saved' && planStatus === 'borrador') return '';
       const label = ({
         saving: 'Guardando...',
         saved: 'Guardado',
@@ -7632,9 +7638,13 @@
     }
 
     async function fetchPlaneacionDetalle(planId) {
+      let primaryPlan = null;
       try {
         const data = await api('getPlaneacionDetalle', { planeacion_id: planId, include_observaciones: false });
-        if (data && data.planeacion) return data.planeacion;
+        if (data && data.planeacion) {
+          primaryPlan = data.planeacion;
+          if (primaryPlan.detail_loaded) return primaryPlan;
+        }
       } catch (err) {
         if (!err || err.code !== 'NOT_FOUND') throw err;
       }
@@ -7644,8 +7654,17 @@
         limit: 1
       });
       const rows = Array.isArray(fallback && fallback.rows) ? fallback.rows : [];
-      if (!rows.length) throw new Error('Planeación no encontrada.');
-      return rows[0];
+      if (!rows.length) {
+        if (primaryPlan) {
+          return Object.assign({}, primaryPlan, {
+            detail_loaded: true
+          });
+        }
+        throw new Error('Planeación no encontrada.');
+      }
+      return Object.assign({}, rows[0], {
+        detail_loaded: true
+      });
     }
 
     async function fetchPlaneacionObservaciones(planId) {
@@ -7660,10 +7679,13 @@
 
     async function ensurePlaneacionDetailLoaded(planId, options = {}) {
       const current = getPlanById(planId);
-      if (current && current.detail_loaded) return current;
+      if (current && current.detail_loaded && !options.force) return current;
       if (!state.ui.planDetailPromises) state.ui.planDetailPromises = {};
-      if (state.ui.planDetailPromises[planId]) {
+      if (!options.force && state.ui.planDetailPromises[planId]) {
         return state.ui.planDetailPromises[planId];
+      }
+      if (options.force && state.ui.planDetailPromises[planId]) {
+        delete state.ui.planDetailPromises[planId];
       }
       const promise = fetchPlaneacionDetalle(planId)
         .then((detail) => {
@@ -8201,6 +8223,19 @@
             })
             .catch(() => state.catalogos);
         }, 140);
+        scheduleAfterPaint(() => {
+          if (state.openPlanId !== planId) return null;
+          const currentOpenPlan = getPlanById(planId);
+          if (currentOpenPlan && currentOpenPlan.detail_loaded) return null;
+          return ensurePlaneacionDetailLoaded(planId, { silent: true, force: true })
+            .then((retryPlan) => {
+              if (state.openPlanId !== planId) return;
+              if (state.ui) state.ui.openPlanLoadingId = '';
+              state.openPlanDraft = retryPlan ? buildOpenPlanDraft(retryPlan) : null;
+              renderPlaneacionesList();
+            })
+            .catch(() => null);
+        }, 2600);
       }, {
         button,
         key: buildActionKey('togglePlanOpen', [planId]),
