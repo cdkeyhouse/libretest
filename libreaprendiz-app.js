@@ -6745,16 +6745,14 @@
       const message = String((plan && plan._local_save_message) || '').trim();
       if (!message) return '';
       const localState = getPlanLocalSaveState(plan);
+      if (localState === 'saved') return '';
       const compactLabel = ({
         creating: 'Creando',
         saving: 'Sincronizando',
-        saved: 'Sincronizada',
         activating: 'Activando',
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
-      const toneClass = localState === 'saved'
-        ? 'is-success'
-        : (localState === 'sync_error' ? 'is-warning' : 'is-pending');
+      const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
       return (
         '<div class="plan-inline-feedback ' + toneClass + '">' +
           '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
