@@ -6744,6 +6744,9 @@
     function getPlanLocalFeedbackMarkup(plan) {
       const message = String((plan && plan._local_save_message) || '').trim();
       const localState = getPlanLocalSaveState(plan);
+      if (localState === 'activating') {
+        return '';
+      }
       if (localState === 'saved') {
         return (
           '<div class="plan-inline-feedback is-success">' +
@@ -8630,7 +8633,7 @@
           ? '<div class="mini">Se están cargando observaciones de esta planeación...</div>'
           : '';
         const buttons = [];
-        if (plan.estado === 'borrador') {
+        if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
           buttons.push('<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>');
         }
         if (plan.estado === 'borrador_pendiente_aprobacion' && hasAdminPower) {
@@ -8737,7 +8740,6 @@
                   (plan.actividades || []).map((item, index) => (
                     '<div class="activity-card">' +
                       '<div><strong>' + escapeHtml(String(item.orden || (index + 1)) + '. ' + (item.texto || 'Actividad')) + '</strong></div>' +
-                      '<div class="mini">Cargando seguimiento completo...</div>' +
                     '</div>'
                   )).join('') +
                 '</div>'
@@ -8773,16 +8775,13 @@
               '</div>' +
               localFeedbackHtml +
               previewSharedHtml +
-              '<div class="plan-loading-note">' +
-                '<strong>Actualizando detalle completo...</strong>' +
-                '<div class="mini">Ya puedes orientarte con esta vista base mientras terminan de llegar observaciones y seguimiento.</div>' +
-                '<div class="plan-loading-progress" aria-hidden="true"></div>' +
-                '<div class="plan-loading-pill-row">' +
-                  '<span class="plan-loading-pill">Alumnos</span>' +
-                  '<span class="plan-loading-pill">Actividades</span>' +
-                  '<span class="plan-loading-pill">Observaciones</span>' +
-                '</div>' +
-              '</div>' +
+              (localFeedbackHtml ? '' : (
+                '<div class="plan-inline-feedback is-pending">' +
+                  '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
+                  '<span class="plan-inline-feedback-label">Actualizando</span>' +
+                  '<span class="plan-inline-feedback-text">Detalle y observaciones...</span>' +
+                '</div>'
+              )) +
               '<div class="stack">' +
                 '<div><strong>Alumnos</strong></div>' +
                 previewAlumnosHtml +
@@ -8790,10 +8789,6 @@
               '<div class="stack">' +
                 '<div><strong>Actividades</strong></div>' +
                 previewActivitiesHtml +
-              '</div>' +
-              '<div class="stack">' +
-                '<div><strong>Observaciones</strong></div>' +
-                '<div class="mini">Se están cargando observaciones generales y finales de esta planeación.</div>' +
               '</div>' +
               '<div class="actions" style="margin-top:14px;">' +
                 '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
@@ -10055,6 +10050,19 @@
       await handleAction(action, async () => {
         const shouldCloseOpenCard = false;
         const previousPlan = getPlanById(planId);
+        if (!previousPlan) throw new Error('Planeación no encontrada.');
+        if (action === 'activarPlaneacion') {
+          const localState = getPlanLocalSaveState(previousPlan);
+          if (isPlaneacionPendingCreation(previousPlan) || ['creating', 'saving', 'activating'].includes(localState)) {
+            setBanner('Espera a que termine de guardarse antes de activarla.', 'info');
+            return;
+          }
+          if (localState === 'sync_error') {
+            schedulePlaneacionOutboxProcessing(60);
+            setBanner('Primero corrige el guardado pendiente antes de activar la semana.', 'info');
+            return;
+          }
+        }
         const previousPlanSnapshot = previousPlan ? cloneJsonSafe(previousPlan, previousPlan) : null;
         if (action === 'activarPlaneacion' && previousPlan) {
           upsertPlaneacionRow(Object.assign({}, previousPlan, {
