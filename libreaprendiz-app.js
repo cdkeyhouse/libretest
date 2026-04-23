@@ -1654,7 +1654,8 @@
       if (!options.force && shouldReuseFacilitadorFeedSnapshot('notificaciones')) {
         return { rows: Array.isArray(state.notificaciones) ? state.notificaciones : [], reusedSnapshot: true };
       }
-      const limit = canUseAdminShell() ? 100 : 120;
+      const defaultLimit = canUseAdminShell() ? 100 : 120;
+      const limit = Math.max(1, Number(options.limit) || defaultLimit);
       const data = await api('getNotificaciones', { limit });
       state.notificaciones = Array.isArray(data.rows) ? data.rows : [];
       markNotificacionesFresh();
@@ -1853,15 +1854,14 @@
         notification_limit: 20,
         include_catalogos: false,
         include_planeaciones: false,
+        include_notificaciones: false,
         include_detail: false
       }));
       state.dashboardStats = dashboard && dashboard.stats ? dashboard.stats : {};
       state.alertas = Array.isArray(dashboard && dashboard.alertas && dashboard.alertas.rows)
         ? dashboard.alertas.rows
         : [];
-      state.notificaciones = Array.isArray(dashboard && dashboard.notificaciones && dashboard.notificaciones.rows)
-        ? dashboard.notificaciones.rows
-        : [];
+      state.notificaciones = [];
       renderSession();
       renderStats();
       renderAdminShell();
@@ -1869,12 +1869,7 @@
       renderInstitutionalNotices();
       syncRoleUi();
 
-      const deferredPromise = Promise.allSettled([
-        refreshNotificaciones()
-      ]).then((results) => {
-        renderAdminShell();
-        if (state.activeAdminModule === 'notificaciones') renderNotificationsAdmin();
-      });
+      const deferredPromise = Promise.resolve();
 
       if (state.ui) state.ui.fastAdminBootPromise = deferredPromise;
       deferredPromise.finally(() => {
@@ -1884,6 +1879,8 @@
 
     async function refreshAll(options = {}) {
       ensureLoggedIn();
+      const attemptedFastFacilitadorBoot = shouldUseFastFacilitadorPlaneacionesBoot(options);
+      const attemptedFastAdminBoot = shouldUseFastAdminDashboardBoot(options);
       if (shouldUseFastFacilitadorPlaneacionesBoot(options)) {
         try {
           await refreshFacilitadorPlaneacionesFastBoot(options);
@@ -1899,12 +1896,14 @@
         } catch (_) {}
       }
       const silent = !!(options && options.silent);
+      const adminNeedsAlertRows = canUseAdminShell() && ['dashboard', 'planeaciones'].includes(String(state.activeAdminModule || '').trim());
+      const adminNeedsNotificationRows = canUseAdminShell() && String(state.activeAdminModule || '').trim() === 'notificaciones';
       const shouldIncludeCatalogos = currentViewNeedsCatalogos();
       const requestedCatalogBlocks = shouldIncludeCatalogos ? getCurrentCatalogBlocks() : [];
       const shouldIncludePlaneaciones = currentViewNeedsPlaneaciones();
       try {
-        const notificationLimit = canUseAdminShell() ? 100 : 120;
-      const dashboardCatalogBlocks = shouldIncludeCatalogos
+        const notificationLimit = canUseAdminShell() ? (adminNeedsNotificationRows ? 100 : 20) : 120;
+        const dashboardCatalogBlocks = shouldIncludeCatalogos
           ? (silent ? getMissingCatalogBlocks(requestedCatalogBlocks) : requestedCatalogBlocks)
           : [];
         const reuseCatalogos = shouldIncludeCatalogos && silent && dashboardCatalogBlocks.length === 0;
@@ -1914,6 +1913,8 @@
           include_catalogos: shouldIncludeCatalogos && !reuseCatalogos,
           catalog_blocks: dashboardCatalogBlocks,
           include_planeaciones: shouldIncludePlaneaciones,
+          include_alertas: !canUseAdminShell() || adminNeedsAlertRows,
+          include_notificaciones: !canUseAdminShell() || adminNeedsNotificationRows,
           include_detail: false
         }));
         state.dashboardStats = dashboard && dashboard.stats ? dashboard.stats : {};
@@ -1934,18 +1935,23 @@
         }
         state.alertas = Array.isArray(dashboard && dashboard.alertas && dashboard.alertas.rows)
           ? dashboard.alertas.rows
-          : [];
+          : ((!canUseAdminShell() || adminNeedsAlertRows) ? [] : state.alertas);
         state.notificaciones = Array.isArray(dashboard && dashboard.notificaciones && dashboard.notificaciones.rows)
           ? dashboard.notificaciones.rows
-          : [];
+          : ((!canUseAdminShell() || adminNeedsNotificationRows) ? [] : state.notificaciones);
       } catch (_) {
         const tasks = [];
         if (shouldIncludeCatalogos) tasks.push(refreshCatalogos());
         if (shouldIncludePlaneaciones) tasks.push(refreshPlaneaciones());
-        tasks.push(refreshAlertas(), refreshNotificaciones());
+        if (!canUseAdminShell() || adminNeedsAlertRows) tasks.push(refreshAlertas());
+        if (!canUseAdminShell() || adminNeedsNotificationRows) tasks.push(refreshNotificaciones());
         await Promise.all(tasks);
       }
-      renderAll();
+      if (attemptedFastFacilitadorBoot || attemptedFastAdminBoot) {
+        renderBootSurface();
+      } else {
+        renderAll();
+      }
       if (requestedCatalogBlocks.includes('periodos') && (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length)) {
         setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
         return;
@@ -2325,12 +2331,27 @@
       }
       state.activeAdminModule = nextModule;
       renderAdminShell();
+      const bootstrappingNotificationsModule = nextModule === 'notificaciones' && !Array.isArray(state.notificaciones).length;
+      if (bootstrappingNotificationsModule) {
+        setAdminModuleLoading(nextModule, true);
+        renderActiveAdminModule(nextModule);
+        refreshAdminModuleSurface(nextModule, {
+          includeStats: true,
+          refreshNotificaciones: true
+        })
+          .then(() => {
+            setAdminModuleLoading(nextModule, false);
+          })
+          .catch(() => {
+            setAdminModuleLoading(nextModule, false);
+          });
+      }
       if (nextModule === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
         refreshPlaneaciones()
           .then(() => renderPlaneacionesSurface({ includeStats: true, includePlaneaciones: true, includeAlertas: false }))
           .catch(() => {});
       }
-      if (adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(nextModule))) {
+      if (!bootstrappingNotificationsModule && adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(nextModule))) {
         setAdminModuleLoading(nextModule, true);
         renderActiveAdminModule(nextModule);
         refreshCatalogos({ blocks: getMissingCatalogBlocks(getAdminModuleCatalogBlocks(nextModule)) })
@@ -2383,7 +2404,9 @@
       const user = state.session && state.session.usuario ? state.session.usuario : null;
       const openPlans = Number(state.dashboardStats && state.dashboardStats.planeaciones_abiertas || state.planeaciones.filter((plan) => ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente'].includes(String(plan.estado || '').trim())).length || 0);
       const closedPlans = Number(state.dashboardStats && state.dashboardStats.planeaciones_cerradas || state.planeaciones.filter((plan) => ['cerrada', 'archivada'].includes(String(plan.estado || '').trim())).length || 0);
-      const openAlerts = state.alertas.filter((alerta) => String(alerta.estado || '').trim() !== 'resuelta').length;
+      const openAlerts = Array.isArray(state.alertas) && state.alertas.length
+        ? state.alertas.filter((alerta) => String(alerta.estado || '').trim() !== 'resuelta').length
+        : Number(state.dashboardStats && state.dashboardStats.alertas_abiertas || 0);
       const activeFacilitadores = state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)).length || Number(state.dashboardStats && state.dashboardStats.facilitadores_activos || 0);
       const visibleAlumnos = getAdminAlumnosCount() || Number(state.dashboardStats && state.dashboardStats.alumnos_activos || 0);
       const activeMaterias = state.catalogos.materias.length || Number(state.dashboardStats && state.dashboardStats.materias_activas || 0);
@@ -2401,7 +2424,11 @@
       if ($('adminKpiFacilitadores')) $('adminKpiFacilitadores').textContent = String(activeFacilitadores);
       if ($('adminCountAlumnos')) $('adminCountAlumnos').textContent = String(visibleAlumnos);
       if ($('adminCountPlaneaciones')) $('adminCountPlaneaciones').textContent = String(Number(state.dashboardStats && state.dashboardStats.planeaciones_visibles || 0) || state.planeaciones.length || 0);
-      if ($('adminCountNotifications')) $('adminCountNotifications').textContent = String((state.notificaciones || []).filter((row) => isNotificationActiveToday(row)).length || 0);
+      if ($('adminCountNotifications')) $('adminCountNotifications').textContent = String(
+        (Array.isArray(state.notificaciones) && state.notificaciones.length
+          ? (state.notificaciones || []).filter((row) => isNotificationActiveToday(row)).length
+          : Number(state.dashboardStats && state.dashboardStats.notificaciones_activas || 0)) || 0
+      );
       if ($('adminCountFacilitadoresCard')) $('adminCountFacilitadoresCard').textContent = String(activeFacilitadores);
       if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(activeMaterias);
       if ($('adminCountTalleres')) $('adminCountTalleres').textContent = String(activeTalleres);
@@ -9160,7 +9187,6 @@
         ui.lastReset = data.last_reset || null;
         ui.audit = data.audit_after || null;
         await refreshAll({ silent: true });
-        renderAll();
         setBanner('Entorno de pruebas reseteado sin tocar la estructura base.', 'success');
       }, { button, key: buildActionKey('resetEntornoPruebas', [ui.selectedCategories.join(','), ui.trashReportFiles ? 'trash' : 'keep']) });
     }
@@ -9733,7 +9759,7 @@
     async function saveGeneralObservation(button, planId) {
       const input = $('obs-general-' + planId);
       const texto = input ? input.value.trim() : '';
-      if (!texto) throw new Error('Escribe la observaci?n general.');
+      if (!texto) throw new Error('Escribe la observación general.');
       await handleAction('crearObsSemana', async () => {
         const previousValue = input ? input.value : '';
         if (input) input.value = '';
@@ -9742,7 +9768,7 @@
           await refreshSinglePlaneacionSurface(planId, {
             snapshotKind: 'obs_general'
           });
-          setBanner('Observaci?n general guardada.', 'success');
+          setBanner('Observación general guardada.', 'success');
         } catch (error) {
           if (input) input.value = previousValue;
           throw error;
