@@ -10087,6 +10087,7 @@
       const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
       const shouldUseLiteSave = shouldUseLightOpenPlanSave(plan, draft, request);
       const activitiesUnchanged = shouldUseLiteSave && draft.activitiesDirty !== true;
+      const activitiesChanged = shouldUseLiteSave && draft.activitiesDirty === true;
       const payload = {
         planeacion_id: planId,
         fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
@@ -10098,6 +10099,7 @@
         alumnos_ids: request.alumnosIds,
         actividades: request.actividades,
         activities_unchanged: activitiesUnchanged,
+        activities_changed: activitiesChanged,
         last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
         last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
         skip_material_sync: !didOpenPlanMaterialStateChange(plan, request),
