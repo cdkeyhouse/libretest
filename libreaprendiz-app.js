@@ -1457,9 +1457,16 @@
       return [String(item.planId || '').trim()].filter(Boolean);
     }
 
+    function shouldExposePlaneacionOutboxIssue(item) {
+      if (!item || typeof item !== 'object') return false;
+      if (item.retryable === false) return true;
+      if (String(item.lastErrorCode || '').trim() === 'INVALID_SESSION') return true;
+      return Number(item.attempts || 0) >= 3;
+    }
+
     function getPlaneacionOutboxLocalState(item) {
       if (!item || typeof item !== 'object') return '';
-      if (String(item.status || '').trim() === 'error') return 'sync_error';
+      if (String(item.status || '').trim() === 'error' && shouldExposePlaneacionOutboxIssue(item)) return 'sync_error';
       if (String(item.kind || '').trim() === 'editor_create') return 'creating';
       return String(item.localState || 'saving').trim() || 'saving';
     }
@@ -1467,6 +1474,9 @@
     function getPlaneacionOutboxLocalMessage(item) {
       if (!item || typeof item !== 'object') return '';
       if (String(item.status || '').trim() === 'error') {
+        if (!shouldExposePlaneacionOutboxIssue(item)) {
+          return String(item.localMessage || 'Guardado local. Sincronizando...').trim();
+        }
         if (item.retryable === false) return 'No se pudo sincronizar. Revisa y vuelve a guardar.';
         if (String(item.lastErrorCode || '').trim() === 'INVALID_SESSION') {
           return 'Pendiente de sincronizar. Vuelve a iniciar sesión para terminar.';
@@ -10541,21 +10551,28 @@
         applyPlaneacionOutboxVisualState(updatedItem);
         persistCurrentBootSnapshot('planeacion_outbox_error');
       }
-      if (retryable) {
+      const shouldNotifyUser = shouldExposePlaneacionOutboxIssue(updatedItem || Object.assign({}, item, {
+        retryable,
+        attempts,
+        lastErrorCode: String((error && error.code) || '').trim()
+      }));
+      if (retryable && shouldNotifyUser) {
         setBanner(
           String((error && error.code) || '').trim() === 'INVALID_SESSION'
             ? 'Hay cambios guardados localmente pendientes de sincronizar. Vuelve a iniciar sesión.'
             : 'Hay cambios guardados localmente pendientes de sincronizar. Seguiremos intentando.',
           'info'
         );
-      } else {
+      } else if (!retryable) {
         setBanner(formatApiError(error), 'error');
       }
-      renderPlaneacionesSurface({
-        includeStats: true,
-        includePlaneaciones: true,
-        includeAlertas: false
-      });
+      if (shouldNotifyUser) {
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+      }
       if (retryable) schedulePlaneacionOutboxProcessing(nextDelay + 120);
       else schedulePlaneacionOutboxProcessing(120);
     }
