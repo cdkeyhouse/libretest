@@ -233,7 +233,9 @@
         adminUiEventsBound: false,
         restoreSnapshotSyncing: false,
         planeacionOutboxProcessing: false,
-        planeacionOutboxRetryTimer: null
+        planeacionOutboxRetryTimer: null,
+        pendingPlanSaveTransactions: {},
+        planDetailPromises: {}
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -751,6 +753,8 @@
         state.ui.multiGroupActiveChildByLote = {};
         state.ui.restoreSnapshotSyncing = false;
         state.ui.planeacionOutboxProcessing = false;
+        state.ui.pendingPlanSaveTransactions = {};
+        state.ui.planDetailPromises = {};
       }
       state.notificationEditor = {
         notificacion_id: '',
@@ -1017,7 +1021,7 @@
     function isBootSnapshotFresh(snapshot) {
       if (!snapshot || typeof snapshot !== 'object') return false;
       const savedAtMs = Date.parse(String(snapshot.saved_at || ''));
-      if (!Number.isFinite(savedAtMs)) return true;
+      if (!Number.isFinite(savedAtMs)) return false;
       return (Date.now() - savedAtMs) <= BOOT_SNAPSHOT_MAX_AGE_MS;
     }
 
@@ -6898,6 +6902,68 @@
       };
     }
 
+    function getCurrentPlanFechaPlaneacion(plan) {
+      const semana = plan ? getWeekById(plan.semana_id) : null;
+      return toYmdFrontend_((semana && semana.fecha_inicio) || '');
+    }
+
+    function buildOpenPlanStructuralSignatureFromDraft(draft) {
+      if (!draft) return '';
+      return JSON.stringify({
+        fecha_planeacion: String(draft.fecha_planeacion || '').trim(),
+        frase_semana: String(draft.frase_semana || '').trim(),
+        materia_id: String(draft.materia_id || '').trim(),
+        submateria_id: String(draft.submateria_id || '').trim(),
+        alumnos_ids: normalizeIdList(draft.alumnos_ids),
+        activities: (Array.isArray(draft.activities) ? draft.activities : [])
+          .map((activity, index) => ({
+            actividad_id: String((activity && activity.actividad_id) || '').trim(),
+            texto: String((activity && activity.texto) || '').trim(),
+            orden: index + 1
+          }))
+          .filter((activity) => activity.texto || activity.actividad_id)
+      });
+    }
+
+    function buildOpenPlanStructuralSignatureFromPlan(plan) {
+      if (!plan) return '';
+      return JSON.stringify({
+        fecha_planeacion: getCurrentPlanFechaPlaneacion(plan),
+        frase_semana: String(plan.frase_semana || '').trim(),
+        materia_id: String(plan.materia_id || '').trim(),
+        submateria_id: String(plan.submateria_id || '').trim(),
+        alumnos_ids: normalizeIdList((plan.alumnos || []).map((row) => row && row.alumno_id)),
+        activities: (Array.isArray(plan.actividades) ? plan.actividades : [])
+          .map((activity, index) => ({
+            actividad_id: String((activity && activity.actividad_id) || '').trim(),
+            texto: String((activity && activity.texto) || '').trim(),
+            orden: index + 1
+          }))
+          .filter((activity) => activity.texto || activity.actividad_id)
+      });
+    }
+
+    function getOpenPlanStructuralDraftState(planId, fallbackPlan) {
+      const currentPlan = getPlanById(planId) || fallbackPlan || null;
+      const draft = currentPlan ? getOpenPlanDraft(currentPlan) : null;
+      if (!currentPlan || !draft) {
+        return {
+          dirty: false,
+          hasActivitiesWithoutId: false
+        };
+      }
+      const activities = Array.isArray(draft.activities) ? draft.activities : [];
+      const hasActivitiesWithoutId = activities.some((activity) => {
+        return String((activity && activity.texto) || '').trim() &&
+          !String((activity && activity.actividad_id) || '').trim();
+      });
+      const dirty = buildOpenPlanStructuralSignatureFromDraft(draft) !== buildOpenPlanStructuralSignatureFromPlan(currentPlan);
+      return {
+        dirty,
+        hasActivitiesWithoutId
+      };
+    }
+
     function getOpenPlanDraft(plan) {
       if (!plan) return null;
       if (!state.openPlanDraft || state.openPlanDraft.planId !== plan.planeacion_id) {
@@ -7567,10 +7633,23 @@
     async function ensurePlaneacionDetailLoaded(planId, options = {}) {
       const current = getPlanById(planId);
       if (current && current.detail_loaded) return current;
-      const detail = await fetchPlaneacionDetalle(planId);
-      const updated = upsertPlaneacionRow(detail);
-      markPlaneacionDetailFresh(planId);
-      return updated;
+      if (!state.ui.planDetailPromises) state.ui.planDetailPromises = {};
+      if (state.ui.planDetailPromises[planId]) {
+        return state.ui.planDetailPromises[planId];
+      }
+      const promise = fetchPlaneacionDetalle(planId)
+        .then((detail) => {
+          const updated = upsertPlaneacionRow(detail);
+          markPlaneacionDetailFresh(planId);
+          return updated;
+        })
+        .finally(() => {
+          if (state.ui && state.ui.planDetailPromises) {
+            delete state.ui.planDetailPromises[planId];
+          }
+        });
+      state.ui.planDetailPromises[planId] = promise;
+      return promise;
     }
 
     async function ensurePlaneacionObservacionesLoaded(planId, options = {}) {
@@ -10308,6 +10387,77 @@
       });
     }
 
+    function clearPendingPlanSaveTransaction(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !state.ui || !state.ui.pendingPlanSaveTransactions) return;
+      delete state.ui.pendingPlanSaveTransactions[normalizedPlanId];
+    }
+
+    function buildPlanSaveTransactionFingerprint(config = {}) {
+      return JSON.stringify({
+        planId: String(config.planId || '').trim(),
+        generalText: String(config.generalText || '').trim(),
+        finalPayloads: (config.finalPayloads || []).map((row) => ({
+          planId: String((row && row.planId) || '').trim(),
+          alumnoId: String((row && row.alumnoId) || '').trim(),
+          nota: String((row && row.nota) || '').trim()
+        })),
+        planSaveAction: String(config.planSaveAction || '').trim(),
+        planSavePayload: config.planSavePayload
+          ? Object.assign({}, config.planSavePayload, { request_id: '' })
+          : null
+      });
+    }
+
+    function buildPlanSaveTransactionBundle(config = {}) {
+      const normalizedPlanId = String(config.planId || '').trim();
+      if (!normalizedPlanId) throw new Error('Planeación no encontrada.');
+      if (!state.ui) state.ui = {};
+      if (!state.ui.pendingPlanSaveTransactions) state.ui.pendingPlanSaveTransactions = {};
+      const fingerprint = buildPlanSaveTransactionFingerprint(config);
+      const existing = state.ui.pendingPlanSaveTransactions[normalizedPlanId];
+      if (existing && existing.fingerprint === fingerprint && existing.bundle) {
+        return cloneJsonSafe(existing.bundle, existing.bundle) || existing.bundle;
+      }
+      const rootRequestId = uid('PLASAVE');
+      const bundle = {
+        planeacion_id: normalizedPlanId,
+        request_id: rootRequestId,
+        general_observation: String(config.generalText || '').trim()
+          ? {
+              planeacion_id: normalizedPlanId,
+              texto: String(config.generalText || '').trim(),
+              request_id: rootRequestId + ':obsg'
+            }
+          : null,
+        final_observation_batch: Array.isArray(config.finalPayloads) && config.finalPayloads.length
+          ? {
+              items: config.finalPayloads.map((row) => ({
+                planeacion_id: row.planId || normalizedPlanId,
+                alumno_id: row.alumnoId,
+                nota: row.nota
+              })),
+              request_id: rootRequestId + ':obsf'
+            }
+          : null,
+        plan_save_action: String(config.planSaveAction || '').trim() || '',
+        plan_save: config.planSavePayload
+          ? Object.assign({}, config.planSavePayload, {
+              request_id: rootRequestId + ':plan'
+            })
+          : null
+      };
+      state.ui.pendingPlanSaveTransactions[normalizedPlanId] = {
+        fingerprint,
+        bundle
+      };
+      return cloneJsonSafe(bundle, bundle) || bundle;
+    }
+
+    async function persistPlanChangesCompositeApi(bundle) {
+      return await api('guardarCambiosPlaneacion', bundle);
+    }
+
     function buildPlaneacionOutboxItem(kind, payload = {}) {
       const createdAt = new Date().toISOString();
       return Object.assign({
@@ -10487,21 +10637,32 @@
     }
 
     async function processPlaneacionOutboxOpenSave(item) {
-      const requests = item.requests && typeof item.requests === 'object' ? item.requests : {};
-      if (requests.generalObservation) {
-        await api('crearObsSemana', requests.generalObservation);
-      }
-      if (requests.finalObservationBatch) {
-        await api('guardarObsAlumnoFinalLote', requests.finalObservationBatch);
-      }
+      const combinedRequest = item.combinedRequest && typeof item.combinedRequest === 'object'
+        ? item.combinedRequest
+        : null;
       let savedPlanResponse = null;
-      if (requests.planSave) {
-        savedPlanResponse = await performOpenPlanSaveRequest(item.planSaveAction || 'guardarPlaneacionCompleta', requests.planSave);
+      if (combinedRequest) {
+        const compositeResponse = await persistPlanChangesCompositeApi(combinedRequest);
+        savedPlanResponse = compositeResponse && compositeResponse.plan_save
+          ? compositeResponse.plan_save
+          : (compositeResponse && compositeResponse.planeacion ? { planeacion: compositeResponse.planeacion } : null);
+      } else {
+        const requests = item.requests && typeof item.requests === 'object' ? item.requests : {};
+        if (requests.generalObservation) {
+          await api('crearObsSemana', requests.generalObservation);
+        }
+        if (requests.finalObservationBatch) {
+          await api('guardarObsAlumnoFinalLote', requests.finalObservationBatch);
+        }
+        if (requests.planSave) {
+          savedPlanResponse = await performOpenPlanSaveRequest(item.planSaveAction || 'guardarPlaneacionCompleta', requests.planSave);
+        }
       }
       const previousPlan = item.previousPlanSnapshot || getPlanById(item.planId);
       const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion
         ? Object.assign({}, previousPlan || {}, savedPlanResponse.planeacion)
         : null;
+      clearPendingPlanSaveTransaction(item.planId);
       const canPatchSimplePlanLocally = !!(item.shouldSavePlan && !item.shouldSaveShared && updatedPlan);
       if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan)) {
         applySavedPlaneacionDetail(item.planId, Object.assign({}, updatedPlan, {
@@ -10857,6 +11018,32 @@
       const previousPlanSnapshot = cloneJsonSafe(plan, plan);
       const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
       const shouldUsePlaneacionOutbox = !canUseAdminShell() && canOptimisticallyRender && !shouldSaveShared && isPlaneacionOutboxEnabled();
+      const shouldUseLiteSave = !!(shouldSavePlan && shouldUseLightOpenPlanSave(plan, planDraft, planSaveRequest));
+      const combinedSaveRequest = buildPlanSaveTransactionBundle({
+        planId,
+        generalText,
+        finalPayloads,
+        planSaveAction: shouldSavePlan
+          ? (shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta')
+          : '',
+        planSavePayload: shouldSavePlan ? {
+          planeacion_id: planId,
+          fecha_planeacion: planDraft.fecha_planeacion || planSaveRequest.fallbackDate,
+          semana_id: planSaveRequest.semana.draft ? '' : planSaveRequest.semana.semana_id,
+          grupo_id: plan.grupo_id,
+          materia_id: planSaveRequest.materiaId,
+          submateria_id: planSaveRequest.submateriaId,
+          frase_semana: String(planDraft.frase_semana || '').trim(),
+          alumnos_ids: planSaveRequest.alumnosIds,
+          actividades: planSaveRequest.actividades,
+          activities_unchanged: shouldUseLiteSave && planDraft.activitiesDirty !== true,
+          activities_changed: shouldUseLiteSave && planDraft.activitiesDirty === true,
+          last_known_updated_at: planDraft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
+          last_known_activities_version: planDraft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
+          skip_material_sync: !didOpenPlanMaterialStateChange(plan, planSaveRequest),
+          minimal_response: shouldUseLiteSave
+        } : null
+      });
       const optimisticPlan = canOptimisticallyRender
         ? buildOptimisticPlaneacionSavePreview(plan, {
             draft: shouldSavePlan ? planDraft : null,
@@ -10902,25 +11089,6 @@
               autoGrowObsFinal(input);
             }
           });
-          const shouldUseLiteSave = !!(shouldSavePlan && shouldUseLightOpenPlanSave(plan, planDraft, planSaveRequest));
-          const outboxPlanPayload = shouldSavePlan ? {
-            planeacion_id: planId,
-            fecha_planeacion: planDraft.fecha_planeacion || planSaveRequest.fallbackDate,
-            semana_id: planSaveRequest.semana.draft ? '' : planSaveRequest.semana.semana_id,
-            grupo_id: plan.grupo_id,
-            materia_id: planSaveRequest.materiaId,
-            submateria_id: planSaveRequest.submateriaId,
-            frase_semana: String(planDraft.frase_semana || '').trim(),
-            alumnos_ids: planSaveRequest.alumnosIds,
-            actividades: planSaveRequest.actividades,
-            activities_unchanged: shouldUseLiteSave && planDraft.activitiesDirty !== true,
-            activities_changed: shouldUseLiteSave && planDraft.activitiesDirty === true,
-            last_known_updated_at: planDraft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
-            last_known_activities_version: planDraft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
-            skip_material_sync: !didOpenPlanMaterialStateChange(plan, planSaveRequest),
-            minimal_response: shouldUseLiteSave,
-            request_id: uid('PLAOPEN')
-          } : null;
           enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('open_save', {
             mergeKey: 'plan:' + String(planId || '').trim(),
             planId: String(planId || '').trim(),
@@ -10931,6 +11099,7 @@
             shouldSaveShared: false,
             shouldRefreshMaterialAlertas,
             shouldForceAlertasAfterSave,
+            combinedRequest: combinedSaveRequest,
             localState: 'saving',
             localMessage: 'Guardado local. Sincronizando...',
             planSaveAction: shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta',
@@ -10938,7 +11107,9 @@
               generalObservation: generalText ? {
                 planeacion_id: planId,
                 texto: generalText,
-                request_id: uid('OSG')
+                request_id: combinedSaveRequest && combinedSaveRequest.general_observation
+                  ? combinedSaveRequest.general_observation.request_id
+                  : uid('OSG')
               } : null,
               finalObservationBatch: finalPayloads.length ? {
                 items: finalPayloads.map((row) => ({
@@ -10946,9 +11117,11 @@
                   alumno_id: row.alumnoId,
                   nota: row.nota
                 })),
-                request_id: uid('OAFL')
+                request_id: combinedSaveRequest && combinedSaveRequest.final_observation_batch
+                  ? combinedSaveRequest.final_observation_batch.request_id
+                  : uid('OAFL')
               } : null,
-              planSave: outboxPlanPayload
+              planSave: combinedSaveRequest ? combinedSaveRequest.plan_save : null
             }
           }));
           persistCurrentBootSnapshot('guardar_cambios_outbox_local');
@@ -10960,30 +11133,26 @@
           setBanner('Guardado local. Sincronizando en segundo plano...', 'success');
           return;
         }
+
         const savedParts = [];
         let savedPlanResponse = null;
         try {
-        if (generalText) {
-          await persistGeneralObservation(planId, generalText);
-          const generalInput = $('obs-general-' + planId);
-          if (generalInput) generalInput.value = '';
-          savedParts.push('observación general');
-        }
-        if (finalPayloads.length) {
-          await persistAlumnoFinalObservationBatch(planId, finalPayloads);
-          savedParts.push('observaciones finales');
-        }
-        if (shouldSavePlan) {
-          savedPlanResponse = await persistOpenPlanDraftApi(planId, planDraft, plan, planSaveRequest);
-          savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
-        }
-        if (shouldSaveShared) {
-          const freshEntry = getPlaneacionEntryByKey(entryKey) || entry;
-          await persistMultiGroupSharedApi(freshEntry, sharedDraft);
-          state.multiGroupSharedDrafts[entryKey] = null;
-          state.openPlanDraft = null;
-          savedParts.push('base multigrupo');
-        }
+          const compositeResponse = await persistPlanChangesCompositeApi(combinedSaveRequest);
+          if (generalText) savedParts.push('observación general');
+          if (finalPayloads.length) savedParts.push('observaciones finales');
+          if (shouldSavePlan) {
+            savedPlanResponse = compositeResponse && compositeResponse.plan_save
+              ? compositeResponse.plan_save
+              : (compositeResponse && compositeResponse.planeacion ? { planeacion: compositeResponse.planeacion } : null);
+            savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
+          }
+          if (shouldSaveShared) {
+            const freshEntry = getPlaneacionEntryByKey(entryKey) || entry;
+            await persistMultiGroupSharedApi(freshEntry, sharedDraft);
+            state.multiGroupSharedDrafts[entryKey] = null;
+            state.openPlanDraft = null;
+            savedParts.push('base multigrupo');
+          }
         } catch (err) {
           if (optimisticPlan && previousPlanSnapshot) {
             upsertPlaneacionRow(previousPlanSnapshot);
@@ -10998,6 +11167,12 @@
           }
           throw err;
         }
+
+        if (generalText) {
+          const generalInput = $('obs-general-' + planId);
+          if (generalInput) generalInput.value = '';
+        }
+        clearPendingPlanSaveTransaction(planId);
         const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion
           ? Object.assign({}, plan, savedPlanResponse.planeacion)
           : null;
@@ -11194,6 +11369,13 @@
     function buildClosePlanPayload(planId, fallbackPlan) {
       const currentPlan = getPlanById(planId) || fallbackPlan;
       if (!currentPlan) throw new Error('Planeación no encontrada.');
+      const structuralDraftState = getOpenPlanStructuralDraftState(planId, currentPlan);
+      if (structuralDraftState.hasActivitiesWithoutId) {
+        throw new Error('Guarda la estructura antes de cerrar la semana.');
+      }
+      if (structuralDraftState.dirty) {
+        throw new Error('Tienes cambios de estructura sin guardar. Guarda antes de cerrar la semana.');
+      }
       const draft = getOpenPlanDraft(currentPlan);
       const activityRows = Array.isArray(draft && draft.activities) && draft.activities.length
         ? draft.activities
@@ -11404,6 +11586,36 @@
       state.ui.adminUiEventsBound = true;
     }
 
+    function buildCreatePlanMutexKey() {
+      return buildActionKey('crearPlaneacion', [
+        $('planFecha').value,
+        $('planMateria').value,
+        $('planSubmateria') ? $('planSubmateria').value : '',
+        getSelectedGroupIds().sort().join(','),
+        getSelectedPlanAlumnos().sort().join(',')
+      ]);
+    }
+
+    async function runCreatePlanAction(button, targetStatus) {
+      const actionKey = buildCreatePlanMutexKey();
+      if (inFlightActions.has(actionKey)) {
+        return inFlightActions.get(actionKey);
+      }
+      const draftButton = $('savePlanDraftBtn');
+      const activeButton = $('savePlanActiveBtn');
+      setButtonBusy(draftButton, true, 'Procesando...');
+      setButtonBusy(activeButton, true, 'Procesando...');
+      try {
+        return await handleAction('crearPlaneacion', () => savePlanEditor(targetStatus), {
+          key: actionKey,
+          busyText: 'Procesando...'
+        });
+      } finally {
+        setButtonBusy(draftButton, false);
+        setButtonBusy(activeButton, false);
+      }
+    }
+
     function bindEvents() {
       bindHiddenPingShortcut();
       document.addEventListener('click', (event) => {
@@ -11438,14 +11650,8 @@
         button: event.currentTarget,
         key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
-      if ($('savePlanDraftBtn')) $('savePlanDraftBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', () => savePlanEditor('borrador'), {
-        button: event.currentTarget,
-        key: buildActionKey('crearPlaneacion', ['borrador', $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
-      }));
-      if ($('savePlanActiveBtn')) $('savePlanActiveBtn').addEventListener('click', (event) => handleAction('crearPlaneacion', () => savePlanEditor('activa'), {
-        button: event.currentTarget,
-        key: buildActionKey('crearPlaneacion', ['activa', $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
-      }));
+      if ($('savePlanDraftBtn')) $('savePlanDraftBtn').addEventListener('click', (event) => runCreatePlanAction(event.currentTarget, 'borrador'));
+      if ($('savePlanActiveBtn')) $('savePlanActiveBtn').addEventListener('click', (event) => runCreatePlanAction(event.currentTarget, 'activa'));
       $('togglePlanBuilderBtn').addEventListener('click', () => togglePlanBuilder());
       $('addActivityBtn').addEventListener('click', () => addEditorActivity());
       if ($('closePlanCancelBtn')) $('closePlanCancelBtn').addEventListener('click', () => closeClosePlanModal());
