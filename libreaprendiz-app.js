@@ -9682,7 +9682,9 @@
           }
           throw err;
         }
-        const updatedPlan = response && response.planeacion ? response.planeacion : null;
+        const updatedPlan = response && response.planeacion
+          ? Object.assign({}, previousPlan || {}, response.planeacion)
+          : null;
         const appliedLocally = !hasActivePlaneacionesFilters() &&
           await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
         if (!appliedLocally) {
@@ -10108,6 +10110,7 @@
         last_known_updated_at: draft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
         last_known_activities_version: draft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
         skip_material_sync: !didOpenPlanMaterialStateChange(plan, request),
+        minimal_response: shouldUseLiteSave,
         request_id: uid('PLAOPEN')
       };
       try {
@@ -10292,7 +10295,9 @@
           }
           throw err;
         }
-        const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion ? savedPlanResponse.planeacion : null;
+        const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion
+          ? Object.assign({}, plan, savedPlanResponse.planeacion)
+          : null;
         const canPatchSimplePlanLocally = shouldSavePlan &&
           !shouldSaveShared &&
           !(entry && entry.isMulti);
