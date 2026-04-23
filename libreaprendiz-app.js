@@ -508,13 +508,13 @@
     function getPlaneacionesSurfaceCatalogBlocks() {
       return canUseAdminShell()
         ? ['facilitadores', 'grupos', 'materias', 'semanas']
-        : ['grupos', 'materias', 'submaterias', 'semanas'];
+        : ['grupos', 'materias', 'semanas'];
     }
 
     function getPlaneacionesEditorCatalogBlocks() {
       return canUseAdminShell()
         ? ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas']
-        : ['alumnos'];
+        : ['alumnos', 'submaterias'];
     }
 
     function getCatalogBlocksForModuleWithScope(moduleName, options = {}) {
@@ -1751,8 +1751,11 @@
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
       const surfaceCatalogBlocks = getPlaneacionesSurfaceCatalogBlocks();
+      const missingSurfaceCatalogBlocks = getMissingCatalogBlocks(surfaceCatalogBlocks);
+      const shouldRequestSurfaceCatalogs = missingSurfaceCatalogBlocks.length > 0;
       const hadLocalNotificaciones = Array.isArray(state.notificaciones) && state.notificaciones.length > 0;
       const requestedOpenPlanId = String(state.openPlanId || '').trim();
+      const canReuseSnapshotOpenPlanDetail = requestedOpenPlanId && shouldPreserveSnapshotPlanDetail(requestedOpenPlanId);
       const shouldReuseAlertas = shouldReuseFacilitadorFeedSnapshot('alertas');
       const shouldReuseNotificaciones = shouldReuseFacilitadorFeedSnapshot('notificaciones');
       const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
@@ -1760,11 +1763,12 @@
         notification_limit: 20,
         include_alertas: !shouldReuseAlertas,
         include_notificaciones: !shouldReuseNotificaciones,
-        catalog_blocks: surfaceCatalogBlocks,
-        open_plan_id: requestedOpenPlanId || ''
+        include_catalogos: shouldRequestSurfaceCatalogs,
+        catalog_blocks: shouldRequestSurfaceCatalogs ? missingSurfaceCatalogBlocks : [],
+        open_plan_id: canReuseSnapshotOpenPlanDetail ? '' : (requestedOpenPlanId || '')
       }));
       if (bootData && bootData.catalogos && Object.keys(bootData.catalogos).length) {
-        mergeCatalogosPayload(bootData.catalogos, surfaceCatalogBlocks);
+        mergeCatalogosPayload(bootData.catalogos, shouldRequestSurfaceCatalogs ? missingSurfaceCatalogBlocks : surfaceCatalogBlocks);
       }
       state.dashboardStats = Object.assign({}, state.dashboardStats || {}, bootData && bootData.stats ? bootData.stats : {});
       state.planeaciones = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
