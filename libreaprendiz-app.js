@@ -8060,16 +8060,19 @@
       state.planeaciones = nextRows;
     }
 
-    async function fetchPlaneacionDetalle(planId) {
+    async function fetchPlaneacionDetalle(planId, options = {}) {
+      const bypassDetailCache = options && options.bypassDetailCache === true;
       let primaryPlan = null;
-      try {
-        const data = await api('getPlaneacionDetalle', { planeacion_id: planId, include_observaciones: false });
-        if (data && data.planeacion) {
-          primaryPlan = data.planeacion;
-          if (primaryPlan.detail_loaded) return primaryPlan;
+      if (!bypassDetailCache) {
+        try {
+          const data = await api('getPlaneacionDetalle', { planeacion_id: planId, include_observaciones: false });
+          if (data && data.planeacion) {
+            primaryPlan = data.planeacion;
+            if (primaryPlan.detail_loaded) return primaryPlan;
+          }
+        } catch (err) {
+          if (!err || err.code !== 'NOT_FOUND') throw err;
         }
-      } catch (err) {
-        if (!err || err.code !== 'NOT_FOUND') throw err;
       }
       const fallback = await api('getPlaneaciones', {
         planeacion_id: planId,
@@ -8114,7 +8117,9 @@
       if (options.force && state.ui.planDetailPromises[planId]) {
         delete state.ui.planDetailPromises[planId];
       }
-      const promise = fetchPlaneacionDetalle(planId)
+      const promise = fetchPlaneacionDetalle(planId, {
+        bypassDetailCache: options.force === true
+      })
         .then((detail) => {
           const updated = upsertPlaneacionRow(detail);
           if (state.openPlanId === planId && hasUsableOpenPlanDetail(updated)) {
