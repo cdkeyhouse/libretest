@@ -7334,7 +7334,7 @@
         grupo ? getGrupoDisplayName(grupo) : plan.grupo_id,
         getPlanMateriaDisplayLabel(plan, materia),
         semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id
-      ].join(' Â· ');
+      ].join(' · ');
     }
 
     function getPlanSubmateriasForMateria(materiaId) {
@@ -9263,13 +9263,13 @@
                   '<div>' +
                     '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                     '<div class="subtle">' + escapeHtml(groupLabel) +
-                    ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                    ' · ' + escapeHtml(weekLabel) + '</div>' +
                   '</div>' +
                   badgeHtml +
                 '</div>' +
                 '<div class="meta-grid">' +
                   '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) Â· ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' Â· ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
+                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
                 '</div>' +
                 localFeedbackHtml +
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
@@ -9297,7 +9297,7 @@
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-cell-summary">' +
                     '<span class="plan-compact-label">Resumen</span>' +
-                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) Â· ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
                     summaryMetaHtml +
                     localFeedbackHtml +
                   '</div>' +
@@ -9341,13 +9341,13 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
                 badgeHtml +
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
               localFeedbackHtml +
               previewSharedHtml +
@@ -9375,13 +9375,13 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
                 badgeHtml +
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
               localFeedbackHtml +
               '<div class="plan-loading-note">' +
@@ -9404,13 +9404,13 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
               badgeHtml +
             '</div>' +
             '<div class="meta-grid">' +
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
             '</div>' +
             localFeedbackHtml +
             (plan.estado === 'borrador'
@@ -10338,7 +10338,6 @@
           includePlaneaciones: true,
           includeAlertas: false
         });
-        setBanner('Guardando planeación en segundo plano...', 'info');
       } else if (optimisticCreatedPlans.length) {
         upsertPlaneacionesRows(optimisticCreatedPlans);
         resetPlanEditor();
@@ -10351,7 +10350,6 @@
           includePlaneaciones: true,
           includeAlertas: false
         });
-        setBanner('Creando planeación...', 'info');
       }
       if (!hasAdminPower && isPlaneacionOutboxEnabled()) {
         if (editorMode === 'edit' && optimisticUpdatedPlan) {
@@ -10378,7 +10376,6 @@
               request_id: uid('PLAUPD')
             }
           }));
-          setBanner('Guardado local. Sincronizando en segundo plano...', 'success');
           return;
         }
         if (editorMode !== 'edit' && optimisticCreatedPlans.length) {
@@ -10401,7 +10398,6 @@
               request_id: uid('PLA')
             }
           }));
-          setBanner('Guardada localmente. Sincronizando creación en segundo plano...', 'success');
           return;
         }
       }
@@ -10701,9 +10697,6 @@
             _local_save_state: 'activating',
             _local_save_message: 'La semana ya está visible mientras termina de activarse.'
           }));
-          if (state.openPlanId === planId) {
-            state.openPlanDraft = null;
-          }
           persistCurrentBootSnapshot('planeacion_activando_local');
           renderPlaneacionesList();
           focusPlaneacionCardSoon(planId);
@@ -10755,8 +10748,8 @@
         }
         setBanner(
           action === 'activarPlaneacion'
-            ? 'La planeaciÃ³n ya estÃ¡ activa y lista para trabajarse.'
-            : ('AcciÃ³n completada: ' + action),
+            ? 'La planeación ya está activa y lista para trabajarse.'
+            : ('Acción completada: ' + action),
           'success'
         );
       }, { button, key: buildActionKey(action, [planId]) });
