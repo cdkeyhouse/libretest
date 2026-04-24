@@ -8914,27 +8914,6 @@
         }
 
         if (!plan.detail_loaded && plan.boot_detail_loaded) {
-          const previewAlumnosHtml = alumnosRows.length
-            ? (
-                '<div class="plan-student-chip-cloud">' +
-                  alumnosRows.map((alumnoRow) => {
-                    const alumnoDisplay = getAlumnoDisplaySnapshot(alumnoRow);
-                    return '<div class="plan-student-chip"><strong>' + escapeHtml(alumnoDisplay.nombre) + '</strong></div>';
-                  }).join('') +
-                '</div>'
-              )
-            : '<div class="mini">Preparando alumnos para esta planeación...</div>';
-          const previewActivitiesHtml = (plan.actividades || []).length
-            ? (
-                '<div class="stack">' +
-                  (plan.actividades || []).map((item, index) => (
-                    '<div class="activity-card">' +
-                      '<div><strong>' + escapeHtml(String(item.orden || (index + 1)) + '. ' + (item.texto || 'Actividad')) + '</strong></div>' +
-                    '</div>'
-                  )).join('') +
-                '</div>'
-              )
-            : '<div class="mini">Preparando actividades para que puedas revisar enseguida...</div>';
           const previewSharedHtml = entry.isMulti
             ? (
                 '<div class="plan-multigroup-switcher">' +
@@ -8965,20 +8944,15 @@
               '</div>' +
               localFeedbackHtml +
               previewSharedHtml +
-              (localFeedbackHtml ? '' : (
-                '<div class="plan-inline-feedback is-pending">' +
-                  '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
-                  '<span class="plan-inline-feedback-label">Actualizando</span>' +
-                  '<span class="plan-inline-feedback-text">Detalle y observaciones...</span>' +
-                '</div>'
-              )) +
-              '<div class="stack">' +
-                '<div><strong>Alumnos</strong></div>' +
-                previewAlumnosHtml +
-              '</div>' +
-              '<div class="stack">' +
-                '<div><strong>Actividades</strong></div>' +
-                previewActivitiesHtml +
+              '<div class="plan-loading-note is-compact">' +
+                '<strong>Abriendo planeación...</strong>' +
+                '<div class="mini">Estamos trayendo alumnos, actividades y observaciones para que abras con contexto completo.</div>' +
+                '<div class="plan-loading-progress" aria-hidden="true"></div>' +
+                '<div class="plan-loading-pill-row">' +
+                  '<span class="plan-loading-pill">Alumnos</span>' +
+                  '<span class="plan-loading-pill">Actividades</span>' +
+                  '<span class="plan-loading-pill">Observaciones</span>' +
+                '</div>' +
               '</div>' +
               '<div class="actions" style="margin-top:14px;">' +
                 '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +

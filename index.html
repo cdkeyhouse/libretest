@@ -987,13 +987,26 @@
       background: rgba(29, 182, 193, 0.08);
       color: var(--text-soft);
     }
+    .plan-loading-note.is-compact {
+      max-width: 560px;
+      padding: 12px 14px;
+      gap: 8px;
+      margin-top: 10px;
+    }
     .plan-loading-note strong {
       color: var(--text);
       font-size: 0.98rem;
     }
+    .plan-loading-note.is-compact strong {
+      font-size: 0.94rem;
+    }
     .plan-loading-note .mini {
       color: var(--muted);
       line-height: 1.45;
+    }
+    .plan-loading-note.is-compact .mini {
+      font-size: 0.8rem;
+      line-height: 1.35;
     }
     .plan-inline-feedback {
       display: flex;
@@ -1091,6 +1104,10 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--text-soft);
       font-size: 0.8rem;
+    }
+    .plan-loading-note.is-compact .plan-loading-pill {
+      padding: 6px 10px;
+      font-size: 0.76rem;
     }
     .plan-list-skeleton {
       display: grid;
