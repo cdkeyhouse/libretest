@@ -6947,6 +6947,10 @@
         finalObservationsByKey[alumnoId] = nota;
         if (targetPlanId) finalObservationsByKey[targetPlanId + '::' + alumnoId] = nota;
       });
+      const generalObservationText = String(
+        sourcePlan._draft_general_observation_text ||
+        ''
+      ).trim();
       return {
         planId: plan.planeacion_id,
         fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
@@ -6964,6 +6968,7 @@
           comentario_cierre: actividad.comentario_cierre || '',
           last_known_updated_at: actividad.fecha_actualizacion || ''
         })) : [createEmptyActivityDraft()],
+        generalObservationText,
         finalObservationsByKey,
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
@@ -7536,6 +7541,9 @@
         nextPlan.obs_semana = current;
         nextPlan.obs_loaded = true;
       }
+      if (String(generalText || '').trim()) {
+        nextPlan._draft_general_observation_text = trimmedGeneral;
+      }
       if (Array.isArray(finalPayloads) && finalPayloads.length) {
         nextPlan.obs_alumno_final = mergeOptimisticAlumnoFinalRows(nextPlan, finalPayloads);
         const draftFinalMap = Object.assign({}, nextPlan._draft_final_observations_by_key || {});
@@ -7593,9 +7601,20 @@
         });
         nextPlan.obs_semana = current;
         nextPlan.obs_loaded = true;
+        nextPlan._draft_general_observation_text = String(options.generalText || '').trim();
       }
       if (Array.isArray(options.finalPayloads) && options.finalPayloads.length) {
         nextPlan.obs_alumno_final = mergeOptimisticAlumnoFinalRows(nextPlan, options.finalPayloads);
+        const draftFinalMap = Object.assign({}, nextPlan._draft_final_observations_by_key || {});
+        options.finalPayloads.forEach((row) => {
+          const alumnoId = String((row && row.alumnoId) || '').trim();
+          const targetPlanId = String((row && (row.planId || nextPlan.planeacion_id)) || '').trim();
+          const nota = String((row && row.nota) || '').trim();
+          if (!alumnoId) return;
+          draftFinalMap[alumnoId] = nota;
+          if (targetPlanId) draftFinalMap[targetPlanId + '::' + alumnoId] = nota;
+        });
+        nextPlan._draft_final_observations_by_key = draftFinalMap;
         nextPlan.obs_loaded = true;
       }
       nextPlan._local_save_state = String(options.localState || 'saving').trim();
@@ -7705,14 +7724,31 @@
         }
         (Array.isArray(finalPayloads) ? finalPayloads : []).forEach((row) => {
           const alumnoId = String((row && row.alumnoId) || '').trim();
+          const targetPlanId = String((row && row.planId) || normalizedPlanId).trim();
           if (!alumnoId) return;
-          const input = $('obs-final-' + normalizedPlanId + '-' + alumnoId);
+          const input = $('obs-final-' + targetPlanId + '-' + alumnoId);
           if (input) {
             input.value = String((row && row.nota) || '').trim();
             autoGrowObsFinal(input);
           }
         });
       });
+    }
+
+    function updateOpenPlanGeneralObservationDraft(planId, value) {
+      if (!state.openPlanDraft) return;
+      const normalizedPlanId = String(planId || state.openPlanDraft.planId || '').trim();
+      if (!normalizedPlanId) return;
+      if (String(state.openPlanDraft.planId || '').trim() !== normalizedPlanId) return;
+      state.openPlanDraft.generalObservationText = String(value || '');
+      const currentPlan = getPlanById(normalizedPlanId);
+      if (currentPlan && currentPlan.planeacion_id) {
+        upsertPlaneacionRow({
+          planeacion_id: normalizedPlanId,
+          _draft_general_observation_text: state.openPlanDraft.generalObservationText
+        });
+      }
+      persistOpenPlanSnapshotSoon('planeacion_draft_obs_general');
     }
 
     function queuePlaneacionPostSaveSync(planId, options = {}) {
@@ -7935,6 +7971,12 @@
       }).join('');
       window.requestAnimationFrame(() => {
         document.querySelectorAll('.obs-final-input').forEach((textarea) => autoGrowObsFinal(textarea));
+        if (state.openPlanDraft && state.openPlanDraft.planId) {
+          const generalInput = $('obs-general-' + state.openPlanDraft.planId);
+          if (generalInput && generalInput.value !== String(state.openPlanDraft.generalObservationText || '')) {
+            generalInput.value = String(state.openPlanDraft.generalObservationText || '');
+          }
+        }
       });
     }
 
@@ -8794,6 +8836,9 @@
         const hasAdminPower = role === 'admin' || role === 'directora';
         const alumnosRows = entry.isMulti ? getPlaneacionEntryAlumnoRows(entry) : (plan.alumnos || []);
         const obsGenerales = getPlanGeneralObservations(plan);
+        const draftGeneralObservationText = state.openPlanDraft && state.openPlanDraft.planId === plan.planeacion_id
+          ? String(state.openPlanDraft.generalObservationText || '')
+          : String(plan._draft_general_observation_text || '');
         const obsAlumnoFinalMap = entry.isMulti ? getPlaneacionEntryAlumnoFinalMap(entry) : getPlanAlumnoFinalMap(plan);
         const allowStructureEdit = hasAdminPower || ((['borrador', 'activa'].includes(plan.estado) && !weekClosed) || plan.estado === 'rechazada');
         const allowGeneralObs = hasAdminPower || !weekClosed;
@@ -11340,17 +11385,6 @@
           });
         }
         if (shouldUsePlaneacionOutbox) {
-          if (generalText) {
-            const generalInput = $('obs-general-' + planId);
-            if (generalInput) generalInput.value = '';
-          }
-          finalPayloads.forEach((row) => {
-            const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
-            if (input) {
-              input.value = '';
-              autoGrowObsFinal(input);
-            }
-          });
           enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('open_save', {
             mergeKey: 'plan:' + String(planId || '').trim(),
             planId: String(planId || '').trim(),
@@ -11392,6 +11426,7 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
+          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           flashButtonLabel(button, 'Guardado');
           return;
         }
@@ -11449,6 +11484,7 @@
           }));
           persistCurrentBootSnapshot('guardar_cambios_local');
           renderPlaneacionesList();
+          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           scheduleClearLocalPlaneacionFeedback(planId);
           if (shouldSavePlan) {
             queuePlaneacionPostSaveSync(planId, {
@@ -11465,6 +11501,7 @@
           }));
           persistCurrentBootSnapshot('guardar_cambios_obs_local');
           renderPlaneacionesList();
+          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           scheduleClearLocalPlaneacionFeedback(planId);
           queuePlaneacionPostSaveSync(planId, {
             refreshDetail: true,
@@ -11476,6 +11513,7 @@
           state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
           state.openPlanDraft = null;
           await refreshPlaneacionesSurface({ includeAlertas: false });
+          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           if (shouldSavePlan || shouldSaveShared) {
             refreshPlaneacionesAlertsDeferred({
               force: shouldForceAlertasAfterSave,
@@ -11882,6 +11920,13 @@
           : null;
         if (!dateInput) return;
         tryShowDatePicker(dateInput);
+      });
+      document.addEventListener('input', (event) => {
+        const target = event && event.target;
+        if (!target || !target.id || typeof target.id !== 'string') return;
+        if (!target.id.startsWith('obs-general-')) return;
+        const planId = target.id.replace('obs-general-', '');
+        updateOpenPlanGeneralObservationDraft(planId, target.value);
       });
       $('pingBtn').addEventListener('click', (event) => handleAction('ping', pingBackend, { button: event.currentTarget }));
       $('loginBtn').addEventListener('click', (event) => triggerLoginAction(event.currentTarget));
