@@ -10934,6 +10934,35 @@
       }).filter((row) => row.nota);
     }
 
+    function collectStoredAlumnoFinalObservations(planId, plan, entry) {
+      const normalizedPlanId = String(planId || '').trim();
+      const currentPlan = plan || getPlanById(normalizedPlanId);
+      const draftMap = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? (state.openPlanDraft.finalObservationsByKey || {})
+        : {};
+      const planDraftMap = Object.assign({}, ((currentPlan || {})._draft_final_observations_by_key || {}));
+      const targetEntry = entry && entry.isMulti ? entry : null;
+      const alumnosRows = targetEntry
+        ? getPlaneacionEntryAlumnoRows(targetEntry)
+        : (Array.isArray((currentPlan || {}).alumnos) ? currentPlan.alumnos : []);
+      if (!alumnosRows.length) return [];
+      return alumnosRows.map((alumnoRow) => {
+        const alumnoId = String((alumnoRow && alumnoRow.alumno_id) || '').trim();
+        const targetPlanId = String((alumnoRow && (alumnoRow.planeacion_id || normalizedPlanId)) || '').trim();
+        const nota =
+          String(draftMap[targetPlanId + '::' + alumnoId] || '').trim() ||
+          String(draftMap[alumnoId] || '').trim() ||
+          String(planDraftMap[targetPlanId + '::' + alumnoId] || '').trim() ||
+          String(planDraftMap[alumnoId] || '').trim();
+        if (!alumnoId || !nota) return null;
+        return {
+          planId: targetPlanId || normalizedPlanId,
+          alumnoId,
+          nota
+        };
+      }).filter(Boolean);
+    }
+
     async function persistGeneralObservation(planId, texto) {
       await api('crearObsSemana', {
         planeacion_id: planId,
@@ -11027,6 +11056,29 @@
         bundle
       };
       return cloneJsonSafe(bundle, bundle) || bundle;
+    }
+
+    function buildOpenPlanDraftWithPendingObservations(draft, generalText, finalPayloads) {
+      if (!draft || typeof draft !== 'object') return draft;
+      const nextDraft = cloneJsonSafe(draft, draft) || draft;
+      const trimmedGeneral = String(generalText || '').trim();
+      if (trimmedGeneral) {
+        nextDraft.generalObservationText = trimmedGeneral;
+      }
+      if (!nextDraft.finalObservationsByKey || typeof nextDraft.finalObservationsByKey !== 'object') {
+        nextDraft.finalObservationsByKey = {};
+      }
+      (Array.isArray(finalPayloads) ? finalPayloads : []).forEach((row) => {
+        const alumnoId = String((row && row.alumnoId) || '').trim();
+        const targetPlanId = String((row && (row.planId || nextDraft.planId)) || '').trim();
+        const nota = String((row && row.nota) || '').trim();
+        if (!alumnoId || !nota) return;
+        nextDraft.finalObservationsByKey[alumnoId] = nota;
+        if (targetPlanId) {
+          nextDraft.finalObservationsByKey[targetPlanId + '::' + alumnoId] = nota;
+        }
+      });
+      return nextDraft;
     }
 
     async function persistPlanChangesCompositeApi(bundle) {
@@ -11272,6 +11324,7 @@
         }));
         persistCurrentBootSnapshot('planeacion_outbox_open_save_local');
         renderPlaneacionesList();
+        restorePendingPlanObservationInputs(item.planId, outboxGeneralText, outboxFinalPayloads);
         scheduleClearLocalPlaneacionFeedback(item.planId);
         if (item.shouldSavePlan) {
           queuePlaneacionPostSaveSync(item.planId, {
@@ -11292,6 +11345,7 @@
         }));
         persistCurrentBootSnapshot('planeacion_outbox_open_obs_local');
         renderPlaneacionesList();
+        restorePendingPlanObservationInputs(item.planId, outboxGeneralText, outboxFinalPayloads);
         scheduleClearLocalPlaneacionFeedback(item.planId);
         queuePlaneacionPostSaveSync(item.planId, {
           refreshDetail: true,
@@ -11554,6 +11608,7 @@
       } else if (state.openPlanId === planId) {
         state.openPlanDraft = buildOpenPlanDraft(Object.assign({}, getPlanById(planId) || updatedPlan));
       }
+      persistCurrentBootSnapshot('planeacion_transition_local');
       await refreshAlertas();
       renderPlaneacionesSurface();
       return true;
@@ -11611,8 +11666,19 @@
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
       const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
-      const generalText = getPendingGeneralObservationText(planId);
+      const fallbackGeneralText =
+        String(
+          (state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === String(planId || '').trim()
+            ? state.openPlanDraft.generalObservationText
+            : '') ||
+          plan._draft_general_observation_text ||
+          ''
+        ).trim();
+      const generalText = getPendingGeneralObservationText(planId) || fallbackGeneralText;
       const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
+      if (!finalPayloads.length) {
+        finalPayloads.push(...collectStoredAlumnoFinalObservations(planId, plan, entry));
+      }
       const currentDraft = hasPlanEditor ? getOpenPlanDraft(plan) : null;
       const planDraft = currentDraft
         ? syncOpenPlanDraftFromVisibleControls(
@@ -11636,6 +11702,9 @@
       const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
       const shouldUsePlaneacionOutbox = !canUseAdminShell() && canOptimisticallyRender && !shouldSaveShared && isPlaneacionOutboxEnabled();
       const shouldUseLiteSave = !!(shouldSavePlan && shouldUseLightOpenPlanSave(plan, planDraft, planSaveRequest));
+      const outboxDraft = shouldSavePlan
+        ? buildOpenPlanDraftWithPendingObservations(planDraft, generalText, finalPayloads)
+        : null;
       applyPendingPlanObservationDraft(planId, generalText, finalPayloads);
       const combinedSaveRequest = buildPlanSaveTransactionBundle({
         planId,
@@ -11695,7 +11764,7 @@
             planId: String(planId || '').trim(),
             previousPlanSnapshot,
             optimisticPlan,
-            draft: planDraft,
+            draft: outboxDraft,
             shouldSavePlan,
             shouldSaveShared: false,
             shouldRefreshMaterialAlertas,
