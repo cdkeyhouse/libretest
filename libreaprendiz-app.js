@@ -7510,12 +7510,44 @@
       }
       const existing = state.planeaciones[idx] || {};
       const nextRow = Object.assign({}, existing, row);
+      const existingUpdatedAtMs = Date.parse(String(existing.fecha_actualizacion || ''));
+      const incomingUpdatedAtMs = Date.parse(String(row.fecha_actualizacion || ''));
+      const incomingLooksOlder = Number.isFinite(existingUpdatedAtMs) &&
+        Number.isFinite(incomingUpdatedAtMs) &&
+        incomingUpdatedAtMs < existingUpdatedAtMs;
+      if (incomingLooksOlder) {
+        nextRow.estado = existing.estado || nextRow.estado;
+        nextRow.fecha_actualizacion = existing.fecha_actualizacion || nextRow.fecha_actualizacion;
+        nextRow.actividades_version_actual = existing.actividades_version_actual || nextRow.actividades_version_actual;
+        nextRow.material_confirmado = existing.material_confirmado || nextRow.material_confirmado;
+        if (existing.actividades_count !== undefined) {
+          nextRow.actividades_count = existing.actividades_count;
+        }
+        if (existing.alumnos_count !== undefined) {
+          nextRow.alumnos_count = existing.alumnos_count;
+        }
+        if (existing._local_save_state && !row._local_save_state) {
+          nextRow._local_save_state = existing._local_save_state;
+          nextRow._local_save_message = existing._local_save_message || nextRow._local_save_message || '';
+        }
+      }
       if (row.detail_loaded === false && existing.detail_loaded && shouldPreserveSnapshotPlanDetail(row.planeacion_id)) {
         nextRow.detail_loaded = true;
         nextRow.alumnos = Array.isArray(existing.alumnos) ? existing.alumnos : [];
         nextRow.actividades = Array.isArray(existing.actividades) ? existing.actividades : [];
       }
+      if (incomingLooksOlder && existing.detail_loaded) {
+        nextRow.detail_loaded = true;
+        nextRow.boot_detail_loaded = !!existing.boot_detail_loaded;
+        nextRow.alumnos = Array.isArray(existing.alumnos) ? existing.alumnos : [];
+        nextRow.actividades = Array.isArray(existing.actividades) ? existing.actividades : [];
+      }
       if (row.obs_loaded === false && existing.obs_loaded) {
+        nextRow.obs_semana = Array.isArray(existing.obs_semana) ? existing.obs_semana : [];
+        nextRow.obs_alumno_final = Array.isArray(existing.obs_alumno_final) ? existing.obs_alumno_final : [];
+        nextRow.obs_loaded = true;
+      }
+      if (incomingLooksOlder && existing.obs_loaded) {
         nextRow.obs_semana = Array.isArray(existing.obs_semana) ? existing.obs_semana : [];
         nextRow.obs_alumno_final = Array.isArray(existing.obs_alumno_final) ? existing.obs_alumno_final : [];
         nextRow.obs_loaded = true;
