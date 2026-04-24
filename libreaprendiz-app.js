@@ -11230,10 +11230,19 @@
               })).filter((row) => row.alumnoId && row.nota)
             : []);
       const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || previousPlan, outboxGeneralText, outboxFinalPayloads);
+      const inlineSavedPreview = buildInlineSavedPlaneacionPreview(
+        previousPlan,
+        item.optimisticPlan || null,
+        planWithSavedObservations,
+        {
+          localState: 'saved',
+          localMessage: 'Cambios sincronizados.'
+        }
+      );
       clearPendingPlanSaveTransaction(item.planId);
       const canPatchSimplePlanLocally = !!(item.shouldSavePlan && !item.shouldSaveShared && updatedPlan);
       if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan)) {
-        applySavedPlaneacionDetail(item.planId, Object.assign({}, planWithSavedObservations, {
+        applySavedPlaneacionDetail(item.planId, inlineSavedPreview || Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
         }));
