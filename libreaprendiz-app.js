@@ -7605,9 +7605,13 @@
       }
       const rowIndex = nextRows.findIndex((plan) => String((plan && plan.planeacion_id) || '').trim() === normalizedPlanId);
       if (rowIndex === -1) return nextRows;
-      nextRows[rowIndex] = Object.assign({}, nextRows[rowIndex], preservedPlan, {
+      nextRows[rowIndex] = Object.assign({}, nextRows[rowIndex], {
         detail_loaded: true,
-        boot_detail_loaded: true
+        boot_detail_loaded: true,
+        alumnos: Array.isArray(preservedPlan.alumnos) ? preservedPlan.alumnos : [],
+        actividades: Array.isArray(preservedPlan.actividades) ? preservedPlan.actividades : [],
+        _draft_general_observation_text: String(preservedPlan._draft_general_observation_text || ''),
+        _draft_final_observations_by_key: Object.assign({}, preservedPlan._draft_final_observations_by_key || {})
       });
       if (preservedPlan.obs_loaded) {
         nextRows[rowIndex].obs_loaded = true;
