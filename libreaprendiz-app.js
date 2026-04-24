@@ -9047,7 +9047,7 @@
         const alumnosRows = entry.isMulti ? getPlaneacionEntryAlumnoRows(entry) : (plan.alumnos || []);
         const obsGenerales = getPlanGeneralObservations(plan);
         const draftGeneralObservationText = state.openPlanDraft && state.openPlanDraft.planId === plan.planeacion_id
-          ? String(state.openPlanDraft.generalObservationText || '')
+          ? String(state.openPlanDraft.generalObservationText || plan._draft_general_observation_text || '')
           : String(plan._draft_general_observation_text || '');
         const obsAlumnoFinalMap = entry.isMulti ? getPlaneacionEntryAlumnoFinalMap(entry) : getPlanAlumnoFinalMap(plan);
         const allowStructureEdit = hasAdminPower || ((['borrador', 'activa'].includes(plan.estado) && !weekClosed) || plan.estado === 'rechazada');
@@ -9126,16 +9126,17 @@
                 ? (targetPlanId + '::' + normalizedAlumnoId)
                 : normalizedAlumnoId;
               const alumnoObs = obsAlumnoFinalMap[alumnoKey] || null;
+              const planDraftFinalMap = Object.assign({}, plan._draft_final_observations_by_key || {});
               const draftAlumnoObs = state.openPlanDraft && state.openPlanDraft.planId === plan.planeacion_id &&
                 state.openPlanDraft.finalObservationsByKey &&
                 Object.prototype.hasOwnProperty.call(state.openPlanDraft.finalObservationsByKey, alumnoKey)
-                  ? String(state.openPlanDraft.finalObservationsByKey[alumnoKey] || '')
+                  ? String(state.openPlanDraft.finalObservationsByKey[alumnoKey] || planDraftFinalMap[alumnoKey] || '')
                   : (
                       state.openPlanDraft && state.openPlanDraft.planId === plan.planeacion_id &&
                       state.openPlanDraft.finalObservationsByKey &&
                       Object.prototype.hasOwnProperty.call(state.openPlanDraft.finalObservationsByKey, normalizedAlumnoId)
-                        ? String(state.openPlanDraft.finalObservationsByKey[normalizedAlumnoId] || '')
-                        : ''
+                        ? String(state.openPlanDraft.finalObservationsByKey[normalizedAlumnoId] || planDraftFinalMap[normalizedAlumnoId] || '')
+                        : String(planDraftFinalMap[alumnoKey] || planDraftFinalMap[normalizedAlumnoId] || '')
                     );
               const alumnoNombre = alumnoRow.nombre_snapshot || alumnoRow.alumno_id;
               return (
