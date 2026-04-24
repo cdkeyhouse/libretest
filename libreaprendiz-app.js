@@ -11950,7 +11950,7 @@
     }
 
     function buildClosePlanPayload(planId, fallbackPlan) {
-      const currentPlan = getPlanById(planId) || fallbackPlan;
+      const currentPlan = fallbackPlan || getPlanById(planId);
       if (!currentPlan) throw new Error('PlaneaciÃ³n no encontrada.');
       const structuralDraftState = getOpenPlanStructuralDraftState(planId, currentPlan);
       if (structuralDraftState.hasActivitiesWithoutId) {
