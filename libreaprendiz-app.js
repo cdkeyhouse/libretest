@@ -7715,8 +7715,36 @@
       const nextPlan = cloneJsonSafe(basePlan, Object.assign({}, basePlan)) || Object.assign({}, basePlan);
       if (updatedPlan && typeof updatedPlan === 'object') {
         Object.keys(updatedPlan).forEach((key) => {
+          if (key === 'actividades') return;
           if (updatedPlan[key] === undefined) return;
           nextPlan[key] = updatedPlan[key];
+        });
+      }
+      if (Array.isArray(updatedPlan && updatedPlan.actividades) && updatedPlan.actividades.length) {
+        const optimisticActivities = Array.isArray(optimisticPlan && optimisticPlan.actividades)
+          ? optimisticPlan.actividades
+          : [];
+        const optimisticById = new Map(
+          optimisticActivities
+            .map((activity, index) => [String((activity && activity.actividad_id) || (activity && activity.orden) || index).trim(), activity])
+        );
+        nextPlan.actividades = updatedPlan.actividades.map((activity, index) => {
+          const activityKey = String((activity && activity.actividad_id) || (activity && activity.orden) || index).trim();
+          const optimisticActivity = optimisticById.get(activityKey) || optimisticActivities[index] || null;
+          const mergedActivity = Object.assign({}, optimisticActivity || {}, activity || {});
+          if ((!String((activity && activity.realizada) || '').trim()) && optimisticActivity) {
+            mergedActivity.realizada = optimisticActivity.realizada;
+          }
+          if ((!String((activity && activity.comentario_cierre) || '').trim()) && optimisticActivity) {
+            mergedActivity.comentario_cierre = optimisticActivity.comentario_cierre;
+          }
+          if ((!String((activity && activity.material_en_carpeta) || '').trim()) && optimisticActivity) {
+            mergedActivity.material_en_carpeta = optimisticActivity.material_en_carpeta;
+          }
+          if ((!String((activity && activity.texto) || '').trim()) && optimisticActivity) {
+            mergedActivity.texto = optimisticActivity.texto;
+          }
+          return mergedActivity;
         });
       }
       nextPlan.detail_loaded = true;
