@@ -408,7 +408,12 @@
       const signature = rows.map((plan) => [
         plan && plan.planeacion_id,
         plan && plan.facilitador_id,
-        plan && (plan.fecha_actualizacion || plan.fecha_creacion || '')
+        plan && (plan.fecha_actualizacion || plan.fecha_creacion || ''),
+        plan && plan.estado,
+        plan && plan._local_save_state,
+        plan && plan.actividades_version_actual,
+        plan && plan.detail_loaded,
+        plan && plan.obs_loaded
       ].join('|')).join('::');
       if (planeacionesIndexMemo.signature === signature) return planeacionesIndexMemo;
 
