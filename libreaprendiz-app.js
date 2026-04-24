@@ -10514,6 +10514,27 @@
         const updatedPlan = response && response.planeacion
           ? Object.assign({}, previousPlan || {}, response.planeacion)
           : null;
+        if (action === 'activarPlaneacion' && updatedPlan && state.openPlanId === planId) {
+          const currentOpenPlan = getPlanById(planId) || previousPlan || updatedPlan;
+          const activatedOpenPlan = Object.assign({}, currentOpenPlan, updatedPlan, {
+            estado: 'activa',
+            fecha_actualizacion: String((updatedPlan && updatedPlan.fecha_actualizacion) || (currentOpenPlan && currentOpenPlan.fecha_actualizacion) || '').trim()
+          });
+          if (currentOpenPlan && currentOpenPlan.detail_loaded) {
+            activatedOpenPlan.detail_loaded = true;
+            activatedOpenPlan.boot_detail_loaded = !!currentOpenPlan.boot_detail_loaded;
+            activatedOpenPlan.actividades = Array.isArray(currentOpenPlan.actividades) ? currentOpenPlan.actividades : [];
+            activatedOpenPlan.alumnos = Array.isArray(currentOpenPlan.alumnos) ? currentOpenPlan.alumnos : [];
+            activatedOpenPlan.obs_semana = Array.isArray(currentOpenPlan.obs_semana) ? currentOpenPlan.obs_semana : [];
+            activatedOpenPlan.obs_alumno_final = Array.isArray(currentOpenPlan.obs_alumno_final) ? currentOpenPlan.obs_alumno_final : [];
+            activatedOpenPlan.obs_loaded = !!currentOpenPlan.obs_loaded;
+          }
+          upsertPlaneacionRow(activatedOpenPlan);
+          state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(
+            activatedOpenPlan,
+            buildOpenPlanDraft(activatedOpenPlan)
+          );
+        }
         const appliedLocally = !hasActivePlaneacionesFilters() &&
           await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
         if (!appliedLocally) {
