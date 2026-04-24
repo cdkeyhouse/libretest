@@ -9373,7 +9373,7 @@
               '<div><strong>Observaciones generales</strong></div>' +
               obsGeneralesHtml +
               '<div class="actions compact">' +
-                '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observaciÃ³n general para administraciÃ³n"' + (allowGeneralObs ? '' : ' disabled') + '></textarea>' +
+                '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '>' + escapeHtml(draftGeneralObservationText || '') + '</textarea>' +
                 (allowGeneralObs ? '' : '<span class="mini">Solo administraciÃ³n puede agregar observaciones en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
@@ -9403,7 +9403,8 @@
           const normalizedPlanId = String(state.openPlanDraft.planId || '').trim();
           const generalInput = $('obs-general-' + normalizedPlanId);
           if (generalInput) {
-            generalInput.value = String(state.openPlanDraft.generalObservationText || '');
+            const currentPlan = getPlanById(normalizedPlanId);
+            generalInput.value = String(state.openPlanDraft.generalObservationText || currentPlan && currentPlan._draft_general_observation_text || '');
           }
           const finalMap = state.openPlanDraft.finalObservationsByKey || {};
           Object.keys(finalMap).forEach((key) => {
@@ -10891,21 +10892,40 @@
     }
 
     function getPendingGeneralObservationText(planId) {
-      const input = $('obs-general-' + planId);
-      return input ? input.value.trim() : '';
+      const normalizedPlanId = String(planId || '').trim();
+      const input = $('obs-general-' + normalizedPlanId);
+      const inputValue = input ? String(input.value || '').trim() : '';
+      if (inputValue) return inputValue;
+      if (state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId) {
+        const draftValue = String(state.openPlanDraft.generalObservationText || '').trim();
+        if (draftValue) return draftValue;
+      }
+      const currentPlan = getPlanById(normalizedPlanId);
+      return currentPlan ? String(currentPlan._draft_general_observation_text || '').trim() : '';
     }
 
     function collectPendingAlumnoFinalObservations(planId, plan, entry) {
+      const normalizedPlanId = String(planId || '').trim();
+      const draftMap = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? (state.openPlanDraft.finalObservationsByKey || {})
+        : {};
+      const planDraftMap = Object.assign({}, ((plan || getPlanById(normalizedPlanId) || {})._draft_final_observations_by_key || {}));
       const targetEntry = entry && entry.isMulti ? entry : null;
       const alumnosRows = targetEntry
         ? getPlaneacionEntryAlumnoRows(targetEntry)
-        : (Array.isArray((plan || getPlanById(planId) || {}).alumnos) ? (plan || getPlanById(planId)).alumnos : []);
+        : (Array.isArray((plan || getPlanById(normalizedPlanId) || {}).alumnos) ? (plan || getPlanById(normalizedPlanId)).alumnos : []);
       if (!alumnosRows.length) return [];
       return alumnosRows.map((alumnoRow) => {
         const alumnoId = alumnoRow.alumno_id;
-        const targetPlanId = String(alumnoRow.planeacion_id || planId);
+        const targetPlanId = String(alumnoRow.planeacion_id || normalizedPlanId);
         const input = $('obs-final-' + targetPlanId + '-' + alumnoId);
-        const nota = input ? input.value.trim() : '';
+        const inputValue = input ? String(input.value || '').trim() : '';
+        const fallbackValue =
+          String(draftMap[targetPlanId + '::' + alumnoId] || '').trim() ||
+          String(draftMap[alumnoId] || '').trim() ||
+          String(planDraftMap[targetPlanId + '::' + alumnoId] || '').trim() ||
+          String(planDraftMap[alumnoId] || '').trim();
+        const nota = inputValue || fallbackValue;
         return { planId: targetPlanId, alumnoId, nota };
       }).filter((row) => row.nota);
     }
