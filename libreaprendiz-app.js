@@ -6924,15 +6924,25 @@
 
     function buildOpenPlanDraft(plan) {
       const semana = getWeekById(plan.semana_id);
+      const snapshotOpenPlan = getBootSnapshotOpenPlanById(plan.planeacion_id);
+      const sourcePlan = (
+        plan &&
+        (
+          (Array.isArray(plan.alumnos) && plan.alumnos.length) ||
+          (Array.isArray(plan.actividades) && plan.actividades.length)
+        )
+      )
+        ? plan
+        : Object.assign({}, snapshotOpenPlan || {}, plan || {});
       return {
         planId: plan.planeacion_id,
         fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
-        frase_semana: plan.frase_semana || '',
-        materia_id: plan.materia_id || '',
-        submateria_id: plan.submateria_id || '',
-        alumnos_ids: (plan.alumnos || []).map((row) => row.alumno_id),
-        original_alumnos_ids: (plan.alumnos || []).map((row) => row.alumno_id),
-        activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
+        frase_semana: sourcePlan.frase_semana || '',
+        materia_id: sourcePlan.materia_id || '',
+        submateria_id: sourcePlan.submateria_id || '',
+        alumnos_ids: (sourcePlan.alumnos || []).map((row) => row.alumno_id),
+        original_alumnos_ids: (sourcePlan.alumnos || []).map((row) => row.alumno_id),
+        activities: (sourcePlan.actividades || []).length ? (sourcePlan.actividades || []).map((actividad) => ({
           key: actividad.actividad_id || uid('ACTOPEN'),
           actividad_id: actividad.actividad_id || '',
           texto: actividad.texto || '',
@@ -6945,6 +6955,20 @@
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
         activitiesDirty: false
       };
+    }
+
+    function hasUsableOpenPlanDetail(plan) {
+      if (!plan || !plan.planeacion_id) return false;
+      const alumnosReady = Number(plan.alumnos_count || 0) === 0 || (Array.isArray(plan.alumnos) && plan.alumnos.length > 0);
+      const actividadesReady = Number(plan.actividades_count || 0) === 0 || (Array.isArray(plan.actividades) && plan.actividades.length > 0);
+      return alumnosReady && actividadesReady;
+    }
+
+    function hasUsableOpenPlanDraftData(draft, plan) {
+      if (!draft || !plan) return false;
+      const alumnosReady = Number(plan.alumnos_count || 0) === 0 || (Array.isArray(draft.alumnos_ids) && draft.alumnos_ids.length > 0);
+      const actividadesReady = Number(plan.actividades_count || 0) === 0 || (Array.isArray(draft.activities) && draft.activities.some((activity) => String((activity && activity.texto) || '').trim() || String((activity && activity.actividad_id) || '').trim()));
+      return alumnosReady && actividadesReady;
     }
 
     function getCurrentPlanFechaPlaneacion(plan) {
@@ -7011,7 +7035,11 @@
 
     function getOpenPlanDraft(plan) {
       if (!plan) return null;
+      if (state.openPlanDraft && state.openPlanDraft.planId === plan.planeacion_id && !hasUsableOpenPlanDraftData(state.openPlanDraft, plan)) {
+        state.openPlanDraft = null;
+      }
       if (!state.openPlanDraft || state.openPlanDraft.planId !== plan.planeacion_id) {
+        if (!hasUsableOpenPlanDetail(plan)) return null;
         state.openPlanDraft = buildOpenPlanDraft(plan);
       }
       return state.openPlanDraft;
@@ -7690,7 +7718,11 @@
 
     async function ensurePlaneacionDetailLoaded(planId, options = {}) {
       const current = getPlanById(planId);
-      if (current && current.detail_loaded && !options.force) return current;
+      const hasUsableCurrentDetail = current && current.detail_loaded && (
+        (Number(current.alumnos_count || 0) === 0 || (Array.isArray(current.alumnos) && current.alumnos.length > 0)) &&
+        (Number(current.actividades_count || 0) === 0 || (Array.isArray(current.actividades) && current.actividades.length > 0))
+      );
+      if (hasUsableCurrentDetail && !options.force) return current;
       if (!state.ui.planDetailPromises) state.ui.planDetailPromises = {};
       if (!options.force && state.ui.planDetailPromises[planId]) {
         return state.ui.planDetailPromises[planId];
@@ -7701,6 +7733,9 @@
       const promise = fetchPlaneacionDetalle(planId)
         .then((detail) => {
           const updated = upsertPlaneacionRow(detail);
+          if (state.openPlanId === planId && hasUsableOpenPlanDetail(updated)) {
+            state.openPlanDraft = updated ? buildOpenPlanDraft(updated) : null;
+          }
           markPlaneacionDetailFresh(planId);
           return updated;
         })
@@ -8205,13 +8240,17 @@
           ensurePlaneacionEntryDetailsLoaded(entry, { silent: true }).then(() => {
             if (state.openPlanId !== planId) return;
             const refreshedPlan = getPlanById(planId) || plan;
-            state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+            state.openPlanDraft = refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)
+              ? buildOpenPlanDraft(refreshedPlan)
+              : null;
             persistCurrentBootSnapshot('planeacion_abierta_multigrupo');
             renderPlaneacionesList();
           }).catch(() => {});
         }
         if (state.ui) state.ui.openPlanLoadingId = '';
-        state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
+        state.openPlanDraft = plan && hasUsableOpenPlanDetail(plan)
+          ? buildOpenPlanDraft(plan)
+          : null;
         persistCurrentBootSnapshot('planeacion_abierta');
         renderPlaneacionesList();
         scheduleAfterPaint(() => {
@@ -8229,7 +8268,9 @@
             .then(() => {
               if (state.openPlanId !== planId) return;
               const refreshedPlan = getPlanById(planId) || plan;
-              state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+              state.openPlanDraft = refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)
+                ? buildOpenPlanDraft(refreshedPlan)
+                : null;
               renderPlaneacionesList();
             })
             .catch(() => state.catalogos);
@@ -8242,7 +8283,9 @@
             .then((retryPlan) => {
               if (state.openPlanId !== planId) return;
               if (state.ui) state.ui.openPlanLoadingId = '';
-              state.openPlanDraft = retryPlan ? buildOpenPlanDraft(retryPlan) : null;
+              state.openPlanDraft = retryPlan && hasUsableOpenPlanDetail(retryPlan)
+                ? buildOpenPlanDraft(retryPlan)
+                : null;
               renderPlaneacionesList();
             })
             .catch(() => null);
@@ -8276,11 +8319,31 @@
 
     function renderOpenPlanGroupSpecificEditor(plan) {
       const draft = getOpenPlanDraft(plan);
-      if (!draft) return '';
+      if (!draft) {
+        return (
+          '<div class="plan-inline-feedback is-pending">' +
+            '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
+            '<span class="plan-inline-feedback-label">Abriendo</span>' +
+            '<span class="plan-inline-feedback-text">Cargando alumnos y actividades...</span>' +
+          '</div>'
+        );
+      }
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       const isMulti = !!(entry && entry.isMulti);
       const showSeguimientoFields = String(plan.estado || '').trim() === 'activa';
-      const activitiesHtml = isMulti ? '' : (draft.activities || []).map((activity, index) => (
+      const activePlanActivities = Array.isArray(plan.actividades) ? plan.actividades : [];
+      const activitiesSource = Array.isArray(draft.activities) && draft.activities.some((activity) => String((activity && activity.texto) || '').trim() || String((activity && activity.actividad_id) || '').trim())
+        ? draft.activities
+        : activePlanActivities.map((activity) => ({
+            key: activity.actividad_id || uid('ACTOPEN'),
+            actividad_id: activity.actividad_id || '',
+            texto: activity.texto || '',
+            material_en_carpeta: normalizeMaterialStatus(activity.material_en_carpeta),
+            realizada: normalizeRealizadaStatus(activity.realizada),
+            comentario_cierre: activity.comentario_cierre || '',
+            last_known_updated_at: activity.fecha_actualizacion || ''
+          }));
+      const activitiesHtml = isMulti ? '' : activitiesSource.map((activity, index) => (
         '<div class="activity-editor">' +
           '<div class="activity-editor-top">' +
             '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
@@ -8308,12 +8371,19 @@
         return plansToRender.map((groupPlan) => {
           const isActiveGroup = groupPlan.planeacion_id === plan.planeacion_id;
           const groupDraft = isActiveGroup ? draft : null;
-          const selectedIds = new Set(
+          const initialSelectedIds = (
             isActiveGroup
               ? (groupDraft && groupDraft.alumnos_ids || [])
               : ((Array.isArray(groupPlan.alumnos) ? groupPlan.alumnos : []).map((row) => row.alumno_id))
           );
           const alumnosGrupo = getAlumnosByGroupId(groupPlan.grupo_id);
+          const selectedIds = new Set(
+            (!initialSelectedIds.length &&
+              Number(groupPlan.alumnos_count || 0) > 0 &&
+              Number(groupPlan.alumnos_count || 0) === alumnosGrupo.length)
+              ? alumnosGrupo.map((alumno) => alumno.alumno_id)
+              : initialSelectedIds
+          );
           const grupo = getGrupoById(groupPlan.grupo_id);
           const grupoLabel = grupo ? getGrupoDisplayName(grupo) : groupPlan.grupo_id;
           return (
@@ -8441,16 +8511,45 @@
       if (!allowStructureEdit) return '';
       if (options.groupSpecificOnly) return renderOpenPlanGroupSpecificEditor(plan);
       const draft = getOpenPlanDraft(plan);
-      if (!draft) return '';
-      const selectedMateriaId = String((draft && draft.materia_id) || plan.materia_id || '').trim();
-      const submaterias = getPlanSubmateriasForMateria(selectedMateriaId);
-      const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
-      const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
-      const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
-      const selected = new Set(draft.alumnos_ids || []);
-      const showSeguimientoFields = String(plan.estado || '').trim() === 'activa';
-      const activitiesHtml = (draft.activities || []).map((activity, index) => (
-        '<div class="activity-editor">' +
+      if (!draft) {
+        return (
+          '<div class="plan-inline-feedback is-pending">' +
+            '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
+            '<span class="plan-inline-feedback-label">Abriendo</span>' +
+            '<span class="plan-inline-feedback-text">Cargando alumnos y actividades...</span>' +
+          '</div>'
+        );
+      }
+        const selectedMateriaId = String((draft && draft.materia_id) || plan.materia_id || '').trim();
+        const submaterias = getPlanSubmateriasForMateria(selectedMateriaId);
+        const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
+        const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
+        const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
+        const selectedIds = Array.isArray(draft.alumnos_ids) && draft.alumnos_ids.length
+          ? draft.alumnos_ids
+          : ((plan.alumnos || []).map((row) => row.alumno_id));
+        const selectedFallbackIds = !selectedIds.length &&
+          Number(plan.alumnos_count || 0) > 0 &&
+          Number(plan.alumnos_count || 0) === alumnosGrupo.length
+          ? alumnosGrupo.map((alumno) => alumno.alumno_id)
+          : selectedIds;
+        const selected = new Set(selectedFallbackIds);
+        const showSeguimientoFields = String(plan.estado || '').trim() === 'activa';
+        const localState = getPlanLocalSaveState(plan);
+        const isOpenSaveBusy = localState === 'saving';
+        const activitiesSource = Array.isArray(draft.activities) && draft.activities.some((activity) => String((activity && activity.texto) || '').trim() || String((activity && activity.actividad_id) || '').trim())
+          ? draft.activities
+          : ((plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
+              key: actividad.actividad_id || uid('ACTOPEN'),
+              actividad_id: actividad.actividad_id || '',
+              texto: actividad.texto || '',
+              material_en_carpeta: normalizeMaterialStatus(actividad.material_en_carpeta),
+              realizada: normalizeRealizadaStatus(actividad.realizada),
+              comentario_cierre: actividad.comentario_cierre || '',
+              last_known_updated_at: actividad.fecha_actualizacion || ''
+            })) : [createEmptyActivityDraft()]);
+        const activitiesHtml = activitiesSource.map((activity, index) => (
+          '<div class="activity-editor">' +
           '<div class="activity-editor-top">' +
             '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
             '<div class="actions compact">' +
@@ -8695,6 +8794,8 @@
         const observationsLoadingHint = !plan.obs_loaded
           ? '<div class="mini">Se están cargando observaciones de esta planeación...</div>'
           : '';
+        const localState = getPlanLocalSaveState(plan);
+        const isOpenSaveBusy = localState === 'saving';
         const actionStatusHtml = getPlanActionStatusMarkup(plan);
         const buttons = [];
         if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
@@ -8962,7 +9063,7 @@
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
               ((allowStructureEdit || allowGeneralObs || allowAlumnoObs)
-                ? '<button class="btn-primary" type="button" onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">Guardar cambios</button>'
+                ? '<button class="btn-primary" type="button"' + (isOpenSaveBusy ? ' disabled aria-disabled="true"' : '') + ' onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">' + (isOpenSaveBusy ? 'Guardando...' : 'Guardar cambios') + '</button>'
                 : '') +
               actionStatusHtml +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
