@@ -11441,13 +11441,27 @@
       });
     }
 
+    function didOpenPlanActivityProgressChange(plan, request) {
+      if (!plan || !request) return true;
+      const currentActivities = Array.isArray(plan.actividades) ? plan.actividades : [];
+      const nextActivities = Array.isArray(request.actividades) ? request.actividades : [];
+      if (!currentActivities.length || currentActivities.length !== nextActivities.length) return true;
+      return currentActivities.some((activity, index) => {
+        const nextActivity = nextActivities[index] || {};
+        return normalizeRealizadaStatus((activity && activity.realizada) || '') !== normalizeRealizadaStatus(nextActivity.realizada || '') ||
+          normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere') !== normalizeMaterialStatus(nextActivity.material_en_carpeta || 'no_requiere') ||
+          String((activity && activity.comentario_cierre) || '').trim() !== String(nextActivity.comentario_cierre || '').trim();
+      });
+    }
+
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
       const plan = providedPlan || getPlanById(planId);
       if (!plan || !draft) throw new Error('PlaneaciÃ³n no encontrada.');
       const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
       const shouldUseLiteSave = shouldUseLightOpenPlanSave(plan, draft, request);
-      const activitiesUnchanged = shouldUseLiteSave && draft.activitiesDirty !== true;
-      const activitiesChanged = shouldUseLiteSave && draft.activitiesDirty === true;
+      const trackingChanged = didOpenPlanActivityProgressChange(plan, request);
+      const activitiesUnchanged = shouldUseLiteSave && draft.activitiesDirty !== true && !trackingChanged;
+      const activitiesChanged = shouldUseLiteSave && (draft.activitiesDirty === true || trackingChanged);
       const payload = {
         planeacion_id: planId,
         fecha_planeacion: draft.fecha_planeacion || request.fallbackDate,
@@ -11576,6 +11590,9 @@
       const shouldSavePlan = !!planDraft;
       const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
       const planSaveRequest = shouldSavePlan ? buildOpenPlanSaveRequest(plan, planDraft) : null;
+      const shouldPersistOpenPlanActivities = shouldSavePlan
+        ? (planDraft.activitiesDirty === true || didOpenPlanActivityProgressChange(plan, planSaveRequest))
+        : false;
       const shouldRefreshMaterialAlertas = shouldSavePlan
         ? didOpenPlanMaterialStateChange(plan, planSaveRequest)
         : false;
@@ -11604,8 +11621,8 @@
           frase_semana: String(planDraft.frase_semana || '').trim(),
           alumnos_ids: planSaveRequest.alumnosIds,
           actividades: planSaveRequest.actividades,
-          activities_unchanged: shouldUseLiteSave && planDraft.activitiesDirty !== true,
-          activities_changed: shouldUseLiteSave && planDraft.activitiesDirty === true,
+          activities_unchanged: shouldUseLiteSave && !shouldPersistOpenPlanActivities,
+          activities_changed: shouldUseLiteSave && shouldPersistOpenPlanActivities,
           last_known_updated_at: planDraft.lastKnownUpdatedAt || plan.fecha_actualizacion || '',
           last_known_activities_version: planDraft.lastKnownActivitiesVersion || plan.actividades_version_actual || '',
           skip_material_sync: !didOpenPlanMaterialStateChange(plan, planSaveRequest),
