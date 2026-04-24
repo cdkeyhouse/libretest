@@ -824,7 +824,7 @@
       body.hidden = !expanded;
       if (focusBar) focusBar.hidden = !createFocus;
       if (listCard) listCard.hidden = createFocus;
-      btn.textContent = expanded ? 'Ocultar editor' : 'Crear nueva planeaciÃ³n';
+      btn.textContent = expanded ? 'Ocultar editor' : 'Crear nueva planeación';
       btn.className = expanded
         ? 'btn-ghost plan-builder-launch-btn is-open'
         : 'btn-accent plan-builder-launch-btn is-collapsed';
@@ -2505,11 +2505,11 @@
       const workspaceSessionCopy = $('workspaceSessionCopy');
       const user = state.session && state.session.usuario ? state.session.usuario : null;
       if (!user) {
-        badge.textContent = 'Sin sesiÃ³n';
+        badge.textContent = 'Sin sesión';
         badge.className = 'pill';
-        info.textContent = 'AÃºn no hay una sesiÃ³n activa.';
+        info.textContent = 'Aún no hay una sesión activa.';
         if (workspaceSessionCopy) {
-          workspaceSessionCopy.innerHTML = '<strong>Sin sesion</strong><span class="mini">Libre Aprendiz</span>';
+          workspaceSessionCopy.innerHTML = '<strong>Sin sesión</strong><span class="mini">Libre Aprendiz</span>';
         }
         if (logoutBtn) logoutBtn.hidden = true;
         if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = true;
@@ -2521,11 +2521,11 @@
       badge.className = 'pill brand';
       info.innerHTML =
         '<strong>' + escapeHtml(user.nombre) + '</strong><br>' +
-        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' Â· ' +
+        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' · ' +
         escapeHtml(user.rol) + '</span>';
       if (workspaceSessionCopy) {
         const restoreChip = state.ui && state.ui.restoreSnapshotSyncing
-          ? '<span class="workspace-session-sync-chip" title="Datos restaurados mientras sincroniza en segundo plano">Restaurado Â· Sync</span>'
+          ? '<span class="workspace-session-sync-chip" title="Datos restaurados mientras sincroniza en segundo plano">Restaurado · Sync</span>'
           : '';
         workspaceSessionCopy.innerHTML =
           '<strong>' + escapeHtml(user.nombre) + '</strong><div class="workspace-session-meta"><span class="mini">' +
@@ -6910,7 +6910,7 @@
       if ($('planeacionesSectionCopy')) {
         $('planeacionesSectionCopy').textContent = canUseAdminShell()
           ? 'Consulta histÃ³rico, filtra y corrige cualquier planeaciÃ³n del sistema.'
-          : 'AquÃ­ puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
+          : 'Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
       }
     }
 
@@ -9222,9 +9222,9 @@
                 '</div>'
               );
             }).join('') + '</div>'
-          : '<div class="mini">No hay alumnos ligados a esta planeaciÃ³n.</div>';
+          : '<div class="mini">No hay alumnos ligados a esta planeación.</div>';
         const observationsLoadingHint = !plan.obs_loaded
-          ? '<div class="mini">Se estÃ¡n cargando observaciones de esta planeaciÃ³n...</div>'
+          ? '<div class="mini">Se están cargando observaciones de esta planeación...</div>'
           : '';
         const localState = getPlanLocalSaveState(plan);
         const isOpenSaveBusy = localState === 'saving';
@@ -9238,7 +9238,7 @@
           buttons.push('<button class="btn-secondary" type="button" onclick="rejectPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Rechazar</button>');
         }
         if (plan.estado === 'rechazada') {
-          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Reenviar aprobaciÃ³n</button>');
+          buttons.push('<button class="btn-secondary" type="button" onclick="resubmitPlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Reenviar aprobación</button>');
         }
         if (allowClose) {
           buttons.push('<button class="btn-accent" type="button" onclick="confirmClosePlan(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Cerrar semana</button>');
@@ -9455,16 +9455,16 @@
               obsGeneralesHtml +
               '<div class="actions compact">' +
                 '<textarea id="obs-general-' + escapeHtml(plan.planeacion_id) + '" placeholder="Agregar observación general para administración"' + (allowGeneralObs ? '' : ' disabled') + '>' + escapeHtml(draftGeneralObservationText || '') + '</textarea>' +
-                (allowGeneralObs ? '' : '<span class="mini">Solo administraciÃ³n puede agregar observaciones en semana cerrada.</span>') +
+                (allowGeneralObs ? '' : '<span class="mini">Solo administración puede agregar observaciones en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="stack">' +
-              '<div><strong>ObservaciÃ³n final por alumno' + (entry.isMulti ? ' Â· todos los grupos' : '') + '</strong></div>' +
+              '<div><strong>Observación final por alumno' + (entry.isMulti ? ' · todos los grupos' : '') + '</strong></div>' +
               obsAlumnoHtml +
               '<div class="actions obs-final-actions">' +
                 (allowAlumnoObs
                   ? ''
-                  : '<span class="mini">Solo administraciÃ³n puede editar en semana cerrada.</span>') +
+                  : '<span class="mini">Solo administración puede editar en semana cerrada.</span>') +
               '</div>' +
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
@@ -10681,7 +10681,7 @@
       await handleAction(action, async () => {
         const shouldCloseOpenCard = false;
         const previousPlan = getPlanById(planId);
-        if (!previousPlan) throw new Error('PlaneaciÃ³n no encontrada.');
+        if (!previousPlan) throw new Error('Planeación no encontrada.');
         if (action === 'activarPlaneacion') {
           const localState = getPlanLocalSaveState(previousPlan);
           if (isPlaneacionPendingCreation(previousPlan) || ['creating', 'saving', 'activating'].includes(localState)) {
@@ -10699,7 +10699,7 @@
           upsertPlaneacionRow(Object.assign({}, previousPlan, {
             estado: 'activa',
             _local_save_state: 'activating',
-            _local_save_message: 'La semana ya estÃ¡ visible mientras termina de activarse.'
+            _local_save_message: 'La semana ya está visible mientras termina de activarse.'
           }));
           if (state.openPlanId === planId) {
             state.openPlanDraft = null;
@@ -12187,7 +12187,7 @@
 
     function buildClosePlanPayload(planId, fallbackPlan) {
       const currentPlan = fallbackPlan || getPlanById(planId);
-      if (!currentPlan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!currentPlan) throw new Error('Planeación no encontrada.');
       const structuralDraftState = getOpenPlanStructuralDraftState(planId, currentPlan);
       if (structuralDraftState.hasActivitiesWithoutId) {
         throw new Error('Guarda la estructura antes de cerrar la semana.');
@@ -12200,14 +12200,14 @@
         ? draft.activities
         : (Array.isArray(currentPlan.actividades) ? currentPlan.actividades : []);
       if (!activityRows.length) {
-        throw new Error('No puedes cerrar una planeaciÃ³n sin actividades.');
+        throw new Error('No puedes cerrar una planeación sin actividades.');
       }
       const actividades = [];
       for (let index = 0; index < activityRows.length; index += 1) {
         const item = activityRows[index];
         const activityLabel = String((item && item.orden) || (index + 1));
         if (!String(item && item.actividad_id || '').trim()) {
-          throw new Error('Primero guarda la planeaciÃ³n antes de cerrar la semana.');
+          throw new Error('Primero guarda la planeación antes de cerrar la semana.');
         }
         const realizadaFieldId = 'activity-realizada-' + item.actividad_id;
         const materialFieldId = 'activity-material-' + item.actividad_id;
