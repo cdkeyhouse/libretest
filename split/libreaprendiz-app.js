@@ -682,7 +682,7 @@
 
       const status = String(data.status || data.estado || '').trim().toLowerCase();
       const rows = [
-        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' Â· ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
+        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' · ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
         periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Período</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
         data.url ? '<div class="admin-reporte-ciclo-result-row"><span>PDF</span><strong><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></strong></div>' : '',
         data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Versión de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
@@ -2521,11 +2521,11 @@
       badge.className = 'pill brand';
       info.innerHTML =
         '<strong>' + escapeHtml(user.nombre) + '</strong><br>' +
-        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' Â· ' +
+        '<span class="mini">' + escapeHtml(user.facilitador_id) + ' · ' +
         escapeHtml(user.rol) + '</span>';
       if (workspaceSessionCopy) {
         const restoreChip = state.ui && state.ui.restoreSnapshotSyncing
-          ? '<span class="workspace-session-sync-chip" title="Datos restaurados mientras sincroniza en segundo plano">Restaurado Â· Sync</span>'
+          ? '<span class="workspace-session-sync-chip" title="Datos restaurados mientras sincroniza en segundo plano">Restaurado · Sync</span>'
           : '';
         workspaceSessionCopy.innerHTML =
           '<strong>' + escapeHtml(user.nombre) + '</strong><div class="workspace-session-meta"><span class="mini">' +
@@ -3659,7 +3659,7 @@
           alumno.alumno_id,
           'grupo',
           'Cambio de grupo',
-          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' Â· ' + String(cambio.motivo || '').trim() : ''),
+          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' · ' + String(cambio.motivo || '').trim() : ''),
           new Date().toISOString()
         );
         invalidateAlumnoHistorialCache(alumno.alumno_id);
@@ -3805,7 +3805,7 @@
       const remoteFailed = !!(state.alumnosUi.remoteHistoryFailedByAlumno && state.alumnosUi.remoteHistoryFailedByAlumno[alumnoId]);
       if ($('adminAlumnoHistorialLabel')) {
         $('adminAlumnoHistorialLabel').textContent = alumno
-          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' Â· ' + (alumno.matricula || alumno.alumno_id))
+          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ' + (alumno.matricula || alumno.alumno_id))
           : 'Seguimiento del alumno.';
       }
       const historyFoot = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('.admin-alumnos-history-foot') : null;
@@ -4367,7 +4367,7 @@
       if (pulse.faltantes) parts.push(pulse.faltantes + ' faltante(s)');
       if (pulse.cierresPendientes) parts.push(pulse.cierresPendientes + ' cierre(s)');
       if (pulse.alertasAbiertas) parts.push(pulse.alertasAbiertas + ' alerta(s)');
-      return parts.join(' Â· ') || 'Sin pendientes críticos';
+      return parts.join(' · ') || 'Sin pendientes críticos';
     }
 
     function closeFacilitadorEditor() {
@@ -4475,7 +4475,7 @@
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
                     '<span>PIN temporal</span>',
-                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar Â· requerido al crear">',
+                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar · requerido al crear">',
                   '</label>',
                 '</div>',
                 '<div class="actions compact admin-alumnos-panel-actions">',
@@ -4581,7 +4581,7 @@
           '<div class="admin-facilitadores-identity">',
             '<div>',
               '<strong>' + escapeHtml(facilitador.nombre_mostrado || facilitador.nombre_completo || facilitador.facilitador_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' Â· ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
+              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' · ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
             '</div>',
             '<span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span>',
           '</div>',
@@ -4628,11 +4628,11 @@
         const periodo = [
           row.fecha_inicio ? ('Desde ' + formatFechaHumana(row.fecha_inicio)) : '',
           row.fecha_fin ? ('Hasta ' + formatFechaHumana(row.fecha_fin)) : ''
-        ].filter(Boolean).join(' Â· ') || 'Sin vigencia cerrada';
+        ].filter(Boolean).join(' · ') || 'Sin vigencia cerrada';
         return [
           '<article class="admin-facilitadores-assignment-item">',
             '<div class="admin-facilitadores-assignment-copy">',
-              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' Â· ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
+              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
               '<div class="mini">' + escapeHtml(periodo) + '</div>',
             '</div>',
             '<div class="admin-facilitadores-assignment-actions">',
@@ -4711,7 +4711,7 @@
             const materia = (state.catalogos.materias || []).find((item) => item.materia_id === asignacion.materia_id);
             return [
               '<div class="admin-facilitadores-matrix-row">',
-                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' Â· ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
+                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
                 semanas.map((semana) => {
                   const cell = getFacilitadorMatrixCellState(facilitadorId, asignacion, semana);
                   const css = cell.code === 'ok' ? 'is-ok' :
@@ -5539,7 +5539,7 @@
                       const alumnoId = String(row.alumno_id || '').trim();
                       return '<label class="admin-taller-membership-candidate">' +
                         '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedIds.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
-                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matrícula') + ' Â· ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
+                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matrícula') + ' · ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
                       '</label>';
                     }).join('') + '</div>'
                   : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta búsqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
@@ -6118,7 +6118,7 @@
           '<div class="admin-materias-identity">',
             '<div>',
               '<strong>' + escapeHtml(materia.nombre || materia.materia_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(materia.materia_id) + ' Â· ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
+              '<div class="mini">' + escapeHtml(materia.materia_id) + ' · ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
             '</div>',
             '<div class="admin-materias-structure">',
               '<span class="admin-alumnos-badge">' + escapeHtml(getMateriaStructureLabel(materia)) + '</span>',
@@ -6171,7 +6171,7 @@
               '<article class="admin-materias-variant-item">',
                 '<div class="admin-materias-variant-copy">',
                   '<strong>' + escapeHtml(row.nombre || row.submateria_id) + '</strong>',
-                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' Â· ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' Â· Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
+                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' · ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' · Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
                 '</div>',
                 '<div class="admin-materias-variant-actions">' + actions.join('') + '</div>',
               '</article>'
@@ -7334,7 +7334,7 @@
         grupo ? getGrupoDisplayName(grupo) : plan.grupo_id,
         getPlanMateriaDisplayLabel(plan, materia),
         semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id
-      ].join(' Â· ');
+      ].join(' · ');
     }
 
     function getPlanSubmateriasForMateria(materiaId) {
@@ -7362,7 +7362,7 @@
       const submateriaLabel = submateria
         ? (submateria.nombre || submateria.submateria_id)
         : (plan && plan.submateria_nombre ? String(plan.submateria_nombre).trim() : '');
-      return submateriaLabel ? (materiaLabel + ' Â· ' + submateriaLabel) : materiaLabel;
+      return submateriaLabel ? (materiaLabel + ' · ' + submateriaLabel) : materiaLabel;
     }
 
     function syncPlanSubmateriaSelect(preferredValue) {
@@ -8209,7 +8209,7 @@
       const week = getWeekByDateOrDraft(resolvedDate);
       const hint = week ? getSemanaHintText(week) : '';
       host.textContent = week
-        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' Â· ')
+        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' · ')
         : 'Selecciona una fecha.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
@@ -8422,15 +8422,15 @@
       }
 
       if (shouldRenderSeguimiento) {
-        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
-        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
         fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
         fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
       }
 
       if (shouldRenderReportes) {
         const reportUi = getReportSelectionState();
-        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
         if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
       }
     }
@@ -8502,7 +8502,7 @@
           nombre: alumno ? (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) : (pa.nombre_snapshot || pa.alumno_id)
         };
       });
-      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' · ' + a.alumno_id, 'Selecciona alumno');
     }
 
     function renderEvaluationDependencies() {
@@ -8522,7 +8522,7 @@
         .map((alumno) => {
           const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
             .filter(Boolean)
-            .join(' Â· ');
+            .join(' · ');
           return { id: alumno.alumno_id, label };
         })
         .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
@@ -8545,7 +8545,7 @@
       const match = state.catalogos.alumnos.find((alumno) => {
         const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
           .filter(Boolean)
-          .join(' Â· ')
+          .join(' · ')
           .toLowerCase();
         return label === query;
       });
@@ -9108,7 +9108,7 @@
         const materia = getMateriaById(plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
         const groupLabel = entry.isMulti
-          ? getPlaneacionEntryGroupLabels(entry).join(' Â· ')
+          ? getPlaneacionEntryGroupLabels(entry).join(' · ')
           : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
         const materiaLabel = getPlanMateriaDisplayLabel(plan, materia);
         const weekLabel = getWeekLabelForPlan(plan, semana);
@@ -9263,13 +9263,13 @@
                   '<div>' +
                     '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                     '<div class="subtle">' + escapeHtml(groupLabel) +
-                    ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                    ' · ' + escapeHtml(weekLabel) + '</div>' +
                   '</div>' +
                   badgeHtml +
                 '</div>' +
                 '<div class="meta-grid">' +
                   '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) Â· ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' Â· ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
+                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
                 '</div>' +
                 localFeedbackHtml +
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
@@ -9297,7 +9297,7 @@
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-cell-summary">' +
                     '<span class="plan-compact-label">Resumen</span>' +
-                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) Â· ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
                     summaryMetaHtml +
                     localFeedbackHtml +
                   '</div>' +
@@ -9341,13 +9341,13 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
                 badgeHtml +
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
               localFeedbackHtml +
               previewSharedHtml +
@@ -9375,13 +9375,13 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
                 badgeHtml +
               '</div>' +
               '<div class="meta-grid">' +
                 '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+                '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
               '</div>' +
               localFeedbackHtml +
               '<div class="plan-loading-note">' +
@@ -9404,13 +9404,13 @@
                 '<div>' +
                   '<h3>' + escapeHtml(materiaLabel) + '</h3>' +
                   '<div class="subtle">' + escapeHtml(groupLabel) +
-                  ' Â· ' + escapeHtml(weekLabel) + '</div>' +
+                  ' · ' + escapeHtml(weekLabel) + '</div>' +
                 '</div>' +
               badgeHtml +
             '</div>' +
             '<div class="meta-grid">' +
               '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' Â· <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' Â· <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
+              '<div><strong>Alumnos:</strong> ' + escapeHtml(String(alumnosCount)) + ' · <strong>Actividades:</strong> ' + escapeHtml(String(actividadesCount)) + (entry.isMulti ? ' · <strong>Grupos:</strong> ' + escapeHtml(String((entry.plans || []).length)) : '') + '</div>' +
             '</div>' +
             localFeedbackHtml +
             (plan.estado === 'borrador'
@@ -9459,7 +9459,7 @@
               '</div>' +
             '</div>' +
             '<div class="stack">' +
-              '<div><strong>Observación final por alumno' + (entry.isMulti ? ' Â· todos los grupos' : '') + '</strong></div>' +
+              '<div><strong>Observación final por alumno' + (entry.isMulti ? ' · todos los grupos' : '') + '</strong></div>' +
               obsAlumnoHtml +
               '<div class="actions obs-final-actions">' +
                 (allowAlumnoObs
@@ -9824,7 +9824,7 @@
           grupo ? getGrupoDisplayName(grupo) : '',
           materia ? (materia.nombre || materia.materia_id) : '',
           semana ? (semana.nombre_visible || semana.semana_id) : ''
-        ].filter(Boolean).join(' Â· ') : '';
+        ].filter(Boolean).join(' · ') : '';
         const metaParts = [];
         if (contexto) metaParts.push(contexto);
         if (alerta.fecha_creacion) metaParts.push('Creada ' + formatFechaHumana(alerta.fecha_creacion));
@@ -9836,7 +9836,7 @@
                 '<div class="alert-status ' + escapeHtml(String(alerta.estado || '').trim()) + '">' + escapeHtml(getAlertStatusLabel(alerta.estado)) + '</div>' +
               '</div>' +
               '<div class="alert-summary">' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
-              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' Â· ')) + '</div>' : '') +
+              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>' : '') +
             '</div>' +
         (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button" onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
           '</div>'
@@ -9862,7 +9862,7 @@
       const selectedPeriodo = getSelectedReportePeriodoRow();
 
       if (adminAlumno) {
-        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' Â· ' + row.alumno_id, 'Selecciona alumno');
+        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' · ' + row.alumno_id, 'Selecciona alumno');
         if (ui.alumno_id) adminAlumno.value = ui.alumno_id;
       }
       if (adminPeriodo) {
@@ -9879,7 +9879,7 @@
       if ($('adminReportSelectionSummary')) {
         $('adminReportSelectionSummary').innerHTML = [
           '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selección') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matrícula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' Â· ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matrícula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' · ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
           '<div class="admin-reporte-ciclo-summary-card"><span>Período</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selección') + '</strong></div>'
         ].join('');
       }
@@ -9888,7 +9888,7 @@
       }
       if ($('adminReportPreviewMeta')) {
         $('adminReportPreviewMeta').textContent = selectedAlumno
-          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' Â· Matrícula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' Â· Documento académico familiar')
+          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' · Matrícula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' · Documento académico familiar')
           : 'Grupo, matrícula y facilitadora se resolverán aquí.';
       }
       if ($('adminReportPreviewPeriodo')) {
@@ -10112,7 +10112,7 @@
         'Categorías: ' + ui.selectedCategories.join(', ') + '.',
         ui.trashReportFiles ? 'Los PDFs/docs asociados en REPORTES_CACHE también se mandarán a papelera si existen.' : 'Los archivos físicos de reportes se conservarán.',
         'La estructura del spreadsheet se mantiene.',
-        'Â¿Deseas continuar?'
+        '¿Deseas continuar?'
       ].join('\n');
       if (!window.confirm(confirmation)) return;
 
