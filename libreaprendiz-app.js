@@ -9191,6 +9191,29 @@
           '</article>'
         );
       }).join('') + loadMoreHtml;
+      window.requestAnimationFrame(() => {
+        document.querySelectorAll('.obs-final-input').forEach((textarea) => autoGrowObsFinal(textarea));
+        if (state.openPlanDraft && state.openPlanDraft.planId) {
+          const normalizedPlanId = String(state.openPlanDraft.planId || '').trim();
+          const generalInput = $('obs-general-' + normalizedPlanId);
+          if (generalInput) {
+            generalInput.value = String(state.openPlanDraft.generalObservationText || '');
+          }
+          const finalMap = state.openPlanDraft.finalObservationsByKey || {};
+          Object.keys(finalMap).forEach((key) => {
+            const normalizedKey = String(key || '').trim();
+            if (!normalizedKey) return;
+            let input = $('obs-final-' + normalizedKey);
+            if (!input && normalizedKey.indexOf('::') < 0) {
+              input = $('obs-final-' + normalizedPlanId + '-' + normalizedKey);
+            }
+            if (input) {
+              input.value = String(finalMap[key] || '');
+              autoGrowObsFinal(input);
+            }
+          });
+        }
+      });
     }
 
     function buildPlaneacionesListSkeleton(count = 3) {
