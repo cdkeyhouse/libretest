@@ -7614,6 +7614,36 @@
       return nextPlan;
     }
 
+    function buildInlineSavedPlaneacionPreview(plan, optimisticPlan, updatedPlan, options = {}) {
+      const basePlan = optimisticPlan || updatedPlan || plan;
+      if (!basePlan || !basePlan.planeacion_id) return null;
+      const nextPlan = cloneJsonSafe(basePlan, Object.assign({}, basePlan)) || Object.assign({}, basePlan);
+      if (updatedPlan && typeof updatedPlan === 'object') {
+        Object.keys(updatedPlan).forEach((key) => {
+          if (updatedPlan[key] === undefined) return;
+          nextPlan[key] = updatedPlan[key];
+        });
+      }
+      nextPlan.detail_loaded = true;
+      nextPlan.boot_detail_loaded = true;
+      if (Array.isArray(nextPlan.actividades) && nextPlan.actividades.length) {
+        const syncedAt = String(nextPlan.fecha_actualizacion || '').trim() || new Date().toISOString();
+        nextPlan.actividades = nextPlan.actividades.map((activity, index) => {
+          const sourceActivity = Array.isArray(plan && plan.actividades) ? plan.actividades[index] : null;
+          const normalizedActivity = Object.assign({}, sourceActivity || {}, activity || {});
+          normalizedActivity.fecha_actualizacion = syncedAt;
+          return normalizedActivity;
+        });
+      }
+      if (options.localState !== undefined) {
+        nextPlan._local_save_state = String(options.localState || '').trim();
+      }
+      if (options.localMessage !== undefined) {
+        nextPlan._local_save_message = String(options.localMessage || '').trim();
+      }
+      return nextPlan;
+    }
+
     function buildOptimisticPlaneacionSavePreview(plan, options = {}) {
       if (!plan || !plan.planeacion_id) return null;
       const nextPlan = cloneJsonSafe(plan, Object.assign({}, plan)) || Object.assign({}, plan);
@@ -11551,11 +11581,20 @@
           ? Object.assign({}, plan, savedPlanResponse.planeacion)
           : null;
         const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || plan, generalText, finalPayloads);
+        const inlineSavedPreview = buildInlineSavedPlaneacionPreview(
+          plan,
+          optimisticPlan,
+          planWithSavedObservations,
+          {
+            localState: 'saved',
+            localMessage: 'Cambios guardados.'
+          }
+        );
         const canPatchSimplePlanLocally = shouldSavePlan &&
           !shouldSaveShared &&
           !(entry && entry.isMulti);
         if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
-          applySavedPlaneacionDetail(planId, Object.assign({}, planWithSavedObservations, {
+          applySavedPlaneacionDetail(planId, inlineSavedPreview || Object.assign({}, planWithSavedObservations, {
             _local_save_state: 'saved',
             _local_save_message: 'Cambios guardados.'
           }));
