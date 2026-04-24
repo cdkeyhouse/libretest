@@ -8891,7 +8891,15 @@
         const submaterias = getPlanSubmateriasForMateria(selectedMateriaId);
         const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
         const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
-        const alumnosGrupo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
+        const alumnosGrupoCatalogo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
+        const alumnosGrupo = alumnosGrupoCatalogo.length
+          ? alumnosGrupoCatalogo
+          : ((Array.isArray(plan.alumnos) ? plan.alumnos : []).map((row) => ({
+              alumno_id: row.alumno_id,
+              grupo_id: plan.grupo_id,
+              nombre_mostrado: row.nombre_snapshot || row.alumno_id,
+              nombre_completo: row.nombre_snapshot || row.alumno_id
+            })));
         const selectedIds = Array.isArray(draft.alumnos_ids) && draft.alumnos_ids.length
           ? draft.alumnos_ids
           : ((plan.alumnos || []).map((row) => row.alumno_id));
