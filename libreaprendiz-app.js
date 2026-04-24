@@ -7466,6 +7466,31 @@
       return Object.keys(byAlumnoId).map((alumnoId) => byAlumnoId[alumnoId]);
     }
 
+    function mergeSavedObservationPreview(plan, generalText, finalPayloads) {
+      if (!plan || !plan.planeacion_id) return plan;
+      const nextPlan = cloneJsonSafe(plan, Object.assign({}, plan)) || Object.assign({}, plan);
+      const nowIso = new Date().toISOString();
+      const trimmedGeneral = String(generalText || '').trim();
+      if (trimmedGeneral) {
+        const current = Array.isArray(nextPlan.obs_semana) ? nextPlan.obs_semana.slice() : [];
+        current.push({
+          obs_semana_id: uid('TMPOS'),
+          planeacion_id: nextPlan.planeacion_id,
+          fecha: getTodayYmdLocal(),
+          fecha_creacion: nowIso,
+          texto: trimmedGeneral,
+          autor_id: getCurrentUserId()
+        });
+        nextPlan.obs_semana = current;
+        nextPlan.obs_loaded = true;
+      }
+      if (Array.isArray(finalPayloads) && finalPayloads.length) {
+        nextPlan.obs_alumno_final = mergeOptimisticAlumnoFinalRows(nextPlan, finalPayloads);
+        nextPlan.obs_loaded = true;
+      }
+      return nextPlan;
+    }
+
     function buildOptimisticPlaneacionSavePreview(plan, options = {}) {
       if (!plan || !plan.planeacion_id) return null;
       const nextPlan = cloneJsonSafe(plan, Object.assign({}, plan)) || Object.assign({}, plan);
@@ -11352,11 +11377,12 @@
         const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion
           ? Object.assign({}, plan, savedPlanResponse.planeacion)
           : null;
+        const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || plan, generalText, finalPayloads);
         const canPatchSimplePlanLocally = shouldSavePlan &&
           !shouldSaveShared &&
           !(entry && entry.isMulti);
         if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
-          applySavedPlaneacionDetail(planId, Object.assign({}, updatedPlan, {
+          applySavedPlaneacionDetail(planId, Object.assign({}, planWithSavedObservations, {
             _local_save_state: 'saved',
             _local_save_message: 'Cambios guardados.'
           }));
@@ -11376,7 +11402,10 @@
             });
           }
         } else if (!shouldSavePlan && !shouldSaveShared) {
-          applyLocalPlaneacionFeedback(planId, 'saved', 'Cambios guardados.');
+          applySavedPlaneacionDetail(planId, Object.assign({}, planWithSavedObservations, {
+            _local_save_state: 'saved',
+            _local_save_message: 'Cambios guardados.'
+          }));
           persistCurrentBootSnapshot('guardar_cambios_obs_local');
           renderPlaneacionesSurface({
             includeStats: true,
