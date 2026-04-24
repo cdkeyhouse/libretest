@@ -6771,6 +6771,7 @@
       if (localState === 'activating') {
         return '';
       }
+      if (localState === 'saving') return '';
       if (localState === 'saved') return '';
       if (!message) return '';
       const compactLabel = ({
@@ -6793,7 +6794,6 @@
       const localState = getPlanLocalSaveState(plan);
       if (localState === 'saved') return '';
       const label = ({
-        saving: 'Guardando...',
         sync_error: 'Pendiente'
       })[localState] || '';
       if (!label) return '';
@@ -11252,12 +11252,6 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
-          setBanner(
-            shouldUsePlaneacionOutbox
-              ? 'Guardado local. Sincronizando en segundo plano...'
-              : 'Guardando cambios en segundo plano...',
-            shouldUsePlaneacionOutbox ? 'success' : 'info'
-          );
         }
         if (shouldUsePlaneacionOutbox) {
           if (generalText) {
@@ -11313,7 +11307,6 @@
             includeAlertas: false
           });
           flashButtonLabel(button, 'Guardado');
-          setBanner('Guardado local. Sincronizando en segundo plano...', 'success');
           return;
         }
 
@@ -11413,11 +11406,7 @@
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
         });
-        const successText = savedParts.length > 1
-          ? 'Cambios guardados.'
-          : ((savedParts[0] || 'Cambios') + ' guardados.');
         flashButtonLabel(button, 'Guardado');
-        setBanner(successText, 'success');
       }, {
         button,
         key: buildActionKey('guardarCambiosPlaneacion', [planId, entryKey || '', generalText.slice(0, 40), finalPayloads.map((row) => row.alumnoId).join(','), shouldSavePlan ? 'plan' : '', shouldSaveShared ? 'multi' : '']),
