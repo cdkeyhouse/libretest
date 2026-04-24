@@ -1164,14 +1164,20 @@
       if (!plan || !plan.planeacion_id) return null;
       const snapshotOpenPlan = getBootSnapshotOpenPlanById(plan.planeacion_id);
       const preview = Object.assign({}, plan, snapshotOpenPlan || {});
-      preview.detail_loaded = false;
-      preview.boot_detail_loaded = true;
       preview.alumnos = Array.isArray(preview.alumnos) ? preview.alumnos : [];
       preview.actividades = Array.isArray(preview.actividades) ? preview.actividades : [];
       preview.obs_semana = Array.isArray(preview.obs_semana) ? preview.obs_semana : [];
       preview.obs_alumno_final = Array.isArray(preview.obs_alumno_final) ? preview.obs_alumno_final : [];
       preview.alumnos_count = Number(preview.alumnos_count || preview.alumnos.length || 0);
       preview.actividades_count = Number(preview.actividades_count || preview.actividades.length || 0);
+      const keepInlineDetail =
+        !!((snapshotOpenPlan && snapshotOpenPlan.detail_loaded) || plan.detail_loaded) &&
+        hasUsableOpenPlanDetail(preview);
+      preview.detail_loaded = keepInlineDetail;
+      preview.boot_detail_loaded = true;
+      if (keepInlineDetail && snapshotOpenPlan && snapshotOpenPlan.obs_loaded) {
+        preview.obs_loaded = true;
+      }
       return preview;
     }
 
