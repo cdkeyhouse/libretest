@@ -11256,6 +11256,17 @@
       state.ui.planeacionOutboxRetryTimer = null;
     }
 
+    function hasPendingPlaneacionOutboxForPlan(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return false;
+      return (state.planeacionOutbox || []).some((item) => {
+        if (!item) return false;
+        if (String((item.planId || '')).trim() !== normalizedPlanId) return false;
+        const status = String(item.status || '').trim();
+        return !status || status === 'pending' || status === 'syncing';
+      });
+    }
+
     function getNextPlaneacionOutboxItem() {
       const now = Date.now();
       return (state.planeacionOutbox || []).find((item) => {
@@ -12221,6 +12232,10 @@
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (hasPendingPlaneacionOutboxForPlan(planId)) {
+        setBanner('Espera a que terminen de sincronizarse los cambios antes de cerrar la semana.', 'info', { button });
+        return;
+      }
       if (['creating', 'saving', 'activating'].includes(getPlanLocalSaveState(plan))) {
         setBanner('Espera a que termine Guardar cambios antes de cerrar la semana.', 'info', { button });
         return;
@@ -12242,6 +12257,10 @@
       if (!planId) return;
       let plan = getPlanById(planId);
       if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (hasPendingPlaneacionOutboxForPlan(planId)) {
+        setClosePlanModalError('Espera a que terminen de sincronizarse los cambios antes de cerrar la semana.');
+        return;
+      }
       const obs = input ? input.value.trim() : '';
       clearClosePlanModalError();
       try {
