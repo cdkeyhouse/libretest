@@ -12152,14 +12152,21 @@
       if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
       const obs = input ? input.value.trim() : '';
       clearClosePlanModalError();
-      if (['saved', 'sync_error'].includes(getPlanLocalSaveState(plan))) {
-        try {
-          const refreshedPlan = await ensurePlaneacionDetailLoaded(planId, { silent: true, force: true });
-          if (refreshedPlan) {
-            plan = refreshedPlan;
-            state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(refreshedPlan, buildOpenPlanDraft(refreshedPlan));
-          }
-        } catch (_) {}
+      try {
+        const refreshedPlan = await ensurePlaneacionDetailLoaded(planId, { silent: true, force: true });
+        if (refreshedPlan) {
+          plan = refreshedPlan;
+          state.openPlanDraft = preserveOpenPlanDraftLocalNotes(
+            planId,
+            syncOpenPlanDraftConcurrencyHints(refreshedPlan, buildOpenPlanDraft(refreshedPlan)),
+            refreshedPlan
+          );
+        }
+      } catch (_) {
+        if (['saved', 'sync_error'].includes(getPlanLocalSaveState(plan))) {
+          setClosePlanModalError('No se pudo actualizar la planeación antes de cerrar. Intenta guardar una vez más.');
+          return;
+        }
       }
       let closePayload = null;
       try {
