@@ -7754,7 +7754,7 @@
         nextPlan.actividades = nextPlan.actividades.map((activity, index) => {
           const sourceActivity = Array.isArray(plan && plan.actividades) ? plan.actividades[index] : null;
           const normalizedActivity = Object.assign({}, sourceActivity || {}, activity || {});
-          normalizedActivity.fecha_actualizacion = syncedAt;
+          normalizedActivity.fecha_actualizacion = String(normalizedActivity.fecha_actualizacion || '').trim() || syncedAt;
           return normalizedActivity;
         });
       }
