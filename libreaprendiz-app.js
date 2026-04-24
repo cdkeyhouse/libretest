@@ -1796,7 +1796,7 @@
         if (append) {
           appendPlaneacionesRows(nextRows);
         } else {
-          state.planeaciones = nextRows;
+          state.planeaciones = preserveOpenPlanDetailOnRowsReplace(nextRows);
         }
         if (state.ui) {
           state.ui.planeacionesLoaded = true;
@@ -1998,9 +1998,13 @@
       }
       state.dashboardStats = Object.assign({}, state.dashboardStats || {}, bootData && bootData.stats ? bootData.stats : {});
       if (shouldRequestPlaneaciones) {
-        state.planeaciones = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
+        const bootRows = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
           ? bootData.planeaciones.rows
           : [];
+        const snapshotOpenPlan = canReuseSnapshotOpenPlanDetail
+          ? (getPlanById(requestedOpenPlanId) || getBootSnapshotOpenPlanById(requestedOpenPlanId))
+          : null;
+        state.planeaciones = preserveOpenPlanDetailOnRowsReplace(bootRows, snapshotOpenPlan, requestedOpenPlanId);
       }
       const bootHasAlertas = !!(bootData && bootData.alertas && Array.isArray(bootData.alertas.rows));
       state.alertas = bootHasAlertas
@@ -7410,6 +7414,28 @@
     function upsertPlaneacionesRows(rows) {
       if (!Array.isArray(rows) || !rows.length) return [];
       return rows.map((row) => upsertPlaneacionRow(row)).filter(Boolean);
+    }
+
+    function preserveOpenPlanDetailOnRowsReplace(rows, planSnapshot = null, planId = state.openPlanId) {
+      const normalizedPlanId = String(planId || '').trim();
+      const nextRows = Array.isArray(rows) ? rows.slice() : [];
+      if (!normalizedPlanId || !nextRows.length) return nextRows;
+      const preservedPlan = planSnapshot || getPlanById(normalizedPlanId) || getBootSnapshotOpenPlanById(normalizedPlanId);
+      if (!(preservedPlan && preservedPlan.detail_loaded && shouldPreserveSnapshotPlanDetail(normalizedPlanId))) {
+        return nextRows;
+      }
+      const rowIndex = nextRows.findIndex((plan) => String((plan && plan.planeacion_id) || '').trim() === normalizedPlanId);
+      if (rowIndex === -1) return nextRows;
+      nextRows[rowIndex] = Object.assign({}, nextRows[rowIndex], preservedPlan, {
+        detail_loaded: true,
+        boot_detail_loaded: true
+      });
+      if (preservedPlan.obs_loaded) {
+        nextRows[rowIndex].obs_loaded = true;
+        nextRows[rowIndex].obs_semana = Array.isArray(preservedPlan.obs_semana) ? preservedPlan.obs_semana : [];
+        nextRows[rowIndex].obs_alumno_final = Array.isArray(preservedPlan.obs_alumno_final) ? preservedPlan.obs_alumno_final : [];
+      }
+      return nextRows;
     }
 
     function removePlaneacionRows(planIds) {
