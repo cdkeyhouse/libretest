@@ -7201,6 +7201,29 @@
       return draft;
     }
 
+    function syncOpenPlanDraftFromVisibleControls(draft) {
+      if (!draft || !Array.isArray(draft.activities) || !draft.activities.length) return draft;
+      draft.activities = draft.activities.map((activity) => {
+        const nextActivity = Object.assign({}, activity || {});
+        const activityId = String((nextActivity && nextActivity.actividad_id) || '').trim();
+        if (!activityId) return nextActivity;
+        const realizadaNode = $('activity-realizada-' + activityId);
+        const materialNode = $('activity-material-' + activityId);
+        const comentarioNode = $('activity-comment-' + activityId);
+        if (realizadaNode) {
+          nextActivity.realizada = normalizeRealizadaStatus(realizadaNode.value);
+        }
+        if (materialNode) {
+          nextActivity.material_en_carpeta = normalizeMaterialStatus(materialNode.value);
+        }
+        if (comentarioNode) {
+          nextActivity.comentario_cierre = String(comentarioNode.value || '').trim();
+        }
+        return nextActivity;
+      });
+      return draft;
+    }
+
     function addOpenPlanDraftActivity() {
       if (!state.openPlanDraft) return;
       state.openPlanDraft.activities.push(createEmptyActivityDraft());
@@ -11517,7 +11540,9 @@
       const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
       const currentDraft = hasPlanEditor ? getOpenPlanDraft(plan) : null;
       const planDraft = currentDraft
-        ? syncOpenPlanDraftConcurrencyHints(plan, JSON.parse(JSON.stringify(currentDraft)))
+        ? syncOpenPlanDraftFromVisibleControls(
+            syncOpenPlanDraftConcurrencyHints(plan, JSON.parse(JSON.stringify(currentDraft)))
+          )
         : null;
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
       const shouldSavePlan = !!planDraft;
