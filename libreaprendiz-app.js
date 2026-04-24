@@ -6987,6 +6987,32 @@
       };
     }
 
+    function preserveOpenPlanDraftLocalNotes(planId, draft, planLike = null) {
+      if (!draft || !draft.planId) return draft;
+      const normalizedPlanId = String(planId || draft.planId || '').trim();
+      const currentPlan = planLike || getPlanById(normalizedPlanId) || null;
+      const currentDraft = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? state.openPlanDraft
+        : null;
+      const nextDraft = cloneJsonSafe(draft, draft) || draft;
+      const generalText = String(
+        (currentDraft && currentDraft.generalObservationText) ||
+        (currentPlan && currentPlan._draft_general_observation_text) ||
+        nextDraft.generalObservationText ||
+        ''
+      );
+      if (generalText) {
+        nextDraft.generalObservationText = generalText;
+      }
+      nextDraft.finalObservationsByKey = Object.assign(
+        {},
+        nextDraft.finalObservationsByKey || {},
+        (currentPlan && currentPlan._draft_final_observations_by_key) || {},
+        (currentDraft && currentDraft.finalObservationsByKey) || {}
+      );
+      return nextDraft;
+    }
+
     function hasUsableOpenPlanDetail(plan) {
       if (!plan || !plan.planeacion_id) return false;
       const alumnosReady = Number(plan.alumnos_count || 0) === 0 || (Array.isArray(plan.alumnos) && plan.alumnos.length > 0);
@@ -8067,7 +8093,9 @@
         .then((detail) => {
           const updated = upsertPlaneacionRow(detail);
           if (state.openPlanId === planId && hasUsableOpenPlanDetail(updated)) {
-            state.openPlanDraft = updated ? buildOpenPlanDraft(updated) : null;
+            state.openPlanDraft = updated
+              ? preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(updated), updated)
+              : null;
           }
           markPlaneacionDetailFresh(planId);
           return updated;
@@ -8580,7 +8608,7 @@
             if (state.openPlanId !== planId) return;
             const refreshedPlan = getPlanById(planId) || plan;
             state.openPlanDraft = refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)
-              ? buildOpenPlanDraft(refreshedPlan)
+              ? preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan)
               : null;
             persistCurrentBootSnapshot('planeacion_abierta_multigrupo');
             renderPlaneacionesList();
@@ -8588,7 +8616,7 @@
         }
         if (state.ui) state.ui.openPlanLoadingId = '';
         state.openPlanDraft = plan && hasUsableOpenPlanDetail(plan)
-          ? buildOpenPlanDraft(plan)
+          ? preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(plan), plan)
           : null;
         persistCurrentBootSnapshot('planeacion_abierta');
         renderPlaneacionesList();
@@ -8608,7 +8636,7 @@
               if (state.openPlanId !== planId) return;
               const refreshedPlan = getPlanById(planId) || plan;
               state.openPlanDraft = refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)
-                ? buildOpenPlanDraft(refreshedPlan)
+                ? preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan)
                 : null;
               renderPlaneacionesList();
             })
@@ -8623,7 +8651,7 @@
               if (state.openPlanId !== planId) return;
               if (state.ui) state.ui.openPlanLoadingId = '';
               state.openPlanDraft = retryPlan && hasUsableOpenPlanDetail(retryPlan)
-                ? buildOpenPlanDraft(retryPlan)
+                ? preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(retryPlan), retryPlan)
                 : null;
               renderPlaneacionesList();
             })
@@ -11597,7 +11625,7 @@
       if (!updatedPlan || !updatedPlan.planeacion_id) return;
       const mergedPlan = upsertPlaneacionRow(updatedPlan) || updatedPlan;
       state.openPlanId = planId;
-      state.openPlanDraft = buildOpenPlanDraft(mergedPlan);
+      state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(mergedPlan), mergedPlan);
     }
 
     async function applySavedPlaneacionTransition(planId, updatedPlan, options = {}) {
@@ -11607,7 +11635,8 @@
         state.openPlanId = '';
         state.openPlanDraft = null;
       } else if (state.openPlanId === planId) {
-        state.openPlanDraft = buildOpenPlanDraft(Object.assign({}, getPlanById(planId) || updatedPlan));
+        const refreshedPlan = Object.assign({}, getPlanById(planId) || updatedPlan);
+        state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
       }
       persistCurrentBootSnapshot('planeacion_transition_local');
       await refreshAlertas();
