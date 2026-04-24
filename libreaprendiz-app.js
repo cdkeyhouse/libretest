@@ -12292,9 +12292,15 @@
           state.openPlanId = '';
           state.openPlanDraft = null;
         }
+        const actividadesPayload = (closePayload.actividades || []).map((item) => ({
+          actividad_id: item.actividad_id,
+          realizada: item.realizada,
+          material_en_carpeta: item.material_en_carpeta,
+          comentario_cierre: item.comentario_cierre
+        }));
         const response = await api('confirmarCierre', {
           planeacion_id: planId,
-          actividades: closePayload.actividades,
+          actividades: actividadesPayload,
           obs_semana: obs,
           request_id: uid('CIE')
         });
