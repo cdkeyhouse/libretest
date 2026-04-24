@@ -10869,19 +10869,32 @@
       const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion
         ? Object.assign({}, previousPlan || {}, savedPlanResponse.planeacion)
         : null;
+      const outboxGeneralText = combinedRequest && combinedRequest.general_observation
+        ? String((combinedRequest.general_observation && combinedRequest.general_observation.texto) || '').trim()
+        : String((((item.requests || {}).generalObservation || {}).texto) || '').trim();
+      const outboxFinalPayloads = combinedRequest && combinedRequest.final_observation_batch && Array.isArray(combinedRequest.final_observation_batch.items)
+        ? combinedRequest.final_observation_batch.items.map((row) => ({
+            planId: String((row && row.planeacion_id) || item.planId || '').trim(),
+            alumnoId: String((row && row.alumno_id) || '').trim(),
+            nota: String((row && row.nota) || '').trim()
+          })).filter((row) => row.alumnoId && row.nota)
+        : (Array.isArray((((item.requests || {}).finalObservationBatch || {}).items))
+            ? (((item.requests || {}).finalObservationBatch || {}).items).map((row) => ({
+                planId: String((row && row.planeacion_id) || item.planId || '').trim(),
+                alumnoId: String((row && row.alumno_id) || '').trim(),
+                nota: String((row && row.nota) || '').trim()
+              })).filter((row) => row.alumnoId && row.nota)
+            : []);
+      const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || previousPlan, outboxGeneralText, outboxFinalPayloads);
       clearPendingPlanSaveTransaction(item.planId);
       const canPatchSimplePlanLocally = !!(item.shouldSavePlan && !item.shouldSaveShared && updatedPlan);
       if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan)) {
-        applySavedPlaneacionDetail(item.planId, Object.assign({}, updatedPlan, {
+        applySavedPlaneacionDetail(item.planId, Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
         }));
         persistCurrentBootSnapshot('planeacion_outbox_open_save_local');
-        renderPlaneacionesSurface({
-          includeStats: true,
-          includePlaneaciones: true,
-          includeAlertas: false
-        });
+        renderPlaneacionesList();
         scheduleClearLocalPlaneacionFeedback(item.planId);
         if (item.shouldSavePlan) {
           queuePlaneacionPostSaveSync(item.planId, {
@@ -10896,13 +10909,12 @@
         return;
       }
       if (!item.shouldSavePlan && !item.shouldSaveShared) {
-        applyLocalPlaneacionFeedback(item.planId, 'saved', 'Cambios sincronizados.');
+        applySavedPlaneacionDetail(item.planId, Object.assign({}, planWithSavedObservations, {
+          _local_save_state: 'saved',
+          _local_save_message: 'Cambios sincronizados.'
+        }));
         persistCurrentBootSnapshot('planeacion_outbox_open_obs_local');
-        renderPlaneacionesSurface({
-          includeStats: true,
-          includePlaneaciones: true,
-          includeAlertas: false
-        });
+        renderPlaneacionesList();
         scheduleClearLocalPlaneacionFeedback(item.planId);
         queuePlaneacionPostSaveSync(item.planId, {
           refreshDetail: true,
@@ -11387,11 +11399,7 @@
             _local_save_message: 'Cambios guardados.'
           }));
           persistCurrentBootSnapshot('guardar_cambios_local');
-          renderPlaneacionesSurface({
-            includeStats: true,
-            includePlaneaciones: true,
-            includeAlertas: false
-          });
+          renderPlaneacionesList();
           scheduleClearLocalPlaneacionFeedback(planId);
           if (shouldSavePlan) {
             queuePlaneacionPostSaveSync(planId, {
@@ -11407,11 +11415,7 @@
             _local_save_message: 'Cambios guardados.'
           }));
           persistCurrentBootSnapshot('guardar_cambios_obs_local');
-          renderPlaneacionesSurface({
-            includeStats: true,
-            includePlaneaciones: true,
-            includeAlertas: false
-          });
+          renderPlaneacionesList();
           scheduleClearLocalPlaneacionFeedback(planId);
           queuePlaneacionPostSaveSync(planId, {
             refreshDetail: true,
