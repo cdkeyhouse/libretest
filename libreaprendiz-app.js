@@ -10540,13 +10540,6 @@
         if (!appliedLocally) {
           await refreshPlaneacionesSurface();
         }
-        if (action === 'activarPlaneacion' && state.openPlanId === planId) {
-          await refreshSinglePlaneacionSurface(planId, {
-            includeStats: false,
-            includeAlertas: false,
-            snapshotKind: 'activar_planeacion'
-          });
-        }
         setBanner(
           action === 'activarPlaneacion'
             ? 'La planeaciÃ³n ya estÃ¡ activa y lista para trabajarse.'
