@@ -7105,7 +7105,60 @@
       if (normalizedPlanId) {
         state.openPlanDraft.finalObservationsByKey[normalizedPlanId + '::' + normalizedAlumnoId] = normalizedValue;
       }
+      const currentPlan = getPlanById(normalizedPlanId);
+      if (currentPlan && currentPlan.planeacion_id) {
+        const nextDraftMap = Object.assign({}, currentPlan._draft_final_observations_by_key || {});
+        if (normalizedValue) {
+          nextDraftMap[normalizedAlumnoId] = normalizedValue;
+          if (normalizedPlanId) nextDraftMap[normalizedPlanId + '::' + normalizedAlumnoId] = normalizedValue;
+        } else {
+          delete nextDraftMap[normalizedAlumnoId];
+          if (normalizedPlanId) delete nextDraftMap[normalizedPlanId + '::' + normalizedAlumnoId];
+        }
+        upsertPlaneacionRow({
+          planeacion_id: normalizedPlanId,
+          _draft_final_observations_by_key: nextDraftMap
+        });
+      }
       persistOpenPlanSnapshotSoon('planeacion_draft_obs_final');
+    }
+
+    function applyPendingPlanObservationDraft(planId, generalText, finalPayloads) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return;
+      const currentPlan = getPlanById(normalizedPlanId);
+      const draft = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? state.openPlanDraft
+        : null;
+      let nextFinalMap = Object.assign({}, (currentPlan && currentPlan._draft_final_observations_by_key) || {});
+      const trimmedGeneral = String(generalText || '').trim();
+      if (draft) {
+        draft.generalObservationText = trimmedGeneral;
+      }
+      if (Array.isArray(finalPayloads) && finalPayloads.length) {
+        finalPayloads.forEach((row) => {
+          const alumnoId = String((row && row.alumnoId) || '').trim();
+          const targetPlanId = String((row && (row.planId || normalizedPlanId)) || '').trim();
+          const nota = String((row && row.nota) || '').trim();
+          if (!alumnoId) return;
+          if (draft) {
+            if (!draft.finalObservationsByKey || typeof draft.finalObservationsByKey !== 'object') {
+              draft.finalObservationsByKey = {};
+            }
+            draft.finalObservationsByKey[alumnoId] = nota;
+            if (targetPlanId) draft.finalObservationsByKey[targetPlanId + '::' + alumnoId] = nota;
+          }
+          nextFinalMap[alumnoId] = nota;
+          if (targetPlanId) nextFinalMap[targetPlanId + '::' + alumnoId] = nota;
+        });
+      }
+      const patch = {
+        planeacion_id: normalizedPlanId,
+        _draft_general_observation_text: trimmedGeneral,
+        _draft_final_observations_by_key: nextFinalMap
+      };
+      upsertPlaneacionRow(patch);
+      persistOpenPlanSnapshotSoon('planeacion_draft_obs_bundle');
     }
 
     function addOpenPlanDraftActivity() {
@@ -11355,6 +11408,7 @@
       const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
       const shouldUsePlaneacionOutbox = !canUseAdminShell() && canOptimisticallyRender && !shouldSaveShared && isPlaneacionOutboxEnabled();
       const shouldUseLiteSave = !!(shouldSavePlan && shouldUseLightOpenPlanSave(plan, planDraft, planSaveRequest));
+      applyPendingPlanObservationDraft(planId, generalText, finalPayloads);
       const combinedSaveRequest = buildPlanSaveTransactionBundle({
         planId,
         generalText,
@@ -11737,6 +11791,10 @@
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeación no encontrada.');
+      if (['creating', 'saving', 'activating'].includes(getPlanLocalSaveState(plan))) {
+        setBanner('Espera a que termine Guardar cambios antes de cerrar la semana.', 'info', { button });
+        return;
+      }
       try {
         buildClosePlanPayload(planId, plan);
       } catch (err) {
