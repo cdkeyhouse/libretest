@@ -8296,7 +8296,7 @@
         const seguimientoHtml = showSeguimientoFields
           ? '<div class="activity-inline-grid">' +
               '<div><label>Material</label><select onchange="updateEditorActivityField(' + index + ', \'material_en_carpeta\', this.value)"><option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option><option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option><option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option></select></div>' +
-              '<div><label>Â¿Se realizÃ³ esta actividad?</label><select onchange="updateEditorActivityField(' + index + ', \'realizada\', this.value)"><option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option><option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option><option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option></select></div>' +
+              '<div><label>¿Se realizó esta actividad?</label><select onchange="updateEditorActivityField(' + index + ', \'realizada\', this.value)"><option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option><option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option><option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option></select></div>' +
               '<div><label>Comentario</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateEditorActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>' +
             '</div>'
           : '<div class="activity-inline-grid">' +
@@ -8722,9 +8722,9 @@
               '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
             '</select></div>' +
             (showSeguimientoFields
-              ? '<div><label>Â¿Se realizÃ³ esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
+              ? '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
                   '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(activity.actividad_id) + '" type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>'
@@ -8820,9 +8820,9 @@
                   '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
                   '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
                 '</select></div>' +
-                '<div><label>Â¿Se realizÃ³?</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
+                '<div><label>¿Se realizó?</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
                   '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario compartido</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'comentario_cierre\', this.value)"></div>' +
@@ -8939,9 +8939,9 @@
               '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
             '</select></div>' +
             (showSeguimientoFields
-              ? '<div><label>Â¿Se realizÃ³ esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
+              ? '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(activity.actividad_id) + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'realizada\', this.value)">' +
                   '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(activity.actividad_id) + '" type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateOpenPlanDraftActivityField(' + index + ', \'comentario_cierre\', this.value)"></div>'
@@ -9133,9 +9133,9 @@
                   '<option value="listo"' + (material === 'listo' ? ' selected' : '') + '>Listo</option>' +
                   '<option value="no_listo"' + (material === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
                 '</select></div>' +
-                '<div><label>Â¿Se realizÃ³ esta actividad?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
+                '<div><label>¿Se realizó esta actividad?</label><select id="activity-realizada-' + escapeHtml(item.actividad_id) + '"' + (editableSeguimiento ? '' : ' disabled') + '>' +
                   '<option value=""' + (!realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (realizada === 'si' ? ' selected' : '') + '>SÃ­</option>' +
+                  '<option value="si"' + (realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
                   '<option value="no"' + (realizada === 'no' ? ' selected' : '') + '>No</option>' +
                 '</select></div>' +
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
@@ -9312,7 +9312,7 @@
               localFeedbackHtml +
               previewSharedHtml +
               '<div class="plan-loading-note is-compact">' +
-                '<strong>Abriendo planeaciÃ³n...</strong>' +
+                '<strong>Abriendo planeación...</strong>' +
                 '<div class="mini">Estamos trayendo alumnos, actividades y observaciones para que abras con contexto completo.</div>' +
                 '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
@@ -9345,8 +9345,8 @@
               '</div>' +
               localFeedbackHtml +
               '<div class="plan-loading-note">' +
-                '<strong>Abriendo planeaciÃ³n...</strong>' +
-                '<div class="mini">Se estÃ¡n cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
+                '<strong>Abriendo planeación...</strong>' +
+                '<div class="mini">Se están cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
                 '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
                   '<span class="plan-loading-pill">Alumnos</span>' +
@@ -9374,7 +9374,7 @@
             '</div>' +
             localFeedbackHtml +
             (plan.estado === 'borrador'
-              ? '<div class="plan-quick-actions"><button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar planeaciÃ³n</button></div>'
+              ? '<div class="plan-quick-actions"><button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar planeación</button></div>'
               : '') +
             (hasMaterialAlert
               ? (
@@ -10250,7 +10250,7 @@
       const optimisticCreatedIds = optimisticCreatedPlans.map((plan) => plan.planeacion_id);
       if (usePlaneacionOutboxFeedback && optimisticCreatedPlans.length) {
         optimisticCreatedPlans.forEach((plan) => {
-          plan._local_save_message = 'Guardada localmente. Sincronizando creaciÃ³n...';
+          plan._local_save_message = 'Guardada localmente. Sincronizando creación...';
         });
       }
       const shouldRollbackCreate = optimisticCreatedIds.length > 0;
@@ -10264,7 +10264,7 @@
           includePlaneaciones: true,
           includeAlertas: false
         });
-        setBanner('Guardando planeaciÃ³n en segundo plano...', 'info');
+        setBanner('Guardando planeación en segundo plano...', 'info');
       } else if (optimisticCreatedPlans.length) {
         upsertPlaneacionesRows(optimisticCreatedPlans);
         resetPlanEditor();
@@ -10277,7 +10277,7 @@
           includePlaneaciones: true,
           includeAlertas: false
         });
-        setBanner('Creando planeaciÃ³n...', 'info');
+        setBanner('Creando planeación...', 'info');
       }
       if (!hasAdminPower && isPlaneacionOutboxEnabled()) {
         if (editorMode === 'edit' && optimisticUpdatedPlan) {
@@ -10312,7 +10312,7 @@
             tempPlanIds: optimisticCreatedIds,
             optimisticPlans: optimisticCreatedPlans,
             forceAlertas: shouldForceAlertasAfterSave,
-            localMessage: 'Guardada localmente. Sincronizando creaciÃ³n...',
+            localMessage: 'Guardada localmente. Sincronizando creación...',
             requestAction: 'crearPlaneacion',
             requestPayload: {
               fecha_planeacion: fechaPlaneacion,
@@ -10327,7 +10327,7 @@
               request_id: uid('PLA')
             }
           }));
-          setBanner('Guardada localmente. Sincronizando creaciÃ³n en segundo plano...', 'success');
+          setBanner('Guardada localmente. Sincronizando creación en segundo plano...', 'success');
           return;
         }
       }
@@ -10397,7 +10397,7 @@
       if (canApplyLocally) {
         upsertPlaneacionRow(Object.assign({}, updatedPlan, {
           _local_save_state: 'saved',
-          _local_save_message: 'PlaneaciÃ³n guardada.'
+          _local_save_message: 'Planeación guardada.'
         }));
         state.openPlanId = updatedPlan.planeacion_id;
         state.openPlanDraft = buildOpenPlanDraft(getPlanById(updatedPlan.planeacion_id) || updatedPlan);
@@ -10414,7 +10414,7 @@
       } else if (canApplyCreateLocally) {
         const appliedPlans = upsertPlaneacionesRows(createdPlans.map((plan) => Object.assign({}, plan, {
           _local_save_state: 'saved',
-          _local_save_message: 'PlaneaciÃ³n creada.'
+          _local_save_message: 'Planeación creada.'
         })));
         renderPlaneacionesSurface({
           includeStats: true,
@@ -10437,7 +10437,7 @@
       setBanner(
         responseData && responseData._meta && responseData._meta.message
           ? responseData._meta.message
-          : (editorMode === 'edit' ? 'PlaneaciÃ³n actualizada.' : 'PlaneaciÃ³n guardada.'),
+          : (editorMode === 'edit' ? 'Planeación actualizada.' : 'Planeación guardada.'),
         'success'
       );
     }
@@ -11520,6 +11520,22 @@
       }
       if (!options.force && state.ui && state.ui.deferredPlaneacionesAlertRefreshPromise) {
         return state.ui.deferredPlaneacionesAlertRefreshPromise;
+      }
+      if (options.force) {
+        const immediateTask = (async () => {
+          try {
+            await refreshAlertas({ force: true });
+            renderPlaneacionesSurface({
+              includeStats,
+              includePlaneaciones,
+              includeAlertas: true
+            });
+          } finally {
+            if (state.ui) state.ui.deferredPlaneacionesAlertRefreshPromise = null;
+          }
+        })();
+        if (state.ui) state.ui.deferredPlaneacionesAlertRefreshPromise = immediateTask;
+        return immediateTask;
       }
       const task = scheduleAfterPaint(async () => {
         try {
