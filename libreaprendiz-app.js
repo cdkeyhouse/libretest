@@ -12025,10 +12025,19 @@
       const input = $('closePlanObsInput');
       const planId = modal ? String(modal.dataset.planId || '').trim() : '';
       if (!planId) return;
-      const plan = getPlanById(planId);
+      let plan = getPlanById(planId);
       if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
       const obs = input ? input.value.trim() : '';
       clearClosePlanModalError();
+      if (['saved', 'sync_error'].includes(getPlanLocalSaveState(plan))) {
+        try {
+          const refreshedPlan = await ensurePlaneacionDetailLoaded(planId, { silent: true, force: true });
+          if (refreshedPlan) {
+            plan = refreshedPlan;
+            state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(refreshedPlan, buildOpenPlanDraft(refreshedPlan));
+          }
+        } catch (_) {}
+      }
       let closePayload = null;
       try {
         closePayload = buildClosePlanPayload(planId, plan);
