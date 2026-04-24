@@ -1557,9 +1557,34 @@
       (state.planeacionOutbox || []).forEach((item) => applyPlaneacionOutboxVisualState(item));
     }
 
+    function clearStalePlaneacionLocalState() {
+      const pendingTransactionIds = new Set(
+        Object.keys((state.ui && state.ui.pendingPlanSaveTransactions) || {})
+          .map((planId) => String(planId || '').trim())
+          .filter(Boolean)
+      );
+      const queuedPlanIds = new Set(
+        (state.planeacionOutbox || [])
+          .map((item) => String((item && item.planId) || '').trim())
+          .filter(Boolean)
+      );
+      state.planeaciones = (state.planeaciones || []).map((plan) => {
+        if (!plan || !plan.planeacion_id) return plan;
+        const planId = String(plan.planeacion_id || '').trim();
+        const localState = String(plan._local_save_state || '').trim();
+        if (!localState) return plan;
+        if (pendingTransactionIds.has(planId) || queuedPlanIds.has(planId)) return plan;
+        return Object.assign({}, plan, {
+          _local_save_state: '',
+          _local_save_message: ''
+        });
+      });
+    }
+
     function activatePlaneacionOutboxForSession(sessionLike = state.session) {
       hydratePlaneacionOutboxForSession(sessionLike);
       reapplyPlaneacionOutboxState();
+      clearStalePlaneacionLocalState();
       schedulePlaneacionOutboxProcessing(140);
     }
 
