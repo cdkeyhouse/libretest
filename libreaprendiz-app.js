@@ -7161,6 +7161,35 @@
       persistOpenPlanSnapshotSoon('planeacion_draft_obs_bundle');
     }
 
+    function syncOpenPlanDraftConcurrencyHints(plan, draft) {
+      if (!plan || !draft) return draft;
+      const latestPlanUpdatedAt = String((plan && plan.fecha_actualizacion) || '').trim();
+      const latestActivitiesVersion = String((plan && plan.actividades_version_actual) || '').trim();
+      if (latestPlanUpdatedAt) {
+        draft.lastKnownUpdatedAt = latestPlanUpdatedAt;
+      }
+      if (latestActivitiesVersion) {
+        draft.lastKnownActivitiesVersion = latestActivitiesVersion;
+      }
+      if (Array.isArray(draft.activities) && Array.isArray(plan.actividades) && plan.actividades.length) {
+        const activitiesById = new Map(
+          plan.actividades
+            .map((activity) => [String((activity && activity.actividad_id) || '').trim(), activity])
+            .filter((entry) => entry[0])
+        );
+        draft.activities.forEach((activity) => {
+          const activityId = String((activity && activity.actividad_id) || '').trim();
+          if (!activityId) return;
+          const currentActivity = activitiesById.get(activityId);
+          const latestActivityUpdatedAt = String((currentActivity && currentActivity.fecha_actualizacion) || '').trim();
+          if (latestActivityUpdatedAt) {
+            activity.last_known_updated_at = latestActivityUpdatedAt;
+          }
+        });
+      }
+      return draft;
+    }
+
     function addOpenPlanDraftActivity() {
       if (!state.openPlanDraft) return;
       state.openPlanDraft.activities.push(createEmptyActivityDraft());
@@ -11430,7 +11459,9 @@
       const generalText = getPendingGeneralObservationText(planId);
       const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
       const currentDraft = hasPlanEditor ? getOpenPlanDraft(plan) : null;
-      const planDraft = currentDraft ? JSON.parse(JSON.stringify(currentDraft)) : null;
+      const planDraft = currentDraft
+        ? syncOpenPlanDraftConcurrencyHints(plan, JSON.parse(JSON.stringify(currentDraft)))
+        : null;
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
       const shouldSavePlan = !!planDraft;
       const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
@@ -11792,7 +11823,7 @@
       if (structuralDraftState.dirty) {
         throw new Error('Tienes cambios de estructura sin guardar. Guarda antes de cerrar la semana.');
       }
-      const draft = getOpenPlanDraft(currentPlan);
+      const draft = syncOpenPlanDraftConcurrencyHints(currentPlan, getOpenPlanDraft(currentPlan));
       const activityRows = Array.isArray(draft && draft.activities) && draft.activities.length
         ? draft.activities
         : (Array.isArray(currentPlan.actividades) ? currentPlan.actividades : []);
