@@ -9632,6 +9632,40 @@
         })[0] || null;
     }
 
+    function injectLocalMaterialAlerts(plansLike) {
+      const plans = Array.isArray(plansLike) ? plansLike : [plansLike];
+      if (!Array.isArray(state.alertas)) state.alertas = [];
+      let changed = false;
+      plans.forEach((planLike) => {
+        const plan = planLike && planLike.planeacion_id ? planLike : getPlanById(planLike && planLike.planeacion_id);
+        if (!plan || !plan.planeacion_id) return;
+        const planId = String(plan.planeacion_id || '').trim();
+        if (!planId) return;
+        const status = String(plan.estado || '').trim();
+        const materialConfirmado = String(plan.material_confirmado || '').trim().toLowerCase() === 'si';
+        if (status !== 'activa' || materialConfirmado) return;
+        const hasOpenAlert = state.alertas.some((alerta) =>
+          String((alerta && alerta.planeacion_id) || '').trim() === planId &&
+          isOpenMaterialAlert(alerta)
+        );
+        if (hasOpenAlert) return;
+        state.alertas.unshift({
+          alerta_id: 'LOCAL-ALT-' + planId,
+          planeacion_id: planId,
+          tipo_alerta: 'material_pendiente',
+          descripcion: 'Falta confirmar el material en carpetas para esta planeación',
+          estado: 'abierta',
+          fecha_creacion: new Date().toISOString(),
+          __local_only: true
+        });
+        changed = true;
+      });
+      if (changed) {
+        markAlertasFresh();
+        persistCurrentBootSnapshot('alertas_local_material');
+      }
+    }
+
     function getVisibleOperationalAlerts() {
       return state.alertas.filter((alerta) => {
         const plan = getPlanById(alerta && alerta.planeacion_id);
@@ -10416,6 +10450,7 @@
           _local_save_state: 'saved',
           _local_save_message: 'Planeación creada.'
         })));
+        if (shouldForceAlertasAfterSave) injectLocalMaterialAlerts(appliedPlans);
         renderPlaneacionesSurface({
           includeStats: true,
           includePlaneaciones: true,
@@ -10629,6 +10664,7 @@
           if (state.openPlanId === planId) {
             state.openPlanDraft = null;
           }
+          persistCurrentBootSnapshot('planeacion_activando_local');
           renderPlaneacionesList();
           focusPlaneacionCardSoon(planId);
           setBanner('Activando semana en segundo plano...', 'info');
@@ -10643,6 +10679,7 @@
         } catch (err) {
           if (action === 'activarPlaneacion' && previousPlanSnapshot) {
             upsertPlaneacionRow(previousPlanSnapshot);
+            persistCurrentBootSnapshot('planeacion_activacion_revertida');
             renderPlaneacionesList();
           }
           throw err;
@@ -11248,8 +11285,9 @@
       if (createdPlans.length) {
         const appliedPlans = upsertPlaneacionesRows(createdPlans.map((plan) => Object.assign({}, plan, {
           _local_save_state: 'saved',
-          _local_save_message: 'PlaneaciÃ³n sincronizada.'
+          _local_save_message: 'Planeación sincronizada.'
         })));
+        if (item.forceAlertas) injectLocalMaterialAlerts(appliedPlans);
         renderPlaneacionesSurface({
           includeStats: true,
           includePlaneaciones: true,
@@ -11275,7 +11313,7 @@
       if (updatedPlan && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan)) {
         upsertPlaneacionRow(Object.assign({}, updatedPlan, {
           _local_save_state: 'saved',
-          _local_save_message: 'PlaneaciÃ³n sincronizada.'
+          _local_save_message: 'Planeación sincronizada.'
         }));
         if (state.openPlanId === updatedPlan.planeacion_id) {
           state.openPlanDraft = buildOpenPlanDraft(getPlanById(updatedPlan.planeacion_id) || updatedPlan);
