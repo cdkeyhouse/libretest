@@ -6938,6 +6938,15 @@
       )
         ? plan
         : Object.assign({}, snapshotOpenPlan || {}, plan || {});
+      const finalObservationsByKey = Object.assign({}, sourcePlan._draft_final_observations_by_key || {});
+      (Array.isArray(sourcePlan.obs_alumno_final) ? sourcePlan.obs_alumno_final : []).forEach((row) => {
+        const alumnoId = String((row && row.alumno_id) || '').trim();
+        const targetPlanId = String((row && row.planeacion_id) || plan.planeacion_id || '').trim();
+        const nota = String((row && row.nota) || '').trim();
+        if (!alumnoId) return;
+        finalObservationsByKey[alumnoId] = nota;
+        if (targetPlanId) finalObservationsByKey[targetPlanId + '::' + alumnoId] = nota;
+      });
       return {
         planId: plan.planeacion_id,
         fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
@@ -6955,6 +6964,7 @@
           comentario_cierre: actividad.comentario_cierre || '',
           last_known_updated_at: actividad.fecha_actualizacion || ''
         })) : [createEmptyActivityDraft()],
+        finalObservationsByKey,
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
         activitiesDirty: false
@@ -7075,6 +7085,22 @@
       state.openPlanDraft.activities[index][field] = value;
       state.openPlanDraft.activitiesDirty = true;
       persistOpenPlanSnapshotSoon('planeacion_draft_actividad');
+    }
+
+    function updateOpenPlanFinalObservationDraft(planId, alumnoId, value) {
+      if (!state.openPlanDraft) return;
+      const normalizedAlumnoId = String(alumnoId || '').trim();
+      const normalizedPlanId = String(planId || state.openPlanDraft.planId || '').trim();
+      if (!normalizedAlumnoId) return;
+      if (!state.openPlanDraft.finalObservationsByKey || typeof state.openPlanDraft.finalObservationsByKey !== 'object') {
+        state.openPlanDraft.finalObservationsByKey = {};
+      }
+      const normalizedValue = String(value || '');
+      state.openPlanDraft.finalObservationsByKey[normalizedAlumnoId] = normalizedValue;
+      if (normalizedPlanId) {
+        state.openPlanDraft.finalObservationsByKey[normalizedPlanId + '::' + normalizedAlumnoId] = normalizedValue;
+      }
+      persistOpenPlanSnapshotSoon('planeacion_draft_obs_final');
     }
 
     function addOpenPlanDraftActivity() {
@@ -7512,6 +7538,16 @@
       }
       if (Array.isArray(finalPayloads) && finalPayloads.length) {
         nextPlan.obs_alumno_final = mergeOptimisticAlumnoFinalRows(nextPlan, finalPayloads);
+        const draftFinalMap = Object.assign({}, nextPlan._draft_final_observations_by_key || {});
+        finalPayloads.forEach((row) => {
+          const alumnoId = String((row && row.alumnoId) || '').trim();
+          const targetPlanId = String((row && (row.planId || nextPlan.planeacion_id)) || '').trim();
+          const nota = String((row && row.nota) || '').trim();
+          if (!alumnoId) return;
+          draftFinalMap[alumnoId] = nota;
+          if (targetPlanId) draftFinalMap[targetPlanId + '::' + alumnoId] = nota;
+        });
+        nextPlan._draft_final_observations_by_key = draftFinalMap;
         nextPlan.obs_loaded = true;
       }
       return nextPlan;
@@ -8829,15 +8865,28 @@
           : '';
         const obsAlumnoHtml = alumnosRows.length
           ? '<div class="obs-grid">' + alumnosRows.map((alumnoRow) => {
+              const targetPlanId = String(alumnoRow.planeacion_id || plan.planeacion_id || '').trim();
+              const normalizedAlumnoId = String(alumnoRow.alumno_id || '').trim();
               const alumnoKey = entry.isMulti
-                ? (String(alumnoRow.planeacion_id || plan.planeacion_id) + '::' + String(alumnoRow.alumno_id || ''))
-                : alumnoRow.alumno_id;
+                ? (targetPlanId + '::' + normalizedAlumnoId)
+                : normalizedAlumnoId;
               const alumnoObs = obsAlumnoFinalMap[alumnoKey] || null;
+              const draftAlumnoObs = state.openPlanDraft && state.openPlanDraft.planId === plan.planeacion_id &&
+                state.openPlanDraft.finalObservationsByKey &&
+                Object.prototype.hasOwnProperty.call(state.openPlanDraft.finalObservationsByKey, alumnoKey)
+                  ? String(state.openPlanDraft.finalObservationsByKey[alumnoKey] || '')
+                  : (
+                      state.openPlanDraft && state.openPlanDraft.planId === plan.planeacion_id &&
+                      state.openPlanDraft.finalObservationsByKey &&
+                      Object.prototype.hasOwnProperty.call(state.openPlanDraft.finalObservationsByKey, normalizedAlumnoId)
+                        ? String(state.openPlanDraft.finalObservationsByKey[normalizedAlumnoId] || '')
+                        : ''
+                    );
               const alumnoNombre = alumnoRow.nombre_snapshot || alumnoRow.alumno_id;
               return (
                 '<div class="obs-alumno-card">' +
                   '<div><strong>' + escapeHtml(alumnoNombre) + '</strong>' + (entry.isMulti ? '<div class="mini">' + escapeHtml(alumnoRow.grupo_label || '') + '</div>' : '') + '</div>' +
-                  '<textarea class="obs-final-input" id="obs-final-' + escapeHtml(String(alumnoRow.planeacion_id || plan.planeacion_id)) + '-' + escapeHtml(alumnoRow.alumno_id) + '" oninput="autoGrowObsFinal(this)"' + (allowAlumnoObs ? '' : ' disabled') + '>' + escapeHtml(alumnoObs ? (alumnoObs.nota || '') : '') + '</textarea>' +
+                  '<textarea class="obs-final-input" id="obs-final-' + escapeHtml(targetPlanId) + '-' + escapeHtml(normalizedAlumnoId) + '" oninput="autoGrowObsFinal(this);updateOpenPlanFinalObservationDraft(\'' + escapeJsAttrValue(targetPlanId) + '\', \'' + escapeJsAttrValue(normalizedAlumnoId) + '\', this.value)"' + (allowAlumnoObs ? '' : ' disabled') + '>' + escapeHtml(draftAlumnoObs || (alumnoObs ? (alumnoObs.nota || '') : '')) + '</textarea>' +
                 '</div>'
               );
             }).join('') + '</div>'
