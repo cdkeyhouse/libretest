@@ -228,6 +228,8 @@
         fastPlaneacionesBootPromise: null,
         planeacionesRestoreLock: false,
         adminModuleLoading: {},
+        adminCatalogPrefetchPromise: null,
+        adminCatalogPrefetchDone: false,
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
         planeacionesMateriaFilter: '',
@@ -669,6 +671,51 @@
 
     function adminModuleNeedsCatalogos(moduleName) {
       return ['planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias', 'talleres'].includes(String(moduleName || '').trim());
+    }
+
+    function getAdminCatalogPrefetchModules() {
+      return ['alumnos', 'materias', 'talleres', 'facilitadores'];
+    }
+
+    function hasAdminCatalogPrefetchWork() {
+      return getAdminCatalogPrefetchModules()
+        .some((moduleName) => getMissingCatalogBlocks(getAdminModuleCatalogBlocks(moduleName)).length > 0);
+    }
+
+    function scheduleAdminCatalogPrefetch(delay = 520) {
+      if (!canUseAdminShell() || !state.ui) return;
+      if (state.ui.adminCatalogPrefetchPromise || state.ui.adminCatalogPrefetchDone) return;
+      if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+      if (!hasAdminCatalogPrefetchWork()) {
+        state.ui.adminCatalogPrefetchDone = true;
+        return;
+      }
+      scheduleUiDebounce('admin-catalog-prefetch', () => {
+        if (!canUseAdminShell() || !state.ui || state.ui.adminCatalogPrefetchPromise) return;
+        state.ui.adminCatalogPrefetchPromise = prefetchAdminCatalogsSequentially()
+          .finally(() => {
+            if (!state.ui) return;
+            state.ui.adminCatalogPrefetchPromise = null;
+            state.ui.adminCatalogPrefetchDone = !hasAdminCatalogPrefetchWork();
+          });
+      }, delay);
+    }
+
+    async function prefetchAdminCatalogsSequentially() {
+      if (!canUseAdminShell()) return;
+      for (const moduleName of getAdminCatalogPrefetchModules()) {
+        if (!canUseAdminShell() || String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+        const blocks = getMissingCatalogBlocks(getAdminModuleCatalogBlocks(moduleName));
+        if (!blocks.length) continue;
+        try {
+          await scheduleAfterPaint(() => refreshCatalogos({ blocks }), 160);
+          if (String(state.activeAdminModule || '').trim() === 'dashboard') {
+            renderAdminShell();
+          }
+        } catch (_) {
+          return;
+        }
+      }
     }
 
     function getCurrentCatalogBlocks() {
@@ -2289,6 +2336,7 @@
       renderAlertas();
       renderInstitutionalNotices();
       syncRoleUi();
+      scheduleAdminCatalogPrefetch();
 
       const deferredPromise = Promise.resolve();
 
@@ -3232,6 +3280,9 @@
       document.querySelectorAll('.admin-panel').forEach((panel) => {
         panel.classList.toggle('is-active', panel.id === 'admin-panel-' + state.activeAdminModule);
       });
+      if (String(state.activeAdminModule || '').trim() === 'dashboard') {
+        scheduleAdminCatalogPrefetch(900);
+      }
     }
 
     function getTodayYmdLocal() {
