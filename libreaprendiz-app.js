@@ -7250,6 +7250,26 @@
       return nextDraft;
     }
 
+    function preserveOpenPlanDraftLocalEdits(planId, draft, planLike = null) {
+      const nextDraft = preserveOpenPlanDraftLocalNotes(planId, draft, planLike);
+      const normalizedPlanId = String(planId || (nextDraft && nextDraft.planId) || '').trim();
+      const currentDraft = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? state.openPlanDraft
+        : null;
+      if (!nextDraft || !currentDraft) return nextDraft;
+      ['fecha_planeacion', 'frase_semana', 'materia_id', 'submateria_id'].forEach((field) => {
+        if (currentDraft[field] !== undefined) nextDraft[field] = currentDraft[field];
+      });
+      if (Array.isArray(currentDraft.alumnos_ids)) {
+        nextDraft.alumnos_ids = currentDraft.alumnos_ids.slice();
+      }
+      if (currentDraft.activitiesDirty && Array.isArray(currentDraft.activities) && currentDraft.activities.length) {
+        nextDraft.activities = cloneJsonSafe(currentDraft.activities, currentDraft.activities) || currentDraft.activities.slice();
+        nextDraft.activitiesDirty = true;
+      }
+      return nextDraft;
+    }
+
     function hasUsableOpenPlanDetail(plan) {
       if (!plan || !plan.planeacion_id) return false;
       const alumnosReady = Number(plan.alumnos_count || 0) === 0 || (Array.isArray(plan.alumnos) && plan.alumnos.length > 0);
@@ -8373,7 +8393,7 @@
           const updated = upsertPlaneacionRow(detail);
           if (state.openPlanId === planId && hasUsableOpenPlanDetail(updated)) {
             state.openPlanDraft = updated
-              ? preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(updated), updated)
+              ? preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(updated), updated)
               : null;
           }
           markPlaneacionDetailFresh(planId);
@@ -8898,7 +8918,7 @@
             if (state.openPlanId !== planId) return;
             const refreshedPlan = getPlanById(planId) || plan;
             if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
-              state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
+              state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
             }
             persistCurrentBootSnapshot('planeacion_abierta_multigrupo');
             renderPlaneacionesList();
@@ -8906,7 +8926,7 @@
         }
         if (state.ui) state.ui.openPlanLoadingId = '';
         if (plan && hasUsableOpenPlanDetail(plan)) {
-          state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(plan), plan);
+          state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(plan), plan);
         }
         persistCurrentBootSnapshot('planeacion_abierta');
         renderPlaneacionesList();
@@ -8926,7 +8946,7 @@
               if (state.openPlanId !== planId) return;
               const refreshedPlan = getPlanById(planId) || plan;
               if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
-                state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
+                state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
               }
               renderPlaneacionesList();
             })
@@ -8941,7 +8961,7 @@
               if (state.openPlanId !== planId) return;
               if (state.ui) state.ui.openPlanLoadingId = '';
               if (retryPlan && hasUsableOpenPlanDetail(retryPlan)) {
-                state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(retryPlan), retryPlan);
+                state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(retryPlan), retryPlan);
               }
               renderPlaneacionesList();
             })
