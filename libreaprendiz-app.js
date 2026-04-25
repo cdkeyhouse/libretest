@@ -6817,11 +6817,14 @@
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
       const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
+      const messageMarkup = localState === 'creating'
+        ? ''
+        : '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>';
       return (
         '<div class="plan-inline-feedback ' + toneClass + '">' +
           '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
           '<span class="plan-inline-feedback-label">' + escapeHtml(compactLabel) + '</span>' +
-          '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>' +
+          messageMarkup +
         '</div>'
       );
     }
@@ -9247,7 +9250,7 @@
           const isPendingCreation = isPlaneacionPendingCreation(plan);
           const localPending = isPlaneacionLocalSavePending(plan);
           const openButtonHtml = isPendingCreation
-            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Sincronizando...</button>'
+            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Abrir</button>'
             : '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
           const quickActivateButton = !localPending && plan.estado === 'borrador'
             ? '<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>'
