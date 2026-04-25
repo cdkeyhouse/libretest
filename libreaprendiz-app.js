@@ -12209,15 +12209,23 @@
           )
         : null;
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
-      const shouldSavePlan = !!planDraft;
+      const shouldSavePlanDraft = !!planDraft;
       const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
-      const planSaveRequest = shouldSavePlan ? buildOpenPlanSaveRequest(plan, planDraft) : null;
-      const shouldPersistOpenPlanActivities = shouldSavePlan
+      const planSaveRequest = shouldSavePlanDraft ? buildOpenPlanSaveRequest(plan, planDraft) : null;
+      const openPlanStructureChanged = shouldSavePlanDraft
+        ? buildOpenPlanStructuralSignatureFromDraft(planDraft) !== buildOpenPlanStructuralSignatureFromPlan(plan)
+        : false;
+      const shouldPersistOpenPlanActivities = shouldSavePlanDraft
         ? (planDraft.activitiesDirty === true || didOpenPlanActivityProgressChange(plan, planSaveRequest))
         : false;
-      const shouldRefreshMaterialAlertas = shouldSavePlan
+      const shouldRefreshMaterialAlertas = shouldSavePlanDraft
         ? didOpenPlanMaterialStateChange(plan, planSaveRequest)
         : false;
+      const shouldSavePlan = shouldSavePlanDraft && (
+        openPlanStructureChanged ||
+        shouldPersistOpenPlanActivities ||
+        shouldRefreshMaterialAlertas
+      );
       const shouldForceAlertasAfterSave =
         (shouldSavePlan && shouldRefreshMaterialAlertas && planDraftAffectsMaterialAlerts(planDraft)) ||
         (shouldSaveShared && planDraftAffectsMaterialAlerts(sharedDraft));
