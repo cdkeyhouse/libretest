@@ -906,6 +906,34 @@
       }, Math.max(300, Number(duration || 0)));
     }
 
+    function captureScrollAnchor(element, targetId) {
+      const target = targetId ? $(targetId) : null;
+      const anchorElement = target || element;
+      if (!anchorElement || typeof anchorElement.getBoundingClientRect !== 'function') return null;
+      const rect = anchorElement.getBoundingClientRect();
+      return {
+        targetId: String(targetId || '').trim(),
+        top: rect.top,
+        scrollX: Number(window.scrollX || window.pageXOffset || 0),
+        scrollY: Number(window.scrollY || window.pageYOffset || 0)
+      };
+    }
+
+    function restoreScrollAnchor(anchor) {
+      if (!anchor) return;
+      window.requestAnimationFrame(() => {
+        const target = anchor.targetId ? $(anchor.targetId) : null;
+        if (target && typeof target.getBoundingClientRect === 'function') {
+          const delta = target.getBoundingClientRect().top - Number(anchor.top || 0);
+          if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+          return;
+        }
+        if (Number.isFinite(anchor.scrollY)) {
+          window.scrollTo(Number(anchor.scrollX || 0), Number(anchor.scrollY || 0));
+        }
+      });
+    }
+
     function captureFeedbackAnchor(button) {
       if (!button) return null;
       const rect = button.getBoundingClientRect();
@@ -9450,6 +9478,9 @@
           : '';
         const localState = getPlanLocalSaveState(plan);
         const isOpenSaveBusy = localState === 'saving';
+        const saveButtonText = isOpenSaveBusy ? 'Sincronizando...' : 'Guardar cambios';
+        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '');
+        const saveButtonBusyAttrs = isOpenSaveBusy ? ' disabled aria-disabled="true" aria-busy="true"' : '';
         const actionStatusHtml = getPlanActionStatusMarkup(plan);
         const buttons = [];
         if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
@@ -9690,7 +9721,7 @@
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
               ((allowStructureEdit || allowGeneralObs || allowAlumnoObs)
-                ? '<button class="btn-primary" type="button"' + (isOpenSaveBusy ? ' disabled aria-disabled="true"' : '') + ' onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">Guardar cambios</button>'
+                ? '<button id="plan-save-' + escapeHtml(plan.planeacion_id) + '" class="' + saveButtonClass + '" type="button"' + saveButtonBusyAttrs + ' onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">' + saveButtonText + '</button>'
                 : '') +
               actionStatusHtml +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
@@ -12127,6 +12158,8 @@
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
       const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
+      const saveScrollAnchor = captureScrollAnchor(button, 'plan-save-' + planId);
+      const restoreSaveScrollAnchor = () => restoreScrollAnchor(saveScrollAnchor);
       const fallbackGeneralText =
         String(
           (state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === String(planId || '').trim()
@@ -12218,6 +12251,7 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
+          restoreSaveScrollAnchor();
         }
         if (shouldUsePlaneacionOutbox) {
           enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('open_save', {
@@ -12261,8 +12295,8 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
+          restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
-          flashButtonLabel(button, 'Guardado');
           return;
         }
 
@@ -12295,6 +12329,7 @@
               includePlaneaciones: true,
               includeAlertas: false
             });
+            restoreSaveScrollAnchor();
             restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           }
           throw err;
@@ -12328,6 +12363,7 @@
           }));
           persistCurrentBootSnapshot('guardar_cambios_local');
           renderPlaneacionesList();
+          restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           scheduleClearLocalPlaneacionFeedback(planId);
           if (shouldSavePlan) {
@@ -12345,6 +12381,7 @@
           }));
           persistCurrentBootSnapshot('guardar_cambios_obs_local');
           renderPlaneacionesList();
+          restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           scheduleClearLocalPlaneacionFeedback(planId);
           queuePlaneacionPostSaveSync(planId, {
@@ -12357,10 +12394,13 @@
           state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
           if (!shouldSavePlan) state.openPlanDraft = null;
           await refreshPlaneacionesSurface({ includeAlertas: false });
+          restoreSaveScrollAnchor();
           const restoredDraftAfterRefresh = shouldSavePlan &&
             restoreOpenPlanDraftAfterSaveRefresh(planId, outboxDraft, generalText, finalPayloads);
           if (!restoredDraftAfterRefresh) {
             restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          } else {
+            restoreSaveScrollAnchor();
           }
           if (shouldSavePlan || shouldSaveShared) {
             refreshPlaneacionesAlertsDeferred({
@@ -12374,11 +12414,10 @@
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
         });
-        flashButtonLabel(button, 'Guardado');
       }, {
         button,
         key: buildActionKey('guardarCambiosPlaneacion', [planId, entryKey || '', generalText.slice(0, 40), finalPayloads.map((row) => row.alumnoId).join(','), shouldSavePlan ? 'plan' : '', shouldSaveShared ? 'multi' : '']),
-        busyText: 'Guardando cambios...'
+        busyText: 'Sincronizando...'
       });
     }
 
