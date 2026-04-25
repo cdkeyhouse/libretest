@@ -6768,7 +6768,7 @@
     }
 
     function isPlaneacionLocalSavePending(plan) {
-      return ['creating', 'saving', 'activating', 'sync_error'].includes(getPlanLocalSaveState(plan));
+      return ['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan));
     }
 
     function getPlanStatusBadgeMeta(plan) {
@@ -6814,10 +6814,11 @@
         creating: 'Sincronizando',
         saving: 'Sincronizando',
         activating: 'Sincronizando',
+        syncing: 'Sincronizando',
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
       const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
-      const messageMarkup = localState === 'creating'
+      const messageMarkup = ['creating', 'syncing'].includes(localState)
         ? ''
         : '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>';
       return (
@@ -9705,6 +9706,22 @@
       }
     }
 
+    function hideOpenMaterialAlertsForPlan(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !Array.isArray(state.alertas)) return false;
+      const nextAlertas = state.alertas.filter((alerta) => {
+        return !(
+          String((alerta && alerta.planeacion_id) || '').trim() === normalizedPlanId &&
+          isOpenMaterialAlert(alerta)
+        );
+      });
+      if (nextAlertas.length === state.alertas.length) return false;
+      state.alertas = nextAlertas;
+      markAlertasFresh();
+      persistCurrentBootSnapshot('alertas_material_ready_local');
+      return true;
+    }
+
     function getVisibleOperationalAlerts() {
       return state.alertas.filter((alerta) => {
         const plan = getPlanById(alerta && alerta.planeacion_id);
@@ -10679,7 +10696,7 @@
         if (!previousPlan) throw new Error('Planeación no encontrada.');
         if (action === 'activarPlaneacion') {
           const localState = getPlanLocalSaveState(previousPlan);
-          if (isPlaneacionPendingCreation(previousPlan) || ['creating', 'saving', 'activating'].includes(localState)) {
+          if (isPlaneacionPendingCreation(previousPlan) || ['creating', 'saving', 'activating', 'syncing'].includes(localState)) {
             setBanner('Espera a que termine de guardarse antes de activarla.', 'info');
             return;
           }
@@ -10973,6 +10990,44 @@
         actionLabel: 'guardarPlaneacionCompletaInline',
         forceAlertas: planDraftAffectsMaterialAlerts(draft)
       });
+    }
+
+    function buildMaterialReadyDraft(draft) {
+      const nextDraft = cloneJsonSafe(draft, draft);
+      nextDraft.activities = (Array.isArray(nextDraft.activities) ? nextDraft.activities : []).map((activity) => {
+        if (normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere') !== 'no_listo') {
+          return activity;
+        }
+        return Object.assign({}, activity, {
+          material_en_carpeta: 'listo'
+        });
+      });
+      nextDraft.activitiesDirty = true;
+      return nextDraft;
+    }
+
+    function buildMaterialReadyPlanPatch(plan, readyDraft) {
+      const draftActivitiesById = new Map(
+        (Array.isArray(readyDraft && readyDraft.activities) ? readyDraft.activities : [])
+          .map((activity) => [String((activity && activity.actividad_id) || '').trim(), activity])
+          .filter((entry) => entry[0])
+      );
+      const sourceActivities = Array.isArray(plan && plan.actividades) && plan.actividades.length
+        ? plan.actividades
+        : (Array.isArray(readyDraft && readyDraft.activities) ? readyDraft.activities : []);
+      return {
+        material_confirmado: 'si',
+        actividades: sourceActivities.map((activity) => {
+          const activityId = String((activity && activity.actividad_id) || '').trim();
+          const draftActivity = activityId ? draftActivitiesById.get(activityId) : null;
+          const nextMaterial = draftActivity
+            ? normalizeMaterialStatus(draftActivity.material_en_carpeta)
+            : (normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere') === 'no_listo' ? 'listo' : normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'));
+          return Object.assign({}, activity, {
+            material_en_carpeta: nextMaterial
+          });
+        })
+      };
     }
 
     async function saveMultiGroupShared(button, entryKey) {
@@ -12115,22 +12170,80 @@
         });
         return;
       }
-      const draft = getOpenPlanDraft(plan);
+      const draft = syncOpenPlanDraftFromVisibleControls(getOpenPlanDraft(plan));
       if (!draft) throw new Error('PlaneaciÃ³n no encontrada.');
       const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
       if (!pendingActivities.length) {
         setBanner('Ya no hay material pendiente en esta planeaciÃ³n.', 'info', { button });
         return;
       }
-      pendingActivities.forEach((activity) => {
-        activity.material_en_carpeta = 'listo';
-      });
-      await persistOpenPlanDraft(button, planId, draft, {
-        successMessage: 'Material marcado como listo.',
-        actionLabel: 'marcarMaterialListo',
-        actionKey: buildActionKey('marcarMaterialListo', [planId, String(pendingActivities.length)]),
-        busyText: 'Marcando...',
-        forceAlertas: true
+      const previousPlanSnapshot = cloneJsonSafe(plan, plan);
+      const previousDraftSnapshot = state.openPlanDraft &&
+        String(state.openPlanDraft.planId || '').trim() === String(planId || '').trim()
+        ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
+        : null;
+      const previousAlertasSnapshot = cloneJsonSafe(state.alertas, state.alertas) || [];
+      const readyDraft = buildMaterialReadyDraft(draft);
+      const readyPatch = buildMaterialReadyPlanPatch(plan, readyDraft);
+      const request = buildOpenPlanSaveRequest(plan, readyDraft);
+      await handleAction('marcarMaterialListo', async () => {
+        state.openPlanDraft = readyDraft;
+        applyOptimisticPlanPatch(planId, readyPatch, {
+          localState: 'syncing',
+          localMessage: 'Sincronizando material...',
+          snapshotKind: 'material_ready_local',
+          render: false
+        });
+        hideOpenMaterialAlertsForPlan(planId);
+        renderPlaneacionesSurface({
+          includeStats: false,
+          includePlaneaciones: true,
+          includeAlertas: true
+        });
+        let response = null;
+        try {
+          response = await persistOpenPlanDraftApi(planId, readyDraft, plan, request);
+        } catch (err) {
+          if (previousPlanSnapshot) upsertPlaneacionRow(previousPlanSnapshot);
+          if (state.openPlanId === planId) {
+            state.openPlanDraft = previousDraftSnapshot;
+          }
+          state.alertas = previousAlertasSnapshot;
+          markAlertasFresh();
+          persistCurrentBootSnapshot('material_ready_revertida');
+          renderPlaneacionesSurface({
+            includeStats: false,
+            includePlaneaciones: true,
+            includeAlertas: true
+          });
+          throw err;
+        }
+        const updatedPlan = response && response.planeacion
+          ? Object.assign({}, getPlanById(planId) || plan, response.planeacion)
+          : null;
+        applyOptimisticPlanPatch(planId, Object.assign({}, readyPatch, updatedPlan || {}, {
+          material_confirmado: 'si'
+        }), {
+          localState: '',
+          localMessage: '',
+          snapshotKind: 'material_ready_confirmed',
+          render: false
+        });
+        renderPlaneacionesSurface({
+          includeStats: false,
+          includePlaneaciones: true,
+          includeAlertas: true
+        });
+        refreshPlaneacionesAlertsDeferred({
+          force: true,
+          includeStats: false,
+          includePlaneaciones: false
+        }).catch(() => {});
+        setBanner('Material marcado como listo.', 'success');
+      }, {
+        button,
+        key: buildActionKey('marcarMaterialListo', [planId, String(pendingActivities.length)]),
+        busyText: 'Sincronizando...'
       });
     }
 
@@ -12272,7 +12385,7 @@
         setBanner('Espera a que terminen de sincronizarse los cambios antes de cerrar la semana.', 'info', { button });
         return;
       }
-      if (['creating', 'saving', 'activating'].includes(getPlanLocalSaveState(plan))) {
+      if (['creating', 'saving', 'activating', 'syncing'].includes(getPlanLocalSaveState(plan))) {
         setBanner('Espera a que termine Guardar cambios antes de cerrar la semana.', 'info', { button });
         return;
       }
