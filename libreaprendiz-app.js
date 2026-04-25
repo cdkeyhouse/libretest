@@ -302,12 +302,113 @@
     const $ = (id) => document.getElementById(id);
 
     function ensureAdminShellMarkupLoaded() {
-      if ($('adminShell')) return true;
+      if ($('adminShell')) {
+        startAdminTextNormalizer();
+        return true;
+      }
       const mount = $('adminShellMount');
       const template = $('adminShellTemplate');
       if (!mount || !template || !template.content) return false;
       mount.replaceChildren(template.content.cloneNode(true));
+      startAdminTextNormalizer();
       return !!$('adminShell');
+    }
+
+    function normalizeMojibakeText(value) {
+      let text = String(value == null ? '' : value);
+      if (!/[\u00c2\u00c3\u00e2\ufffd?]/.test(text)) return text;
+      [
+        [/\u00c3\u00a1/g, '\u00e1'],
+        [/\u00c3\u00a9/g, '\u00e9'],
+        [/\u00c3\u00ad/g, '\u00ed'],
+        [/\u00c3\u00b3/g, '\u00f3'],
+        [/\u00c3\u00ba/g, '\u00fa'],
+        [/\u00c3\u00b1/g, '\u00f1'],
+        [/\u00c3\u00bc/g, '\u00fc'],
+        [/\u00c3\u0081/g, '\u00c1'],
+        [/\u00c3\u0089/g, '\u00c9'],
+        [/\u00c3\u008d/g, '\u00cd'],
+        [/\u00c3\u0093/g, '\u00d3'],
+        [/\u00c3\u009a/g, '\u00da'],
+        [/\u00c3\u0091/g, '\u00d1'],
+        [/\u00c2\u00bf/g, '\u00bf'],
+        [/\u00c2\u00a1/g, '\u00a1'],
+        [/\u00c2\u00b7/g, '\u00b7'],
+        [/\u00e2\u20ac\u0153/g, '"'],
+        [/\u00e2\u20ac\u009d/g, '"'],
+        [/\u00e2\u20ac\u2122/g, "'"],
+        [/\u00e2\u20ac\u201d/g, '-'],
+        [/\u00e2\u20ac\u201c/g, '-'],
+        [/\u00e2\u0153\u201c/g, '\u2713'],
+        [/\u00e2\u0153\u2022/g, '\u00d7'],
+        [/\u00c2/g, '']
+      ].forEach(([pattern, replacement]) => {
+        text = text.replace(pattern, replacement);
+      });
+      return text
+        .replace(/Planeaci\?nes/g, 'Planeaciones')
+        .replace(/planeaci\?n/g, 'planeacion')
+        .replace(/sesi\?n/g, 'sesion')
+        .replace(/pedag\?gico/g, 'pedagogico');
+    }
+
+    function normalizeAdminTextNode(node) {
+      if (!node || node.nodeType !== Node.TEXT_NODE) return;
+      const next = normalizeMojibakeText(node.nodeValue);
+      if (next !== node.nodeValue) node.nodeValue = next;
+    }
+
+    function normalizeAdminElementText(root) {
+      if (!root || !canUseAdminShell()) return;
+      const skipTags = new Set(['SCRIPT', 'STYLE', 'TEMPLATE']);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node && node.parentElement;
+          if (!parent || skipTags.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      let node = walker.nextNode();
+      while (node) {
+        normalizeAdminTextNode(node);
+        node = walker.nextNode();
+      }
+      root.querySelectorAll('[placeholder], [title], [aria-label]').forEach((el) => {
+        ['placeholder', 'title', 'aria-label'].forEach((attr) => {
+          if (!el.hasAttribute(attr)) return;
+          const current = el.getAttribute(attr);
+          const next = normalizeMojibakeText(current);
+          if (next !== current) el.setAttribute(attr, next);
+        });
+      });
+    }
+
+    function startAdminTextNormalizer() {
+      const shell = $('adminShell');
+      if (!shell || shell.dataset.textNormalizerReady === 'true') return;
+      shell.dataset.textNormalizerReady = 'true';
+      normalizeAdminElementText(shell);
+      if (typeof MutationObserver !== 'function') return;
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'characterData') {
+            normalizeAdminTextNode(mutation.target);
+            return;
+          }
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              normalizeAdminTextNode(node);
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+              normalizeAdminElementText(node);
+            }
+          });
+        });
+      });
+      observer.observe(shell, {
+        subtree: true,
+        childList: true,
+        characterData: true
+      });
     }
 
     function tryShowDatePicker(input) {
