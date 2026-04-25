@@ -7242,9 +7242,6 @@
       if (generalText) {
         nextDraft.generalObservationText = generalText;
       }
-      if (currentDraft && currentDraft.generalObservationDirty === true) {
-        nextDraft.generalObservationDirty = true;
-      }
       nextDraft.finalObservationsByKey = Object.assign(
         {},
         nextDraft.finalObservationsByKey || {},
@@ -7266,6 +7263,9 @@
       });
       if (Array.isArray(currentDraft.alumnos_ids)) {
         nextDraft.alumnos_ids = currentDraft.alumnos_ids.slice();
+      }
+      if (currentDraft.generalObservationDirty === true) {
+        nextDraft.generalObservationDirty = true;
       }
       if (currentDraft.activitiesDirty && Array.isArray(currentDraft.activities) && currentDraft.activities.length) {
         nextDraft.activities = cloneJsonSafe(currentDraft.activities, currentDraft.activities) || currentDraft.activities.slice();
