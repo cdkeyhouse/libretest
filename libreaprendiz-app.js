@@ -237,6 +237,7 @@
         restoreSnapshotSyncing: false,
         planeacionOutboxProcessing: false,
         planeacionOutboxRetryTimer: null,
+        closePlanSyncWatchTimer: null,
         pendingPlanSaveTransactions: {},
         planDetailPromises: {},
         planeacionDetailPrefetchRunning: false
@@ -12603,7 +12604,10 @@
       modal.dataset.planId = planId;
       modal.hidden = false;
       input.value = '';
-      clearClosePlanModalError();
+      const syncBlock = syncClosePlanModalState(planId);
+      if (syncBlock && syncBlock.kind === 'syncing') {
+        scheduleClosePlanSyncWatch(planId);
+      }
       window.requestAnimationFrame(() => input.focus());
     }
 
@@ -12611,10 +12615,12 @@
       const modal = $('closePlanModal');
       const input = $('closePlanObsInput');
       if (!modal) return;
+      clearClosePlanSyncWatchTimer();
       modal.hidden = true;
       modal.dataset.planId = '';
       if (input) input.value = '';
       clearClosePlanModalError();
+      setClosePlanConfirmBlocked(null);
     }
 
     function setClosePlanModalError(message) {
@@ -12630,6 +12636,80 @@
       if (!errorBox) return;
       errorBox.textContent = '';
       errorBox.hidden = true;
+    }
+
+    function clearClosePlanSyncWatchTimer() {
+      if (!state.ui || !state.ui.closePlanSyncWatchTimer) return;
+      window.clearTimeout(state.ui.closePlanSyncWatchTimer);
+      state.ui.closePlanSyncWatchTimer = null;
+    }
+
+    function getClosePlanSyncBlock(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const plan = getPlanById(normalizedPlanId);
+      const localState = getPlanLocalSaveState(plan);
+      if (hasPendingPlaneacionOutboxForPlan(normalizedPlanId) || ['creating', 'saving', 'activating', 'syncing'].includes(localState)) {
+        return {
+          kind: 'syncing',
+          message: 'Sincronizando cambios antes de cerrar la semana.',
+          buttonText: 'Sincronizando cambios...'
+        };
+      }
+      if (localState === 'sync_error') {
+        return {
+          kind: 'error',
+          message: 'Hay cambios pendientes de sincronizar. Revisa Guardar cambios antes de cerrar.',
+          buttonText: 'Pendiente de sincronizar'
+        };
+      }
+      return null;
+    }
+
+    function setClosePlanConfirmBlocked(block) {
+      const button = $('closePlanConfirmBtn');
+      if (!button) return;
+      if (block) {
+        if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
+        if (!button.dataset.originalWidth) button.dataset.originalWidth = String(button.offsetWidth || 0);
+        if (button.offsetWidth) button.style.width = button.offsetWidth + 'px';
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+        if (block.kind === 'syncing') button.setAttribute('aria-busy', 'true');
+        else button.removeAttribute('aria-busy');
+        button.textContent = block.buttonText;
+        return;
+      }
+      setButtonBusy(button, false);
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('aria-busy');
+    }
+
+    function syncClosePlanModalState(planId) {
+      const block = getClosePlanSyncBlock(planId);
+      setClosePlanConfirmBlocked(block);
+      if (block) {
+        setClosePlanModalError(block.message);
+      } else {
+        clearClosePlanModalError();
+      }
+      return block;
+    }
+
+    function scheduleClosePlanSyncWatch(planId) {
+      clearClosePlanSyncWatchTimer();
+      if (!state.ui) return;
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return;
+      state.ui.closePlanSyncWatchTimer = window.setTimeout(() => {
+        if (state.ui) state.ui.closePlanSyncWatchTimer = null;
+        const modal = $('closePlanModal');
+        if (!modal || modal.hidden || String(modal.dataset.planId || '').trim() !== normalizedPlanId) return;
+        const block = syncClosePlanModalState(normalizedPlanId);
+        if (block && block.kind === 'syncing') {
+          scheduleClosePlanSyncWatch(normalizedPlanId);
+        }
+      }, 450);
     }
 
     function focusPlanCloseField(targetId) {
@@ -12725,12 +12805,8 @@
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
       if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
-      if (hasPendingPlaneacionOutboxForPlan(planId)) {
-        setBanner('Espera a que terminen de sincronizarse los cambios antes de cerrar la semana.', 'info', { button });
-        return;
-      }
-      if (['creating', 'saving', 'activating', 'syncing'].includes(getPlanLocalSaveState(plan))) {
-        setBanner('Espera a que termine Guardar cambios antes de cerrar la semana.', 'info', { button });
+      if (getClosePlanSyncBlock(planId)) {
+        openClosePlanModal(planId);
         return;
       }
       try {
@@ -12750,8 +12826,9 @@
       if (!planId) return;
       let plan = getPlanById(planId);
       if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
-      if (hasPendingPlaneacionOutboxForPlan(planId)) {
-        setClosePlanModalError('Espera a que terminen de sincronizarse los cambios antes de cerrar la semana.');
+      const syncBlock = syncClosePlanModalState(planId);
+      if (syncBlock) {
+        if (syncBlock.kind === 'syncing') scheduleClosePlanSyncWatch(planId);
         return;
       }
       const obs = input ? input.value.trim() : '';
