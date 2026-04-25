@@ -2294,17 +2294,6 @@
       return !(plan.detail_loaded && hasUsableOpenPlanDetail(plan));
     }
 
-    function getPlaneacionDetailPrefetchRank(plan) {
-      const statusRank = ({
-        activa: 0,
-        borrador: 1,
-        rechazada: 2,
-        borrador_pendiente_aprobacion: 3
-      })[String(plan && plan.estado || '').trim()] ?? 9;
-      const hasAlertRank = planHasOpenMaterialAlert(plan && plan.planeacion_id) ? 0 : 1;
-      return (statusRank * 10) + hasAlertRank;
-    }
-
     function getVisiblePlaneacionDetailPrefetchIds() {
       if (!state.session || !state.session.token) return [];
       if (!state.ui || state.ui.planeacionesLoading || !state.ui.planeacionesLoaded) return [];
@@ -2317,10 +2306,6 @@
           if (!planId || seen.has(planId)) return false;
           seen.add(planId);
           return canPrefetchPlaneacionDetail(plan);
-        })
-        .sort((left, right) => {
-          const rankDiff = getPlaneacionDetailPrefetchRank(left.plan) - getPlaneacionDetailPrefetchRank(right.plan);
-          return rankDiff || (left.index - right.index);
         })
         .slice(0, OPEN_PLAN_DETAIL_PREFETCH_LIMIT)
         .map(({ plan }) => String(plan.planeacion_id || '').trim())
