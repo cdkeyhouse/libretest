@@ -12142,7 +12142,7 @@
     }
 
     async function markPlanMaterialReady(button, planId) {
-      if (!window.confirm('Esto marcarÃ¡ como listo el material pendiente de esta planeaciÃ³n.')) return;
+      if (!window.confirm('Esto marcará como listo el material pendiente de esta planeación.')) return;
       const plan = getPlanById(planId);
       if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
