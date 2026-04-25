@@ -34,6 +34,16 @@
       };
     }
 
+    function createEmptyAlumnoDeleteState() {
+      return {
+        idsText: '',
+        trashReportFiles: true,
+        preview: null,
+        lastResult: null,
+        confirmationText: ''
+      };
+    }
+
     function createEmptyAlumnosUiState() {
       return {
         search: '',
@@ -54,6 +64,7 @@
         remoteHistoryFailedByAlumno: {},
         historyByAlumno: {},
         notesByAlumno: {},
+        deleteControl: createEmptyAlumnoDeleteState(),
         mockRows: []
       };
     }
@@ -4262,6 +4273,142 @@
       }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]), busyText: button ? button.textContent : 'Archivar' });
     }
 
+    function getAlumnoDeleteControlState() {
+      if (!state.alumnosUi) state.alumnosUi = createEmptyAlumnosUiState();
+      if (!state.alumnosUi.deleteControl) state.alumnosUi.deleteControl = createEmptyAlumnoDeleteState();
+      return state.alumnosUi.deleteControl;
+    }
+
+    function parseAlumnoDeleteIdsText(value) {
+      return String(value || '')
+        .split(/[\s,;]+/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .filter((item, index, arr) => arr.indexOf(item) === index);
+    }
+
+    function formatAlumnoDeleteRowsBySheet(rowsBySheet) {
+      const rows = rowsBySheet && typeof rowsBySheet === 'object' ? rowsBySheet : {};
+      const labels = {
+        ALUMNOS: 'Alumnos',
+        PLANEACION_ALUMNOS: 'Relación con planeaciones',
+        OBS_ALUMNO: 'Observaciones de alumno',
+        ALERTAS: 'Alertas',
+        EVALUACIONES: 'Evaluaciones',
+        ALUMNO_TALLER: 'Talleres',
+        ALUMNO_REFUERZO: 'Refuerzos',
+        NOTAS_DIRECTORA: 'Notas dirección',
+        REPORTES_CACHE: 'Reportes'
+      };
+      return Object.keys(labels)
+        .filter((key) => Number(rows[key] || 0) > 0)
+        .map((key) => '<div class="admin-alumnos-readonly"><span>' + escapeHtml(labels[key]) + '</span><strong>' + escapeHtml(String(rows[key] || 0)) + '</strong></div>')
+        .join('');
+    }
+
+    function removeDeletedAlumnosFromClient(alumnoIds) {
+      const ids = new Set((alumnoIds || []).map((id) => String(id || '').trim()).filter(Boolean));
+      if (!ids.size) return;
+      if (Array.isArray(state.catalogos.alumnos)) {
+        state.catalogos.alumnos = state.catalogos.alumnos.filter((row) => !ids.has(String(row.alumno_id || '').trim()));
+      }
+      ids.forEach((id) => {
+        delete state.alumnosUi.archivedShadow[id];
+        delete state.alumnosUi.remoteHistoryByAlumno[id];
+        delete state.alumnosUi.remoteHistoryLoadedByAlumno[id];
+        delete state.alumnosUi.remoteHistoryFailedByAlumno[id];
+        delete state.alumnosUi.historyByAlumno[id];
+        delete state.alumnosUi.notesByAlumno[id];
+      });
+      if (ids.has(String(state.alumnosUi.selectedAlumnoId || '').trim())) closeAlumnoEditor();
+      if (ids.has(String(state.alumnosUi.historialAlumnoId || '').trim())) closeAlumnoHistorial();
+      if (ids.has(String(state.alumnosUi.cambioGrupo && state.alumnosUi.cambioGrupo.alumno_id || '').trim())) closeCambioGrupo();
+      bumpAlumnosSourceRevision();
+    }
+
+    function renderAlumnoDeletePreview() {
+      const previewHost = $('adminAlumnoDeletePreview');
+      if (!previewHost) return;
+      const control = getAlumnoDeleteControlState();
+      const preview = control.preview;
+      const result = control.lastResult;
+      const data = result || preview;
+      if (!data) {
+        previewHost.innerHTML = '<div class="admin-alumnos-empty" style="min-height:120px;"><div><strong>Sin vista previa.</strong><div class="subtle">Escribe uno o varios alumno_id para revisar el impacto antes de borrar.</div></div></div>';
+        return;
+      }
+      const alumnos = Array.isArray(data.alumnos) ? data.alumnos : [];
+      const missing = Array.isArray(data.missing_alumno_ids) ? data.missing_alumno_ids : [];
+      const affectedPlans = Array.isArray(data.planeaciones_afectadas) ? data.planeaciones_afectadas : [];
+      const emptyPlans = Array.isArray(data.planeaciones_que_quedan_sin_alumnos) ? data.planeaciones_que_quedan_sin_alumnos : [];
+      const deletedRows = result && result.deleted_rows ? result.deleted_rows : null;
+      const rowsBySheet = deletedRows || data.rows_by_sheet || {};
+      const reportFiles = data.report_files || (data.before_preview && data.before_preview.report_files) || {};
+      const planeacionRows = affectedPlans.length
+        ? affectedPlans.slice(0, 8).map((plan) => {
+            const materia = plan.materia_nombre || plan.materia_id || 'Sin materia';
+            return '<div class="admin-alumnos-readonly"><span>' + escapeHtml(plan.planeacion_id || '-') + '</span><strong>' + escapeHtml(materia + ' · ' + (plan.alumnos_antes || 0) + ' -> ' + (plan.alumnos_despues || 0)) + '</strong></div>';
+          }).join('')
+        : '<div class="admin-alumnos-empty" style="min-height:88px;"><div><strong>Sin planeaciones afectadas.</strong></div></div>';
+      previewHost.innerHTML = [
+        '<div class="admin-alumnos-mini-grid">',
+          '<div class="admin-alumnos-readonly"><span>Alumnos encontrados</span><strong>' + escapeHtml(String(alumnos.length || 0)) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Filas afectadas</span><strong>' + escapeHtml(String(data.total_rows || Object.values(rowsBySheet).reduce((sum, count) => sum + Number(count || 0), 0))) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Planeaciones afectadas</span><strong>' + escapeHtml(String(affectedPlans.length || 0)) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Quedan sin alumnos</span><strong>' + escapeHtml(String(emptyPlans.length || 0)) + '</strong></div>',
+        '</div>',
+        missing.length ? '<div class="admin-config-danger"><strong>No encontrados:</strong> ' + escapeHtml(missing.join(', ')) + '</div>' : '',
+        '<div class="admin-alumnos-mini-grid">' + (formatAlumnoDeleteRowsBySheet(rowsBySheet) || '<div class="admin-alumnos-readonly"><span>Registros asociados</span><strong>0</strong></div>') + '</div>',
+        '<div class="admin-alumnos-mini-grid">',
+          '<div class="admin-alumnos-readonly"><span>PDFs de reporte</span><strong>' + escapeHtml(String(reportFiles.pdf_files || 0)) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Docs de reporte</span><strong>' + escapeHtml(String(reportFiles.doc_files || 0)) + '</strong></div>',
+        '</div>',
+        '<div class="admin-alumnos-section-head"><div><h4>Planeaciones</h4><div class="subtle">Se conserva la planeación; solo se retira el alumno y se recalcula el conteo.</div></div></div>',
+        '<div class="admin-alumnos-mini-grid">' + planeacionRows + '</div>'
+      ].join('');
+    }
+
+    async function previewAlumnoDeleteControl(button) {
+      ensureLoggedIn();
+      const control = getAlumnoDeleteControlState();
+      const ids = parseAlumnoDeleteIdsText(control.idsText);
+      if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
+      await handleAction('previewBorradoAlumnos', async () => {
+        const preview = await api('previewBorradoAlumnos', { alumno_ids: ids });
+        control.preview = preview;
+        control.lastResult = null;
+        control.confirmationText = '';
+        renderAdminAlumnosModule();
+      }, { button, key: buildActionKey('previewBorradoAlumnos', ids), busyText: 'Revisando' });
+    }
+
+    async function executeAlumnoDeleteControl(button) {
+      ensureLoggedIn();
+      const control = getAlumnoDeleteControlState();
+      const ids = parseAlumnoDeleteIdsText(control.idsText);
+      if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
+      if (String(control.confirmationText || '').trim() !== 'BORRAR_ALUMNOS') {
+        throw new Error('Escribe BORRAR_ALUMNOS para confirmar.');
+      }
+      if (!control.preview || !Array.isArray(control.preview.alumnos) || !control.preview.alumnos.length) {
+        throw new Error('Primero genera una vista previa con alumnos existentes.');
+      }
+      if (!confirm('Se borraran por completo los alumnos encontrados y sus datos asociados. Esta accion no se puede deshacer desde la app.')) return;
+      await handleAction('borrarAlumnosControlado', async () => {
+        const result = await api('borrarAlumnosControlado', {
+          alumno_ids: ids,
+          confirmation_code: 'BORRAR_ALUMNOS',
+          trash_report_files: !!control.trashReportFiles
+        });
+        control.lastResult = result;
+        control.preview = result.before_preview || control.preview;
+        control.confirmationText = '';
+        removeDeletedAlumnosFromClient(result.deleted_alumno_ids || ids);
+        renderAdminModuleSurface('alumnos');
+        setBanner('Borrado controlado completado.', 'success');
+      }, { button, key: buildActionKey('borrarAlumnosControlado', ids), busyText: 'Borrando' });
+    }
+
     async function reactivateAlumno(alumnoId, button) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
@@ -4387,6 +4534,18 @@
           '<div class="mini">' + escapeHtml(ymd ? formatFechaHumana(ymd) : 'Sin fecha') + '</div>' +
         '</article>';
       }).join('');
+    }
+
+    function renderAlumnoDeleteControl() {
+      const panel = $('adminAlumnoDeleteControl');
+      if (!panel) return;
+      panel.hidden = getCurrentRole() !== 'admin';
+      if (panel.hidden) return;
+      const control = getAlumnoDeleteControlState();
+      if ($('adminAlumnoDeleteIds')) $('adminAlumnoDeleteIds').value = control.idsText || '';
+      if ($('adminAlumnoDeleteConfirm')) $('adminAlumnoDeleteConfirm').value = control.confirmationText || '';
+      if ($('adminAlumnoDeleteTrashFiles')) $('adminAlumnoDeleteTrashFiles').checked = control.trashReportFiles !== false;
+      renderAlumnoDeletePreview();
     }
 
     function renderAdminAlumnosList() {
@@ -4563,6 +4722,34 @@
                   '<button id="adminAlumnoHistorialCloseBtn" class="btn-ghost" type="button">Cerrar</button>',
                 '</div>',
               '</section>',
+              '<section id="adminAlumnoDeleteControl" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4>Borrado controlado</h4>',
+                    '<div class="subtle">Solo para alumnos de prueba. Revisa impacto antes de ejecutar.</div>',
+                  '</div>',
+                '</div>',
+                '<div class="admin-config-danger"><strong>Acci&oacute;n irreversible:</strong> borra el alumno y sus observaciones, alertas, evaluaciones, talleres, refuerzos, notas, reportes y relaci&oacute;n con planeaciones.</div>',
+                '<div class="admin-alumnos-editor-grid">',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Alumno IDs</span>',
+                    '<textarea id="adminAlumnoDeleteIds" rows="4" placeholder="ALU-123&#10;ALU-456"></textarea>',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Confirmaci&oacute;n</span>',
+                    '<input id="adminAlumnoDeleteConfirm" type="text" placeholder="Escribe BORRAR_ALUMNOS para ejecutar">',
+                  '</label>',
+                  '<label class="admin-alumnos-field-full" style="display:flex;gap:10px;align-items:center;">',
+                    '<input id="adminAlumnoDeleteTrashFiles" type="checkbox">',
+                    '<span>Mover PDFs/DOC de reportes a papelera</span>',
+                  '</label>',
+                '</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminAlumnoDeletePreviewBtn" class="btn-secondary" type="button">Vista previa</button>',
+                  '<button id="adminAlumnoDeleteExecuteBtn" class="btn-danger" type="button">Borrar alumnos</button>',
+                '</div>',
+                '<div id="adminAlumnoDeletePreview" class="admin-alumnos-history"></div>',
+              '</section>',
             '</aside>',
           '</div>',
         '</article>'
@@ -4608,6 +4795,7 @@
       renderAlumnoEditor();
       renderAlumnoCambioGrupo();
       renderAlumnoHistorial();
+      renderAlumnoDeleteControl();
     }
 
     function bindAdminAlumnosEvents() {
@@ -4673,6 +4861,21 @@
         closeAlumnoHistorial();
         renderAdminAlumnosModule();
       });
+      if ($('adminAlumnoDeleteIds')) $('adminAlumnoDeleteIds').addEventListener('input', (event) => {
+        const control = getAlumnoDeleteControlState();
+        control.idsText = event.currentTarget.value;
+        control.preview = null;
+        control.lastResult = null;
+        renderAlumnoDeletePreview();
+      });
+      if ($('adminAlumnoDeleteTrashFiles')) $('adminAlumnoDeleteTrashFiles').addEventListener('change', (event) => {
+        getAlumnoDeleteControlState().trashReportFiles = !!event.currentTarget.checked;
+      });
+      if ($('adminAlumnoDeleteConfirm')) $('adminAlumnoDeleteConfirm').addEventListener('input', (event) => {
+        getAlumnoDeleteControlState().confirmationText = event.currentTarget.value;
+      });
+      if ($('adminAlumnoDeletePreviewBtn')) $('adminAlumnoDeletePreviewBtn').addEventListener('click', (event) => previewAlumnoDeleteControl(event.currentTarget));
+      if ($('adminAlumnoDeleteExecuteBtn')) $('adminAlumnoDeleteExecuteBtn').addEventListener('click', (event) => executeAlumnoDeleteControl(event.currentTarget));
     }
 
     function canManageFacilitadoresCatalog() {
@@ -13798,7 +14001,9 @@
         archiveAlumno,
         reactivateAlumno,
         openAlumnoHistorial,
-        closeAlumnoHistorial
+        closeAlumnoHistorial,
+        previewAlumnoDeleteControl,
+        executeAlumnoDeleteControl
       }
     };
 
