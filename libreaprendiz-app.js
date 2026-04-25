@@ -7220,6 +7220,7 @@
         finalObservationsByKey,
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
+        generalObservationDirty: false,
         activitiesDirty: false
       };
     }
@@ -7240,6 +7241,9 @@
       );
       if (generalText) {
         nextDraft.generalObservationText = generalText;
+      }
+      if (currentDraft && currentDraft.generalObservationDirty === true) {
+        nextDraft.generalObservationDirty = true;
       }
       nextDraft.finalObservationsByKey = Object.assign(
         {},
@@ -8280,6 +8284,7 @@
       if (!normalizedPlanId) return;
       if (String(state.openPlanDraft.planId || '').trim() !== normalizedPlanId) return;
       state.openPlanDraft.generalObservationText = String(value || '');
+      state.openPlanDraft.generalObservationDirty = true;
       const currentPlan = getPlanById(normalizedPlanId);
       if (currentPlan && currentPlan.planeacion_id) {
         upsertPlaneacionRow({
@@ -11349,13 +11354,18 @@
       const normalizedPlanId = String(planId || '').trim();
       const input = $('obs-general-' + normalizedPlanId);
       const inputValue = input ? String(input.value || '').trim() : '';
-      if (inputValue) return inputValue;
-      if (state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId) {
-        const draftValue = String(state.openPlanDraft.generalObservationText || '').trim();
-        if (draftValue) return draftValue;
-      }
       const currentPlan = getPlanById(normalizedPlanId);
-      return currentPlan ? String(currentPlan._draft_general_observation_text || '').trim() : '';
+      const storedValue = currentPlan ? String(currentPlan._draft_general_observation_text || '').trim() : '';
+      const currentDraft = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? state.openPlanDraft
+        : null;
+      const draftValue = currentDraft ? String(currentDraft.generalObservationText || '').trim() : '';
+      const draftDirty = !!(currentDraft && currentDraft.generalObservationDirty === true);
+      if (inputValue) {
+        if (draftDirty || inputValue !== storedValue) return inputValue;
+        return '';
+      }
+      return draftDirty ? draftValue : '';
     }
 
     function collectPendingAlumnoFinalObservations(planId, plan, entry) {
