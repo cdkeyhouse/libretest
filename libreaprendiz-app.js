@@ -36,6 +36,7 @@
 
     function createEmptyAlumnoDeleteState() {
       return {
+        expanded: false,
         idsText: '',
         trashReportFiles: true,
         preview: null,
@@ -4287,6 +4288,56 @@
         .filter((item, index, arr) => arr.indexOf(item) === index);
     }
 
+    function fallbackCopyText(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = String(text || '');
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      if (!copied) throw new Error('No se pudo copiar el ID.');
+    }
+
+    async function copyAlumnoId(alumnoId, button) {
+      const id = String(alumnoId || '').trim();
+      if (!id) throw new Error('No hay alumno_id para copiar.');
+      const originalText = button ? button.textContent : '';
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(id);
+        } else {
+          fallbackCopyText(id);
+        }
+        if (button) {
+          button.textContent = 'Copiado';
+          window.setTimeout(() => {
+            if (button) button.textContent = originalText || 'Copiar ID';
+          }, 1200);
+        }
+        setBanner('ID de alumno copiado.', 'success');
+      } catch (err) {
+        fallbackCopyText(id);
+        setBanner('ID de alumno copiado.', 'success');
+      }
+    }
+
+    function toggleAlumnoDeleteControl(forceExpanded) {
+      const control = getAlumnoDeleteControlState();
+      control.expanded = typeof forceExpanded === 'boolean' ? forceExpanded : !control.expanded;
+      renderAdminAlumnosModule();
+      if (control.expanded) {
+        window.setTimeout(() => {
+          const panel = $('adminAlumnoDeleteControl');
+          if (panel && typeof panel.scrollIntoView === 'function') {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 40);
+      }
+    }
+
     function formatAlumnoDeleteRowsBySheet(rowsBySheet) {
       const rows = rowsBySheet && typeof rowsBySheet === 'object' ? rowsBySheet : {};
       const labels = {
@@ -4443,6 +4494,7 @@
       if (!alumno) return '';
       const visualStatus = getAlumnoStatusVisual(alumno);
       const buttons = [
+        '<button class="btn-ghost" type="button" onclick="copyAlumnoId(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this)">Copiar ID</button>',
         '<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(alumno.alumno_id) + '\')">Ver historial</button>'
       ];
       if (visualStatus === 'activo') {
@@ -4476,6 +4528,15 @@
       if ($('adminAlumnoNotas')) $('adminAlumnoNotas').value = state.alumnosUi.editor.notas_internas || '';
       fillSelect($('adminAlumnoGrupo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Selecciona grupo');
       if ($('adminAlumnoGrupo')) $('adminAlumnoGrupo').value = state.alumnosUi.editor.grupo_id || '';
+      if ($('adminAlumnoIdentity')) {
+        $('adminAlumnoIdentity').hidden = !selectedAlumno;
+        $('adminAlumnoIdentity').innerHTML = selectedAlumno
+          ? [
+              '<div class="admin-alumnos-readonly"><span>Alumno ID</span><strong>' + escapeHtml(selectedAlumno.alumno_id || '-') + '</strong></div>',
+              '<div class="admin-alumnos-readonly"><span>Matr&iacute;cula</span><strong>' + escapeHtml(selectedAlumno.matricula || '-') + '</strong></div>'
+            ].join('')
+          : '';
+      }
       if ($('adminAlumnoQuickActions')) {
         $('adminAlumnoQuickActions').hidden = !selectedAlumno;
         $('adminAlumnoQuickActions').innerHTML = selectedAlumno ? buildAlumnoQuickActionsMarkup(selectedAlumno) : '';
@@ -4508,7 +4569,7 @@
       const remoteFailed = !!(state.alumnosUi.remoteHistoryFailedByAlumno && state.alumnosUi.remoteHistoryFailedByAlumno[alumnoId]);
       if ($('adminAlumnoHistorialLabel')) {
         $('adminAlumnoHistorialLabel').textContent = alumno
-          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' Â· ' + (alumno.matricula || alumno.alumno_id))
+          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ID: ' + alumno.alumno_id + ' · ' + (alumno.matricula || 'sin matrícula'))
           : 'Seguimiento del alumno.';
       }
       const historyFoot = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('.admin-alumnos-history-foot') : null;
@@ -4539,9 +4600,9 @@
     function renderAlumnoDeleteControl() {
       const panel = $('adminAlumnoDeleteControl');
       if (!panel) return;
-      panel.hidden = getCurrentRole() !== 'admin';
-      if (panel.hidden) return;
       const control = getAlumnoDeleteControlState();
+      panel.hidden = getCurrentRole() !== 'admin' || !control.expanded;
+      if (panel.hidden) return;
       if ($('adminAlumnoDeleteIds')) $('adminAlumnoDeleteIds').value = control.idsText || '';
       if ($('adminAlumnoDeleteConfirm')) $('adminAlumnoDeleteConfirm').value = control.confirmationText || '';
       if ($('adminAlumnoDeleteTrashFiles')) $('adminAlumnoDeleteTrashFiles').checked = control.trashReportFiles !== false;
@@ -4571,11 +4632,12 @@
         rows.map((row) => {
           const visualStatus = getAlumnoStatusVisual(row);
           const actions = [
+            '<button class="btn-ghost" type="button" onclick="copyAlumnoId(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Copiar ID</button>',
             '<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>'
           ];
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
-            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button></div>' +
+            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button><div class="mini">ID: ' + escapeHtml(row.alumno_id || '-') + '</div></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
             '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
@@ -4599,6 +4661,7 @@
                 '<span>Buscar</span>',
                 '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matr&iacute;cula o nombre">',
               '</label>',
+              '<button id="adminAlumnoDeleteToggleBtn" class="btn-secondary" type="button">Borrado controlado</button>',
               '<button id="adminAlumnoNewBtn" class="btn-primary" type="button">Nuevo alumno</button>',
             '</div>',
           '</div>',
@@ -4635,6 +4698,7 @@
                   '</div>',
                 '</div>',
                 '<div id="adminAlumnoQuickActions" class="actions compact admin-alumnos-panel-actions" hidden></div>',
+                '<div id="adminAlumnoIdentity" class="admin-alumnos-mini-grid" hidden></div>',
                 '<div class="admin-alumnos-editor-grid">',
                   '<label class="field">',
                     '<span>Matr&iacute;cula</span>',
@@ -4775,6 +4839,12 @@
       if ($('adminAlumnosFilterInactiveBtn')) $('adminAlumnosFilterInactiveBtn').classList.toggle('is-active', filter === 'inactivos');
       if ($('adminAlumnosFilterGraduatedBtn')) $('adminAlumnosFilterGraduatedBtn').classList.toggle('is-active', filter === 'egresados');
       if ($('adminAlumnosFilterArchivedBtn')) $('adminAlumnosFilterArchivedBtn').classList.toggle('is-active', filter === 'archivados');
+      const deleteControl = getAlumnoDeleteControlState();
+      if ($('adminAlumnoDeleteToggleBtn')) {
+        $('adminAlumnoDeleteToggleBtn').hidden = getCurrentRole() !== 'admin';
+        $('adminAlumnoDeleteToggleBtn').textContent = deleteControl.expanded ? 'Ocultar borrado' : 'Borrado controlado';
+        $('adminAlumnoDeleteToggleBtn').setAttribute('aria-expanded', deleteControl.expanded ? 'true' : 'false');
+      }
       const headTitle = panel.querySelector('.admin-alumnos-head-copy h3');
       if (headTitle) headTitle.textContent = 'Cat\u00e1logo de alumnos';
       const headSubtitle = panel.querySelector('.admin-alumnos-head-copy .subtle');
@@ -4831,6 +4901,7 @@
         state.alumnosUi.filter = 'archivados';
         renderAdminAlumnosModule();
       });
+      if ($('adminAlumnoDeleteToggleBtn')) $('adminAlumnoDeleteToggleBtn').addEventListener('click', () => toggleAlumnoDeleteControl());
       if ($('adminAlumnoNewBtn')) $('adminAlumnoNewBtn').addEventListener('click', () => openAlumnoEditor('new'));
       if ($('adminAlumnoMatricula')) $('adminAlumnoMatricula').addEventListener('input', (event) => { state.alumnosUi.editor.matricula = event.currentTarget.value; });
       if ($('adminAlumnoNombres')) $('adminAlumnoNombres').addEventListener('input', (event) => {
@@ -14002,6 +14073,8 @@
         reactivateAlumno,
         openAlumnoHistorial,
         closeAlumnoHistorial,
+        copyAlumnoId,
+        toggleAlumnoDeleteControl,
         previewAlumnoDeleteControl,
         executeAlumnoDeleteControl
       }
