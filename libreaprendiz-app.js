@@ -6895,7 +6895,7 @@
       const localState = getPlanLocalSaveState(plan);
       if (localState === 'saving') return '';
       if (localState === 'saved') return '';
-      if (!message) return '';
+      if (!message && localState !== 'activating') return '';
       const compactLabel = ({
         creating: 'Sincronizando',
         saving: 'Sincronizando',
@@ -6904,7 +6904,7 @@
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
       const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
-      const messageMarkup = ['creating', 'syncing'].includes(localState)
+      const messageMarkup = ['creating', 'syncing', 'activating'].includes(localState)
         ? ''
         : '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>';
       return (
@@ -10917,7 +10917,7 @@
             fecha_actualizacion: String((previousPlan && previousPlan.fecha_actualizacion) || '').trim()
           }, {
             localState: 'activating',
-            localMessage: 'Sincronizando activación...',
+            localMessage: '',
             snapshotKind: 'planeacion_activando_local',
             forceLocalMaterialAlerts: true,
             closeOpenCard: shouldCloseOpenCard
