@@ -12199,15 +12199,7 @@
       const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
       const saveScrollAnchor = captureScrollAnchor(button, 'plan-save-' + planId);
       const restoreSaveScrollAnchor = () => restoreScrollAnchor(saveScrollAnchor);
-      const fallbackGeneralText =
-        String(
-          (state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === String(planId || '').trim()
-            ? state.openPlanDraft.generalObservationText
-            : '') ||
-          plan._draft_general_observation_text ||
-          ''
-        ).trim();
-      const generalText = getPendingGeneralObservationText(planId) || fallbackGeneralText;
+      const generalText = getPendingGeneralObservationText(planId);
       const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
       if (!finalPayloads.length) {
         finalPayloads.push(...collectStoredAlumnoFinalObservations(planId, plan, entry));
