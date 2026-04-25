@@ -6868,8 +6868,8 @@
       }
       if (localState === 'saving') {
         return {
-          className: ('is-local-pending ' + baseClass).trim(),
-          label: 'Guardando...'
+          className: baseClass,
+          label: getPlanStatusLabel(plan && plan.estado)
         };
       }
       if (localState === 'activating') {
@@ -6893,9 +6893,8 @@
     function getPlanLocalFeedbackMarkup(plan) {
       const message = String((plan && plan._local_save_message) || '').trim();
       const localState = getPlanLocalSaveState(plan);
-      if (localState === 'saving') return '';
       if (localState === 'saved') return '';
-      if (!message && localState !== 'activating') return '';
+      if (!message && !['saving', 'activating'].includes(localState)) return '';
       const compactLabel = ({
         creating: 'Sincronizando',
         saving: 'Sincronizando',
@@ -6904,7 +6903,7 @@
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
       const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
-      const messageMarkup = ['creating', 'syncing', 'activating'].includes(localState)
+      const messageMarkup = ['creating', 'saving', 'syncing', 'activating'].includes(localState)
         ? ''
         : '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>';
       return (
@@ -9664,7 +9663,7 @@
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
               ((allowStructureEdit || allowGeneralObs || allowAlumnoObs)
-                ? '<button class="btn-primary" type="button"' + (isOpenSaveBusy ? ' disabled aria-disabled="true"' : '') + ' onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">' + (isOpenSaveBusy ? 'Guardando...' : 'Guardar cambios') + '</button>'
+                ? '<button class="btn-primary" type="button"' + (isOpenSaveBusy ? ' disabled aria-disabled="true"' : '') + ' onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">Guardar cambios</button>'
                 : '') +
               actionStatusHtml +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
