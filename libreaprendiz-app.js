@@ -6789,8 +6789,8 @@
       }
       if (localState === 'activating') {
         return {
-          className: ('is-local-pending ' + baseClass).trim(),
-          label: 'Activando...'
+          className: baseClass,
+          label: getPlanStatusLabel(plan && plan.estado)
         };
       }
       if (localState === 'sync_error') {
@@ -6808,16 +6808,13 @@
     function getPlanLocalFeedbackMarkup(plan) {
       const message = String((plan && plan._local_save_message) || '').trim();
       const localState = getPlanLocalSaveState(plan);
-      if (localState === 'activating') {
-        return '';
-      }
       if (localState === 'saving') return '';
       if (localState === 'saved') return '';
       if (!message) return '';
       const compactLabel = ({
         creating: 'Creando',
         saving: 'Sincronizando',
-        activating: 'Activando',
+        activating: 'Sincronizando',
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
       const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
@@ -10692,15 +10689,17 @@
         }
         const previousPlanSnapshot = previousPlan ? cloneJsonSafe(previousPlan, previousPlan) : null;
         if (action === 'activarPlaneacion' && previousPlan) {
-          upsertPlaneacionRow(Object.assign({}, previousPlan, {
+          const optimisticPlan = applyOptimisticPlanPatch(planId, {
             estado: 'activa',
-            _local_save_state: 'activating',
-            _local_save_message: 'La semana ya está visible mientras termina de activarse.'
-          }));
-          persistCurrentBootSnapshot('planeacion_activando_local');
-          renderPlaneacionesList();
-          focusPlaneacionCardSoon(planId);
-          setBanner('Activando semana en segundo plano...', 'info');
+            fecha_actualizacion: String((previousPlan && previousPlan.fecha_actualizacion) || '').trim()
+          }, {
+            localState: 'activating',
+            localMessage: 'Sincronizando activación...',
+            snapshotKind: 'planeacion_activando_local',
+            forceLocalMaterialAlerts: true
+          });
+          if (optimisticPlan) focusPlaneacionCardSoon(planId);
+          setBanner('La planeación ya aparece activa. Sincronizando...', 'info');
         }
         if (shouldCloseOpenCard) {
           state.openPlanId = '';
@@ -10720,29 +10719,27 @@
         const updatedPlan = response && response.planeacion
           ? Object.assign({}, previousPlan || {}, response.planeacion)
           : null;
-        if (action === 'activarPlaneacion' && updatedPlan && state.openPlanId === planId) {
-          const currentOpenPlan = getPlanById(planId) || previousPlan || updatedPlan;
-          const activatedOpenPlan = Object.assign({}, currentOpenPlan, updatedPlan, {
+        let appliedLocally = false;
+        if (action === 'activarPlaneacion' && updatedPlan) {
+          applyOptimisticPlanPatch(planId, Object.assign({}, updatedPlan, {
             estado: 'activa',
-            fecha_actualizacion: String((updatedPlan && updatedPlan.fecha_actualizacion) || (currentOpenPlan && currentOpenPlan.fecha_actualizacion) || '').trim()
+            fecha_actualizacion: String((updatedPlan && updatedPlan.fecha_actualizacion) || '').trim()
+          }), {
+            localState: '',
+            localMessage: '',
+            snapshotKind: 'planeacion_activacion_confirmada',
+            forceLocalMaterialAlerts: true
           });
-          if (currentOpenPlan && currentOpenPlan.detail_loaded) {
-            activatedOpenPlan.detail_loaded = true;
-            activatedOpenPlan.boot_detail_loaded = !!currentOpenPlan.boot_detail_loaded;
-            activatedOpenPlan.actividades = Array.isArray(currentOpenPlan.actividades) ? currentOpenPlan.actividades : [];
-            activatedOpenPlan.alumnos = Array.isArray(currentOpenPlan.alumnos) ? currentOpenPlan.alumnos : [];
-            activatedOpenPlan.obs_semana = Array.isArray(currentOpenPlan.obs_semana) ? currentOpenPlan.obs_semana : [];
-            activatedOpenPlan.obs_alumno_final = Array.isArray(currentOpenPlan.obs_alumno_final) ? currentOpenPlan.obs_alumno_final : [];
-            activatedOpenPlan.obs_loaded = !!currentOpenPlan.obs_loaded;
-          }
-          upsertPlaneacionRow(activatedOpenPlan);
-          state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(
-            activatedOpenPlan,
-            buildOpenPlanDraft(activatedOpenPlan)
-          );
+          refreshPlaneacionesAlertsDeferred({
+            force: true,
+            includeStats: false,
+            includePlaneaciones: false
+          }).catch(() => {});
+          appliedLocally = true;
+        } else {
+          appliedLocally = !hasActivePlaneacionesFilters() &&
+            await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
         }
-        const appliedLocally = !hasActivePlaneacionesFilters() &&
-          await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
         if (!appliedLocally) {
           await refreshPlaneacionesSurface();
         }
@@ -11732,6 +11729,40 @@
       const mergedPlan = upsertPlaneacionRow(updatedPlan) || updatedPlan;
       state.openPlanId = planId;
       state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(mergedPlan), mergedPlan);
+    }
+
+    function applyOptimisticPlanPatch(planId, patch = {}, options = {}) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const currentPlan = getPlanById(normalizedPlanId);
+      if (!currentPlan) return null;
+      const patchValue = typeof patch === 'function' ? (patch(currentPlan) || {}) : (patch || {});
+      const nextPlan = Object.assign({}, currentPlan, patchValue);
+      if (options.localState !== undefined) nextPlan._local_save_state = String(options.localState || '').trim();
+      if (options.localMessage !== undefined) nextPlan._local_save_message = String(options.localMessage || '').trim();
+      const appliedPlan = upsertPlaneacionRow(nextPlan) || nextPlan;
+      if (options.forceLocalMaterialAlerts) injectLocalMaterialAlerts(appliedPlan);
+      if (state.openPlanId === normalizedPlanId && options.preserveOpenDraft !== false) {
+        const currentDraft = state.openPlanDraft &&
+          String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+          ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
+          : null;
+        if (currentDraft) {
+          state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(
+            appliedPlan,
+            preserveOpenPlanDraftLocalNotes(normalizedPlanId, currentDraft, appliedPlan)
+          );
+        } else if (appliedPlan.detail_loaded) {
+          state.openPlanDraft = preserveOpenPlanDraftLocalNotes(
+            normalizedPlanId,
+            buildOpenPlanDraft(appliedPlan),
+            appliedPlan
+          );
+        }
+      }
+      persistCurrentBootSnapshot(options.snapshotKind || 'planeacion_optimistic_patch');
+      if (options.render !== false) renderPlaneacionesList();
+      return appliedPlan;
     }
 
     async function applySavedPlaneacionTransition(planId, updatedPlan, options = {}) {
