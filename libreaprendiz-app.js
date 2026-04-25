@@ -4632,7 +4632,6 @@
         rows.map((row) => {
           const visualStatus = getAlumnoStatusVisual(row);
           const actions = [
-            '<button class="btn-ghost" type="button" onclick="copyAlumnoId(\'' + escapeJsAttrValue(row.alumno_id) + '\', this)">Copiar ID</button>',
             '<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>'
           ];
           return '<article class="admin-alumnos-row">' +
