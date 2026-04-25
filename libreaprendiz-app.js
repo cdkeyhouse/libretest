@@ -238,6 +238,7 @@
         planeacionOutboxProcessing: false,
         planeacionOutboxRetryTimer: null,
         closePlanSyncWatchTimer: null,
+        adminModuleErrors: {},
         pendingPlanSaveTransactions: {},
         planDetailPromises: {},
         planeacionDetailPrefetchRunning: false
@@ -2432,6 +2433,10 @@
         renderAdminModulePlaceholder(normalized);
         return;
       }
+      if (getAdminModuleError(normalized)) {
+        renderAdminModuleError(normalized);
+        return;
+      }
       if (adminModuleNeedsCatalogos(normalized) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(normalized))) {
         renderAdminModulePlaceholder(normalized);
         return;
@@ -2476,6 +2481,22 @@
       }
       if (isLoading) state.ui.adminModuleLoading[key] = true;
       else delete state.ui.adminModuleLoading[key];
+    }
+
+    function getAdminModuleError(moduleName) {
+      const key = String(moduleName || '').trim();
+      return String(state.ui && state.ui.adminModuleErrors && state.ui.adminModuleErrors[key] || '').trim();
+    }
+
+    function setAdminModuleError(moduleName, message) {
+      const key = String(moduleName || '').trim();
+      if (!key || !state.ui) return;
+      if (!state.ui.adminModuleErrors || typeof state.ui.adminModuleErrors !== 'object') {
+        state.ui.adminModuleErrors = {};
+      }
+      const normalizedMessage = String(message || '').trim();
+      if (normalizedMessage) state.ui.adminModuleErrors[key] = normalizedMessage;
+      else delete state.ui.adminModuleErrors[key];
     }
 
     function getAdminModulePlaceholderCopy(moduleName) {
@@ -2523,6 +2544,31 @@
       }
     }
 
+    function getAdminModuleDisplayName(moduleName) {
+      switch (String(moduleName || '').trim()) {
+        case 'dashboard':
+          return 'Dashboard';
+        case 'planeaciones':
+          return 'Planeaciones';
+        case 'alumnos':
+          return 'Alumnos';
+        case 'notificaciones':
+          return 'Notificaciones';
+        case 'reporte-ciclo':
+          return 'Reporte de ciclo';
+        case 'facilitadores':
+          return 'Facilitadores';
+        case 'materias':
+          return 'Materias';
+        case 'talleres':
+          return 'Talleres';
+        case 'configuracion':
+          return 'Configuracion';
+        default:
+          return 'Modulo';
+      }
+    }
+
     function renderAdminModulePlaceholder(moduleName) {
       const panel = $('admin-panel-' + String(moduleName || '').trim());
       if (!panel) return;
@@ -2531,6 +2577,21 @@
         '<article class="admin-placeholder">' +
           '<h3>' + escapeHtml(copy.title) + '</h3>' +
           '<p>' + escapeHtml(copy.body) + '</p>' +
+        '</article>';
+    }
+
+    function renderAdminModuleError(moduleName) {
+      const normalized = String(moduleName || '').trim();
+      const panel = $('admin-panel-' + normalized);
+      if (!panel) return;
+      const message = getAdminModuleError(normalized) || 'No se pudo cargar este modulo.';
+      panel.innerHTML =
+        '<article class="admin-placeholder">' +
+          '<h3>No se pudo cargar ' + escapeHtml(getAdminModuleDisplayName(normalized)) + '</h3>' +
+          '<p>' + escapeHtml(message) + '</p>' +
+          '<div class="actions compact">' +
+            '<button class="btn-secondary" type="button" onclick="activateAdminModule(\'' + escapeJsAttrValue(normalized) + '\')">Reintentar</button>' +
+          '</div>' +
         '</article>';
     }
 
@@ -2937,10 +2998,12 @@
         state.ui.notificationFilter = 'activas';
       }
       state.activeAdminModule = nextModule;
+      setAdminModuleError(nextModule, '');
       renderAdminShell();
       const bootstrappingNotificationsModule = nextModule === 'notificaciones' && !Array.isArray(state.notificaciones).length;
       if (bootstrappingNotificationsModule) {
         setAdminModuleLoading(nextModule, true);
+        renderAdminShell();
         renderActiveAdminModule(nextModule);
         refreshAdminModuleSurface(nextModule, {
           includeStats: true,
@@ -2950,8 +3013,9 @@
             setAdminModuleLoading(nextModule, false);
             renderAdminModuleSurface(nextModule, { includeStats: false });
           })
-          .catch(() => {
+          .catch((err) => {
             setAdminModuleLoading(nextModule, false);
+            setAdminModuleError(nextModule, formatApiError(err));
             renderAdminModuleSurface(nextModule, { includeStats: false });
           });
       }
@@ -2962,6 +3026,7 @@
       }
       if (!bootstrappingNotificationsModule && adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(nextModule))) {
         setAdminModuleLoading(nextModule, true);
+        renderAdminShell();
         renderActiveAdminModule(nextModule);
         refreshCatalogos({ blocks: getMissingCatalogBlocks(getAdminModuleCatalogBlocks(nextModule)) })
           .then(() => {
@@ -2973,20 +3038,25 @@
               renderAdminModuleSurface(nextModule, { includeStats: false });
             }
           })
-          .catch(() => {
+          .catch((err) => {
             setAdminModuleLoading(nextModule, false);
+            setAdminModuleError(nextModule, formatApiError(err));
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           });
       }
       if (nextModule === 'configuracion' && !getMaintenanceUi().preview) {
         setAdminModuleLoading(nextModule, true);
+        renderAdminShell();
         renderActiveAdminModule(nextModule);
         loadMaintenancePreview({ keepAudit: true })
           .then(() => {
             setAdminModuleLoading(nextModule, false);
             renderAdminModuleSurface(nextModule, { includeStats: false });
           })
-          .catch(() => {
+          .catch((err) => {
             setAdminModuleLoading(nextModule, false);
+            setAdminModuleError(nextModule, formatApiError(err));
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           });
       }
       if (nextModule === 'planeaciones') {
@@ -3044,7 +3114,19 @@
       if ($('adminCountReportes')) $('adminCountReportes').textContent = getReportStatusLabel(getReportSelectionState().lastResult && (getReportSelectionState().lastResult.status || getReportSelectionState().lastResult.estado) || 'PDF');
 
       document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
-        btn.classList.toggle('is-active', btn.dataset.adminModule === state.activeAdminModule);
+        const moduleName = String(btn.dataset.adminModule || '').trim();
+        const isActive = moduleName === state.activeAdminModule;
+        const isLoading = isAdminModuleLoading(moduleName);
+        if (!btn.dataset.defaultText) btn.dataset.defaultText = btn.textContent;
+        btn.classList.toggle('is-active', isActive);
+        btn.classList.toggle('is-loading', isLoading);
+        if (isLoading) {
+          btn.setAttribute('aria-busy', 'true');
+          btn.textContent = btn.dataset.defaultText + ' - Cargando...';
+        } else {
+          btn.removeAttribute('aria-busy');
+          btn.textContent = btn.dataset.defaultText;
+        }
       });
       document.querySelectorAll('.admin-panel').forEach((panel) => {
         panel.classList.toggle('is-active', panel.id === 'admin-panel-' + state.activeAdminModule);
@@ -13509,6 +13591,7 @@
         usePlanForObservation
       },
       admin: {
+        activateAdminModule,
         editNotification,
         notificationAction,
         toggleNotificationAudienceFacilitador,
