@@ -8037,7 +8037,16 @@
         nextPlan.actividades = updatedPlan.actividades.map((activity, index) => {
           const activityKey = String((activity && activity.actividad_id) || (activity && activity.orden) || index).trim();
           const optimisticActivity = optimisticById.get(activityKey) || optimisticActivities[index] || null;
+          const sourceActivity = Array.isArray(plan && plan.actividades) ? plan.actividades[index] : null;
           const mergedActivity = Object.assign({}, optimisticActivity || {}, activity || {});
+          if (optimisticActivity) {
+            const previousText = String((sourceActivity && sourceActivity.texto) || '').trim();
+            const optimisticText = String((optimisticActivity && optimisticActivity.texto) || '').trim();
+            const responseText = String((activity && activity.texto) || '').trim();
+            if (optimisticText && optimisticText !== previousText && responseText === previousText) {
+              mergedActivity.texto = optimisticActivity.texto;
+            }
+          }
           if ((!String((activity && activity.realizada) || '').trim()) && optimisticActivity) {
             mergedActivity.realizada = optimisticActivity.realizada;
           }
