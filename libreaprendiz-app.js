@@ -7,6 +7,8 @@
     const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
     const OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
     const OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
+    const OPEN_PLAN_DETAIL_PREFETCH_LIMIT = 6;
+    const OPEN_PLAN_DETAIL_PREFETCH_DELAY_MS = 650;
     const LOGIN_PRELOAD_CATALOG_BLOCKS = ['materias', 'semanas', 'grupos'];
 
     function createEmptyAlumnoEditorState() {
@@ -235,7 +237,8 @@
         planeacionOutboxProcessing: false,
         planeacionOutboxRetryTimer: null,
         pendingPlanSaveTransactions: {},
-        planDetailPromises: {}
+        planDetailPromises: {},
+        planeacionDetailPrefetchRunning: false
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -2261,6 +2264,7 @@
       if (includePlaneaciones && isPlaneacionesSurfaceVisible()) {
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
+        scheduleVisiblePlaneacionDetailPrefetch();
       }
       if (includeAlertas && isAlertasSurfaceVisible()) renderAlertas();
     }
@@ -2277,6 +2281,56 @@
       timers[key] = window.setTimeout(() => {
         delete timers[key];
         fn();
+      }, delay);
+    }
+
+    function getVisiblePlaneacionDetailPrefetchIds() {
+      if (!state.session || !state.session.token) return [];
+      if (!state.ui || state.ui.planeacionesLoading || !state.ui.planeacionesLoaded) return [];
+      if (!isPlaneacionesSurfaceVisible()) return [];
+      const ids = [];
+      getVisiblePlaneacionEntries().some((entry) => {
+        const plan = getOpenPlaneacionEntry(entry) || entry.representative || null;
+        const planId = String((plan && plan.planeacion_id) || '').trim();
+        if (!planId || ids.includes(planId)) return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
+        if (isPlaneacionPendingCreation(plan)) return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
+        if (['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan))) {
+          return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
+        }
+        if (plan.detail_loaded && hasUsableOpenPlanDetail(plan)) return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
+        ids.push(planId);
+        return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
+      });
+      return ids;
+    }
+
+    async function prefetchVisiblePlaneacionDetails() {
+      if (!state.ui || state.ui.planeacionDetailPrefetchRunning) return;
+      const planIds = getVisiblePlaneacionDetailPrefetchIds();
+      if (!planIds.length) return;
+      state.ui.planeacionDetailPrefetchRunning = true;
+      try {
+        for (const planId of planIds) {
+          if (!isPlaneacionesSurfaceVisible()) break;
+          const currentPlan = getPlanById(planId);
+          if (!currentPlan || isPlaneacionPendingCreation(currentPlan)) continue;
+          if (['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(currentPlan))) continue;
+          if (currentPlan.detail_loaded && hasUsableOpenPlanDetail(currentPlan)) continue;
+          try {
+            await ensurePlaneacionDetailLoaded(planId, { silent: true });
+          } catch (_) {}
+        }
+      } finally {
+        if (state.ui) state.ui.planeacionDetailPrefetchRunning = false;
+      }
+    }
+
+    function scheduleVisiblePlaneacionDetailPrefetch(delay = OPEN_PLAN_DETAIL_PREFETCH_DELAY_MS) {
+      if (!state.session || !state.session.token) return;
+      if (!state.ui || !state.ui.planeacionesLoaded) return;
+      if (!isPlaneacionesSurfaceVisible()) return;
+      scheduleUiDebounce('planeacion-detail-prefetch', () => {
+        prefetchVisiblePlaneacionDetails().catch(() => {});
       }, delay);
     }
 
@@ -10208,6 +10262,7 @@
       if (shouldRenderPlaneaciones) {
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
+        scheduleVisiblePlaneacionDetailPrefetch();
       }
       if (shouldRenderAlerts) renderAlertas();
       syncRoleUi();
@@ -10230,6 +10285,7 @@
       } else if (String(state.activeTab || '').trim() === 'planeaciones') {
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
+        scheduleVisiblePlaneacionDetailPrefetch();
       }
       syncRoleUi();
       activateTab(state.activeTab);
