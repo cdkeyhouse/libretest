@@ -8190,6 +8190,24 @@
       });
     }
 
+    function restoreOpenPlanDraftAfterSaveRefresh(planId, draft, generalText, finalPayloads) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || String(state.openPlanId || '').trim() !== normalizedPlanId) return false;
+      const currentPlan = getPlanById(normalizedPlanId);
+      const sourceDraft = draft
+        ? (cloneJsonSafe(draft, draft) || draft)
+        : (currentPlan && currentPlan.detail_loaded ? buildOpenPlanDraft(currentPlan) : null);
+      if (!sourceDraft) return false;
+      sourceDraft.planId = normalizedPlanId;
+      state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(
+        currentPlan || {},
+        buildOpenPlanDraftWithPendingObservations(sourceDraft, generalText, finalPayloads)
+      );
+      renderPlaneacionesList();
+      restorePendingPlanObservationInputs(normalizedPlanId, generalText, finalPayloads);
+      return true;
+    }
+
     function updateOpenPlanGeneralObservationDraft(planId, value) {
       if (!state.openPlanDraft) return;
       const normalizedPlanId = String(planId || state.openPlanDraft.planId || '').trim();
@@ -11733,6 +11751,11 @@
       state.openPlanId = item.shouldSavePlan ? item.planId : state.openPlanId;
       if (state.openPlanId !== item.planId) state.openPlanDraft = null;
       await refreshPlaneacionesSurface({ includeAlertas: false });
+      const restoredDraftAfterRefresh = item.shouldSavePlan &&
+        restoreOpenPlanDraftAfterSaveRefresh(item.planId, item.draft, outboxGeneralText, outboxFinalPayloads);
+      if (!restoredDraftAfterRefresh) {
+        restorePendingPlanObservationInputs(item.planId, outboxGeneralText, outboxFinalPayloads);
+      }
       refreshPlaneacionesAlertsDeferred({
         force: !!item.shouldForceAlertasAfterSave,
         includeStats: false,
@@ -12323,9 +12346,13 @@
           });
         } else {
           state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
-          state.openPlanDraft = null;
+          if (!shouldSavePlan) state.openPlanDraft = null;
           await refreshPlaneacionesSurface({ includeAlertas: false });
-          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          const restoredDraftAfterRefresh = shouldSavePlan &&
+            restoreOpenPlanDraftAfterSaveRefresh(planId, outboxDraft, generalText, finalPayloads);
+          if (!restoredDraftAfterRefresh) {
+            restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          }
           if (shouldSavePlan || shouldSaveShared) {
             refreshPlaneacionesAlertsDeferred({
               force: shouldForceAlertasAfterSave,
