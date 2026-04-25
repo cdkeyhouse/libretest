@@ -7,7 +7,8 @@
     const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
     const OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
     const OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
-    const OPEN_PLAN_DETAIL_PREFETCH_LIMIT = 6;
+    const OPEN_PLAN_DETAIL_PREFETCH_LIMIT = 10;
+    const OPEN_PLAN_DETAIL_PREFETCH_CONCURRENCY = 2;
     const OPEN_PLAN_DETAIL_PREFETCH_DELAY_MS = 650;
     const LOGIN_PRELOAD_CATALOG_BLOCKS = ['materias', 'semanas', 'grupos'];
 
@@ -2284,24 +2285,46 @@
       }, delay);
     }
 
+    function canPrefetchPlaneacionDetail(plan) {
+      if (!plan || !plan.planeacion_id) return false;
+      const status = String(plan.estado || '').trim();
+      if (['cerrada', 'archivada', 'cierre_pendiente'].includes(status)) return false;
+      if (isPlaneacionPendingCreation(plan)) return false;
+      if (['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan))) return false;
+      return !(plan.detail_loaded && hasUsableOpenPlanDetail(plan));
+    }
+
+    function getPlaneacionDetailPrefetchRank(plan) {
+      const statusRank = ({
+        activa: 0,
+        borrador: 1,
+        rechazada: 2,
+        borrador_pendiente_aprobacion: 3
+      })[String(plan && plan.estado || '').trim()] ?? 9;
+      const hasAlertRank = planHasOpenMaterialAlert(plan && plan.planeacion_id) ? 0 : 1;
+      return (statusRank * 10) + hasAlertRank;
+    }
+
     function getVisiblePlaneacionDetailPrefetchIds() {
       if (!state.session || !state.session.token) return [];
       if (!state.ui || state.ui.planeacionesLoading || !state.ui.planeacionesLoaded) return [];
       if (!isPlaneacionesSurfaceVisible()) return [];
-      const ids = [];
-      getVisiblePlaneacionEntries().some((entry) => {
-        const plan = getOpenPlaneacionEntry(entry) || entry.representative || null;
-        const planId = String((plan && plan.planeacion_id) || '').trim();
-        if (!planId || ids.includes(planId)) return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
-        if (isPlaneacionPendingCreation(plan)) return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
-        if (['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan))) {
-          return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
-        }
-        if (plan.detail_loaded && hasUsableOpenPlanDetail(plan)) return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
-        ids.push(planId);
-        return ids.length >= OPEN_PLAN_DETAIL_PREFETCH_LIMIT;
-      });
-      return ids;
+      const seen = new Set();
+      return getVisiblePlaneaciones()
+        .map((plan, index) => ({ plan, index }))
+        .filter(({ plan }) => {
+          const planId = String((plan && plan.planeacion_id) || '').trim();
+          if (!planId || seen.has(planId)) return false;
+          seen.add(planId);
+          return canPrefetchPlaneacionDetail(plan);
+        })
+        .sort((left, right) => {
+          const rankDiff = getPlaneacionDetailPrefetchRank(left.plan) - getPlaneacionDetailPrefetchRank(right.plan);
+          return rankDiff || (left.index - right.index);
+        })
+        .slice(0, OPEN_PLAN_DETAIL_PREFETCH_LIMIT)
+        .map(({ plan }) => String(plan.planeacion_id || '').trim())
+        .filter(Boolean);
     }
 
     async function prefetchVisiblePlaneacionDetails() {
@@ -2310,19 +2333,42 @@
       if (!planIds.length) return;
       state.ui.planeacionDetailPrefetchRunning = true;
       try {
-        for (const planId of planIds) {
-          if (!isPlaneacionesSurfaceVisible()) break;
-          const currentPlan = getPlanById(planId);
-          if (!currentPlan || isPlaneacionPendingCreation(currentPlan)) continue;
-          if (['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(currentPlan))) continue;
-          if (currentPlan.detail_loaded && hasUsableOpenPlanDetail(currentPlan)) continue;
-          try {
-            await ensurePlaneacionDetailLoaded(planId, { silent: true });
-          } catch (_) {}
-        }
+        let nextIndex = 0;
+        const loadNext = async () => {
+          while (nextIndex < planIds.length) {
+            const planId = planIds[nextIndex];
+            nextIndex += 1;
+            if (!isPlaneacionesSurfaceVisible()) break;
+            const currentPlan = getPlanById(planId);
+            if (!canPrefetchPlaneacionDetail(currentPlan)) continue;
+            try {
+              await ensurePlaneacionDetailLoaded(planId, { silent: true });
+            } catch (_) {}
+          }
+        };
+        const workerCount = Math.min(OPEN_PLAN_DETAIL_PREFETCH_CONCURRENCY, planIds.length);
+        await Promise.all(Array.from({ length: workerCount }, loadNext));
       } finally {
         if (state.ui) state.ui.planeacionDetailPrefetchRunning = false;
       }
+    }
+
+    function prioritizePlaneacionDetailPrefetch(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !state.session || !state.session.token) return;
+      if (!isPlaneacionesSurfaceVisible()) return;
+      const currentPlan = getPlanById(normalizedPlanId);
+      if (!canPrefetchPlaneacionDetail(currentPlan)) return;
+      ensurePlaneacionDetailLoaded(normalizedPlanId, { silent: true }).catch(() => {});
+    }
+
+    function buildOpenPlanPrefetchIntentAttrs(planId) {
+      const escapedPlanId = escapeJsAttrValue(planId);
+      const action = "prioritizePlaneacionDetailPrefetch('" + escapedPlanId + "')";
+      return ' onpointerenter="' + action + '"' +
+        ' onpointerdown="' + action + '"' +
+        ' onfocus="' + action + '"' +
+        ' ontouchstart="' + action + '"';
     }
 
     function scheduleVisiblePlaneacionDetailPrefetch(delay = OPEN_PLAN_DETAIL_PREFETCH_DELAY_MS) {
@@ -9304,9 +9350,10 @@
         if (!isOpen) {
           const isPendingCreation = isPlaneacionPendingCreation(plan);
           const localPending = isPlaneacionLocalSavePending(plan);
+          const openIntentAttrs = buildOpenPlanPrefetchIntentAttrs(plan.planeacion_id);
           const openButtonHtml = isPendingCreation
             ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Abrir</button>'
-            : '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
+            : '<button class="btn-open-plan" type="button"' + openIntentAttrs + ' onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
           const quickActivateButton = !localPending && plan.estado === 'borrador'
             ? '<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>'
             : '';
@@ -9407,12 +9454,11 @@
               previewSharedHtml +
               '<div class="plan-loading-note is-compact">' +
                 '<strong>Abriendo planeación...</strong>' +
-                '<div class="mini">Estamos trayendo alumnos, actividades y observaciones para que abras con contexto completo.</div>' +
+                '<div class="mini">Estamos preparando alumnos y actividades para que abras con contexto operativo.</div>' +
                 '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
                   '<span class="plan-loading-pill">Alumnos</span>' +
                   '<span class="plan-loading-pill">Actividades</span>' +
-                  '<span class="plan-loading-pill">Observaciones</span>' +
                 '</div>' +
               '</div>' +
               '<div class="actions" style="margin-top:14px;">' +
@@ -9440,12 +9486,11 @@
               localFeedbackHtml +
               '<div class="plan-loading-note">' +
                 '<strong>Abriendo planeación...</strong>' +
-                '<div class="mini">Se están cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
+                '<div class="mini">Se están cargando alumnos y actividades para que puedas empezar a revisar de inmediato.</div>' +
                 '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
                   '<span class="plan-loading-pill">Alumnos</span>' +
                   '<span class="plan-loading-pill">Actividades</span>' +
-                  '<span class="plan-loading-pill">Observaciones</span>' +
                 '</div>' +
               '</div>' +
             '</article>'
@@ -9908,7 +9953,7 @@
               '<div class="alert-summary">' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
               (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' Â· ')) + '</div>' : '') +
             '</div>' +
-        (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button" onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
+        (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button"' + buildOpenPlanPrefetchIntentAttrs(plan.planeacion_id) + ' onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
           '</div>'
         );
       }).join('');
@@ -12861,6 +12906,7 @@
         planAction,
         saveActivityProgress,
         togglePlanOpen,
+        prioritizePlaneacionDetailPrefetch,
         editPlan,
         approvePlan,
         rejectPlan,
