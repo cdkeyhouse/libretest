@@ -7965,6 +7965,15 @@
       if (updatedPlan && typeof updatedPlan === 'object') {
         Object.keys(updatedPlan).forEach((key) => {
           if (key === 'actividades') return;
+          if (
+            key === 'alumnos' &&
+            Array.isArray(updatedPlan.alumnos) &&
+            updatedPlan.alumnos.length === 0 &&
+            Array.isArray(nextPlan.alumnos) &&
+            nextPlan.alumnos.length > 0
+          ) {
+            return;
+          }
           if (updatedPlan[key] === undefined) return;
           nextPlan[key] = updatedPlan[key];
         });
