@@ -2292,6 +2292,7 @@
       if (includeStats) renderStats();
       if (canUseAdminShell()) renderAdminShell();
       if (includePlaneaciones && isPlaneacionesSurfaceVisible()) {
+        renderPlaneacionesFilterSelects();
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
         scheduleVisiblePlaneacionDetailPrefetch();
@@ -2583,9 +2584,9 @@
       if (reportPanel) reportPanel.hidden = facilitatorMode || adminMode || !canViewReportes;
       if (estadoFilter) {
         Array.from(estadoFilter.options).forEach((option) => {
-          option.hidden = facilitatorMode && ['rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(option.value);
+          option.hidden = facilitatorMode && ['borrador_pendiente_aprobacion', 'rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(option.value);
         });
-        if (facilitatorMode && ['rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(estadoFilter.value)) {
+        if (facilitatorMode && ['borrador_pendiente_aprobacion', 'rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(estadoFilter.value)) {
           estadoFilter.value = '';
         }
       }
@@ -6794,6 +6795,25 @@
       return [...state.catalogos.semanas].sort((a, b) => toYmdFrontend_(a.fecha_inicio).localeCompare(toYmdFrontend_(b.fecha_inicio)));
     }
 
+    function getPlaneacionesFilterSemanas() {
+      if (getCurrentRole() !== 'facilitador') return getSortedSemanas();
+      const weekIds = new Set(getVisiblePlaneaciones()
+        .map((plan) => String(plan && plan.semana_id || '').trim())
+        .filter(Boolean));
+      if (!weekIds.size) return [];
+      const known = getSortedSemanas().filter((semana) => weekIds.has(String(semana && semana.semana_id || '').trim()));
+      const knownIds = new Set(known.map((semana) => String(semana && semana.semana_id || '').trim()));
+      const unknown = Array.from(weekIds)
+        .filter((semanaId) => !knownIds.has(semanaId))
+        .map((semanaId) => ({
+          semana_id: semanaId,
+          fecha_inicio: '',
+          fecha_fin: '',
+          nombre_visible: semanaId
+        }));
+      return known.concat(unknown);
+    }
+
     function getWeekById(semanaId) {
       return state.catalogos.semanas.find((item) => item.semana_id === semanaId) || null;
     }
@@ -6876,6 +6896,25 @@
         cerrada: 'Cerrada',
         archivada: 'Archivada'
       })[String(status || '').trim()] || String(status || 'Sin estado');
+    }
+
+    function getPlanStatusFilterOptions() {
+      const statusOrder = ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente', 'cerrada', 'archivada'];
+      if (getCurrentRole() !== 'facilitador') {
+        return statusOrder.map((status) => ({
+          value: status,
+          label: getPlanStatusLabel(status)
+        }));
+      }
+      const visibleStatuses = new Set(getVisiblePlaneaciones()
+        .map((plan) => String(plan && plan.estado || '').trim())
+        .filter(Boolean));
+      return ['borrador', 'activa']
+        .filter((status) => visibleStatuses.has(status))
+        .map((status) => ({
+          value: status,
+          label: getPlanStatusLabel(status)
+        }));
     }
 
     function getPlanLocalSaveState(plan) {
@@ -8691,7 +8730,7 @@
       if (shouldRenderPlaneaciones) {
         fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
         syncPlanSubmateriaSelect();
-        fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
+        renderPlaneacionesFilterSelects();
         fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => getGrupoDisplayName(g), 'Todos los grupos');
         if (canUseAdminShell()) {
           fillSelect($('filterFacilitador'), state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)), (f) => f.facilitador_id, (f) => f.nombre_mostrado || f.nombre_completo || f.facilitador_id, 'Todos los facilitadores');
@@ -8710,6 +8749,29 @@
         const reportUi = getReportSelectionState();
         fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
         if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
+      }
+    }
+
+    function renderPlaneacionesFilterSelects() {
+      const semanaFilter = $('filterSemana');
+      const estadoFilter = $('filterEstado');
+      if (semanaFilter) {
+        fillSelect(
+          semanaFilter,
+          getPlaneacionesFilterSemanas(),
+          (semana) => String(semana && semana.semana_id || '').trim(),
+          (semana) => semana.nombre_visible || semana.semana_id,
+          'Todas las semanas'
+        );
+      }
+      if (estadoFilter) {
+        fillSelect(
+          estadoFilter,
+          getPlanStatusFilterOptions(),
+          (status) => status.value,
+          (status) => status.label,
+          'Todos los estados'
+        );
       }
     }
 
