@@ -2534,6 +2534,209 @@
         '</article>';
     }
 
+    function getAdminNotificationsModuleTemplate() {
+      return [
+        '<article class="admin-toolbar">',
+          '<div class="admin-toolbar-head">',
+            '<div class="admin-notification-head-copy">',
+              '<h3>Notificaciones globales</h3>',
+              '<p class="subtle">Gestiona y envia avisos globales para facilitadores.</p>',
+            '</div>',
+            '<div class="admin-notification-toolbar-actions">',
+              '<button id="adminNotificationFilterActiveBtn" class="btn-ghost" type="button">Ver activas</button>',
+              '<button id="adminNotificationFilterScheduledBtn" class="btn-ghost" type="button">Ver programadas</button>',
+              '<button id="adminNotificationFilterDraftBtn" class="btn-ghost" type="button">Ver borradores / archivadas</button>',
+              '<button id="adminNotificationFilterClosedBtn" class="btn-ghost" type="button">Ver cerradas</button>',
+              '<button id="adminNotificationNewBtn" class="btn-primary" type="button">Nueva notificacion</button>',
+            '</div>',
+          '</div>',
+          '<div id="adminNotificationEditor" class="admin-notification-editor" hidden>',
+            '<div class="admin-notification-section-head">',
+              '<h4 id="adminNotificationEditorTitle">Nueva notificacion</h4>',
+            '</div>',
+            '<div class="admin-notification-editor-layout">',
+              '<div class="admin-notification-editor-main">',
+                '<div>',
+                  '<label for="adminNotificationTitle">Titulo</label>',
+                  '<input id="adminNotificationTitle" type="text" maxlength="150" placeholder="Titulo">',
+                '</div>',
+                '<div>',
+                  '<label for="adminNotificationMessage">Mensaje</label>',
+                  '<textarea id="adminNotificationMessage" placeholder="Ingresa el mensaje que sera visible para los facilitadores."></textarea>',
+                '</div>',
+              '</div>',
+              '<div class="admin-notification-editor-side">',
+                '<div class="admin-notification-inline-grid">',
+                  '<div>',
+                    '<label for="adminNotificationPriority">Prioridad</label>',
+                    '<select id="adminNotificationPriority">',
+                      '<option value="normal">Normal</option>',
+                      '<option value="alta">Alta</option>',
+                    '</select>',
+                  '</div>',
+                  '<div>',
+                    '<label for="adminNotificationStart">Fecha de inicio</label>',
+                    '<input id="adminNotificationStart" type="date">',
+                  '</div>',
+                  '<div>',
+                    '<label for="adminNotificationEnd">Fecha de cierre</label>',
+                    '<input id="adminNotificationEnd" type="date">',
+                  '</div>',
+                '</div>',
+                '<div>',
+                  '<label for="adminNotificationAudience">Dirigido a</label>',
+                  '<select id="adminNotificationAudience">',
+                    '<option value="todos">Todos los facilitadores</option>',
+                    '<option value="especificos">Facilitadores especificos</option>',
+                  '</select>',
+                '</div>',
+                '<div id="adminNotificationAudienceList" class="notification-audience-checklist" hidden></div>',
+                '<div class="actions compact admin-notification-editor-actions">',
+                  '<button id="adminNotificationSaveDraftBtn" class="btn-secondary" type="button">Guardar borrador</button>',
+                  '<button id="adminNotificationPublishBtn" class="btn-primary" type="button">Publicar</button>',
+                  '<button id="adminNotificationCancelBtn" class="btn-ghost" type="button">Cancelar</button>',
+                '</div>',
+              '</div>',
+            '</div>',
+          '</div>',
+          '<div id="adminNotificationFeedback" class="inline-feedback"></div>',
+          '<div class="admin-notification-section-head">',
+            '<h4 id="adminNotificationListTitle">Notificaciones activas</h4>',
+          '</div>',
+          '<div id="adminNotificationsList" class="admin-notification-list"></div>',
+        '</article>'
+      ].join('');
+    }
+
+    function ensureAdminNotificationsModuleTemplate() {
+      const panel = $('admin-panel-notificaciones');
+      if (!panel || $('adminNotificationsList')) return false;
+      panel.innerHTML = getAdminNotificationsModuleTemplate();
+      return true;
+    }
+
+    function bindAdminNotificationsTemplateEvents() {
+      const bind = (id, eventName, handler) => {
+        const node = $(id);
+        if (!node || (node.dataset && node.dataset.adminTemplateBound)) return;
+        node.addEventListener(eventName, handler);
+        if (node.dataset) node.dataset.adminTemplateBound = '1';
+      };
+      bind('adminNotificationNewBtn', 'click', () => openNotificationEditor());
+      bind('adminNotificationFilterActiveBtn', 'click', () => setNotificationFilter('activas'));
+      bind('adminNotificationFilterScheduledBtn', 'click', () => setNotificationFilter('programadas'));
+      bind('adminNotificationFilterDraftBtn', 'click', () => setNotificationFilter('borradores'));
+      bind('adminNotificationFilterClosedBtn', 'click', () => setNotificationFilter('cerradas'));
+      bind('adminNotificationTitle', 'input', (event) => updateNotificationEditorField('titulo', event.currentTarget.value));
+      bind('adminNotificationMessage', 'input', (event) => updateNotificationEditorField('mensaje', event.currentTarget.value));
+      bind('adminNotificationPriority', 'change', (event) => updateNotificationEditorField('prioridad', event.currentTarget.value));
+      bind('adminNotificationStart', 'change', (event) => updateNotificationEditorField('fecha_inicio', event.currentTarget.value));
+      bind('adminNotificationEnd', 'change', (event) => updateNotificationEditorField('fecha_cierre', event.currentTarget.value));
+      bind('adminNotificationAudience', 'change', (event) => updateNotificationEditorField('visible_para', event.currentTarget.value));
+      bind('adminNotificationSaveDraftBtn', 'click', (event) => saveNotificationEditor(event.currentTarget, 'borrador'));
+      bind('adminNotificationPublishBtn', 'click', (event) => saveNotificationEditor(event.currentTarget, 'publicada'));
+      bind('adminNotificationCancelBtn', 'click', () => {
+        resetNotificationEditor();
+        renderNotificationsAdmin();
+      });
+    }
+
+    function getAdminReporteCicloModuleTemplate() {
+      return [
+        '<article class="admin-toolbar admin-reporte-ciclo-module">',
+          '<div class="admin-alumnos-head admin-reporte-ciclo-head">',
+            '<div class="admin-alumnos-head-copy admin-reporte-ciclo-copy">',
+              '<h3>Reporte de ciclo</h3>',
+              '<p class="subtle">Genera, regenera y monitorea el PDF academico familiar por alumno y periodo sin salir del adminShell.</p>',
+            '</div>',
+            '<div class="admin-reporte-ciclo-kpis">',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiAlumnos">0</strong><span>Alumnos</span></div>',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPeriodos">0</strong><span>Periodos</span></div>',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPdf">Sin consulta</strong><span>Ultimo estado</span></div>',
+            '</div>',
+          '</div>',
+          '<div class="admin-reporte-ciclo-layout">',
+            '<div class="admin-reporte-ciclo-main">',
+              '<div class="admin-reporte-ciclo-request">',
+                '<div class="admin-reporte-ciclo-grid">',
+                  '<div class="field"><label for="adminReportAlumno">Alumno</label><select id="adminReportAlumno"></select></div>',
+                  '<div class="field"><label for="adminReportPeriodo">Periodo</label><select id="adminReportPeriodo"></select></div>',
+                '</div>',
+                '<div class="admin-reporte-ciclo-actions actions compact">',
+                  '<button id="adminGenerateNowBtn" class="btn-primary" type="button">Solicitar / actualizar</button>',
+                  '<button id="adminRequestReportBtn" class="btn-secondary" type="button">Forzar regeneracion</button>',
+                  '<button id="adminStatusReportBtn" class="btn-ghost" type="button">Revisar estado</button>',
+                '</div>',
+                '<div class="admin-reporte-ciclo-helper subtle">El PDF se genera desde backend y puede quedar listo de inmediato o unos segundos despues, segun el estado del cache.</div>',
+              '</div>',
+              '<div class="admin-reporte-ciclo-preview-card">',
+                '<div class="admin-alumnos-section-head"><h4>Vista del documento</h4></div>',
+                '<div id="adminReportSelectionSummary" class="admin-reporte-ciclo-summary"></div>',
+                '<div class="admin-reporte-ciclo-preview">',
+                  '<div class="admin-reporte-ciclo-preview-sheet">',
+                    '<div class="admin-reporte-ciclo-preview-header"><div class="admin-reporte-ciclo-preview-logo">LA</div><div><strong>Libre Aprendiz</strong><span>Reporte academico para familias</span></div></div>',
+                    '<div class="admin-reporte-ciclo-preview-strip"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>',
+                    '<div class="admin-reporte-ciclo-preview-block"><div><strong id="adminReportPreviewAlumno">Selecciona un alumno</strong><span id="adminReportPreviewMeta">Grupo, matricula y facilitadora se resolveran aqui.</span></div><div class="admin-reporte-ciclo-badge" id="adminReportPreviewPeriodo">Periodo</div></div>',
+                    '<div class="admin-reporte-ciclo-preview-section">',
+                      '<div class="admin-reporte-ciclo-preview-section-head"><div class="admin-reporte-ciclo-dot"></div><strong>ACTIVIDADES POR MATERIA</strong><span>Estado de realizacion</span></div>',
+                      '<div class="admin-reporte-ciclo-preview-row"><span class="is-done">&#10003;</span><div>Actividad registrada del periodo</div><small>Sem 1</small></div>',
+                      '<div class="admin-reporte-ciclo-preview-row"><span class="is-pending"></span><div>Actividad pendiente o sin dato visible</div><small>Sem 2</small></div>',
+                      '<div class="admin-reporte-ciclo-preview-row"><span class="is-no">&times;</span><div>Actividad marcada como no realizada</div><small>Sem 3</small></div>',
+                    '</div>',
+                  '</div>',
+                '</div>',
+              '</div>',
+            '</div>',
+            '<aside class="admin-alumnos-panel admin-reporte-ciclo-side">',
+              '<div class="admin-alumnos-panel-head"><h4>Estado y PDF</h4></div>',
+              '<div id="adminReportResult" class="admin-reporte-ciclo-result"></div>',
+              '<div class="admin-reporte-ciclo-notes">',
+                '<div class="admin-reporte-ciclo-note"><strong>Incluye</strong><span>Encabezado institucional, datos del alumno, actividades por materia y pie familiar.</span></div>',
+                '<div class="admin-reporte-ciclo-note"><strong>No incluye</strong><span>Observaciones internas, notas de direccion, IDs tecnicos ni estados administrativos.</span></div>',
+                '<div class="admin-reporte-ciclo-note"><strong>Salida final</strong><span>PDF en Drive con URL directa para abrir y compartir dentro de la operacion escolar.</span></div>',
+              '</div>',
+            '</aside>',
+          '</div>',
+        '</article>'
+      ].join('');
+    }
+
+    function ensureAdminReporteCicloModuleTemplate() {
+      const panel = $('admin-panel-reporte-ciclo');
+      if (!panel || $('adminReportAlumno')) return false;
+      panel.innerHTML = getAdminReporteCicloModuleTemplate();
+      return true;
+    }
+
+    function bindAdminReporteCicloTemplateEvents() {
+      const bind = (id, eventName, handler) => {
+        const node = $(id);
+        if (!node || (node.dataset && node.dataset.adminTemplateBound)) return;
+        node.addEventListener(eventName, handler);
+        if (node.dataset) node.dataset.adminTemplateBound = '1';
+      };
+      bind('adminReportAlumno', 'change', (event) => {
+        setReporteSelection('alumno_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      bind('adminReportPeriodo', 'change', (event) => {
+        setReporteSelection('periodo_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      bind('adminGenerateNowBtn', 'click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
+        button: event.currentTarget,
+        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      bind('adminRequestReportBtn', 'click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
+        button: event.currentTarget,
+        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      bind('adminStatusReportBtn', 'click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
+        button: event.currentTarget,
+        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+    }
+
     function renderAdminModuleSurface(moduleName = state.activeAdminModule, options = {}) {
       if (!canUseAdminShell()) return;
       if (options.includeStats !== false) renderStats();
@@ -2745,9 +2948,11 @@
         })
           .then(() => {
             setAdminModuleLoading(nextModule, false);
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           })
           .catch(() => {
             setAdminModuleLoading(nextModule, false);
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           });
       }
       if (nextModule === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
@@ -3010,6 +3215,8 @@
     function renderNotificationsAdmin() {
       const panel = $('admin-panel-notificaciones');
       if (!panel || !canUseAdminShell()) return;
+      const rebuiltTemplate = ensureAdminNotificationsModuleTemplate();
+      if (rebuiltTemplate) bindAdminNotificationsTemplateEvents();
       const activeBtn = $('adminNotificationFilterActiveBtn');
       const scheduledBtn = $('adminNotificationFilterScheduledBtn');
       const draftBtn = $('adminNotificationFilterDraftBtn');
@@ -10218,6 +10425,8 @@
     }
 
     function renderAdminReporteCicloModule() {
+      const rebuiltTemplate = ensureAdminReporteCicloModuleTemplate();
+      if (rebuiltTemplate) bindAdminReporteCicloTemplateEvents();
       const ui = getReportSelectionState();
       const alumnos = state.catalogos.alumnos || [];
       const periodos = getAvailablePeriods();
