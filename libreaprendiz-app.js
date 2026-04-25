@@ -5923,7 +5923,7 @@
                     const alumno = row.alumno || {};
                     return '<span class="admin-taller-member-chip"><span>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || row.alumno_id) + '</span><span class="mini">' + escapeHtml(getGrupoNombre(alumno.grupo_id)) + '</span></span>';
                   }).join('') + '</div>'
-                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso rÃ¡pido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
+                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso rapido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
             '</div>',
             (membershipOpen
               ? '<div class="admin-taller-membership-head">' +
