@@ -681,19 +681,19 @@
 
       if (!data) {
         return compact
-          ? '<div class="subtle">TodavÃ­a no hay una consulta de reporte.</div>'
-          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>AÃºn no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y perÃ­odo para generar o revisar el PDF.</div></div></div>';
+          ? '<div class="subtle">Todavia no hay una consulta de reporte.</div>'
+          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>Aun no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y periodo para generar o revisar el PDF.</div></div></div>';
       }
 
       const status = String(data.status || data.estado || '').trim().toLowerCase();
       const rows = [
-        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' Â· ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
-        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>PerÃ­odo</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
+        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' - ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
+        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Periodo</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
         data.url ? '<div class="admin-reporte-ciclo-result-row"><span>PDF</span><strong><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></strong></div>' : '',
-        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>VersiÃ³n de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
-        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>VersiÃ³n PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
+        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Version de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
+        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>Version PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
         data.started_at ? '<div class="admin-reporte-ciclo-result-row"><span>Inicio</span><strong>' + escapeHtml(formatFechaHumana(data.started_at)) + '</strong></div>' : '',
-        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>FinalizaciÃ³n</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
+        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>Finalizacion</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
         data.next_retry_at ? '<div class="admin-reporte-ciclo-result-row"><span>Reintento</span><strong>' + escapeHtml(formatFechaHumana(data.next_retry_at)) + '</strong></div>' : '',
         data.error_message ? '<div class="admin-reporte-ciclo-result-row"><span>Error</span><strong>' + escapeHtml(data.error_message) + '</strong></div>' : '',
         data._meta && data._meta.message ? '<div class="admin-reporte-ciclo-result-row"><span>Info</span><strong>' + escapeHtml(data._meta.message) + '</strong></div>' : '',
@@ -704,8 +704,8 @@
         return [
           '<div><strong>Estado:</strong> ' + escapeHtml(getReportStatusLabel(status)) + '</div>',
           data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
-          data && data.version_datos ? '<div><strong>VersiÃ³n datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
-          data && data.version_pdf ? '<div><strong>VersiÃ³n PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
+          data && data.version_datos ? '<div><strong>Version datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
+          data && data.version_pdf ? '<div><strong>Version PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
           data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
           data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
           Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
@@ -2483,12 +2483,12 @@
         case 'planeaciones':
           return {
             title: 'Cargando planeaciones',
-            body: 'Preparamos filtros y herramientas del mÃ³dulo sin frenar la vista principal.'
+            body: 'Preparamos filtros y herramientas del modulo sin frenar la vista principal.'
           };
         case 'alumnos':
           return {
             title: 'Cargando alumnos',
-            body: 'Se estÃ¡n hidratando grupos y fichas base para que el listado responda mÃ¡s rÃ¡pido.'
+            body: 'Se estan hidratando grupos y fichas base para que el listado responda mas rapido.'
           };
         case 'facilitadores':
           return {
@@ -2498,27 +2498,27 @@
         case 'materias':
           return {
             title: 'Cargando materias',
-            body: 'Se estÃ¡n organizando materias base y variantes activas.'
+            body: 'Se estan organizando materias base y variantes activas.'
           };
         case 'talleres':
           return {
             title: 'Cargando talleres',
-            body: 'Preparamos catÃ¡logo base y relaciones activas sin congelar la navegaciÃ³n.'
+            body: 'Preparamos catalogo base y relaciones activas sin congelar la navegacion.'
           };
         case 'notificaciones':
           return {
             title: 'Cargando notificaciones',
-            body: 'Se estÃ¡ preparando la bandeja activa y el editor institucional.'
+            body: 'Se esta preparando la bandeja activa y el editor institucional.'
           };
         case 'reporte-ciclo':
           return {
             title: 'Cargando reporte de ciclo',
-            body: 'Se estÃ¡n preparando alumnos y periodos para este mÃ³dulo.'
+            body: 'Se estan preparando alumnos y periodos para este modulo.'
           };
         default:
           return {
-            title: 'Cargando mÃ³dulo',
-            body: 'Preparamos la informaciÃ³n necesaria para mostrar este panel.'
+            title: 'Cargando modulo',
+            body: 'Preparamos la informacion necesaria para mostrar este panel.'
           };
       }
     }
@@ -3239,7 +3239,7 @@
       if (start) start.value = state.notificationEditor.fecha_inicio || '';
       if (end) end.value = state.notificationEditor.fecha_cierre || '';
       if (audience) audience.value = state.notificationEditor.visible_para || 'todos';
-      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificaciÃ³n' : 'Nueva notificaciÃ³n';
+      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificacion' : 'Nueva notificacion';
       if (listTitle) listTitle.textContent = getNotificationFilterTitle();
       const filter = (state.ui && state.ui.notificationFilter) || 'activas';
       if (activeBtn) activeBtn.classList.toggle('is-active', filter === 'activas');
@@ -3251,17 +3251,17 @@
       if (!list) return;
       const rows = getFilteredAdminNotifications();
       if (!rows.length) {
-        list.innerHTML = '<div class="empty">TodavÃ­a no hay notificaciones en esta vista.</div>';
+        list.innerHTML = '<div class="empty">Todavia no hay notificaciones en esta vista.</div>';
         return;
       }
       list.innerHTML = '<div class="admin-notification-list-table">' +
         '<div class="admin-notification-list-header">' +
-          '<div>TÃ­tulo</div>' +
+          '<div>Titulo</div>' +
           '<div>Estado</div>' +
           '<div>Vigencia</div>' +
           '<div>Prioridad</div>' +
           '<div>Audiencia</div>' +
-          '<div>Ãšltima actualizaciÃ³n</div>' +
+          '<div>Ultima actualizacion</div>' +
           '<div>Acciones</div>' +
         '</div>' +
         rows.map((row) => {
@@ -3284,7 +3284,7 @@
         }
         return '<article class="admin-notification-row' + (high ? ' is-high' : '') + '">' +
           '<div class="admin-notification-title">' +
-            '<strong>' + escapeHtml(row.titulo || 'Sin tÃ­tulo') + '</strong>' +
+            '<strong>' + escapeHtml(row.titulo || 'Sin titulo') + '</strong>' +
             '<div class="admin-notification-message mini">' + escapeHtml(row.mensaje || '') + '</div>' +
           '</div>' +
           '<div class="admin-notification-meta-stack">' +
@@ -3636,7 +3636,7 @@
           entry_id: 'seed-alta-' + alumno.alumno_id,
           tipo: 'alta',
           titulo: 'Alta de alumno',
-          detalle: 'Registro inicial del alumno en el catÃ¡logo.',
+          detalle: 'Registro inicial del alumno en el catalogo.',
           fecha: alumno.fecha_alta
         });
       }
@@ -3645,7 +3645,7 @@
           entry_id: 'seed-archivado-' + alumno.alumno_id,
           tipo: 'archivado',
           titulo: 'Alumno archivado',
-          detalle: 'Se marcÃ³ como archivado dentro del catÃ¡logo escolar.',
+          detalle: 'Se marco como archivado dentro del catalogo escolar.',
           fecha: alumno.archivado_at || alumno.fecha_baja
         });
       }
@@ -3655,7 +3655,7 @@
           entry_id: 'seed-pausa-' + alumno.alumno_id,
           tipo: 'pausa',
           titulo: 'Alumno en pausa',
-          detalle: 'El alumno quedÃ³ en pausa dentro del catÃ¡logo.',
+          detalle: 'El alumno quedo en pausa dentro del catalogo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -3664,7 +3664,7 @@
           entry_id: 'seed-inactivo-' + alumno.alumno_id,
           tipo: 'inactivo',
           titulo: 'Alumno inactivo',
-          detalle: 'El alumno quedÃ³ marcado como inactivo en el catÃ¡logo.',
+          detalle: 'El alumno quedo marcado como inactivo en el catalogo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -3835,7 +3835,7 @@
       ensureLoggedIn();
       const editor = state.alumnosUi.editor || createEmptyAlumnoEditorState();
       const fullName = composeAlumnoNombreCompleto(editor.nombres, editor.apellidos);
-      if (!String(editor.matricula || '').trim()) throw new Error('Captura la matrÃ­cula del alumno.');
+      if (!String(editor.matricula || '').trim()) throw new Error('Captura la matricula del alumno.');
       if (!fullName) throw new Error('Captura el nombre del alumno.');
       if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
       const editing = state.alumnosUi.editorMode === 'edit';
@@ -3843,7 +3843,7 @@
       const existingAlumno = editing ? getAlumnoById(existingId) : null;
       const previousStatus = existingAlumno ? getAlumnoStatusVisual(existingAlumno) : 'activo';
       const nextStatus = getAlumnoStatusVisual({ estatus: String(editor.estatus || 'activo').trim() });
-      if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasarÃ¡ a pausa y seguirÃ¡ visible dentro del catÃ¡logo administrativo.')) return;
+      if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasara a pausa y seguira visible dentro del catalogo administrativo.')) return;
       await handleAction('guardarAlumno', async () => {
         const payload = {
           alumno_id: existingId,
@@ -3864,7 +3864,7 @@
             savedId,
             editing ? 'edicion' : 'alta',
             editing ? 'Ficha actualizada' : 'Alta de alumno',
-            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agregÃ³ un nuevo alumno al catÃ¡logo.',
+            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agrego un nuevo alumno al catalogo.',
             new Date().toISOString()
           );
           invalidateAlumnoHistorialCache(savedId);
@@ -3946,11 +3946,11 @@
 
     function pauseAlumno(alumnoId, button) {
       return updateAlumnoStatus(alumnoId, 'pausa', button, {
-        confirmText: 'El alumno quedarÃ¡ en pausa y seguirÃ¡ visible dentro del catÃ¡logo administrativo.',
+        confirmText: 'El alumno quedara en pausa y seguira visible dentro del catalogo administrativo.',
         actionKey: 'guardarAlumno:pausa',
         historyType: 'pausa',
         historyTitle: 'Alumno en pausa',
-        historyDetail: 'Se pausÃ³ temporalmente al alumno dentro del catÃ¡logo.',
+        historyDetail: 'Se pauso temporalmente al alumno dentro del catalogo.',
         successMessage: 'Alumno en pausa.'
       });
     }
@@ -4019,7 +4019,7 @@
           archivado_at: archivedAt
         });
         bumpAlumnosSourceRevision();
-        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retirÃ³ del listado activo del catÃ¡logo.', new Date().toISOString());
+        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiro del listado activo del catalogo.', new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
@@ -4038,11 +4038,11 @@
         return;
       }
       return updateAlumnoStatus(alumnoId, 'activo', button, {
-        confirmText: 'El alumno volverÃ¡ al catÃ¡logo activo.',
+        confirmText: 'El alumno volvera al catalogo activo.',
         actionKey: 'reactivarAlumno',
         historyType: 'reactivado',
         historyTitle: 'Alumno reactivado',
-        historyDetail: 'Se devolviÃ³ al alumno al catÃ¡logo activo.',
+        historyDetail: 'Se devolvio al alumno al catalogo activo.',
         successMessage: 'Alumno reactivado.'
       });
     }
@@ -4198,13 +4198,13 @@
         '<article class="admin-toolbar admin-alumnos-module">',
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
-              '<h3>CatÃ¡logo de alumnos</h3>',
-              '<p class="subtle">Administra altas, ediciÃ³n, cambios de grupo y estatus del catÃ¡logo escolar.</p>',
+              '<h3>Cat&aacute;logo de alumnos</h3>',
+              '<p class="subtle">Administra altas, edici&oacute;n, cambios de grupo y estatus del cat&aacute;logo escolar.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminAlumnosSearch">',
                 '<span>Buscar</span>',
-                '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matrÃ­cula o nombre">',
+                '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matr&iacute;cula o nombre">',
               '</label>',
               '<button id="adminAlumnoNewBtn" class="btn-primary" type="button">Nuevo alumno</button>',
             '</div>',
@@ -4228,7 +4228,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminAlumnosListTitle">Alumnos activos</h4>',
-                  '<div id="adminAlumnosListMeta" class="subtle">Listado del catÃ¡logo escolar.</div>',
+                  '<div id="adminAlumnosListMeta" class="subtle">Listado del cat&aacute;logo escolar.</div>',
                 '</div>',
               '</div>',
               '<div id="adminAlumnosList" class="admin-alumnos-list"></div>',
@@ -4244,7 +4244,7 @@
                 '<div id="adminAlumnoQuickActions" class="actions compact admin-alumnos-panel-actions" hidden></div>',
                 '<div class="admin-alumnos-editor-grid">',
                   '<label class="field">',
-                    '<span>MatrÃ­cula</span>',
+                    '<span>Matr&iacute;cula</span>',
                     '<input id="adminAlumnoMatricula" type="text" maxlength="50" placeholder="Ej. A-1024">',
                   '</label>',
                   '<label class="field">',
@@ -4273,8 +4273,8 @@
                     '</select>',
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
-                    '<span>ObservaciÃ³n administrativa</span>',
-                    '<textarea id="adminAlumnoNotas" rows="4" placeholder="Notas internas para administraciÃ³n"></textarea>',
+                    '<span>Observaci&oacute;n administrativa</span>',
+                    '<textarea id="adminAlumnoNotas" rows="4" placeholder="Notas internas para administraci&oacute;n"></textarea>',
                   '</label>',
                 '</div>',
                 '<div class="actions compact admin-alumnos-panel-actions">',
@@ -4291,7 +4291,7 @@
                 '</div>',
                 '<div class="admin-alumnos-mini-grid">',
                   '<div class="admin-alumnos-readonly">',
-                    '<span>MatrÃ­cula</span>',
+                    '<span>Matr&iacute;cula</span>',
                     '<strong id="adminAlumnoCambioMatricula">-</strong>',
                   '</div>',
                   '<div class="admin-alumnos-readonly">',
@@ -4726,7 +4726,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Facilitadores</h3>',
-              '<p class="subtle">Administra accesos, asignaciones y pulso semanal del equipo acadÃ©mico.</p>',
+              '<p class="subtle">Administra accesos, asignaciones y pulso semanal del equipo acad&eacute;mico.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminFacilitadoresSearch">',
@@ -4918,7 +4918,7 @@
           '</div>',
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Alta</span><strong>' + escapeHtml(facilitador.fecha_alta ? formatFechaHumana(facilitador.fecha_alta) : 'Sin fecha') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Ãšltima actividad</span><strong>' + escapeHtml(getFacilitadorUpdatedLabel(facilitador)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Ultima actividad</span><strong>' + escapeHtml(getFacilitadorUpdatedLabel(facilitador)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Asignaciones activas</span><strong>' + escapeHtml(String(asignaciones.filter((item) => item.activa && !item.archivado_at).length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Estado operativo</span><strong>' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</strong></div>',
           '</div>',
@@ -5640,7 +5640,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Talleres</h3>',
-              '<p class="subtle">Administra el catÃ¡logo base de talleres antes de asignar alumnos o crear planeaciones por taller.</p>',
+              '<p class="subtle">Administra el cat&aacute;logo base de talleres antes de asignar alumnos o crear planeaciones por taller.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminTalleresSearch">',
@@ -5669,7 +5669,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminTalleresListTitle">Talleres activos</h4>',
-                  '<div id="adminTalleresListMeta" class="subtle">CatÃ¡logo operativo base para futuros grupos mixtos.</div>',
+                  '<div id="adminTalleresListMeta" class="subtle">Cat&aacute;logo operativo base para futuros grupos mixtos.</div>',
                 '</div>',
               '</div>',
               '<div id="adminTalleresList" class="admin-alumnos-list"></div>',
@@ -5751,7 +5751,7 @@
       if ($('adminTalleresListTitle')) $('adminTalleresListTitle').textContent = filter === 'todos' ? 'Todos los talleres' : (filter === 'archivados' ? 'Talleres archivados' : (filter === 'inactivos' ? 'Talleres inactivos' : 'Talleres activos'));
       if ($('adminTalleresListMeta')) $('adminTalleresListMeta').textContent = rows.length + ' taller(es) visibles en esta vista.';
       if (!rows.length) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay talleres para mostrar.</strong><div class="subtle">Crea el catÃ¡logo base del taller para pasar despuÃ©s a inscripciones y planeaciones.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay talleres para mostrar.</strong><div class="subtle">Crea el cat&aacute;logo base del taller para pasar despu&eacute;s a inscripciones y planeaciones.</div></div></div>';
         return;
       }
       host.innerHTML = [
@@ -5771,7 +5771,7 @@
             return [
               '<article class="admin-talleres-row' + (selected ? ' is-selected' : '') + '" onclick="selectTaller(\'' + escapeJsAttrValue(row.taller_id) + '\')">',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.taller_id) + '</div></div>',
-                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos despuÃ©s') + '</div></div>',
+                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos despues') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</div></div>',
                 '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getTallerStatusBadgeClass(row.estatus) + '">' + escapeHtml(getTallerStatusLabel(row.estatus)) + '</span></div>',
@@ -5788,7 +5788,7 @@
       if (!host) return;
       const taller = getTallerById(state.talleresUi.selectedTallerId);
       if (!taller) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">AquÃ­ verÃ¡s su materia base, responsable y el acceso rÃ¡pido para editar el catÃ¡logo.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">Aqui veras su materia base, responsable y el acceso rapido para editar el catalogo.</div></div></div>';
         return;
       }
       const materia = (state.catalogos.materias || []).find((item) => item.materia_id === taller.materia_id);
@@ -5819,7 +5819,7 @@
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Materia base</span><strong>' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Responsable</span><strong>' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Ãšltima actualizaciÃ³n</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Ultima actualizacion</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Alumnos inscritos</span><strong>' + escapeHtml(String(activeMembers.length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Grupos mezclados</span><strong>' + escapeHtml(representedGroups.length ? String(representedGroups.length) : '0') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Siguiente paso</span><strong>Inscribir alumnos</strong></div>',
@@ -5846,7 +5846,7 @@
             (membershipOpen
               ? '<div class="admin-taller-membership-head">' +
                   '<div class="admin-taller-membership-tools">' +
-                    '<label class="field" for="adminTallerMembershipSearch"><span>Buscar alumno</span><input id="adminTallerMembershipSearch" type="search" placeholder="Nombre, matrÃ­cula o grupo"></label>' +
+                    '<label class="field" for="adminTallerMembershipSearch"><span>Buscar alumno</span><input id="adminTallerMembershipSearch" type="search" placeholder="Nombre, matr&iacute;cula o grupo"></label>' +
                     '<label class="field" for="adminTallerMembershipGroup"><span>Grupo</span><select id="adminTallerMembershipGroup"></select></label>' +
                   '</div>' +
                   '<div class="admin-taller-membership-actions">' +
@@ -5861,10 +5861,10 @@
                       const alumnoId = String(row.alumno_id || '').trim();
                       return '<label class="admin-taller-membership-candidate">' +
                         '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedIds.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
-                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matrÃ­cula') + ' Â· ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
+                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matricula') + ' - ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
                       '</label>';
                     }).join('') + '</div>'
-                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta bÃºsqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta busqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
               : ''),
           '</div>',
         '</div>'
@@ -6010,7 +6010,7 @@
     }
 
     async function archiveTaller(button, tallerId) {
-      if (!window.confirm('Esto archivarÃ¡ el taller del catÃ¡logo base.')) return;
+      if (!window.confirm('Esto archivara el taller del catalogo base.')) return;
       await handleAction('archivarTaller', async () => {
         await api('archivarTaller', {
           taller_id: tallerId,
@@ -6270,7 +6270,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Materias</h3>',
-              '<p class="subtle">Administra el catÃ¡logo base y sus variantes operativas.</p>',
+              '<p class="subtle">Administra el cat&aacute;logo base y sus variantes operativas.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminMateriasSearch">',
@@ -6299,7 +6299,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminMateriasListTitle">Materias activas</h4>',
-                  '<div id="adminMateriasListMeta" class="subtle">CatÃ¡logo base, estructura y orden visual.</div>',
+                  '<div id="adminMateriasListMeta" class="subtle">Cat&aacute;logo base, estructura y orden visual.</div>',
                 '</div>',
               '</div>',
               '<div id="adminMateriasList" class="admin-alumnos-list"></div>',
@@ -6310,7 +6310,7 @@
                 '<div class="admin-alumnos-panel-head">',
                   '<div>',
                     '<h4 id="adminMateriaEditorTitle">Nueva materia</h4>',
-                    '<div class="subtle">Define catÃ¡logo base, estructura y estatus operativo.</div>',
+                    '<div class="subtle">Define cat&aacute;logo base, estructura y estatus operativo.</div>',
                   '</div>',
                 '</div>',
                 '<div class="admin-alumnos-editor-grid">',
@@ -6429,7 +6429,7 @@
       if (!host) return;
       const materia = getSelectedMateria();
       if (!materia) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">AquÃ­ aparecerÃ¡ su estructura, variantes y acciones operativas.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">Aqui aparecera su estructura, variantes y acciones operativas.</div></div></div>';
         return;
       }
       const subRows = getSubmateriasForMateria(materia.materia_id);
@@ -6524,7 +6524,7 @@
       const editor = state.materiasUi.subEditor || createEmptySubmateriaEditorState();
       return [
         '<section class="admin-alumnos-panel">',
-          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">MantÃ©n la materia base limpia y administra sus variantes aquÃ­.</div></div></div>',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">Manten la materia base limpia y administra sus variantes aqui.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
               '<span>Submateria ID</span>',
@@ -6773,7 +6773,7 @@
     }
 
     async function archiveSubmateria(button, materiaId, submateriaId) {
-      if (!window.confirm('Esta variante dejarÃ¡ de estar disponible en el catÃ¡logo operativo.')) return;
+      if (!window.confirm('Esta variante dejara de estar disponible en el catalogo operativo.')) return;
       await handleAction('archivarSubmateria', async () => {
         await api('archivarSubmateria', {
           submateria_id: submateriaId,
@@ -10453,8 +10453,8 @@
       if ($('adminReportSelectionSummary')) {
         $('adminReportSelectionSummary').innerHTML = [
           '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selecciÃ³n') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matrÃ­cula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' Â· ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>PerÃ­odo</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selecciÃ³n') + '</strong></div>'
+          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matricula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' - ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Periodo</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin seleccion') + '</strong></div>'
         ].join('');
       }
       if ($('adminReportPreviewAlumno')) {
@@ -10462,8 +10462,8 @@
       }
       if ($('adminReportPreviewMeta')) {
         $('adminReportPreviewMeta').textContent = selectedAlumno
-          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' Â· MatrÃ­cula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' Â· Documento acadÃ©mico familiar')
-          : 'Grupo, matrÃ­cula y facilitadora se resolverÃ¡n aquÃ­.';
+          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' - Matricula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' - Documento academico familiar')
+          : 'Grupo, matricula y facilitadora se resolveran aqui.';
       }
       if ($('adminReportPreviewPeriodo')) {
         $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'PerÃ­odo') : 'PerÃ­odo';
@@ -10514,10 +10514,10 @@
         : [
             { key: 'planeaciones', label: 'Planeaciones y actividades', description: 'Limpia planeaciones, relaciones y actividades.', default_selected: true },
             { key: 'seguimiento', label: 'Seguimiento, alertas y notas', description: 'Limpia observaciones, alertas y notas.', default_selected: true },
-            { key: 'evaluaciones', label: 'Evaluaciones acadÃ©micas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
+            { key: 'evaluaciones', label: 'Evaluaciones academicas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
             { key: 'reportes', label: 'Cache y artefactos de reportes', description: 'Limpia cache y permite mover PDFs/docs a papelera.', default_selected: true },
             { key: 'comunicacion', label: 'Notificaciones internas', description: 'Limpia avisos y notificaciones.', default_selected: false },
-            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar catÃ¡logos base.', default_selected: false },
+            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar catalogos base.', default_selected: false },
             { key: 'bitacora', label: 'BitÃ¡cora operativa', description: 'Limpia historial de acciones.', default_selected: false }
           ];
       return available;
@@ -10587,7 +10587,7 @@
               '<span class="admin-config-pill">AuditorÃ­a final</span>',
             '</div>',
             lastReset
-              ? ('<div class="admin-note">Ãšltimo reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
+              ? ('<div class="admin-note">Ultimo reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
               : '<div class="admin-note">AÃºn no hay un reset tÃ©cnico registrado en este entorno.</div>',
           '</article>',
           '<div class="admin-config-grid">',
