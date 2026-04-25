@@ -9063,7 +9063,7 @@
       }
 
       if (!entriesToRender.length) {
-        host.innerHTML = '<div class="empty">TodavÃ­a no hay planeaciones para los filtros actuales.</div>';
+        host.innerHTML = '<div class="empty">Todavía no hay planeaciones para los filtros actuales.</div>';
         return;
       }
 
@@ -9593,7 +9593,7 @@
     function buildPlaneacionesLoadingEmptyState() {
       return '<div class="plan-list-loading-shell">' +
         '<div class="plan-list-loading-copy"><span>Revisando si tienes planeaciones activas...</span></div>' +
-        '<div class="empty">Si no tienes planeaciones abiertas, en un momento verÃ¡s el estado vacÃ­o real.</div>' +
+        '<div class="empty">Si no tienes planeaciones abiertas, en un momento verás el estado vacío real.</div>' +
       '</div>';
     }
 
