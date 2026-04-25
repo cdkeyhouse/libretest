@@ -10777,7 +10777,8 @@
 
     async function planAction(button, planId, action) {
       await handleAction(action, async () => {
-        const shouldCloseOpenCard = false;
+        const shouldCloseOpenCard = action === 'activarPlaneacion' &&
+          String(state.openPlanId || '').trim() === String(planId || '').trim();
         const previousPlan = getPlanById(planId);
         if (!previousPlan) throw new Error('Planeación no encontrada.');
         if (action === 'activarPlaneacion') {
@@ -10793,6 +10794,10 @@
           }
         }
         const previousPlanSnapshot = previousPlan ? cloneJsonSafe(previousPlan, previousPlan) : null;
+        const previousOpenPlanId = state.openPlanId;
+        const previousOpenPlanDraft = state.openPlanDraft
+          ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
+          : null;
         if (action === 'activarPlaneacion' && previousPlan) {
           const optimisticPlan = applyOptimisticPlanPatch(planId, {
             estado: 'activa',
@@ -10801,14 +10806,10 @@
             localState: 'activating',
             localMessage: 'Sincronizando activación...',
             snapshotKind: 'planeacion_activando_local',
-            forceLocalMaterialAlerts: true
+            forceLocalMaterialAlerts: true,
+            closeOpenCard: shouldCloseOpenCard
           });
           if (optimisticPlan) focusPlaneacionCardSoon(planId);
-          setBanner('La planeación ya aparece activa. Sincronizando...', 'info');
-        }
-        if (shouldCloseOpenCard) {
-          state.openPlanId = '';
-          state.openPlanDraft = null;
         }
         let response = null;
         try {
@@ -10816,6 +10817,8 @@
         } catch (err) {
           if (action === 'activarPlaneacion' && previousPlanSnapshot) {
             upsertPlaneacionRow(previousPlanSnapshot);
+            state.openPlanId = previousOpenPlanId;
+            state.openPlanDraft = previousOpenPlanDraft;
             persistCurrentBootSnapshot('planeacion_activacion_revertida');
             renderPlaneacionesList();
           }
@@ -10833,7 +10836,8 @@
             localState: '',
             localMessage: '',
             snapshotKind: 'planeacion_activacion_confirmada',
-            forceLocalMaterialAlerts: true
+            forceLocalMaterialAlerts: true,
+            closeOpenCard: shouldCloseOpenCard
           });
           refreshPlaneacionesAlertsDeferred({
             force: true,
