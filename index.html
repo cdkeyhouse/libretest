@@ -3275,6 +3275,28 @@
       background: rgba(237, 251, 245, 0.95);
       color: #0f7d5d;
     }
+    .plan-field-error {
+      margin-top: 8px;
+      color: var(--danger);
+      font-size: 0.84rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .plan-field-error[hidden] {
+      display: none;
+    }
+    input.plan-field-invalid,
+    select.plan-field-invalid,
+    textarea.plan-field-invalid {
+      border-color: rgba(179, 59, 46, 0.72) !important;
+      box-shadow: 0 0 0 3px rgba(179, 59, 46, 0.12) !important;
+    }
+    .checklist.plan-field-invalid,
+    #planActivitiesList.plan-field-invalid {
+      border-radius: 18px;
+      outline: 2px solid rgba(179, 59, 46, 0.45);
+      outline-offset: 4px;
+    }
     .actions.compact {
       gap: 10px;
       margin-top: 10px;
@@ -4690,6 +4712,13 @@
     .action-toast.success { color: var(--la-lime) !important; border-color: rgba(184,216,50,0.30) !important; }
     .action-toast.error { color: #ff8fb3 !important; border-color: rgba(232,25,106,0.32) !important; }
     .action-toast.warn { color: #ffc980 !important; border-color: rgba(240,123,32,0.32) !important; }
+    .plan-field-error { color: #ff8fb3 !important; }
+    input.plan-field-invalid,
+    select.plan-field-invalid,
+    textarea.plan-field-invalid {
+      border-color: rgba(232,25,106,0.58) !important;
+      box-shadow: 0 0 0 3px rgba(232,25,106,0.16) !important;
+    }
 
     button {
       box-shadow: none !important;

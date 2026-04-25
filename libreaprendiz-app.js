@@ -6710,6 +6710,7 @@
         lockedSemanaId: '',
         lockedGrupoId: '',
         selectedSubmateriaId: '',
+        validationErrors: {},
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: [createEmptyActivityDraft()]
@@ -6972,6 +6973,105 @@
 
     function getSelectedPlanAlumnos() {
       return Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+    }
+
+    function createPlanEditorValidationError(message, fieldId) {
+      const error = new Error(message);
+      error.isPlanEditorValidation = true;
+      error.focusTargetId = fieldId || '';
+      return error;
+    }
+
+    function getPlanEditorValidationErrors() {
+      if (!state.planEditor) return {};
+      if (!state.planEditor.validationErrors || typeof state.planEditor.validationErrors !== 'object') {
+        state.planEditor.validationErrors = {};
+      }
+      return state.planEditor.validationErrors;
+    }
+
+    function getPlanEditorFieldErrorId(fieldId) {
+      return 'planFieldError-' + String(fieldId || '').trim();
+    }
+
+    function getPlanEditorFieldErrorHost(fieldId) {
+      const target = $(fieldId);
+      if (!target) return null;
+      if (fieldId === 'planGruposChecklist' || fieldId === 'planAlumnosChecklist' || fieldId === 'planActivitiesList') {
+        return target.parentElement || target;
+      }
+      return target.closest('.plan-date-detected-field') || target.parentElement || target;
+    }
+
+    function ensurePlanEditorFieldErrorNode(fieldId) {
+      const normalizedFieldId = String(fieldId || '').trim();
+      if (!normalizedFieldId) return null;
+      let node = $(getPlanEditorFieldErrorId(normalizedFieldId));
+      if (node) return node;
+      const host = getPlanEditorFieldErrorHost(normalizedFieldId);
+      if (!host) return null;
+      node = document.createElement('div');
+      node.id = getPlanEditorFieldErrorId(normalizedFieldId);
+      node.className = 'plan-field-error';
+      node.setAttribute('role', 'alert');
+      node.hidden = true;
+      host.appendChild(node);
+      return node;
+    }
+
+    function renderPlanEditorValidation() {
+      const errors = getPlanEditorValidationErrors();
+      ['planFecha', 'planMateria', 'planSubmateria', 'planGruposChecklist', 'planAlumnosChecklist', 'planActivitiesList'].forEach((fieldId) => {
+        const target = $(fieldId);
+        if (!target) return;
+        const message = String(errors[fieldId] || '').trim();
+        const node = ensurePlanEditorFieldErrorNode(fieldId);
+        if (node) {
+          node.textContent = message;
+          node.hidden = !message;
+        }
+        target.classList.toggle('plan-field-invalid', !!message);
+        if (message) {
+          target.setAttribute('aria-invalid', 'true');
+          if (node) target.setAttribute('aria-describedby', node.id);
+        } else {
+          target.removeAttribute('aria-invalid');
+          if (node && target.getAttribute('aria-describedby') === node.id) {
+            target.removeAttribute('aria-describedby');
+          }
+        }
+      });
+    }
+
+    function clearPlanEditorValidation(fieldId) {
+      const errors = getPlanEditorValidationErrors();
+      if (fieldId) {
+        delete errors[String(fieldId || '').trim()];
+      } else {
+        state.planEditor.validationErrors = {};
+      }
+      renderPlanEditorValidation();
+    }
+
+    function showPlanEditorValidationError(error) {
+      if (!(error && error.isPlanEditorValidation)) return false;
+      const fieldId = String(error.focusTargetId || '').trim();
+      if (!fieldId) return false;
+      const errors = getPlanEditorValidationErrors();
+      Object.keys(errors).forEach((key) => delete errors[key]);
+      errors[fieldId] = error.message || 'Revisa este campo.';
+      if (state.ui) state.ui.planBuilderExpanded = true;
+      renderPlanBuilderVisibility();
+      renderPlanEditorValidation();
+      const target = $(fieldId);
+      const scrollTarget = getPlanEditorFieldErrorHost(fieldId) || target || $('planBuilderCard');
+      if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
+        scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (target && typeof target.focus === 'function' && !['planGruposChecklist', 'planAlumnosChecklist', 'planActivitiesList'].includes(fieldId)) {
+        window.setTimeout(() => target.focus({ preventScroll: true }), 120);
+      }
+      return true;
     }
 
     function resetPlanEditor() {
@@ -8304,6 +8404,7 @@
       const input = event && event.currentTarget ? event.currentTarget : $('planFecha');
       if (!input) return;
       if ($('planFecha') && $('planFecha') !== input) $('planFecha').value = input.value || '';
+      clearPlanEditorValidation('planFecha');
       renderPlanWeekResolved();
     }
 
@@ -8409,6 +8510,8 @@
     function handlePlanGroupChecklistChange(event) {
       const input = event && event.target;
       if (!input || input.type !== 'checkbox') return;
+      clearPlanEditorValidation('planGruposChecklist');
+      clearPlanEditorValidation('planAlumnosChecklist');
       const selected = applyGroupSelectionToAlumnoSet(new Set(getSelectedPlanAlumnos()), input.value, !!input.checked);
       renderPlanAlumnosChecklist(selected);
     }
@@ -8483,6 +8586,7 @@
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
       renderPlanBuilderVisibility();
+      renderPlanEditorValidation();
     }
 
     function renderBaseSelects(options = {}) {
@@ -8523,15 +8627,18 @@
     function updateEditorActivityField(index, field, value) {
       if (!state.planEditor.activities[index]) return;
       state.planEditor.activities[index][field] = value;
+      clearPlanEditorValidation('planActivitiesList');
     }
 
     function addEditorActivity() {
+      clearPlanEditorValidation('planActivitiesList');
       state.planEditor.activities.push(createEmptyActivityDraft());
       renderPlanActivitiesEditor();
     }
 
     function removeEditorActivity(index) {
       if (state.planEditor.activities.length <= 1) return;
+      clearPlanEditorValidation('planActivitiesList');
       state.planEditor.activities.splice(index, 1);
       renderPlanActivitiesEditor();
     }
@@ -8539,6 +8646,7 @@
     function moveEditorActivity(index, direction) {
       const target = index + direction;
       if (target < 0 || target >= state.planEditor.activities.length) return;
+      clearPlanEditorValidation('planActivitiesList');
       const copy = [...state.planEditor.activities];
       const temp = copy[index];
       copy[index] = copy[target];
@@ -8554,6 +8662,7 @@
     }
 
     function toggleAllVisibleAlumnos(checked) {
+      clearPlanEditorValidation('planAlumnosChecklist');
       Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
         input.checked = checked;
       });
@@ -8561,6 +8670,8 @@
 
     function toggleAllGroups(checked) {
       if (state.planEditor.mode === 'edit') return;
+      clearPlanEditorValidation('planGruposChecklist');
+      clearPlanEditorValidation('planAlumnosChecklist');
       Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
         input.checked = checked;
       });
@@ -10326,6 +10437,7 @@
       if (state.ui && state.ui.planeacionesCatalogosLoading) {
         throw new Error('Espera a que terminen de cargar materias y grupos.');
       }
+      clearPlanEditorValidation();
       const hasAdminPower = canUseAdminShell();
       const editorMode = state.planEditor.mode;
       const fallbackDate = editorMode === 'edit'
@@ -10333,23 +10445,23 @@
         : '';
       const fechaPlaneacion = $('planFecha').value || fallbackDate;
       const semana = getWeekByDateOrDraft(fechaPlaneacion);
-      if (!semana) throw new Error('Selecciona una fecha valida para construir la semana.');
+      if (!semana) throw createPlanEditorValidationError('Selecciona una fecha valida para construir la semana.', 'planFecha');
       const materiaId = String($('planMateria').value || '').trim();
       const fraseSemana = $('planFrase').value.trim();
-      if (!materiaId) throw new Error('Selecciona una materia.');
+      if (!materiaId) throw createPlanEditorValidationError('Selecciona una materia.', 'planMateria');
       const selectedSubmateriaId = $('planSubmateria') ? $('planSubmateria').value : '';
       if (materiaRequiresPlanSubmateria(materiaId) && !selectedSubmateriaId) {
-        throw new Error('Selecciona una submateria.');
+        throw createPlanEditorValidationError('Selecciona una submateria.', 'planSubmateria');
       }
       const grupoIds = state.planEditor.mode === 'edit'
         ? (hasAdminPower ? getSelectedGroupIds() : [state.planEditor.lockedGrupoId])
         : getSelectedGroupIds();
-      if (!grupoIds.length) throw new Error('Selecciona al menos un grupo.');
+      if (!grupoIds.length) throw createPlanEditorValidationError('Selecciona al menos un grupo.', 'planGruposChecklist');
       if (editorMode === 'edit' && hasAdminPower && grupoIds.length !== 1) {
-        throw new Error('AdministraciÃ³n debe seleccionar exactamente un grupo al editar una planeaciÃ³n.');
+        throw createPlanEditorValidationError('Administracion debe seleccionar exactamente un grupo al editar una planeacion.', 'planGruposChecklist');
       }
       const alumnosIds = getSelectedPlanAlumnos();
-      if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
+      if (!alumnosIds.length) throw createPlanEditorValidationError('Selecciona al menos un alumno.', 'planAlumnosChecklist');
       const includeSeguimientoOnEditor = canUseAdminShell() && editorMode === 'edit';
       const usePlaneacionOutboxFeedback = !hasAdminPower && isPlaneacionOutboxEnabled();
       const actividades = state.planEditor.activities
@@ -10362,11 +10474,11 @@
           last_known_updated_at: activity.last_known_updated_at || ''
         }))
         .filter((activity) => activity.texto);
-      if (!actividades.length) throw new Error('Captura al menos una actividad.');
+      if (!actividades.length) throw createPlanEditorValidationError('Captura al menos una actividad.', 'planActivitiesList');
       if (includeSeguimientoOnEditor) {
         actividades.forEach((activity, index) => {
           if (activity.realizada === 'no' && !activity.comentario_cierre) {
-            throw new Error('La actividad ' + (index + 1) + ' necesita comentario porque no se realizÃ³.');
+            throw createPlanEditorValidationError('La actividad ' + (index + 1) + ' necesita comentario porque no se realizo.', 'planActivitiesList');
           }
         });
       }
@@ -10758,6 +10870,7 @@
             setBanner('Tu sesiÃ³n expirÃ³ o ya no es vÃ¡lida. Vuelve a iniciar sesiÃ³n.', 'error', { anchor: feedbackAnchor });
             return;
           }
+          if (showPlanEditorValidationError(err)) return;
           const handled = typeof options.onError === 'function'
             ? options.onError(err, { anchor: feedbackAnchor, button })
             : false;
@@ -12860,13 +12973,17 @@
       $('planFecha').addEventListener('input', handlePlanFechaChanged);
       $('planFecha').addEventListener('change', handlePlanFechaChanged);
       $('planMateria').addEventListener('change', () => {
+        clearPlanEditorValidation('planMateria');
+        clearPlanEditorValidation('planSubmateria');
         state.planEditor.selectedSubmateriaId = '';
         syncPlanSubmateriaSelect('');
       });
       if ($('planSubmateria')) $('planSubmateria').addEventListener('change', (event) => {
+        clearPlanEditorValidation('planSubmateria');
         state.planEditor.selectedSubmateriaId = event.currentTarget.value || '';
       });
       $('planGruposChecklist').addEventListener('change', handlePlanGroupChecklistChange);
+      $('planAlumnosChecklist').addEventListener('change', () => clearPlanEditorValidation('planAlumnosChecklist'));
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
       $('evaMateria').addEventListener('change', renderEvaluationDependencies);
       $('filterAlumnoSearch').addEventListener('change', syncAlumnoFilterFromInput);
