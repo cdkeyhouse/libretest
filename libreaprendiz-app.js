@@ -6775,10 +6775,9 @@
       const localState = getPlanLocalSaveState(plan);
       const baseClass = String((plan && plan.estado) || '').trim();
       if (localState === 'creating') {
-        const isActiveTarget = String((plan && plan.estado) || '').trim() === 'activa';
         return {
-          className: ('is-local-pending ' + baseClass).trim(),
-          label: isActiveTarget ? 'Activando...' : 'Creando...'
+          className: baseClass,
+          label: getPlanStatusLabel(plan && plan.estado)
         };
       }
       if (localState === 'saving') {
@@ -6812,7 +6811,7 @@
       if (localState === 'saved') return '';
       if (!message) return '';
       const compactLabel = ({
-        creating: 'Creando',
+        creating: 'Sincronizando',
         saving: 'Sincronizando',
         activating: 'Sincronizando',
         sync_error: 'Pendiente'
@@ -7938,7 +7937,7 @@
           boot_detail_loaded: true,
           obs_loaded: false,
           _local_save_state: 'creating',
-          _local_save_message: 'Creando planeaciÃ³n...'
+          _local_save_message: 'Sincronizando planeación...'
         };
       });
     }
@@ -9248,7 +9247,7 @@
           const isPendingCreation = isPlaneacionPendingCreation(plan);
           const localPending = isPlaneacionLocalSavePending(plan);
           const openButtonHtml = isPendingCreation
-            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Creando...</button>'
+            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Sincronizando...</button>'
             : '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
           const quickActivateButton = !localPending && plan.estado === 'borrador'
             ? '<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>'
@@ -10338,7 +10337,7 @@
       } else if (optimisticCreatedPlans.length) {
         upsertPlaneacionesRows(optimisticCreatedPlans);
         resetPlanEditor();
-        state.openPlanId = optimisticCreatedIds[0] || '';
+        state.openPlanId = '';
         state.openPlanDraft = null;
         persistCurrentBootSnapshot('planeacion_editor_creando');
         focusPlaneacionCardSoon(optimisticCreatedIds[0]);
