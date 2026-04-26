@@ -8841,6 +8841,7 @@
         frase_semana: selectedPlan.frase_semana || '',
         activities: (selectedPlan.actividades || []).length ? (selectedPlan.actividades || []).map((actividad) => ({
           key: actividad.actividad_id || uid('ACTSHR'),
+          actividad_id: actividad.actividad_id || '',
           texto: actividad.texto || '',
           material_en_carpeta: normalizeMaterialStatus(actividad.material_en_carpeta),
           realizada: normalizeRealizadaStatus(actividad.realizada),
@@ -10389,30 +10390,36 @@
           '<div class="card-head inline-head">' +
             '<div><label>Actividades</label></div>' +
           '</div>' +
-          '<div class="stack">' + (draft.activities || []).map((activity, index) => (
-            '<div class="activity-editor">' +
-              '<div class="activity-editor-top">' +
-                '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
-                '<div class="actions compact">' +
-                  '<button class="btn-ghost" type="button" onclick="removeMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ')">Quitar</button>' +
+          '<div class="stack">' + (draft.activities || []).map((activity, index) => {
+            const activityId = String((activity && (activity.actividad_id || activity.key)) || '').trim();
+            const materialFieldId = activityId ? ' id="activity-material-' + escapeHtml(activityId) + '"' : '';
+            const realizadaFieldId = activityId ? ' id="activity-realizada-' + escapeHtml(activityId) + '"' : '';
+            const comentarioFieldId = activityId ? ' id="activity-comment-' + escapeHtml(activityId) + '"' : '';
+            return (
+              '<div class="activity-editor">' +
+                '<div class="activity-editor-top">' +
+                  '<span class="activity-chip">Actividad ' + (index + 1) + '</span>' +
+                  '<div class="actions compact">' +
+                    '<button class="btn-ghost" type="button" onclick="removeMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ')">Quitar</button>' +
+                  '</div>' +
                 '</div>' +
-              '</div>' +
-              '<textarea onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
-              '<div class="activity-inline-grid">' +
-                '<div><label>Material compartido</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'material_en_carpeta\', this.value)">' +
-                  '<option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
-                  '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
-                  '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
-                '</select></div>' +
-                '<div><label>¿Se realizó?</label><select onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
-                  '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
-                  '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
-                  '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
-                '</select></div>' +
-                '<div><label>Comentario compartido</label><input type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'comentario_cierre\', this.value)"></div>' +
-              '</div>' +
-            '</div>'
-          )).join('') + '</div>' +
+                '<textarea onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'texto\', this.value)">' + escapeHtml(activity.texto || '') + '</textarea>' +
+                '<div class="activity-inline-grid">' +
+                  '<div><label>Material compartido</label><select' + materialFieldId + ' onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'material_en_carpeta\', this.value)">' +
+                    '<option value="no_requiere"' + (activity.material_en_carpeta === 'no_requiere' ? ' selected' : '') + '>No requiere</option>' +
+                    '<option value="listo"' + (activity.material_en_carpeta === 'listo' ? ' selected' : '') + '>Listo</option>' +
+                    '<option value="no_listo"' + (activity.material_en_carpeta === 'no_listo' ? ' selected' : '') + '>No listo</option>' +
+                  '</select></div>' +
+                  '<div><label>¿Se realizó?</label><select' + realizadaFieldId + ' onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'realizada\', this.value)">' +
+                    '<option value=""' + (!activity.realizada ? ' selected' : '') + '>Pendiente</option>' +
+                    '<option value="si"' + (activity.realizada === 'si' ? ' selected' : '') + '>Sí</option>' +
+                    '<option value="no"' + (activity.realizada === 'no' ? ' selected' : '') + '>No</option>' +
+                  '</select></div>' +
+                  '<div><label>Comentario compartido</label><input' + comentarioFieldId + ' type="text" value="' + escapeHtml(activity.comentario_cierre || '') + '" onchange="updateMultiGroupSharedActivityField(\'' + escapeJsAttrValue(entry.key) + '\', ' + index + ', \'comentario_cierre\', this.value)"></div>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join('') + '</div>' +
           '<div class="plan-activities-add-wrap">' +
             '<button class="btn-accent plan-activities-add-btn" type="button" onclick="addMultiGroupSharedActivity(\'' + escapeJsAttrValue(entry.key) + '\')">Agregar otra actividad</button>' +
           '</div>' +
