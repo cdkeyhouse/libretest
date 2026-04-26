@@ -8762,6 +8762,13 @@
       return buildPlaneacionEntries(state.planeaciones || []).find((entry) => entry.key === entryKey) || null;
     }
 
+    function getPlaneacionEntryByPlanId(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      return buildPlaneacionEntries(state.planeaciones || [])
+        .find((entry) => (entry.plans || []).some((plan) => String(plan.planeacion_id || '').trim() === normalizedPlanId)) || null;
+    }
+
     function getOpenPlaneacionEntry(entry) {
       if (!entry) return null;
       const plans = Array.isArray(entry.plans) ? entry.plans : [];
@@ -14104,6 +14111,42 @@
       return { currentPlan, actividades };
     }
 
+    function buildClosePlanPayloads(planId, fallbackPlan) {
+      const selectedPayload = buildClosePlanPayload(planId, fallbackPlan);
+      const entry = getPlaneacionEntryByPlanId(planId);
+      if (!entry || !entry.isMulti) return [selectedPayload];
+      const selectedPlanId = String((selectedPayload.currentPlan && selectedPayload.currentPlan.planeacion_id) || planId || '').trim();
+      const sourceActivities = selectedPayload.actividades || [];
+      const activePlans = (entry.plans || [])
+        .filter((plan) => String(plan && plan.estado || '').trim() === 'activa');
+      if (activePlans.length <= 1) return [selectedPayload];
+      return activePlans.map((targetPlan) => {
+        const targetPlanId = String((targetPlan && targetPlan.planeacion_id) || '').trim();
+        if (targetPlanId === selectedPlanId) return selectedPayload;
+        const targetActivities = Array.isArray(targetPlan && targetPlan.actividades) ? targetPlan.actividades : [];
+        if (targetActivities.length < sourceActivities.length) {
+          throw new Error('No se pudo preparar el cierre de todos los grupos. Abre la planeacion y espera a que cargue completa.');
+        }
+        return {
+          currentPlan: targetPlan,
+          actividades: sourceActivities.map((sourceActivity, index) => {
+            const targetActivity = targetActivities[index] || {};
+            const targetActivityId = String(targetActivity.actividad_id || '').trim();
+            if (!targetActivityId) {
+              throw new Error('No se pudo preparar el cierre de todos los grupos. Guarda la planeacion antes de cerrar.');
+            }
+            return {
+              actividad_id: targetActivityId,
+              realizada: sourceActivity.realizada,
+              material_en_carpeta: sourceActivity.material_en_carpeta,
+              comentario_cierre: sourceActivity.comentario_cierre,
+              last_known_updated_at: targetActivity.last_known_updated_at || targetActivity.fecha_actualizacion || ''
+            };
+          })
+        };
+      });
+    }
+
     function buildClosePlanOptimisticPatch(plan, closePayload, obs) {
       const payloadActivities = new Map((closePayload.actividades || [])
         .map((item) => [String((item && item.actividad_id) || '').trim(), item])
@@ -14130,14 +14173,19 @@
     }
 
     async function confirmClosePlan(button, planId) {
-      const plan = getPlanById(planId);
+      let plan = getPlanById(planId);
       if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       if (getClosePlanSyncBlock(planId)) {
         openClosePlanModal(planId);
         return;
       }
       try {
-        buildClosePlanPayload(planId, plan);
+        const entry = getPlaneacionEntryByPlanId(planId);
+        if (entry && entry.isMulti) {
+          await ensurePlaneacionEntryDetailsLoaded(entry, { silent: true });
+          plan = getPlanById(planId) || plan;
+        }
+        buildClosePlanPayloads(planId, plan);
       } catch (err) {
         focusPlanCloseField(err && err.focusTargetId);
         setBanner(formatApiError(err), 'error', { button });
@@ -14178,27 +14226,43 @@
           }
         }
       }
-      let closePayload = null;
+      const closeEntry = getPlaneacionEntryByPlanId(planId);
+      if (closeEntry && closeEntry.isMulti) {
+        try {
+          await ensurePlaneacionEntryDetailsLoaded(closeEntry, { silent: true });
+          plan = getPlanById(planId) || plan;
+        } catch (_) {}
+      }
+      let closePayloads = [];
       try {
-        closePayload = buildClosePlanPayload(planId, plan);
+        closePayloads = buildClosePlanPayloads(planId, plan);
       } catch (err) {
         setClosePlanModalError(formatApiError(err));
         return;
       }
-      const previousPlanSnapshot = cloneJsonSafe(plan, plan);
+      const previousPlanSnapshots = closePayloads.map((payload) =>
+        cloneJsonSafe(payload.currentPlan, payload.currentPlan)
+      );
       const previousDraftSnapshot = state.openPlanDraft
         ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
         : null;
       const previousOpenPlanId = state.openPlanId;
-      const shouldCloseOpenCard = state.openPlanId === planId;
-      const closePatch = buildClosePlanOptimisticPatch(plan, closePayload, obs);
+      const targetPlanIds = closePayloads
+        .map((payload) => String((payload.currentPlan && payload.currentPlan.planeacion_id) || '').trim())
+        .filter(Boolean);
+      const shouldCloseOpenCard = targetPlanIds.includes(String(state.openPlanId || '').trim());
       await handleAction('confirmarCierre', async () => {
-        applyOptimisticPlanPatch(planId, closePatch, {
-          localState: 'syncing',
-          localMessage: 'Sincronizando cierre...',
-          snapshotKind: 'planeacion_cierre_local',
-          closeOpenCard: shouldCloseOpenCard,
-          render: false
+        closePayloads.forEach((payload) => {
+          const targetPlan = payload.currentPlan;
+          const targetPlanId = String((targetPlan && targetPlan.planeacion_id) || '').trim();
+          if (!targetPlanId) return;
+          applyOptimisticPlanPatch(targetPlanId, buildClosePlanOptimisticPatch(targetPlan, payload, obs), {
+            localState: 'syncing',
+            localMessage: 'Sincronizando cierre...',
+            snapshotKind: 'planeacion_cierre_local',
+            closeOpenCard: shouldCloseOpenCard && String(state.openPlanId || '').trim() === targetPlanId,
+            render: false
+          });
         });
         closeClosePlanModal();
         renderPlaneacionesSurface({
@@ -14207,64 +14271,52 @@
           includeAlertas: false
         });
         setBanner('La planeación salió de abiertas. Sincronizando cierre...', 'info');
-        const actividadesPayload = (closePayload.actividades || []).map((item) => ({
-          actividad_id: item.actividad_id,
-          realizada: item.realizada,
-          material_en_carpeta: item.material_en_carpeta,
-          comentario_cierre: item.comentario_cierre
-        }));
-        const response = await api('confirmarCierre', {
-          planeacion_id: planId,
-          actividades: actividadesPayload,
-          obs_semana: obs,
-          request_id: uid('CIE')
-        });
-        const updatedPlan = response && response.planeacion ? response.planeacion : null;
-        if (updatedPlan) {
-          applyOptimisticPlanPatch(planId, Object.assign({}, updatedPlan, {
+        for (const closePayload of closePayloads) {
+          const targetPlanId = String((closePayload.currentPlan && closePayload.currentPlan.planeacion_id) || '').trim();
+          if (!targetPlanId) continue;
+          const actividadesPayload = (closePayload.actividades || []).map((item) => ({
+            actividad_id: item.actividad_id,
+            realizada: item.realizada,
+            material_en_carpeta: item.material_en_carpeta,
+            comentario_cierre: item.comentario_cierre
+          }));
+          const response = await api('confirmarCierre', {
+            planeacion_id: targetPlanId,
+            actividades: actividadesPayload,
+            obs_semana: obs,
+            request_id: uid('CIE')
+          });
+          const updatedPlan = response && response.planeacion ? response.planeacion : null;
+          applyOptimisticPlanPatch(targetPlanId, updatedPlan ? Object.assign({}, updatedPlan, {
             estado: 'cerrada'
-          }), {
-            localState: '',
-            localMessage: '',
-            snapshotKind: 'planeacion_cierre_confirmada',
-            closeOpenCard: shouldCloseOpenCard,
-            render: false
-          });
-          renderPlaneacionesSurface({
-            includeStats: true,
-            includePlaneaciones: true,
-            includeAlertas: false
-          });
-          refreshPlaneacionesAlertsDeferred({
-            force: true,
-            includeStats: false,
-            includePlaneaciones: false
-          }).catch(() => {});
-        } else {
-          applyOptimisticPlanPatch(planId, {
+          }) : {
             estado: 'cerrada'
           }, {
             localState: '',
             localMessage: '',
             snapshotKind: 'planeacion_cierre_confirmada',
-            closeOpenCard: shouldCloseOpenCard,
+            closeOpenCard: false,
             render: false
           });
-          renderPlaneacionesSurface({
-            includeStats: true,
-            includePlaneaciones: true,
-            includeAlertas: false
-          });
-          refreshPlaneacionesSurface({ includeAlertas: false }).catch(() => {});
         }
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        refreshPlaneacionesAlertsDeferred({
+          force: true,
+          includeStats: false,
+          includePlaneaciones: false
+        }).catch(() => {});
         setBanner('Cierre confirmado.', 'success');
       }, {
         button,
-        key: buildActionKey('confirmarCierre', [planId]),
+        key: buildActionKey('confirmarCierre', targetPlanIds.length ? targetPlanIds : [planId]),
         onError: (err) => {
-          if (previousPlanSnapshot) {
-            upsertPlaneacionRow(previousPlanSnapshot);
-          }
+          previousPlanSnapshots.forEach((snapshot) => {
+            if (snapshot) upsertPlaneacionRow(snapshot);
+          });
           state.openPlanId = previousOpenPlanId;
           state.openPlanDraft = previousDraftSnapshot;
           persistCurrentBootSnapshot('planeacion_cierre_revertido');
@@ -14277,6 +14329,7 @@
           const nextInput = $('closePlanObsInput');
           if (nextInput) nextInput.value = obs;
           setClosePlanModalError(formatApiError(err));
+          refreshPlaneacionesSurface({ includeAlertas: false }).catch(() => {});
           return true;
         }
       });
