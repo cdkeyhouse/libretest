@@ -6413,16 +6413,16 @@
             '<div class="admin-alumnos-readonly"><span>&Uacute;ltima actualizaci&oacute;n</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Alumnos inscritos</span><strong>' + escapeHtml(String(activeMembers.length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Grupos mezclados</span><strong>' + escapeHtml(representedGroups.length ? String(representedGroups.length) : '0') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Siguiente paso</span><strong>Inscribir alumnos</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Gesti&oacute;n</span><strong>Editar alumnos</strong></div>',
           '</div>',
           '<div class="admin-taller-membership">',
             '<div class="admin-taller-membership-head">',
               '<div class="admin-taller-membership-copy">',
                 '<h4>Alumnos del taller</h4>',
-                '<div class="subtle">Selecciona alumnos activos de cualquier grupo sin moverlos de su grupo escolar.</div>',
+                '<div class="subtle">Marca o desmarca alumnos activos sin moverlos de su grupo escolar.</div>',
               '</div>',
               '<div class="admin-taller-membership-actions">',
-                (canManage && taller.estatus !== 'archivado' && !membershipOpen ? '<button class="btn-primary" type="button" onclick="openTallerMembershipEditor(\'' + escapeJsAttrValue(taller.taller_id) + '\')">Inscribir alumnos</button>' : ''),
+                (canManage && taller.estatus !== 'archivado' && !membershipOpen ? '<button class="btn-primary" type="button" onclick="openTallerMembershipEditor(\'' + escapeJsAttrValue(taller.taller_id) + '\')">Editar alumnos</button>' : ''),
                 (canManage && membershipOpen ? '<button class="btn-ghost" type="button" onclick="cancelTallerMembershipEditor()">Cancelar</button>' : ''),
               '</div>',
             '</div>',
@@ -6443,10 +6443,10 @@
                   '<div class="admin-taller-membership-actions">' +
                     '<button class="btn-ghost" type="button" onclick="toggleAllVisibleTallerAlumnos(true)">Seleccionar visibles</button>' +
                     '<button class="btn-ghost" type="button" onclick="toggleAllVisibleTallerAlumnos(false)">Limpiar visibles</button>' +
-                    '<button id="adminTallerMembershipSaveBtn" class="btn-primary" type="button" onclick="saveTallerMemberships(this)">Guardar alumnos</button>' +
+                    '<button id="adminTallerMembershipSaveBtn" class="btn-primary" type="button" onclick="saveTallerMemberships(this)">Guardar cambios</button>' +
                   '</div>' +
                 '</div>' +
-                '<div class="subtle">' + escapeHtml(String(selectedIds.size)) + ' alumno(s) listos para este taller.</div>' +
+                '<div class="subtle">' + escapeHtml(String(selectedIds.size)) + ' alumno(s) seleccionado(s). Desmarca para quitar del taller.</div>' +
                 (visibleCandidates.length
                   ? '<div class="checklist admin-taller-membership-candidates">' + visibleCandidates.map((row) => {
                       const alumnoId = String(row.alumno_id || '').trim();
