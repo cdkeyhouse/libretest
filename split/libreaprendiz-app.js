@@ -1581,7 +1581,38 @@
       });
     }
 
+    function clearInvalidSessionFlagsInOutbox(sessionLike = state.session) {
+      const ownerKey = getPlaneacionOutboxOwnerKey(sessionLike);
+      if (!ownerKey) return;
+      const store = readPlaneacionOutboxStore();
+      const items = Array.isArray(store[ownerKey]) ? store[ownerKey] : [];
+      let changed = false;
+      const updated = items.map((item) => {
+        if (
+          item &&
+          String(item.lastErrorCode || '').trim() === 'INVALID_SESSION' &&
+          String(item.status || '').trim() === 'error' &&
+          item.retryable !== false
+        ) {
+          changed = true;
+          return Object.assign({}, item, {
+            status: 'pending',
+            lastErrorCode: '',
+            lastErrorMessage: '',
+            nextAttemptAt: '',
+            attempts: 0
+          });
+        }
+        return item;
+      });
+      if (changed) {
+        store[ownerKey] = updated;
+        writePlaneacionOutboxStore(store);
+      }
+    }
+
     function activatePlaneacionOutboxForSession(sessionLike = state.session) {
+      clearInvalidSessionFlagsInOutbox(sessionLike);
       hydratePlaneacionOutboxForSession(sessionLike);
       reapplyPlaneacionOutboxState();
       clearStalePlaneacionLocalState();
@@ -10212,6 +10243,7 @@
           renderActiveAdminModule(state.activeAdminModule);
         }
       } else if (String(state.activeTab || '').trim() === 'planeaciones') {
+        renderBaseSelects({ planeaciones: true });
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
       }
