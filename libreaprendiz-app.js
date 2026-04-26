@@ -4049,7 +4049,9 @@
     }
 
     function getAdminAlumnosCount() {
-      return buildAlumnoSourceRows().length;
+      return buildAlumnoSourceRows()
+        .filter((row) => getAlumnoStatusVisual(row) === 'activo')
+        .length;
     }
 
     function getAlumnoListTitle() {
