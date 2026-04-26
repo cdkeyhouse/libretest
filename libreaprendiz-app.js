@@ -1,4 +1,4 @@
-﻿    const STORAGE_KEYS = {
+    const STORAGE_KEYS = {
       session: 'la_v8_session',
       bootSnapshot: 'la_v8_boot_snapshot',
       planeacionOutbox: 'la_v8_planeacion_outbox'
@@ -40,6 +40,7 @@
         idsText: '',
         trashReportFiles: true,
         preview: null,
+        previewIds: [],
         lastResult: null,
         confirmationText: ''
       };
@@ -180,6 +181,7 @@
         selectedCategories: ['planeaciones', 'seguimiento', 'evaluaciones', 'reportes'],
         trashReportFiles: true,
         preview: null,
+        previewSignature: '',
         audit: null,
         lastReset: null
       };
@@ -242,6 +244,8 @@
         adminModuleLoading: {},
         adminCatalogPrefetchPromise: null,
         adminCatalogPrefetchDone: false,
+        adminNotificationsPrefetchPromise: null,
+        adminNotificationsPrefetchDone: false,
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
         planeacionesMateriaFilter: '',
@@ -268,6 +272,7 @@
         planId: '',
         lockedSemanaId: '',
         lockedGrupoId: '',
+        selectedTallerId: '',
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: []
@@ -646,8 +651,8 @@
 
     function getPlaneacionesEditorCatalogBlocks() {
       return canUseAdminShell()
-        ? ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas']
-        : ['alumnos', 'submaterias'];
+        ? ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas', 'talleres', 'alumno_talleres']
+        : ['alumnos', 'submaterias', 'talleres', 'alumno_talleres'];
     }
 
     function getCatalogBlocksForModuleWithScope(moduleName, options = {}) {
@@ -694,6 +699,10 @@
         .some((moduleName) => getMissingCatalogBlocks(getAdminModuleCatalogBlocks(moduleName)).length > 0);
     }
 
+    function hasAdminNotificationsPrefetchWork() {
+      return !Array.isArray(state.notificaciones) || state.notificaciones.length === 0;
+    }
+
     function scheduleAdminCatalogPrefetch(delay = 520) {
       if (!canUseAdminShell() || !state.ui) return;
       if (state.ui.adminCatalogPrefetchPromise || state.ui.adminCatalogPrefetchDone) return;
@@ -704,11 +713,53 @@
       }
       scheduleUiDebounce('admin-catalog-prefetch', () => {
         if (!canUseAdminShell() || !state.ui || state.ui.adminCatalogPrefetchPromise) return;
+        if (state.ui.adminCatalogPrefetchDone) return;
+        if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+        if (!hasAdminCatalogPrefetchWork()) {
+          state.ui.adminCatalogPrefetchDone = true;
+          return;
+        }
         state.ui.adminCatalogPrefetchPromise = prefetchAdminCatalogsSequentially()
           .finally(() => {
             if (!state.ui) return;
             state.ui.adminCatalogPrefetchPromise = null;
             state.ui.adminCatalogPrefetchDone = !hasAdminCatalogPrefetchWork();
+          });
+      }, delay);
+    }
+
+    function scheduleAdminNotificationsPrefetch(delay = 1100) {
+      if (!canUseAdminShell() || !state.ui) return;
+      if (state.ui.adminNotificationsPrefetchPromise || state.ui.adminNotificationsPrefetchDone) return;
+      if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+      if (!hasAdminNotificationsPrefetchWork()) {
+        state.ui.adminNotificationsPrefetchDone = true;
+        return;
+      }
+      scheduleUiDebounce('admin-notificaciones-prefetch', () => {
+        if (!canUseAdminShell() || !state.ui || state.ui.adminNotificationsPrefetchPromise) return;
+        if (state.ui.adminNotificationsPrefetchDone) return;
+        if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+        if (!hasAdminNotificationsPrefetchWork()) {
+          state.ui.adminNotificationsPrefetchDone = true;
+          return;
+        }
+        state.ui.adminNotificationsPrefetchPromise = scheduleAfterPaint(
+          () => refreshNotificaciones({ force: true, limit: 100 }),
+          140
+        )
+          .then(() => {
+            if (String(state.activeAdminModule || '').trim() === 'dashboard') {
+              renderAdminShell();
+              renderInstitutionalNotices();
+              syncRoleUi();
+            }
+          })
+          .catch(() => null)
+          .finally(() => {
+            if (!state.ui) return;
+            state.ui.adminNotificationsPrefetchPromise = null;
+            state.ui.adminNotificationsPrefetchDone = !hasAdminNotificationsPrefetchWork();
           });
       }, delay);
     }
@@ -822,7 +873,7 @@
         listo: 'Listo',
         obsoleto: 'Obsoleto',
         error: 'Error',
-        inexistente: 'Sin cachÃ©'
+        inexistente: 'Sin cach\u00e9'
       })[String(status || '').trim().toLowerCase()] || (status || 'Sin estado');
     }
 
@@ -842,19 +893,19 @@
 
       if (!data) {
         return compact
-          ? '<div class="subtle">Todavia no hay una consulta de reporte.</div>'
-          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>Aun no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y periodo para generar o revisar el PDF.</div></div></div>';
+          ? '<div class="subtle">Todav&iacute;a no hay una consulta de reporte.</div>'
+          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>A&uacute;n no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y per&iacute;odo para generar o revisar el PDF.</div></div></div>';
       }
 
       const status = String(data.status || data.estado || '').trim().toLowerCase();
       const rows = [
         alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' - ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
-        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Periodo</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
+        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Per&iacute;odo</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
         data.url ? '<div class="admin-reporte-ciclo-result-row"><span>PDF</span><strong><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></strong></div>' : '',
-        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Version de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
-        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>Version PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
+        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Versi&oacute;n de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
+        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>Versi&oacute;n PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
         data.started_at ? '<div class="admin-reporte-ciclo-result-row"><span>Inicio</span><strong>' + escapeHtml(formatFechaHumana(data.started_at)) + '</strong></div>' : '',
-        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>Finalizacion</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
+        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>Finalizaci&oacute;n</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
         data.next_retry_at ? '<div class="admin-reporte-ciclo-result-row"><span>Reintento</span><strong>' + escapeHtml(formatFechaHumana(data.next_retry_at)) + '</strong></div>' : '',
         data.error_message ? '<div class="admin-reporte-ciclo-result-row"><span>Error</span><strong>' + escapeHtml(data.error_message) + '</strong></div>' : '',
         data._meta && data._meta.message ? '<div class="admin-reporte-ciclo-result-row"><span>Info</span><strong>' + escapeHtml(data._meta.message) + '</strong></div>' : '',
@@ -865,8 +916,8 @@
         return [
           '<div><strong>Estado:</strong> ' + escapeHtml(getReportStatusLabel(status)) + '</div>',
           data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
-          data && data.version_datos ? '<div><strong>Version datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
-          data && data.version_pdf ? '<div><strong>Version PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
+          data && data.version_datos ? '<div><strong>Versi&oacute;n datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
+          data && data.version_pdf ? '<div><strong>Versi&oacute;n PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
           data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
           data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
           Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
@@ -923,6 +974,8 @@
         state.ui.planeacionesMateriaFilter = '';
         state.ui.multiGroupActiveChildByLote = {};
         state.ui.restoreSnapshotSyncing = false;
+        state.ui.adminNotificationsPrefetchPromise = null;
+        state.ui.adminNotificationsPrefetchDone = false;
         state.ui.planeacionOutboxProcessing = false;
         state.ui.pendingPlanSaveTransactions = {};
         state.ui.planDetailPromises = {};
@@ -1714,7 +1767,7 @@
         }
         if (item.retryable === false) return 'No se pudo sincronizar. Revisa y vuelve a guardar.';
         if (String(item.lastErrorCode || '').trim() === 'INVALID_SESSION') {
-          return 'Pendiente de sincronizar. Vuelve a iniciar sesiÃ³n para terminar.';
+          return 'Pendiente de sincronizar. Vuelve a iniciar sesi\u00f3n para terminar.';
         }
         return 'Guardado local pendiente. Reintentaremos en segundo plano.';
       }
@@ -1814,7 +1867,7 @@
     }
 
     function ensureLoggedIn() {
-      if (!state.session || !state.session.token) throw new Error('Primero inicia sesiÃ³n.');
+      if (!state.session || !state.session.token) throw new Error('Primero inicia sesi\u00f3n.');
     }
 
     function formatApiError(err) {
@@ -1829,7 +1882,7 @@
     function isTruthyValue(value) {
       if (value === true) return true;
       const normalized = String(value == null ? '' : value).trim().toLowerCase();
-      return normalized === 'si' || normalized === 'sÃ­' || normalized === 'true' || normalized === '1' || normalized === 'x' || normalized === 'yes';
+      return normalized === 'si' || normalized === 's\u00ed' || normalized === 'true' || normalized === '1' || normalized === 'x' || normalized === 'yes';
     }
 
     function canUseReportes() {
@@ -1848,7 +1901,7 @@
 
     function ensureCanUseReportes() {
       if (!canUseReportes()) {
-        throw new Error('Los reportes solo estÃ¡n disponibles para direcciÃ³n y admin.');
+        throw new Error('Los reportes solo est\u00e1n disponibles para direcci\u00f3n y admin.');
       }
     }
 
@@ -1872,7 +1925,7 @@
 
     function ensureBackendPeriodsReady() {
       if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
-        throw new Error('El backend no devolviÃ³ perÃ­odos activos. Revisa la hoja PERIODOS antes de continuar.');
+        throw new Error('El backend no devolvi\u00f3 per\u00edodos activos. Revisa la hoja PERIODOS antes de continuar.');
       }
     }
 
@@ -1891,7 +1944,7 @@
       try {
         json = JSON.parse(text);
       } catch (_) {
-        throw new Error('El backend respondio algo no JSON: ' + text.slice(0, 180));
+        throw new Error('El backend respondi\u00f3 algo no JSON: ' + text.slice(0, 180));
       }
 
       if (!json.ok) {
@@ -1913,8 +1966,8 @@
       const json = await response.json();
       if (!json.ok) throw new Error(json.error || 'Ping fallido');
       setBanner(
-        'ConexiÃ³n activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
-        ' | mÃ³dulo de reportes ' + (json.data && json.data.report_module || '-'),
+        'Conexi\u00f3n activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
+        ' | m\u00f3dulo de reportes ' + (json.data && json.data.report_module || '-'),
         'success'
       );
     }
@@ -1960,7 +2013,7 @@
         clearLoginInputs();
         renderAll();
         saveSession(null);
-        setBanner('No habÃ­a una sesiÃ³n activa.', 'info');
+        setBanner('No hab\u00eda una sesi\u00f3n activa.', 'info');
         return;
       }
       let remoteLogoutFailed = false;
@@ -1973,7 +2026,7 @@
       clearLoadedData();
       clearLoginInputs();
       renderAll();
-      setBanner(remoteLogoutFailed ? 'SesiÃ³n local cerrada.' : 'SesiÃ³n cerrada.', remoteLogoutFailed ? 'info' : 'success');
+      setBanner(remoteLogoutFailed ? 'Sesi\u00f3n local cerrada.' : 'Sesi\u00f3n cerrada.', remoteLogoutFailed ? 'info' : 'success');
     }
 
     async function refreshCatalogos(options = {}) {
@@ -2349,6 +2402,7 @@
       renderInstitutionalNotices();
       syncRoleUi();
       scheduleAdminCatalogPrefetch();
+      scheduleAdminNotificationsPrefetch();
 
       const deferredPromise = Promise.resolve();
 
@@ -2434,7 +2488,7 @@
         renderAll();
       }
       if (requestedCatalogBlocks.includes('periodos') && (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length)) {
-        setBanner('Faltan perÃ­odos activos en el backend. Revisa la hoja PERIODOS.', 'error');
+        setBanner('Faltan per\u00edodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
         return;
       }
     }
@@ -2665,12 +2719,12 @@
         case 'planeaciones':
           return {
             title: 'Cargando planeaciones',
-            body: 'Preparamos filtros y herramientas del modulo sin frenar la vista principal.'
+            body: 'Preparamos filtros y herramientas del m\u00f3dulo sin frenar la vista principal.'
           };
         case 'alumnos':
           return {
             title: 'Cargando alumnos',
-            body: 'Se estan hidratando grupos y fichas base para que el listado responda mas rapido.'
+            body: 'Se est\u00e1n hidratando grupos y fichas base para que el listado responda m\u00e1s r\u00e1pido.'
           };
         case 'facilitadores':
           return {
@@ -2680,27 +2734,27 @@
         case 'materias':
           return {
             title: 'Cargando materias',
-            body: 'Se estan organizando materias base y variantes activas.'
+            body: 'Se est\u00e1n organizando materias base y variantes activas.'
           };
         case 'talleres':
           return {
             title: 'Cargando talleres',
-            body: 'Preparamos catalogo base y relaciones activas sin congelar la navegacion.'
+            body: 'Preparamos cat\u00e1logo base y relaciones activas sin congelar la navegaci\u00f3n.'
           };
         case 'notificaciones':
           return {
             title: 'Cargando notificaciones',
-            body: 'Se esta preparando la bandeja activa y el editor institucional.'
+            body: 'Se est\u00e1 preparando la bandeja activa y el editor institucional.'
           };
         case 'reporte-ciclo':
           return {
             title: 'Cargando reporte de ciclo',
-            body: 'Se estan preparando alumnos y periodos para este modulo.'
+            body: 'Se est\u00e1n preparando alumnos y per\u00edodos para este m\u00f3dulo.'
           };
         default:
           return {
-            title: 'Cargando modulo',
-            body: 'Preparamos la informacion necesaria para mostrar este panel.'
+            title: 'Cargando m\u00f3dulo',
+            body: 'Preparamos la informaci\u00f3n necesaria para mostrar este panel.'
           };
       }
     }
@@ -2724,9 +2778,9 @@
         case 'talleres':
           return 'Talleres';
         case 'configuracion':
-          return 'Configuracion';
+          return 'Configuraci\u00f3n';
         default:
-          return 'Modulo';
+          return 'M\u00f3dulo';
       }
     }
 
@@ -2745,7 +2799,7 @@
       const normalized = String(moduleName || '').trim();
       const panel = $('admin-panel-' + normalized);
       if (!panel) return;
-      const message = getAdminModuleError(normalized) || 'No se pudo cargar este modulo.';
+      const message = getAdminModuleError(normalized) || 'No se pudo cargar este m\u00f3dulo.';
       panel.innerHTML =
         '<article class="admin-placeholder">' +
           '<h3>No se pudo cargar ' + escapeHtml(getAdminModuleDisplayName(normalized)) + '</h3>' +
@@ -2769,22 +2823,22 @@
               '<button id="adminNotificationFilterScheduledBtn" class="btn-ghost" type="button">Ver programadas</button>',
               '<button id="adminNotificationFilterDraftBtn" class="btn-ghost" type="button">Ver borradores / archivadas</button>',
               '<button id="adminNotificationFilterClosedBtn" class="btn-ghost" type="button">Ver cerradas</button>',
-              '<button id="adminNotificationNewBtn" class="btn-primary" type="button">Nueva notificacion</button>',
+              '<button id="adminNotificationNewBtn" class="btn-primary" type="button">Nueva notificaci&oacute;n</button>',
             '</div>',
           '</div>',
           '<div id="adminNotificationEditor" class="admin-notification-editor" hidden>',
             '<div class="admin-notification-section-head">',
-              '<h4 id="adminNotificationEditorTitle">Nueva notificacion</h4>',
+              '<h4 id="adminNotificationEditorTitle">Nueva notificaci&oacute;n</h4>',
             '</div>',
             '<div class="admin-notification-editor-layout">',
               '<div class="admin-notification-editor-main">',
                 '<div>',
-                  '<label for="adminNotificationTitle">Titulo</label>',
-                  '<input id="adminNotificationTitle" type="text" maxlength="150" placeholder="Titulo">',
+                  '<label for="adminNotificationTitle">T&iacute;tulo</label>',
+                  '<input id="adminNotificationTitle" type="text" maxlength="150" placeholder="T&iacute;tulo">',
                 '</div>',
                 '<div>',
                   '<label for="adminNotificationMessage">Mensaje</label>',
-                  '<textarea id="adminNotificationMessage" placeholder="Ingresa el mensaje que sera visible para los facilitadores."></textarea>',
+                  '<textarea id="adminNotificationMessage" placeholder="Ingresa el mensaje que ser&aacute; visible para los facilitadores."></textarea>',
                 '</div>',
               '</div>',
               '<div class="admin-notification-editor-side">',
@@ -2809,7 +2863,7 @@
                   '<label for="adminNotificationAudience">Dirigido a</label>',
                   '<select id="adminNotificationAudience">',
                     '<option value="todos">Todos los facilitadores</option>',
-                    '<option value="especificos">Facilitadores especificos</option>',
+                    '<option value="especificos">Facilitadores espec&iacute;ficos</option>',
                   '</select>',
                 '</div>',
                 '<div id="adminNotificationAudienceList" class="notification-audience-checklist" hidden></div>',
@@ -2869,12 +2923,12 @@
           '<div class="admin-alumnos-head admin-reporte-ciclo-head">',
             '<div class="admin-alumnos-head-copy admin-reporte-ciclo-copy">',
               '<h3>Reporte de ciclo</h3>',
-              '<p class="subtle">Genera, regenera y monitorea el PDF academico familiar por alumno y periodo sin salir del adminShell.</p>',
+              '<p class="subtle">Genera, regenera y monitorea el PDF acad&eacute;mico familiar por alumno y per&iacute;odo sin salir del adminShell.</p>',
             '</div>',
             '<div class="admin-reporte-ciclo-kpis">',
               '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiAlumnos">0</strong><span>Alumnos</span></div>',
-              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPeriodos">0</strong><span>Periodos</span></div>',
-              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPdf">Sin consulta</strong><span>Ultimo estado</span></div>',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPeriodos">0</strong><span>Per&iacute;odos</span></div>',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPdf">Sin consulta</strong><span>&Uacute;ltimo estado</span></div>',
             '</div>',
           '</div>',
           '<div class="admin-reporte-ciclo-layout">',
@@ -2882,25 +2936,25 @@
               '<div class="admin-reporte-ciclo-request">',
                 '<div class="admin-reporte-ciclo-grid">',
                   '<div class="field"><label for="adminReportAlumno">Alumno</label><select id="adminReportAlumno"></select></div>',
-                  '<div class="field"><label for="adminReportPeriodo">Periodo</label><select id="adminReportPeriodo"></select></div>',
+                  '<div class="field"><label for="adminReportPeriodo">Per&iacute;odo</label><select id="adminReportPeriodo"></select></div>',
                 '</div>',
                 '<div class="admin-reporte-ciclo-actions actions compact">',
                   '<button id="adminGenerateNowBtn" class="btn-primary" type="button">Solicitar / actualizar</button>',
-                  '<button id="adminRequestReportBtn" class="btn-secondary" type="button">Forzar regeneracion</button>',
+                  '<button id="adminRequestReportBtn" class="btn-secondary" type="button">Forzar regeneraci&oacute;n</button>',
                   '<button id="adminStatusReportBtn" class="btn-ghost" type="button">Revisar estado</button>',
                 '</div>',
-                '<div class="admin-reporte-ciclo-helper subtle">El PDF se genera desde backend y puede quedar listo de inmediato o unos segundos despues, segun el estado del cache.</div>',
+                '<div class="admin-reporte-ciclo-helper subtle">El PDF se genera desde backend y puede quedar listo de inmediato o unos segundos despu&eacute;s, seg&uacute;n el estado del cach&eacute;.</div>',
               '</div>',
               '<div class="admin-reporte-ciclo-preview-card">',
                 '<div class="admin-alumnos-section-head"><h4>Vista del documento</h4></div>',
                 '<div id="adminReportSelectionSummary" class="admin-reporte-ciclo-summary"></div>',
                 '<div class="admin-reporte-ciclo-preview">',
                   '<div class="admin-reporte-ciclo-preview-sheet">',
-                    '<div class="admin-reporte-ciclo-preview-header"><div class="admin-reporte-ciclo-preview-logo">LA</div><div><strong>Libre Aprendiz</strong><span>Reporte academico para familias</span></div></div>',
+                    '<div class="admin-reporte-ciclo-preview-header"><div class="admin-reporte-ciclo-preview-logo">LA</div><div><strong>Libre Aprendiz</strong><span>Reporte acad&eacute;mico para familias</span></div></div>',
                     '<div class="admin-reporte-ciclo-preview-strip"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>',
-                    '<div class="admin-reporte-ciclo-preview-block"><div><strong id="adminReportPreviewAlumno">Selecciona un alumno</strong><span id="adminReportPreviewMeta">Grupo, matricula y facilitadora se resolveran aqui.</span></div><div class="admin-reporte-ciclo-badge" id="adminReportPreviewPeriodo">Periodo</div></div>',
+                    '<div class="admin-reporte-ciclo-preview-block"><div><strong id="adminReportPreviewAlumno">Selecciona un alumno</strong><span id="adminReportPreviewMeta">Grupo, matr&iacute;cula y facilitadora se resolver&aacute;n aqu&iacute;.</span></div><div class="admin-reporte-ciclo-badge" id="adminReportPreviewPeriodo">Per&iacute;odo</div></div>',
                     '<div class="admin-reporte-ciclo-preview-section">',
-                      '<div class="admin-reporte-ciclo-preview-section-head"><div class="admin-reporte-ciclo-dot"></div><strong>ACTIVIDADES POR MATERIA</strong><span>Estado de realizacion</span></div>',
+                      '<div class="admin-reporte-ciclo-preview-section-head"><div class="admin-reporte-ciclo-dot"></div><strong>ACTIVIDADES POR MATERIA</strong><span>Estado de realizaci&oacute;n</span></div>',
                       '<div class="admin-reporte-ciclo-preview-row"><span class="is-done">&#10003;</span><div>Actividad registrada del periodo</div><small>Sem 1</small></div>',
                       '<div class="admin-reporte-ciclo-preview-row"><span class="is-pending"></span><div>Actividad pendiente o sin dato visible</div><small>Sem 2</small></div>',
                       '<div class="admin-reporte-ciclo-preview-row"><span class="is-no">&times;</span><div>Actividad marcada como no realizada</div><small>Sem 3</small></div>',
@@ -2914,8 +2968,8 @@
               '<div id="adminReportResult" class="admin-reporte-ciclo-result"></div>',
               '<div class="admin-reporte-ciclo-notes">',
                 '<div class="admin-reporte-ciclo-note"><strong>Incluye</strong><span>Encabezado institucional, datos del alumno, actividades por materia y pie familiar.</span></div>',
-                '<div class="admin-reporte-ciclo-note"><strong>No incluye</strong><span>Observaciones internas, notas de direccion, IDs tecnicos ni estados administrativos.</span></div>',
-                '<div class="admin-reporte-ciclo-note"><strong>Salida final</strong><span>PDF en Drive con URL directa para abrir y compartir dentro de la operacion escolar.</span></div>',
+                '<div class="admin-reporte-ciclo-note"><strong>No incluye</strong><span>Observaciones internas, notas de direcci&oacute;n, IDs t&eacute;cnicos ni estados administrativos.</span></div>',
+                '<div class="admin-reporte-ciclo-note"><strong>Salida final</strong><span>PDF en Drive con URL directa para abrir y compartir dentro de la operaci&oacute;n escolar.</span></div>',
               '</div>',
             '</aside>',
           '</div>',
@@ -3112,7 +3166,7 @@
 
     async function loadMorePlaneaciones(button) {
       if (!state.ui || state.ui.planeacionesLoadingMore || !state.ui.planeacionesHasMore) return;
-      await handleAction('cargar mÃ¡s planeaciones', async () => {
+      await handleAction('cargar m\u00e1s planeaciones', async () => {
         await refreshPlaneaciones({ append: true });
         renderPlaneacionesList();
       }, {
@@ -3161,15 +3215,27 @@
       state.activeAdminModule = nextModule;
       setAdminModuleError(nextModule, '');
       renderAdminShell();
-      const bootstrappingNotificationsModule = nextModule === 'notificaciones' && !Array.isArray(state.notificaciones).length;
+      const bootstrappingNotificationsModule = nextModule === 'notificaciones' && (!Array.isArray(state.notificaciones) || !state.notificaciones.length);
       if (bootstrappingNotificationsModule) {
         setAdminModuleLoading(nextModule, true);
         renderAdminShell();
         renderActiveAdminModule(nextModule);
-        refreshAdminModuleSurface(nextModule, {
-          includeStats: true,
-          refreshNotificaciones: true
-        })
+        const pendingNotificationsPrefetch = state.ui && state.ui.adminNotificationsPrefetchPromise;
+        const loadNotifications = pendingNotificationsPrefetch
+          ? pendingNotificationsPrefetch.then(() => {
+              if (Array.isArray(state.notificaciones) && state.notificaciones.length) {
+                return null;
+              }
+              return refreshAdminModuleSurface(nextModule, {
+                includeStats: true,
+                refreshNotificaciones: true
+              });
+            })
+          : refreshAdminModuleSurface(nextModule, {
+              includeStats: true,
+              refreshNotificaciones: true
+            });
+        loadNotifications
           .then(() => {
             setAdminModuleLoading(nextModule, false);
             renderAdminModuleSurface(nextModule, { includeStats: false });
@@ -3256,7 +3322,7 @@
         $('adminShellTitle').textContent = 'Centro de control' + (user ? ' de ' + (user.nombre || user.nombre_mostrado || user.facilitador_id || '') : '');
       }
       if ($('adminRolePill')) {
-        $('adminRolePill').textContent = user ? (user.rol === 'admin' ? 'Admin' : 'Directora') : 'AdministraciÃ³n';
+        $('adminRolePill').textContent = user ? (user.rol === 'admin' ? 'Admin' : 'Directora') : 'Administraci\u00f3n';
       }
       if ($('adminKpiOpenPlans')) $('adminKpiOpenPlans').textContent = String(openPlans);
       if ($('adminKpiClosedPlans')) $('adminKpiClosedPlans').textContent = String(closedPlans);
@@ -3294,6 +3360,7 @@
       });
       if (String(state.activeAdminModule || '').trim() === 'dashboard') {
         scheduleAdminCatalogPrefetch(900);
+        scheduleAdminNotificationsPrefetch(1180);
       }
     }
 
@@ -3341,7 +3408,7 @@
         const row = (state.catalogos.facilitadores || []).find((item) => item.facilitador_id === id);
         return row ? (row.nombre_mostrado || row.nombre_completo || row.facilitador_id) : id;
       }).filter(Boolean);
-      return names.length ? names.join(', ') : 'Facilitadores especÃ­ficos';
+      return names.length ? names.join(', ') : 'Facilitadores espec\u00edficos';
     }
 
     function setNotificationEditorExpanded(next) {
@@ -3415,18 +3482,18 @@
       const diff = Math.round((today.getTime() - target.getTime()) / 86400000);
       if (diff <= 0) return 'Hoy';
       if (diff === 1) return 'Ayer';
-      return 'Hace ' + diff + ' dÃ­as';
+      return 'Hace ' + diff + ' d\u00edas';
     }
 
     function getNotificationActionMessage(action, status) {
-      if (action === 'publicarNotificacion') return 'NotificaciÃ³n publicada.';
-      if (action === 'despublicarNotificacion') return 'La notificaciÃ³n volviÃ³ a borrador.';
-      if (action === 'cerrarNotificacion') return 'NotificaciÃ³n cerrada.';
-      if (action === 'archivarNotificacion') return 'NotificaciÃ³n archivada.';
-      if (action === 'duplicarNotificacion') return 'Se creÃ³ una copia en borrador.';
-      if (status === 'publicada') return 'NotificaciÃ³n publicada.';
+      if (action === 'publicarNotificacion') return 'Notificaci\u00f3n publicada.';
+      if (action === 'despublicarNotificacion') return 'La notificaci\u00f3n volvi\u00f3 a borrador.';
+      if (action === 'cerrarNotificacion') return 'Notificaci\u00f3n cerrada.';
+      if (action === 'archivarNotificacion') return 'Notificaci\u00f3n archivada.';
+      if (action === 'duplicarNotificacion') return 'Se cre\u00f3 una copia en borrador.';
+      if (status === 'publicada') return 'Notificaci\u00f3n publicada.';
       if (status === 'borrador') return 'Borrador guardado.';
-      return 'NotificaciÃ³n actualizada.';
+      return 'Notificaci\u00f3n actualizada.';
     }
 
     function getNotificationBusyText(action) {
@@ -3485,7 +3552,7 @@
       if (start) start.value = state.notificationEditor.fecha_inicio || '';
       if (end) end.value = state.notificationEditor.fecha_cierre || '';
       if (audience) audience.value = state.notificationEditor.visible_para || 'todos';
-      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificacion' : 'Nueva notificacion';
+      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificaci\u00f3n' : 'Nueva notificaci\u00f3n';
       if (listTitle) listTitle.textContent = getNotificationFilterTitle();
       const filter = (state.ui && state.ui.notificationFilter) || 'activas';
       if (activeBtn) activeBtn.classList.toggle('is-active', filter === 'activas');
@@ -3497,17 +3564,17 @@
       if (!list) return;
       const rows = getFilteredAdminNotifications();
       if (!rows.length) {
-        list.innerHTML = '<div class="empty">Todavia no hay notificaciones en esta vista.</div>';
+        list.innerHTML = '<div class="empty">Todav\u00eda no hay notificaciones en esta vista.</div>';
         return;
       }
       list.innerHTML = '<div class="admin-notification-list-table">' +
         '<div class="admin-notification-list-header">' +
-          '<div>Titulo</div>' +
+          '<div>T&iacute;tulo</div>' +
           '<div>Estado</div>' +
           '<div>Vigencia</div>' +
           '<div>Prioridad</div>' +
           '<div>Audiencia</div>' +
-          '<div>Ultima actualizacion</div>' +
+          '<div>&Uacute;ltima actualizaci&oacute;n</div>' +
           '<div>Acciones</div>' +
         '</div>' +
         rows.map((row) => {
@@ -3633,7 +3700,7 @@
             : 'borrador';
           const saved = await api('guardarNotificacion', buildNotificationPayload(saveStatus));
           const notificationId = (saved && saved.notificacion_id) || state.notificationEditor.notificacion_id || '';
-          if (!notificationId) throw new Error('No se pudo preparar la notificaciÃ³n para publicar.');
+          if (!notificationId) throw new Error('No se pudo preparar la notificaci\u00f3n para publicar.');
           await api('publicarNotificacion', {
             notificacion_id: notificationId,
             request_id: uid('NOTIP')
@@ -3650,7 +3717,7 @@
         });
         setBanner(
           targetStatus === 'publicada'
-            ? (isEditing ? 'NotificaciÃ³n actualizada y publicada.' : 'NotificaciÃ³n publicada.')
+            ? (isEditing ? 'Notificaci\u00f3n actualizada y publicada.' : 'Notificaci\u00f3n publicada.')
             : (isEditing ? 'Cambios del borrador guardados.' : 'Borrador guardado. Puedes verlo en Ver borradores / archivadas.'),
           'success'
         );
@@ -3882,7 +3949,7 @@
           entry_id: 'seed-alta-' + alumno.alumno_id,
           tipo: 'alta',
           titulo: 'Alta de alumno',
-          detalle: 'Registro inicial del alumno en el catalogo.',
+          detalle: 'Registro inicial del alumno en el cat\u00e1logo.',
           fecha: alumno.fecha_alta
         });
       }
@@ -3891,7 +3958,7 @@
           entry_id: 'seed-archivado-' + alumno.alumno_id,
           tipo: 'archivado',
           titulo: 'Alumno archivado',
-          detalle: 'Se marco como archivado dentro del catalogo escolar.',
+          detalle: 'Se marc\u00f3 como archivado dentro del cat\u00e1logo escolar.',
           fecha: alumno.archivado_at || alumno.fecha_baja
         });
       }
@@ -3901,7 +3968,7 @@
           entry_id: 'seed-pausa-' + alumno.alumno_id,
           tipo: 'pausa',
           titulo: 'Alumno en pausa',
-          detalle: 'El alumno quedo en pausa dentro del catalogo.',
+          detalle: 'El alumno qued\u00f3 en pausa dentro del cat\u00e1logo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -3910,7 +3977,7 @@
           entry_id: 'seed-inactivo-' + alumno.alumno_id,
           tipo: 'inactivo',
           titulo: 'Alumno inactivo',
-          detalle: 'El alumno quedo marcado como inactivo en el catalogo.',
+          detalle: 'El alumno qued\u00f3 marcado como inactivo en el cat\u00e1logo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -3919,7 +3986,7 @@
           entry_id: 'seed-egresado-' + alumno.alumno_id,
           tipo: 'egresado',
           titulo: 'Alumno egresado',
-          detalle: 'El alumno quedÃ³ registrado como egresado.',
+          detalle: 'El alumno qued\u00f3 registrado como egresado.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -4078,26 +4145,27 @@
     }
 
     async function saveAlumnoEditor(button) {
-      ensureLoggedIn();
       const editor = state.alumnosUi.editor || createEmptyAlumnoEditorState();
       const fullName = composeAlumnoNombreCompleto(editor.nombres, editor.apellidos);
-      if (!String(editor.matricula || '').trim()) throw new Error('Captura la matricula del alumno.');
-      if (!fullName) throw new Error('Captura el nombre del alumno.');
-      if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
       const editing = state.alumnosUi.editorMode === 'edit';
       const existingId = editing ? state.alumnosUi.selectedAlumnoId : '';
       const existingAlumno = editing ? getAlumnoById(existingId) : null;
       const previousStatus = existingAlumno ? getAlumnoStatusVisual(existingAlumno) : 'activo';
       const nextStatus = getAlumnoStatusVisual({ estatus: String(editor.estatus || 'activo').trim() });
-      if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasara a pausa y seguira visible dentro del catalogo administrativo.')) return;
       await handleAction('guardarAlumno', async () => {
+        ensureLoggedIn();
+        if (!String(editor.matricula || '').trim()) throw new Error('Captura la matr\u00edcula del alumno.');
+        if (!fullName) throw new Error('Captura el nombre del alumno.');
+        if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
+        if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasar\u00e1 a pausa y seguir\u00e1 visible dentro del cat\u00e1logo administrativo.')) return;
         const payload = {
           alumno_id: existingId,
           matricula: String(editor.matricula || '').trim(),
           nombre_completo: fullName,
           nombre_mostrado: composeAlumnoNombreMostrado(editor.nombres, editor.alias, fullName),
           grupo_id: String(editor.grupo_id || '').trim(),
-          estatus: String(editor.estatus || 'activo').trim()
+          estatus: String(editor.estatus || 'activo').trim(),
+          notas_internas: String(editor.notas_internas || '').trim()
         };
         const response = await api('guardarAlumno', payload);
         const savedId = (response && response.alumno_id) || existingId || '';
@@ -4110,7 +4178,7 @@
             savedId,
             editing ? 'edicion' : 'alta',
             editing ? 'Ficha actualizada' : 'Alta de alumno',
-            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agrego un nuevo alumno al catalogo.',
+            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agreg\u00f3 un nuevo alumno al cat\u00e1logo.',
             new Date().toISOString()
           );
           invalidateAlumnoHistorialCache(savedId);
@@ -4142,7 +4210,7 @@
     async function updateAlumnoStatus(alumnoId, nextStatus, button, options) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
       const currentStatus = getAlumnoStatusVisual(alumno);
       const targetStatus = String(nextStatus || '').trim().toLowerCase();
       const meta = Object.assign({
@@ -4150,7 +4218,7 @@
         actionKey: 'guardarAlumno:estatus',
         historyType: targetStatus || 'estado',
         historyTitle: 'Estado actualizado',
-        historyDetail: 'Se actualizÃ³ el estatus del alumno.',
+        historyDetail: 'Se actualiz\u00f3 el estatus del alumno.',
         successMessage: 'Estatus actualizado.'
       }, options || {});
       if (meta.confirmText && !confirm(meta.confirmText)) return;
@@ -4192,11 +4260,11 @@
 
     function pauseAlumno(alumnoId, button) {
       return updateAlumnoStatus(alumnoId, 'pausa', button, {
-        confirmText: 'El alumno quedara en pausa y seguira visible dentro del catalogo administrativo.',
+        confirmText: 'El alumno quedar\u00e1 en pausa y seguir\u00e1 visible dentro del cat\u00e1logo administrativo.',
         actionKey: 'guardarAlumno:pausa',
         historyType: 'pausa',
         historyTitle: 'Alumno en pausa',
-        historyDetail: 'Se pauso temporalmente al alumno dentro del catalogo.',
+        historyDetail: 'Se paus\u00f3 temporalmente al alumno dentro del cat\u00e1logo.',
         successMessage: 'Alumno en pausa.'
       });
     }
@@ -4205,7 +4273,7 @@
       ensureLoggedIn();
       const cambio = state.alumnosUi.cambioGrupo || createEmptyAlumnoCambioState();
       const alumno = getAlumnoById(cambio.alumno_id);
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
       if (!String(cambio.nuevo_grupo_id || '').trim()) throw new Error('Selecciona el nuevo grupo.');
       if (String(cambio.nuevo_grupo_id || '').trim() === String(alumno.grupo_id || '').trim()) {
         throw new Error('Selecciona un grupo diferente al actual.');
@@ -4227,7 +4295,7 @@
           alumno.alumno_id,
           'grupo',
           'Cambio de grupo',
-          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' Â· ' + String(cambio.motivo || '').trim() : ''),
+          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' \u00b7 ' + String(cambio.motivo || '').trim() : ''),
           new Date().toISOString()
         );
         invalidateAlumnoHistorialCache(alumno.alumno_id);
@@ -4247,8 +4315,8 @@
       if (alumno && getAlumnoStatusVisual(alumno) === 'activo') {
         throw new Error('Primero pausa o cambia el estatus del alumno antes de archivarlo.');
       }
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
-      if (!confirm('El alumno pasarÃ¡ a archivados y saldrÃ¡ de las vistas activas.')) return;
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
+      if (!confirm('El alumno pasar\u00e1 a archivados y saldr\u00e1 de las vistas activas.')) return;
       await handleAction('archivarAlumno', async () => {
         await api('archivarAlumno', { alumno_id: alumno.alumno_id });
         const archivedAt = new Date().toISOString();
@@ -4265,7 +4333,7 @@
           archivado_at: archivedAt
         });
         bumpAlumnosSourceRevision();
-        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiro del listado activo del catalogo.', new Date().toISOString());
+        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retir\u00f3 del listado activo del cat\u00e1logo.', new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
@@ -4423,10 +4491,11 @@
       ensureLoggedIn();
       const control = getAlumnoDeleteControlState();
       const ids = parseAlumnoDeleteIdsText(control.idsText);
-      if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
       await handleAction('previewBorradoAlumnos', async () => {
+        if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
         const preview = await api('previewBorradoAlumnos', { alumno_ids: ids });
         control.preview = preview;
+        control.previewIds = ids.slice();
         control.lastResult = null;
         control.confirmationText = '';
         renderAdminAlumnosModule();
@@ -4437,15 +4506,20 @@
       ensureLoggedIn();
       const control = getAlumnoDeleteControlState();
       const ids = parseAlumnoDeleteIdsText(control.idsText);
-      if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
-      if (String(control.confirmationText || '').trim() !== 'BORRAR_ALUMNOS') {
-        throw new Error('Escribe BORRAR_ALUMNOS para confirmar.');
-      }
-      if (!control.preview || !Array.isArray(control.preview.alumnos) || !control.preview.alumnos.length) {
-        throw new Error('Primero genera una vista previa con alumnos existentes.');
-      }
-      if (!confirm('Se borraran por completo los alumnos encontrados y sus datos asociados. Esta accion no se puede deshacer desde la app.')) return;
       await handleAction('borrarAlumnosControlado', async () => {
+        const previewIds = Array.isArray(control.previewIds) ? control.previewIds : [];
+        const samePreviewIds = ids.length === previewIds.length && ids.every((id, index) => id === previewIds[index]);
+        if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
+        if (String(control.confirmationText || '').trim() !== 'BORRAR_ALUMNOS') {
+          throw new Error('Escribe BORRAR_ALUMNOS para confirmar.');
+        }
+        if (!control.preview || !Array.isArray(control.preview.alumnos) || !control.preview.alumnos.length) {
+          throw new Error('Primero genera una vista previa con alumnos existentes.');
+        }
+        if (!samePreviewIds) {
+          throw new Error('Actualiza la vista previa antes de borrar. Los IDs cambiaron.');
+        }
+        if (!confirm('Se borrar\u00e1n por completo los alumnos encontrados y sus datos asociados. Esta acci\u00f3n no se puede deshacer desde la app.')) return;
         const result = await api('borrarAlumnosControlado', {
           alumno_ids: ids,
           confirmation_code: 'BORRAR_ALUMNOS',
@@ -4463,18 +4537,18 @@
     async function reactivateAlumno(alumnoId, button) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
-      if (!alumno) throw new Error('No se encontrÃ³ el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
       if (!String(alumno.grupo_id || '').trim()) {
         openCambioGrupo(alumnoId);
         setBanner('Selecciona primero un grupo para reactivar al alumno.', 'info');
         return;
       }
       return updateAlumnoStatus(alumnoId, 'activo', button, {
-        confirmText: 'El alumno volvera al catalogo activo.',
+        confirmText: 'El alumno volver\u00e1 al cat\u00e1logo activo.',
         actionKey: 'reactivarAlumno',
         historyType: 'reactivado',
         historyTitle: 'Alumno reactivado',
-        historyDetail: 'Se devolvio al alumno al catalogo activo.',
+        historyDetail: 'Se devolvi\u00f3 al alumno al cat\u00e1logo activo.',
         successMessage: 'Alumno reactivado.'
       });
     }
@@ -4584,7 +4658,7 @@
       }
       const rows = getAlumnoHistorial(state.alumnosUi.historialAlumnoId);
       if (!rows.length) {
-        host.innerHTML = '<div class="admin-alumnos-empty">TodavÃ­a no hay movimientos registrados para este alumno.</div>';
+        host.innerHTML = '<div class="admin-alumnos-empty">Todav&iacute;a no hay movimientos registrados para este alumno.</div>';
         return;
       }
       host.innerHTML = rows.map((row) => {
@@ -4935,7 +5009,10 @@
         const control = getAlumnoDeleteControlState();
         control.idsText = event.currentTarget.value;
         control.preview = null;
+        control.previewIds = [];
         control.lastResult = null;
+        control.confirmationText = '';
+        if ($('adminAlumnoDeleteConfirm')) $('adminAlumnoDeleteConfirm').value = '';
         renderAlumnoDeletePreview();
       });
       if ($('adminAlumnoDeleteTrashFiles')) $('adminAlumnoDeleteTrashFiles').addEventListener('change', (event) => {
@@ -5138,23 +5215,23 @@
 
     function getFacilitadorMatrixCellState(facilitadorId, asignacion, semana) {
       if (!isAssignmentActiveForSemana(asignacion, semana)) {
-        return { code: 'na', label: 'â€”', title: 'Sin asignaciÃ³n activa en esta semana' };
+        return { code: 'na', label: '\u2014', title: 'Sin asignaci\u00f3n activa en esta semana' };
       }
       const plan = getFacilitadorPlanForCell(facilitadorId, asignacion, semana.semana_id);
       if (!plan) {
-        return { code: 'missing', label: 'Falta', title: 'No existe una planeaciÃ³n registrada para esta asignaciÃ³n en la semana.' };
+        return { code: 'missing', label: 'Falta', title: 'No existe una planeaci\u00f3n registrada para esta asignaci\u00f3n en la semana.' };
       }
       if (getFacilitadorPlanAlertCount(plan.planeacion_id)) {
-        return { code: 'alert', label: 'Alerta', title: 'La planeaciÃ³n tiene alertas abiertas.' };
+        return { code: 'alert', label: 'Alerta', title: 'La planeaci\u00f3n tiene alertas abiertas.' };
       }
       const status = String(plan.estado || '').trim();
       if (status === 'cierre_pendiente') {
-        return { code: 'pending', label: 'Cierre', title: 'La planeaciÃ³n quedÃ³ en cierre pendiente.' };
+        return { code: 'pending', label: 'Cierre', title: 'La planeaci\u00f3n qued\u00f3 en cierre pendiente.' };
       }
       if (status === 'cerrada' || status === 'archivada') {
-        return { code: 'closed', label: 'Cerrada', title: 'La planeaciÃ³n ya cerrÃ³ su ciclo operativo.' };
+        return { code: 'closed', label: 'Cerrada', title: 'La planeaci\u00f3n ya cerr\u00f3 su ciclo operativo.' };
       }
-      return { code: 'ok', label: 'Lista', title: 'La planeaciÃ³n estÃ¡ registrada y operativa.' };
+      return { code: 'ok', label: 'Lista', title: 'La planeaci\u00f3n est\u00e1 registrada y operativa.' };
     }
 
     function buildFacilitadorPulse(facilitadorId) {
@@ -5196,7 +5273,7 @@
       if (pulse.faltantes) parts.push(pulse.faltantes + ' faltante(s)');
       if (pulse.cierresPendientes) parts.push(pulse.cierresPendientes + ' cierre(s)');
       if (pulse.alertasAbiertas) parts.push(pulse.alertasAbiertas + ' alerta(s)');
-      return parts.join(' Â· ') || 'Sin pendientes crÃ­ticos';
+      return parts.join(' \u00b7 ') || 'Sin pendientes cr\u00edticos';
     }
 
     function closeFacilitadorEditor() {
@@ -5304,7 +5381,7 @@
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
                     '<span>PIN temporal</span>',
-                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar Â· requerido al crear">',
+                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar &middot; requerido al crear">',
                   '</label>',
                 '</div>',
                 '<div class="actions compact admin-alumnos-panel-actions">',
@@ -5395,7 +5472,7 @@
       if (!host) return;
       const facilitador = getFacilitadorById(state.facilitadoresUi.selectedFacilitadorId);
       if (!facilitador) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">AquÃ­ aparecerÃ¡n sus asignaciones, pulso semanal y accesos rÃ¡pidos.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">Aqu&iacute; aparecer&aacute;n sus asignaciones, pulso semanal y accesos r&aacute;pidos.</div></div></div>';
         return;
       }
       const visualStatus = getFacilitadorVisualStatus(facilitador);
@@ -5410,7 +5487,7 @@
           '<div class="admin-facilitadores-identity">',
             '<div>',
               '<strong>' + escapeHtml(facilitador.nombre_mostrado || facilitador.nombre_completo || facilitador.facilitador_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' Â· ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
+              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' &middot; ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
             '</div>',
             '<span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span>',
           '</div>',
@@ -5437,8 +5514,8 @@
             '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.alertasAbiertas)) + '</strong><span>Alertas</span></div>',
           '</div>',
           (pinOpen && canManage ? renderFacilitadorPinBlock() : ''),
-          '<div class="admin-alumnos-section-head"><div><h4>Asignaciones</h4><div class="subtle">RelaciÃ³n grupo + materia que se espera de este facilitador.</div></div>' +
-            '<div class="actions compact">' + (canUseAdminShell() ? '<button class="btn-primary" type="button" onclick="openFacilitadorAsignacionEditor(\'new\')">Nueva asignaciÃ³n</button>' : '') + '</div></div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Asignaciones</h4><div class="subtle">Relaci&oacute;n grupo + materia que se espera de este facilitador.</div></div>' +
+            '<div class="actions compact">' + (canUseAdminShell() ? '<button class="btn-primary" type="button" onclick="openFacilitadorAsignacionEditor(\'new\')">Nueva asignaci&oacute;n</button>' : '') + '</div></div>',
           '<div class="admin-facilitadores-assignment-list">' + renderFacilitadorAssignmentsList(facilitador.facilitador_id) + '</div>',
           (asignacionOpen ? renderFacilitadorAsignacionEditor() : ''),
           '<div class="admin-alumnos-section-head"><div><h4>Pulso semanal</h4><div class="subtle">Semanas recientes cruzadas con asignaciones activas y planeaciones existentes.</div></div></div>',
@@ -5457,11 +5534,11 @@
         const periodo = [
           row.fecha_inicio ? ('Desde ' + formatFechaHumana(row.fecha_inicio)) : '',
           row.fecha_fin ? ('Hasta ' + formatFechaHumana(row.fecha_fin)) : ''
-        ].filter(Boolean).join(' Â· ') || 'Sin vigencia cerrada';
+        ].filter(Boolean).join(' \u00b7 ') || 'Sin vigencia cerrada';
         return [
           '<article class="admin-facilitadores-assignment-item">',
             '<div class="admin-facilitadores-assignment-copy">',
-              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' Â· ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
+              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' &middot; ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
               '<div class="mini">' + escapeHtml(periodo) + '</div>',
             '</div>',
             '<div class="admin-facilitadores-assignment-actions">',
@@ -5497,7 +5574,7 @@
       const asign = state.facilitadoresUi.asignacion || createEmptyFacilitadorAsignacionState();
       return [
         '<section class="admin-alumnos-panel">',
-          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignaciÃ³n' : 'Nueva asignaciÃ³n') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignaci\u00f3n' : 'Nueva asignaci\u00f3n') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
               '<span>Grupo</span>',
@@ -5518,7 +5595,7 @@
           '</div>',
           '<div class="actions compact admin-alumnos-panel-actions">',
             '<button class="btn-ghost" type="button" onclick="closeFacilitadorAsignacionPanel()">Cancelar</button>',
-            '<button class="btn-primary" type="button" onclick="saveFacilitadorAsignacion(this)">Guardar asignaciÃ³n</button>',
+            '<button class="btn-primary" type="button" onclick="saveFacilitadorAsignacion(this)">Guardar asignaci&oacute;n</button>',
           '</div>',
         '</section>'
       ].join('');
@@ -5528,19 +5605,19 @@
       const semanas = getFacilitadorRecentWeeks();
       const asignaciones = getFacilitadorAsignaciones(facilitadorId).filter((row) => row.activa);
       if (!semanas.length || !asignaciones.length) {
-        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todavÃ­a.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignaciÃ³n activa.</div></div></div>';
+        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todav&iacute;a.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignaci&oacute;n activa.</div></div></div>';
       }
       return [
         '<div class="admin-facilitadores-matrix-table">',
           '<div class="admin-facilitadores-matrix-header">',
-            '<div class="admin-facilitadores-matrix-label">AsignaciÃ³n</div>',
+            '<div class="admin-facilitadores-matrix-label">Asignaci&oacute;n</div>',
             semanas.map((semana) => '<div class="admin-facilitadores-matrix-cell">' + escapeHtml(formatSemanaLabel(semana)) + '</div>').join(''),
           '</div>',
           asignaciones.map((asignacion) => {
             const materia = (state.catalogos.materias || []).find((item) => item.materia_id === asignacion.materia_id);
             return [
               '<div class="admin-facilitadores-matrix-row">',
-                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' Â· ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
+                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' &middot; ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
                 semanas.map((semana) => {
                   const cell = getFacilitadorMatrixCellState(facilitadorId, asignacion, semana);
                   const css = cell.code === 'ok' ? 'is-ok' :
@@ -5654,7 +5731,6 @@
     }
 
     async function saveFacilitadorEditor(button) {
-      if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede editar facilitadores.');
       const mode = state.facilitadoresUi.editorMode || 'new';
       const payload = {
         facilitador_id: $('adminFacilitadorIdInput') ? $('adminFacilitadorIdInput').value.trim() : '',
@@ -5666,12 +5742,13 @@
         request_id: uid('FACED')
       };
       const pinPlano = $('adminFacilitadorPinInput') ? $('adminFacilitadorPinInput').value.trim() : '';
-      if (!payload.facilitador_id) throw new Error('Captura el Facilitador ID.');
-      if (!payload.nombre_completo) throw new Error('Captura el nombre completo.');
-      if (!payload.nombre_mostrado) throw new Error('Captura el nombre mostrado.');
-      if (mode === 'new' && !pinPlano) throw new Error('Captura un PIN temporal para el nuevo facilitador.');
-      if (pinPlano) payload.pin_plano = pinPlano;
       await handleAction('guardarFacilitador', async () => {
+        if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede editar facilitadores.');
+        if (!payload.facilitador_id) throw new Error('Captura el Facilitador ID.');
+        if (!payload.nombre_completo) throw new Error('Captura el nombre completo.');
+        if (!payload.nombre_mostrado) throw new Error('Captura el nombre mostrado.');
+        if (mode === 'new' && !pinPlano) throw new Error('Captura un PIN temporal para el nuevo facilitador.');
+        if (pinPlano) payload.pin_plano = pinPlano;
         const data = await api('guardarFacilitador', payload);
         if (data && data.facilitador) applySavedFacilitadorCatalogRow(data.facilitador);
         closeFacilitadorEditor();
@@ -5746,7 +5823,7 @@
       if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede archivar facilitadores.');
       const row = getFacilitadorById(facilitadorId);
       if (!row) throw new Error('Facilitador no encontrado.');
-      if (!confirm('Esto archivarÃ¡ al facilitador y cerrarÃ¡ sus accesos operativos.')) return;
+      if (!confirm('Esto archivar\u00e1 al facilitador y cerrar\u00e1 sus accesos operativos.')) return;
       await handleAction('archivarFacilitador', async () => {
         await api('archivarFacilitador', {
           facilitador_id: row.facilitador_id,
@@ -5864,7 +5941,7 @@
         });
         closeFacilitadorAsignacionEditor();
         renderAdminModuleSurface('facilitadores');
-        setBanner('AsignaciÃ³n guardada.', 'success');
+        setBanner('Asignaci\u00f3n guardada.', 'success');
       }, {
         button,
         key: buildActionKey('guardarFacilitadorAsignacion', [facilitadorId, payload.grupo_id, payload.materia_id, payload.asignacion_id || 'new']),
@@ -5873,7 +5950,7 @@
     }
 
     async function archiveFacilitadorAsignacion(button, asignacionId) {
-      if (!confirm('Esta asignaciÃ³n dejarÃ¡ de contar para el pulso semanal del facilitador.')) return;
+      if (!confirm('Esta asignaci\u00f3n dejar\u00e1 de contar para el pulso semanal del facilitador.')) return;
       await handleAction('archivarFacilitadorAsignacion', async () => {
         await api('archivarFacilitadorAsignacion', {
           asignacion_id: asignacionId,
@@ -5892,7 +5969,7 @@
         });
         closeFacilitadorAsignacionEditor();
         renderAdminModuleSurface('facilitadores');
-        setBanner('AsignaciÃ³n retirada del pulso semanal.', 'success');
+        setBanner('Asignaci\u00f3n retirada del pulso semanal.', 'success');
       }, {
         button,
         key: buildActionKey('archivarFacilitadorAsignacion', [asignacionId]),
@@ -5918,7 +5995,7 @@
       });
       setBanner(
         state.ui && state.ui.planeacionesMateriaFilter
-          ? 'Planeaciones filtradas por asignaciÃ³n del facilitador.'
+          ? 'Planeaciones filtradas por asignaci\u00f3n del facilitador.'
           : 'Planeaciones filtradas por facilitador.',
         'info'
       );
@@ -6204,7 +6281,7 @@
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
                     '<span>Nombre</span>',
-                    '<input id="adminTallerNombreInput" type="text" maxlength="100" placeholder="Ej. Taller de futbol">',
+                    '<input id="adminTallerNombreInput" type="text" maxlength="100" placeholder="Ej. Taller de f&uacute;tbol">',
                   '</label>',
                   '<label class="field">',
                     '<span>Materia base</span>',
@@ -6278,7 +6355,7 @@
             return [
               '<article class="admin-talleres-row' + (selected ? ' is-selected' : '') + '" onclick="selectTaller(\'' + escapeJsAttrValue(row.taller_id) + '\')">',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.taller_id) + '</div></div>',
-                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos despues') + '</div></div>',
+                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos despu\u00e9s') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</div></div>',
                 '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getTallerStatusBadgeClass(row.estatus) + '">' + escapeHtml(getTallerStatusLabel(row.estatus)) + '</span></div>',
@@ -6295,7 +6372,7 @@
       if (!host) return;
       const taller = getTallerById(state.talleresUi.selectedTallerId);
       if (!taller) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">Aqui veras su materia base, responsable y el acceso rapido para editar el catalogo.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">Aqu&iacute; ver&aacute;s su materia base, responsable y el acceso r&aacute;pido para editar el cat&aacute;logo.</div></div></div>';
         return;
       }
       const materia = (state.catalogos.materias || []).find((item) => item.materia_id === taller.materia_id);
@@ -6326,7 +6403,7 @@
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Materia base</span><strong>' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Responsable</span><strong>' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Ultima actualizacion</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>&Uacute;ltima actualizaci&oacute;n</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Alumnos inscritos</span><strong>' + escapeHtml(String(activeMembers.length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Grupos mezclados</span><strong>' + escapeHtml(representedGroups.length ? String(representedGroups.length) : '0') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Siguiente paso</span><strong>Inscribir alumnos</strong></div>',
@@ -6348,7 +6425,7 @@
                     const alumno = row.alumno || {};
                     return '<span class="admin-taller-member-chip"><span>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || row.alumno_id) + '</span><span class="mini">' + escapeHtml(getGrupoNombre(alumno.grupo_id)) + '</span></span>';
                   }).join('') + '</div>'
-                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso rapido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
+                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso r&aacute;pido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
             '</div>',
             (membershipOpen
               ? '<div class="admin-taller-membership-head">' +
@@ -6368,10 +6445,10 @@
                       const alumnoId = String(row.alumno_id || '').trim();
                       return '<label class="admin-taller-membership-candidate">' +
                         '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedIds.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
-                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matricula') + ' - ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
+                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matr\u00edcula') + ' - ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
                       '</label>';
                     }).join('') + '</div>'
-                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta busqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta b&uacute;squeda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
               : ''),
           '</div>',
         '</div>'
@@ -6471,7 +6548,6 @@
     }
 
     async function saveTallerEditor(button) {
-      if (!canManageTalleresCatalog()) throw new Error('No tienes permiso para editar talleres.');
       const mode = state.talleresUi.editorMode || 'new';
       const payload = {
         taller_id: $('adminTallerIdInput') ? $('adminTallerIdInput').value.trim() : '',
@@ -6481,9 +6557,10 @@
         estatus: $('adminTallerStatusInput') ? $('adminTallerStatusInput').value : 'activo',
         request_id: uid('TAL')
       };
-      if (!payload.taller_id) throw new Error('Captura el taller ID.');
-      if (!payload.nombre) throw new Error('Captura el nombre del taller.');
       await handleAction('guardarTaller', async () => {
+        if (!canManageTalleresCatalog()) throw new Error('No tienes permiso para editar talleres.');
+        if (!payload.taller_id) throw new Error('Captura el taller ID.');
+        if (!payload.nombre) throw new Error('Captura el nombre del taller.');
         const data = await api('guardarTaller', payload);
         if (data && data.taller) applySavedTallerCatalogRow(data.taller);
         closeTallerEditor();
@@ -6517,7 +6594,7 @@
     }
 
     async function archiveTaller(button, tallerId) {
-      if (!window.confirm('Esto archivara el taller del catalogo base.')) return;
+      if (!window.confirm('Esto archivar\u00e1 el taller del cat\u00e1logo base.')) return;
       await handleAction('archivarTaller', async () => {
         await api('archivarTaller', {
           taller_id: tallerId,
@@ -6912,8 +6989,8 @@
             const subRows = getSubmateriasForMateria(row.materia_id);
             const actions = [
               '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); openMateriaEditor(\'edit\', \'' + escapeJsAttrValue(row.materia_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'up\')">â†‘</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'down\')">â†“</button>',
+              '<button class="btn-ghost" type="button" title="Subir materia" aria-label="Subir materia" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'up\')">&uarr;</button>',
+              '<button class="btn-ghost" type="button" title="Bajar materia" aria-label="Bajar materia" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'down\')">&darr;</button>',
               '<button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectMateria(\'' + escapeJsAttrValue(row.materia_id) + '\')">Ver panel</button>'
             ];
             return [
@@ -6936,7 +7013,7 @@
       if (!host) return;
       const materia = getSelectedMateria();
       if (!materia) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">Aqui aparecera su estructura, variantes y acciones operativas.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">Aqu&iacute; aparecer&aacute; su estructura, variantes y acciones operativas.</div></div></div>';
         return;
       }
       const subRows = getSubmateriasForMateria(materia.materia_id);
@@ -6947,7 +7024,7 @@
           '<div class="admin-materias-identity">',
             '<div>',
               '<strong>' + escapeHtml(materia.nombre || materia.materia_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(materia.materia_id) + ' Â· ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
+              '<div class="mini">' + escapeHtml(materia.materia_id) + ' &middot; ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
             '</div>',
             '<div class="admin-materias-structure">',
               '<span class="admin-alumnos-badge">' + escapeHtml(getMateriaStructureLabel(materia)) + '</span>',
@@ -6968,7 +7045,7 @@
             '<div class="admin-alumnos-readonly"><span>Estructura</span><strong>' + escapeHtml(getMateriaStructureLabel(materia)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Variantes registradas</span><strong>' + escapeHtml(String(subRows.length)) + '</strong></div>',
           '</div>',
-          '<div class="admin-alumnos-section-head"><div><h4>Variantes</h4><div class="subtle">' + escapeHtml(materiaHasVariants(materia) ? 'Submaterias de operaciÃ³n para esta materia base.' : 'Materia simple sin variantes registradas.') + '</div></div></div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Variantes</h4><div class="subtle">' + escapeHtml(materiaHasVariants(materia) ? 'Submaterias de operaci\u00f3n para esta materia base.' : 'Materia simple sin variantes registradas.') + '</div></div></div>',
           (materiaHasVariants(materia) ? renderMateriaVariantsList(materia) : '<div class="admin-alumnos-empty" style="min-height:136px;"><div><strong>Materia simple.</strong><div class="subtle">Esta materia no usa submaterias operativas en este momento.</div></div></div>'),
           (state.materiasUi.subEditorOpen && String(state.materiasUi.subEditor.materia_id || '').trim() === materia.materia_id ? renderSubmateriaEditor() : ''),
         '</div>'
@@ -6978,15 +7055,15 @@
     function renderMateriaVariantsList(materia) {
       const subRows = getSubmateriasForMateria(materia.materia_id);
       if (!subRows.length) {
-        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin variantes registradas.</strong><div class="subtle">Agrega submaterias para especializar la operaciÃ³n sin duplicar la materia base.</div></div></div>';
+        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin variantes registradas.</strong><div class="subtle">Agrega submaterias para especializar la operaci&oacute;n sin duplicar la materia base.</div></div></div>';
       }
       return [
         '<div class="admin-materias-variants">',
           subRows.map((row) => {
             const actions = [
               '<button class="btn-ghost" type="button" onclick="openSubmateriaEditor(\'edit\', \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'up\')">â†‘</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'down\')">â†“</button>',
+              '<button class="btn-ghost" type="button" title="Subir submateria" aria-label="Subir submateria" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'up\')">&uarr;</button>',
+              '<button class="btn-ghost" type="button" title="Bajar submateria" aria-label="Bajar submateria" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'down\')">&darr;</button>',
               (row.estatus === 'activa'
                 ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Desactivar</button>'
                 : (row.estatus === 'inactiva'
@@ -7000,7 +7077,7 @@
               '<article class="admin-materias-variant-item">',
                 '<div class="admin-materias-variant-copy">',
                   '<strong>' + escapeHtml(row.nombre || row.submateria_id) + '</strong>',
-                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' Â· ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' Â· Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
+                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' &middot; ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' &middot; Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
                 '</div>',
                 '<div class="admin-materias-variant-actions">' + actions.join('') + '</div>',
               '</article>'
@@ -7031,7 +7108,7 @@
       const editor = state.materiasUi.subEditor || createEmptySubmateriaEditorState();
       return [
         '<section class="admin-alumnos-panel">',
-          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">Manten la materia base limpia y administra sus variantes aqui.</div></div></div>',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">Mant&eacute;n la materia base limpia y administra sus variantes aqu&iacute;.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
               '<span>Submateria ID</span>',
@@ -7089,9 +7166,9 @@
         estatus: $('adminMateriaStatusInput') ? $('adminMateriaStatusInput').value : 'activa',
         request_id: uid('MAT')
       };
-      if (!payload.materia_id) throw new Error('Captura la materia ID.');
-      if (!payload.nombre) throw new Error('Captura el nombre de la materia.');
       await handleAction('guardarMateria', async () => {
+        if (!payload.materia_id) throw new Error('Captura la materia ID.');
+        if (!payload.nombre) throw new Error('Captura el nombre de la materia.');
         const data = await api('guardarMateria', payload);
         if (data && data.materia) applySavedMateriaCatalogRow(data.materia);
         closeMateriaEditor();
@@ -7172,7 +7249,7 @@
     }
 
     async function archiveMateria(button, materiaId) {
-      if (!window.confirm('Esto archivarÃ¡ la materia base y retirarÃ¡ sus variantes operativas visibles.')) return;
+      if (!window.confirm('Esto archivar\u00e1 la materia base y retirar\u00e1 sus variantes operativas visibles.')) return;
       await handleAction('archivarMateria', async () => {
         await api('archivarMateria', {
           materia_id: materiaId,
@@ -7206,7 +7283,7 @@
     async function toggleMateriaStatus(button, materiaId) {
       const row = getMateriaBaseRows().find((item) => item.materia_id === String(materiaId || '').trim());
       if (!row) throw new Error('Materia no encontrada.');
-      if (row.estatus === 'archivada') throw new Error('Usa la acciÃ³n de reactivar para una materia archivada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acci\u00f3n de reactivar para una materia archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleMateriaStatus', async () => {
         await api('guardarMateria', {
@@ -7275,12 +7352,12 @@
       }, {
         button,
         key: buildActionKey('reordenarMateria', [materiaId, direction]),
-        busyText: direction === 'up' ? 'â†‘' : 'â†“'
+        busyText: direction === 'up' ? 'Subiendo...' : 'Bajando...'
       });
     }
 
     async function archiveSubmateria(button, materiaId, submateriaId) {
-      if (!window.confirm('Esta variante dejara de estar disponible en el catalogo operativo.')) return;
+      if (!window.confirm('Esta variante dejar\u00e1 de estar disponible en el cat\u00e1logo operativo.')) return;
       await handleAction('archivarSubmateria', async () => {
         await api('archivarSubmateria', {
           submateria_id: submateriaId,
@@ -7305,7 +7382,7 @@
     async function toggleSubmateriaStatus(button, materiaId, submateriaId) {
       const row = getSubmateriasForMateria(materiaId).find((item) => item.submateria_id === String(submateriaId || '').trim());
       if (!row) throw new Error('Submateria no encontrada.');
-      if (row.estatus === 'archivada') throw new Error('Usa la acciÃ³n de reactivar para una submateria archivada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acci\u00f3n de reactivar para una submateria archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleSubmateriaStatus', async () => {
         await api('guardarSubmateria', {
@@ -7378,7 +7455,7 @@
       }, {
         button,
         key: buildActionKey('reordenarSubmateria', [submateriaId, direction]),
-        busyText: direction === 'up' ? 'â†‘' : 'â†“'
+        busyText: direction === 'up' ? 'Subiendo...' : 'Bajando...'
       });
     }
 
@@ -7428,7 +7505,7 @@
     function renderPeriodSelects() {
       const periods = getAvailablePeriods();
       ['obsPeriodo', 'evaPeriodo', 'notaPeriodo', 'repPeriodo'].forEach((id) => {
-        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona perÃ­odo');
+        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona per\u00edodo');
       });
       const reportUi = getReportSelectionState();
       if ($('repPeriodo') && reportUi.periodo_id) $('repPeriodo').value = reportUi.periodo_id;
@@ -7454,6 +7531,7 @@
         lockedSemanaId: '',
         lockedGrupoId: '',
         selectedSubmateriaId: '',
+        selectedTallerId: '',
         validationErrors: {},
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
@@ -7464,14 +7542,14 @@
     function normalizeMaterialStatus(value) {
       const raw = String(value == null ? '' : value).trim().toLowerCase();
       if (!raw) return 'no_requiere';
-      if (['listo', 'si', 'sÃ­', 'true', '1'].includes(raw)) return 'listo';
+      if (['listo', 'si', 's\u00ed', 'true', '1'].includes(raw)) return 'listo';
       if (['no_listo', 'no', 'false', '0'].includes(raw)) return 'no_listo';
       return 'no_requiere';
     }
 
     function normalizeRealizadaStatus(value) {
       const raw = String(value == null ? '' : value).trim().toLowerCase();
-      if (['si', 'sÃ­', 'true', '1'].includes(raw)) return 'si';
+      if (['si', 's\u00ed', 'true', '1'].includes(raw)) return 'si';
       if (['no', 'false', '0'].includes(raw)) return 'no';
       return '';
     }
@@ -7603,7 +7681,7 @@
     function getPlanStatusLabel(status) {
       return ({
         borrador: 'Borrador',
-        borrador_pendiente_aprobacion: 'Pendiente de aprobaciÃ³n',
+        borrador_pendiente_aprobacion: 'Pendiente de aprobaci\u00f3n',
         rechazada: 'Rechazada',
         activa: 'Activa',
         cierre_pendiente: 'Cierre pendiente',
@@ -7863,6 +7941,7 @@
       $('planFecha').value = '';
       $('planMateria').value = '';
       if ($('planSubmateria')) $('planSubmateria').value = '';
+      if ($('planTaller')) $('planTaller').value = '';
       $('planFrase').value = '';
       if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
       if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
@@ -7875,7 +7954,7 @@
       }
       if ($('planeacionesSectionCopy')) {
         $('planeacionesSectionCopy').textContent = canUseAdminShell()
-          ? 'Consulta histÃ³rico, filtra y corrige cualquier planeaciÃ³n del sistema.'
+          ? 'Consulta hist\u00f3rico, filtra y corrige cualquier planeaci\u00f3n del sistema.'
           : 'Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
       }
     }
@@ -7886,6 +7965,7 @@
       if ($('planFecha')) $('planFecha').value = '';
       if ($('planMateria')) $('planMateria').value = '';
       if ($('planSubmateria')) $('planSubmateria').value = '';
+      if ($('planTaller')) $('planTaller').value = '';
       if ($('planFrase')) $('planFrase').value = '';
       if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
       if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
@@ -7905,6 +7985,7 @@
         lockedSemanaId: plan.semana_id,
         lockedGrupoId: plan.grupo_id,
         selectedSubmateriaId: plan.submateria_id || '',
+        selectedTallerId: '',
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
@@ -8352,7 +8433,7 @@
       const submateriaLabel = submateria
         ? (submateria.nombre || submateria.submateria_id)
         : (plan && plan.submateria_nombre ? String(plan.submateria_nombre).trim() : '');
-      return submateriaLabel ? (materiaLabel + ' Â· ' + submateriaLabel) : materiaLabel;
+      return submateriaLabel ? (materiaLabel + ' \u00b7 ' + submateriaLabel) : materiaLabel;
     }
 
     function syncPlanSubmateriaSelect(preferredValue) {
@@ -9123,7 +9204,7 @@
             detail_loaded: true
           });
         }
-        throw new Error('PlaneaciÃ³n no encontrada.');
+        throw new Error('Planeaci\u00f3n no encontrada.');
       }
       return Object.assign({}, rows[0], {
         detail_loaded: true
@@ -9236,7 +9317,7 @@
       const week = getWeekByDateOrDraft(resolvedDate);
       const hint = week ? getSemanaHintText(week) : '';
       host.textContent = week
-        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' Â· ')
+        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' \u00b7 ')
         : 'Selecciona una fecha.';
       host.className = 'inline-note';
       if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
@@ -9290,6 +9371,95 @@
       return getCatalogIndex().alumnosByGroupId.get(String(groupId || '').trim()) || [];
     }
 
+    function getPlanEditorTallerOptions() {
+      const currentUserId = getCurrentUserId();
+      return (state.catalogos.talleres || [])
+        .filter((row) => {
+          const status = String(row.estatus || '').trim() || (row.activo === false ? 'inactivo' : 'activo');
+          if (status !== 'activo' || row.activo === false) return false;
+          if (canUseAdminShell()) return true;
+          const facilitatorId = String(row.facilitador_id || '').trim();
+          return !facilitatorId || !currentUserId || facilitatorId === currentUserId;
+        })
+        .sort((a, b) => String(a.nombre || a.taller_id).localeCompare(String(b.nombre || b.taller_id), 'es'));
+    }
+
+    function getPlanEditorTallerById(tallerId) {
+      const targetId = String(tallerId || '').trim();
+      if (!targetId) return null;
+      return getPlanEditorTallerOptions().find((row) => String(row.taller_id || '').trim() === targetId) || null;
+    }
+
+    function getSelectedPlanTallerId() {
+      const select = $('planTaller');
+      const fromSelect = select ? String(select.value || '').trim() : '';
+      return fromSelect || String(state.planEditor && state.planEditor.selectedTallerId || '').trim();
+    }
+
+    function getPlanTallerAlumnoIdSet(tallerId) {
+      const targetId = String(tallerId || '').trim();
+      if (!targetId) return new Set();
+      return new Set((state.catalogos.alumno_talleres || [])
+        .filter((row) => String(row.taller_id || '').trim() === targetId && row.activa !== false)
+        .map((row) => String(row.alumno_id || '').trim())
+        .filter(Boolean));
+    }
+
+    function getPlanEditorAlumnosByGroupId(groupId) {
+      const alumnos = getAlumnosByGroupId(groupId);
+      const tallerId = getSelectedPlanTallerId();
+      if (!tallerId) return alumnos;
+      const allowedAlumnoIds = getPlanTallerAlumnoIdSet(tallerId);
+      if (!allowedAlumnoIds.size) return [];
+      return alumnos.filter((alumno) => allowedAlumnoIds.has(String(alumno.alumno_id || '').trim()));
+    }
+
+    function getPlanTallerAvailableGroupIds(tallerId) {
+      const allowedAlumnoIds = getPlanTallerAlumnoIdSet(tallerId);
+      if (!allowedAlumnoIds.size) return [];
+      const groupIds = new Set();
+      allowedAlumnoIds.forEach((alumnoId) => {
+        const alumno = getCatalogIndex().alumnosById.get(alumnoId);
+        const groupId = String(alumno && alumno.grupo_id || '').trim();
+        if (groupId) groupIds.add(groupId);
+      });
+      return Array.from(groupIds);
+    }
+
+    function renderPlanTallerSelect() {
+      const field = $('planTallerField');
+      const select = $('planTaller');
+      const note = $('planTallerNote');
+      if (!field || !select) return;
+      const isEdit = state.planEditor.mode === 'edit';
+      const options = getPlanEditorTallerOptions();
+      field.hidden = isEdit || !options.length;
+      if (field.hidden) {
+        if (!isEdit) state.planEditor.selectedTallerId = '';
+        select.value = '';
+        if (note) note.textContent = '';
+        return;
+      }
+      const preferredValue = String(state.planEditor.selectedTallerId || '').trim();
+      fillSelect(select, options, (row) => row.taller_id, (row) => row.nombre || row.taller_id, 'Sin taller');
+      if (preferredValue && options.some((row) => String(row.taller_id || '').trim() === preferredValue)) {
+        select.value = preferredValue;
+      }
+      state.planEditor.selectedTallerId = select.value || '';
+      const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
+      select.disabled = catalogsLoading || isEdit;
+      if (note) {
+        const selectedTallerId = select.value || '';
+        if (!selectedTallerId) {
+          note.textContent = 'Opcional: usa un taller para filtrar alumnos.';
+        } else {
+          const availableIds = getPlanTallerAlumnoIdSet(selectedTallerId);
+          const availableInCatalog = Array.from(availableIds).filter((alumnoId) => getCatalogIndex().alumnosById.has(alumnoId)).length;
+          note.textContent = String(availableInCatalog) + ' alumno(s) disponibles en tus grupos.';
+        }
+      }
+    }
+
     function getAlumnoDisplaySnapshot(alumnoRow) {
       const alumnoId = String(alumnoRow && alumnoRow.alumno_id || '').trim();
       const catalogAlumno = getCatalogIndex().alumnosById.get(alumnoId);
@@ -9302,7 +9472,7 @@
 
     function applyGroupSelectionToAlumnoSet(selectedSet, groupId, checked) {
       const nextSelected = selectedSet instanceof Set ? selectedSet : new Set(selectedSet || []);
-      getAlumnosByGroupId(groupId).forEach((alumno) => {
+      getPlanEditorAlumnosByGroupId(groupId).forEach((alumno) => {
         if (checked) nextSelected.add(alumno.alumno_id);
         else nextSelected.delete(alumno.alumno_id);
       });
@@ -9322,19 +9492,19 @@
         ? ((canUseAdminShell() ? selectedGroups : []).length ? selectedGroups : [state.planEditor.lockedGrupoId])
         : selectedGroups;
       if (!groupIds.length) {
-        host.innerHTML = '<div class="empty">Selecciona al menos un grupo para cargar alumnos.</div>';
+        host.innerHTML = '<div class="empty">' + (getSelectedPlanTallerId() ? 'Selecciona un taller con alumnos disponibles o marca un grupo.' : 'Selecciona al menos un grupo para cargar alumnos.') + '</div>';
         return;
       }
       host.innerHTML = groupIds.map((groupId) => {
         const group = getCatalogIndex().gruposById.get(String(groupId || '').trim());
-        const alumnos = getAlumnosByGroupId(groupId);
+        const alumnos = getPlanEditorAlumnosByGroupId(groupId);
         return (
             '<div class="group-block">' +
               '<div class="group-block-head">' +
                 '<div><strong>' + escapeHtml(group ? getGrupoDisplayName(group) : groupId) + '</strong></div>' +
               '</div>' +
             '<div class="checklist">' +
-              alumnos.map((alumno) => {
+              (alumnos.length ? alumnos.map((alumno) => {
                 const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
                 return (
                   '<label class="check-item">' +
@@ -9342,7 +9512,7 @@
                     '<span><strong>' + escapeHtml(label) + '</strong></span>' +
                   '</label>'
                 );
-              }).join('') +
+              }).join('') : '<div class="empty">' + (getSelectedPlanTallerId() ? 'No hay alumnos de este taller en este grupo.' : 'No hay alumnos activos en este grupo.') + '</div>') +
             '</div>' +
           '</div>'
         );
@@ -9356,6 +9526,34 @@
       clearPlanEditorValidation('planAlumnosChecklist');
       const selected = applyGroupSelectionToAlumnoSet(new Set(getSelectedPlanAlumnos()), input.value, !!input.checked);
       renderPlanAlumnosChecklist(selected);
+    }
+
+    function handlePlanTallerChanged(event) {
+      if (state.planEditor.mode === 'edit') return;
+      const select = event && event.currentTarget ? event.currentTarget : $('planTaller');
+      const tallerId = select ? String(select.value || '').trim() : '';
+      state.planEditor.selectedTallerId = tallerId;
+      clearPlanEditorValidation('planGruposChecklist');
+      clearPlanEditorValidation('planAlumnosChecklist');
+      const taller = getPlanEditorTallerById(tallerId);
+      if (taller && taller.materia_id && $('planMateria')) {
+        $('planMateria').value = taller.materia_id;
+        state.planEditor.selectedSubmateriaId = '';
+        clearPlanEditorValidation('planMateria');
+        clearPlanEditorValidation('planSubmateria');
+        syncPlanSubmateriaSelect('');
+      }
+      if (tallerId) {
+        const selectedGroupIds = new Set(getPlanTallerAvailableGroupIds(tallerId));
+        Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+          input.checked = selectedGroupIds.has(String(input.value || '').trim());
+        });
+        renderPlanTallerSelect();
+        renderPlanAlumnosChecklist(new Set(Array.from(getPlanTallerAlumnoIdSet(tallerId))));
+        return;
+      }
+      renderPlanTallerSelect();
+      renderPlanAlumnosChecklist(new Set(getSelectedPlanAlumnos()));
     }
 
     function renderPlanActivitiesEditor() {
@@ -9400,7 +9598,7 @@
       const primarySaveBtn = $('savePlanBtn');
       const draftSaveBtn = $('savePlanDraftBtn');
       const activeSaveBtn = $('savePlanActiveBtn');
-      $('planEditorTitle').textContent = isEdit ? 'Editar planeaciÃ³n' : 'Plan';
+      $('planEditorTitle').textContent = isEdit ? 'Editar planeaci\u00f3n' : 'Plan';
       if (primarySaveBtn) {
         primarySaveBtn.hidden = !isEdit;
         primarySaveBtn.textContent = 'Guardar cambios';
@@ -9417,6 +9615,7 @@
       $('planFecha').disabled = !canEditDate;
       $('planMateria').disabled = catalogsLoading;
       if ($('planSubmateria')) $('planSubmateria').disabled = catalogsLoading;
+      if ($('planTaller')) $('planTaller').disabled = catalogsLoading || isEdit;
       $('planFrase').disabled = catalogsLoading;
       $('selectAllVisibleAlumnosBtn').disabled = catalogsLoading;
       $('clearVisibleAlumnosBtn').disabled = catalogsLoading;
@@ -9424,6 +9623,7 @@
       if (loadingNote) loadingNote.hidden = !catalogsLoading;
       renderPlanWeekResolved();
       syncPlanSubmateriaSelect();
+      renderPlanTallerSelect();
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
@@ -9453,15 +9653,15 @@
       }
 
       if (shouldRenderSeguimiento) {
-        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
-        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
         fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
-        fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeaciÃ³n');
+        fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeaci\u00f3n');
       }
 
       if (shouldRenderReportes) {
         const reportUi = getReportSelectionState();
-        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
         if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
       }
     }
@@ -9563,7 +9763,7 @@
           nombre: alumno ? (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) : (pa.nombre_snapshot || pa.alumno_id)
         };
       });
-      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' Â· ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
     }
 
     function renderEvaluationDependencies() {
@@ -9583,7 +9783,7 @@
         .map((alumno) => {
           const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
             .filter(Boolean)
-            .join(' Â· ');
+            .join(' \u00b7 ');
           return { id: alumno.alumno_id, label };
         })
         .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
@@ -9606,7 +9806,7 @@
       const match = state.catalogos.alumnos.find((alumno) => {
         const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
           .filter(Boolean)
-          .join(' Â· ')
+          .join(' \u00b7 ')
           .toLowerCase();
         return label === query;
       });
@@ -9686,7 +9886,7 @@
       }
       const currentPlan = getPlanById(planId);
       if (isPlaneacionPendingCreation(currentPlan)) {
-        setBanner('La planeaciÃ³n se estÃ¡ creando. Espera un momento para abrirla.', 'info', { button });
+        setBanner('La planeaci\u00f3n se est\u00e1 creando. Espera un momento para abrirla.', 'info', { button });
         return;
       }
       if (state.ui) state.ui.openPlanLoadingId = planId;
@@ -9882,7 +10082,7 @@
         '<div class="plan-open-editor plan-open-editor-group">' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selecciÃ³n solo afecta al grupo actual.</p>') + '</div>' +
+              '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selecci&oacute;n solo afecta al grupo actual.</p>') + '</div>' +
             '</div>' +
             '<div class="stack">' + allStudentBlocks + '</div>' +
           '</div>' +
@@ -9949,7 +10149,7 @@
         '<div class="plan-multigroup-shared">' +
           '<div class="plan-multigroup-header">' +
             '<div>' +
-              '<div class="plan-multigroup-title">PlaneaciÃ³n multigrupo</div>' +
+              '<div class="plan-multigroup-title">Planeaci&oacute;n multigrupo</div>' +
               '<div class="plan-multigroup-groups">' + getPlaneacionEntryGroupLabels(entry).map((label) => '<span class="plan-multigroup-chip">' + escapeHtml(label) + '</span>').join('') + '</div>' +
             '</div>' +
             '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
@@ -10156,7 +10356,7 @@
         ? (
             '<div class="plan-list-more">' +
               '<button class="btn-ghost" type="button" onclick="loadMorePlaneaciones(this)"' + ((state.ui && state.ui.planeacionesLoadingMore) ? ' disabled' : '') + '>' +
-                ((state.ui && state.ui.planeacionesLoadingMore) ? 'Cargando...' : 'Cargar mÃ¡s') +
+                ((state.ui && state.ui.planeacionesLoadingMore) ? 'Cargando...' : 'Cargar m\u00e1s') +
               '</button>' +
             '</div>'
           )
@@ -10169,7 +10369,7 @@
         const materia = getMateriaById(plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
         const groupLabel = entry.isMulti
-          ? getPlaneacionEntryGroupLabels(entry).join(' Â· ')
+          ? getPlaneacionEntryGroupLabels(entry).join(' \u00b7 ')
           : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
         const materiaLabel = getPlanMateriaDisplayLabel(plan, materia);
         const weekLabel = getWeekLabelForPlan(plan, semana);
@@ -10197,7 +10397,7 @@
         const hasMaterialAlert = entry.isMulti ? planEntryHasOpenMaterialAlert(entry) : planHasOpenMaterialAlert(plan.planeacion_id);
         const latestResolvedMaterialAlert = entry.isMulti ? getLatestResolvedMaterialAlertForEntry(entry) : (hasAdminPower ? getLatestResolvedMaterialAlertForPlan(plan.planeacion_id) : null);
         const materialHistoryHtml = latestResolvedMaterialAlert
-          ? '<div class="plan-alert-history">Historico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</div>'
+          ? '<div class="plan-alert-history">Hist&oacute;rico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</div>'
           : '';
         const alumnosCount = entry.isMulti ? getPlaneacionEntryAlumnoCount(entry) : getPlanAlumnoCount(plan);
         const actividadesCount = entry.isMulti ? getPlaneacionEntryActividadCount(entry) : getPlanActividadCount(plan);
@@ -10216,7 +10416,7 @@
           ? (
               '<div class="plan-compact-summary-meta">' +
                 (hasMaterialAlert ? '<span class="plan-alert-chip">Material pendiente</span>' : '') +
-                (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">HistÃ³rico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
+                (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">Hist&oacute;rico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
                 (entry.isMulti ? '<span class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</span>' : '') +
               '</div>'
             )
@@ -10242,7 +10442,7 @@
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
               '</div>' +
               ((hasAdminPower || editableSeguimiento)
-                ? '<div class="mini">Los cambios de seguimiento se guardan con el botÃ³n Guardar cambios.</div>'
+                ? '<div class="mini">Los cambios de seguimiento se guardan con el bot&oacute;n Guardar cambios.</div>'
                 : '') +
             '</div>'
           );
@@ -10582,7 +10782,7 @@
           '<div class="plan-collapsed-mobile">' +
             '<div class="plan-top">' +
               '<div>' +
-                '<h3>Cargando planeaciÃ³n...</h3>' +
+                '<h3>Cargando planeaci\u00f3n...</h3>' +
                 '<div class="subtle">Preparando fecha, grupo y materia</div>' +
               '</div>' +
               '<span class="plan-loading-badge">Cargando</span>' +
@@ -10600,7 +10800,7 @@
               '<div class="plan-compact-cell plan-compact-cell-date">' +
                 '<span class="plan-compact-label">Fecha</span>' +
                 '<span class="plan-loading-line primary">Cargando fecha...</span>' +
-                '<span class="plan-loading-line secondary">Semana en preparaciÃ³n</span>' +
+                '<span class="plan-loading-line secondary">Semana en preparaci&oacute;n</span>' +
               '</div>' +
               '<div class="plan-compact-cell plan-compact-cell-group">' +
                 '<span class="plan-compact-label">Grupo</span>' +
@@ -10625,7 +10825,7 @@
               '<div class="plan-compact-cell plan-compact-cell-phrase">' +
                 '<span class="plan-compact-label">Frase</span>' +
                 '<span class="plan-loading-phrase-chip">Frase de la semana</span>' +
-                '<span class="plan-loading-line secondary">Preparando el contenido de la planeaciÃ³n...</span>' +
+                '<span class="plan-loading-line secondary">Preparando el contenido de la planeaci\u00f3n...</span>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -10665,8 +10865,8 @@
 
     function getAlertTypeLabel(tipo) {
       return ({
-        planeacion_semana_cerrada_aprobacion: 'AprobaciÃ³n pendiente',
-        planeacion_rechazada: 'PlaneaciÃ³n rechazada',
+        planeacion_semana_cerrada_aprobacion: 'Aprobaci\u00f3n pendiente',
+        planeacion_rechazada: 'Planeaci\u00f3n rechazada',
         material_pendiente: 'Material pendiente',
         material_inicio_semana_pendiente: 'Material pendiente'
       })[String(tipo || '').trim()] || String(tipo || 'Alerta');
@@ -10676,7 +10876,11 @@
       const tipo = String((alerta && alerta.tipo_alerta) || '').trim();
       const descripcion = String((alerta && alerta.descripcion) || '').trim();
       if (tipo === 'material_pendiente' && descripcion.indexOf('Material no confirmado en carpetas') === 0) {
-        const nombre = descripcion.split('â€”').slice(1).join('â€”').trim();
+        const nombre = descripcion
+          .split(new RegExp('\\u2014|' + String.fromCharCode(0x00e2, 0x20ac, 0x201d)))
+          .slice(1)
+          .join(' - ')
+          .trim();
         return nombre
           ? ('Falta confirmar el material en carpetas para ' + nombre)
           : 'Falta confirmar el material en carpetas.';
@@ -10687,14 +10891,14 @@
     function getAlertStatusLabel(status) {
       return ({
         abierta: 'Abierta',
-        en_revision: 'En revisiÃ³n',
+        en_revision: 'En revisi\u00f3n',
         resuelta: 'Resuelta'
       })[String(status || '').trim()] || String(status || 'Sin estado');
     }
 
     function isOperationalAlert(alerta) {
       const tipo = String(alerta && alerta.tipo_alerta || '').trim().toLowerCase();
-      return !/(obs|observacion|observaciÃ³n|nota|seguimiento)/.test(tipo);
+      return !/(obs|observacion|observaci\u00f3n|nota|seguimiento)/.test(tipo);
     }
 
     function isOpenMaterialAlert(alerta) {
@@ -10890,7 +11094,7 @@
         card.hidden = (adminMode && state.activeAdminModule !== 'dashboard') || !visibleAlertas.length;
       }
       if (!visibleAlertas.length) {
-        host.innerHTML = '<div class="empty">TodavÃ­a no hay alertas visibles para esta sesiÃ³n.</div>';
+        host.innerHTML = '<div class="empty">Todav&iacute;a no hay alertas visibles para esta sesi&oacute;n.</div>';
         return;
       }
 
@@ -10903,7 +11107,7 @@
           grupo ? getGrupoDisplayName(grupo) : '',
           materia ? (materia.nombre || materia.materia_id) : '',
           semana ? (semana.nombre_visible || semana.semana_id) : ''
-        ].filter(Boolean).join(' Â· ') : '';
+        ].filter(Boolean).join(' \u00b7 ') : '';
         const metaParts = [];
         if (contexto) metaParts.push(contexto);
         if (alerta.fecha_creacion) metaParts.push('Creada ' + formatFechaHumana(alerta.fecha_creacion));
@@ -10915,7 +11119,7 @@
                 '<div class="alert-status ' + escapeHtml(String(alerta.estado || '').trim()) + '">' + escapeHtml(getAlertStatusLabel(alerta.estado)) + '</div>' +
               '</div>' +
               '<div class="alert-summary">' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
-              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' Â· ')) + '</div>' : '') +
+              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' \u00b7 ')) + '</div>' : '') +
             '</div>' +
         (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button"' + buildOpenPlanPrefetchIntentAttrs(plan.planeacion_id) + ' onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
           '</div>'
@@ -10943,11 +11147,11 @@
       const selectedPeriodo = getSelectedReportePeriodoRow();
 
       if (adminAlumno) {
-        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' Â· ' + row.alumno_id, 'Selecciona alumno');
+        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' \u00b7 ' + row.alumno_id, 'Selecciona alumno');
         if (ui.alumno_id) adminAlumno.value = ui.alumno_id;
       }
       if (adminPeriodo) {
-        fillSelect(adminPeriodo, periodos, (row) => row.id, (row) => row.id + ' - ' + row.name, 'Selecciona perÃ­odo');
+        fillSelect(adminPeriodo, periodos, (row) => row.id, (row) => row.id + ' - ' + row.name, 'Selecciona per\u00edodo');
         if (ui.periodo_id) adminPeriodo.value = ui.periodo_id;
       }
       if ($('repAlumno') && ui.alumno_id) $('repAlumno').value = ui.alumno_id;
@@ -10959,9 +11163,9 @@
 
       if ($('adminReportSelectionSummary')) {
         $('adminReportSelectionSummary').innerHTML = [
-          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selecciÃ³n') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matricula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' - ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Periodo</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin seleccion') + '</strong></div>'
+          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selecci\u00f3n') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matr\u00edcula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' - ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Per\u00edodo</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selecci\u00f3n') + '</strong></div>'
         ].join('');
       }
       if ($('adminReportPreviewAlumno')) {
@@ -10969,11 +11173,11 @@
       }
       if ($('adminReportPreviewMeta')) {
         $('adminReportPreviewMeta').textContent = selectedAlumno
-          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' - Matricula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' - Documento academico familiar')
-          : 'Grupo, matricula y facilitadora se resolveran aqui.';
+          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' - Matr\u00edcula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' - Documento acad\u00e9mico familiar')
+          : 'Grupo, matr\u00edcula y facilitadora se resolver\u00e1n aqu\u00ed.';
       }
       if ($('adminReportPreviewPeriodo')) {
-        $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'PerÃ­odo') : 'PerÃ­odo';
+        $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'Per\u00edodo') : 'Per\u00edodo';
       }
 
       const adminHost = $('adminReportResult');
@@ -11006,12 +11210,41 @@
       };
       const data = await api('getEntornoPruebasStatus', payload);
       ui.preview = data.preview || null;
+      ui.previewSignature = getMaintenancePreviewSignature();
       ui.lastReset = data.last_reset || null;
       ui.availableCategories = Array.isArray(data.available_categories) ? data.available_categories : [];
       if (!options || !options.keepAudit) {
         ui.audit = ui.audit || null;
       }
       return data;
+    }
+
+    function getMaintenancePreviewSignature(categories, trashReportFiles) {
+      const ui = getMaintenanceUi();
+      const sourceCategories = Array.isArray(categories) ? categories : ui.selectedCategories;
+      const normalizedCategories = sourceCategories
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+        .sort();
+      const trash = typeof trashReportFiles === 'boolean' ? trashReportFiles : !!ui.trashReportFiles;
+      return JSON.stringify({
+        categories: normalizedCategories,
+        trash_report_files: trash
+      });
+    }
+
+    function isMaintenancePreviewCurrent() {
+      const ui = getMaintenanceUi();
+      return !!ui.preview && String(ui.previewSignature || '') === getMaintenancePreviewSignature();
+    }
+
+    function invalidateMaintenancePreviewIfParamsChanged() {
+      const ui = getMaintenanceUi();
+      if (!ui.preview) return false;
+      if (isMaintenancePreviewCurrent()) return false;
+      ui.preview = null;
+      ui.previewSignature = '';
+      return true;
     }
 
     function getMaintenanceCategories() {
@@ -11021,11 +11254,11 @@
         : [
             { key: 'planeaciones', label: 'Planeaciones y actividades', description: 'Limpia planeaciones, relaciones y actividades.', default_selected: true },
             { key: 'seguimiento', label: 'Seguimiento, alertas y notas', description: 'Limpia observaciones, alertas y notas.', default_selected: true },
-            { key: 'evaluaciones', label: 'Evaluaciones academicas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
-            { key: 'reportes', label: 'Cache y artefactos de reportes', description: 'Limpia cache y permite mover PDFs/docs a papelera.', default_selected: true },
+            { key: 'evaluaciones', label: 'Evaluaciones acad\u00e9micas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
+            { key: 'reportes', label: 'Cach\u00e9 y artefactos de reportes', description: 'Limpia cach\u00e9 y permite mover PDFs/docs a papelera.', default_selected: true },
             { key: 'comunicacion', label: 'Notificaciones internas', description: 'Limpia avisos y notificaciones.', default_selected: false },
-            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar catalogos base.', default_selected: false },
-            { key: 'bitacora', label: 'BitÃ¡cora operativa', description: 'Limpia historial de acciones.', default_selected: false }
+            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar cat\u00e1logos base.', default_selected: false },
+            { key: 'bitacora', label: 'Bit\u00e1cora operativa', description: 'Limpia historial de acciones.', default_selected: false }
           ];
       return available;
     }
@@ -11047,7 +11280,7 @@
       const ui = getMaintenanceUi();
       const rows = ui.preview && Array.isArray(ui.preview.per_sheet) ? ui.preview.per_sheet : [];
       if (!rows.length) {
-        return '<div class="admin-alumnos-empty"><div><strong>Sin datos cargados.</strong><div class="subtle">Usa â€œActualizar vista previaâ€ para revisar quÃ© se limpiarÃ­a.</div></div></div>';
+        return '<div class="admin-alumnos-empty"><div><strong>Sin datos cargados.</strong><div class="subtle">Usa &ldquo;Actualizar vista previa&rdquo; para revisar qu&eacute; se limpiar&iacute;a.</div></div></div>';
       }
       return '<div class="admin-config-sheet-list">' + rows.map((row) => (
         '<div class="admin-config-sheet-row"><strong>' + escapeHtml(row.sheet) + '</strong><span class="mini">' + escapeHtml(String(row.rows || 0)) + ' fila(s)</span></div>'
@@ -11058,7 +11291,7 @@
       const ui = getMaintenanceUi();
       const audit = ui.audit || null;
       if (!audit) {
-        return '<div class="admin-alumnos-empty"><div><strong>AuditorÃ­a pendiente.</strong><div class="subtle">Ejecuta la auditorÃ­a para revisar duplicados, referencias huÃ©rfanas y estados invÃ¡lidos.</div></div></div>';
+        return '<div class="admin-alumnos-empty"><div><strong>Auditor&iacute;a pendiente.</strong><div class="subtle">Ejecuta la auditor&iacute;a para revisar duplicados, referencias hu&eacute;rfanas y estados inv&aacute;lidos.</div></div></div>';
       }
       const issues = Array.isArray(audit.issues) ? audit.issues : [];
       const warnings = Array.isArray(audit.warnings) ? audit.warnings : [];
@@ -11071,7 +11304,7 @@
         '</div>',
         items.length
           ? ('<div class="admin-config-audit-list">' + items.map((item) => '<div class="admin-config-audit-item admin-config-note">' + escapeHtml(item) + '</div>').join('') + '</div>')
-          : '<div class="admin-note">La auditorÃ­a no detectÃ³ hallazgos en esta corrida.</div>'
+          : '<div class="admin-note">La auditor&iacute;a no detect&oacute; hallazgos en esta corrida.</div>'
       ].join('');
     }
 
@@ -11085,21 +11318,21 @@
         '<div class="admin-config-module">',
           '<article class="admin-placeholder">',
             '<div>',
-              '<h3>ConfiguraciÃ³n y mantenimiento</h3>',
-              '<p>Zona tÃ©cnica para auditar el entorno online de pruebas y limpiar solo datos transaccionales, sin borrar hojas ni headers.</p>',
+              '<h3>Configuraci&oacute;n y mantenimiento</h3>',
+              '<p>Zona t&eacute;cnica para auditar el entorno online de pruebas y limpiar solo datos transaccionales, sin borrar hojas ni headers.</p>',
             '</div>',
             '<div class="admin-config-pills">',
               '<span class="admin-config-pill">Preserva estructura</span>',
               '<span class="admin-config-pill">Preview antes de reset</span>',
-              '<span class="admin-config-pill">AuditorÃ­a final</span>',
+              '<span class="admin-config-pill">Auditor&iacute;a final</span>',
             '</div>',
             lastReset
-              ? ('<div class="admin-note">Ultimo reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
-              : '<div class="admin-note">AÃºn no hay un reset tÃ©cnico registrado en este entorno.</div>',
+              ? ('<div class="admin-note">&Uacute;ltimo reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
+              : '<div class="admin-note">A&uacute;n no hay un reset t&eacute;cnico registrado en este entorno.</div>',
           '</article>',
           '<div class="admin-config-grid">',
             '<section class="admin-config-card">',
-              '<div class="admin-config-card-head"><div><h3>Reset seguro del entorno</h3><div class="subtle">Selecciona quÃ© capas operativas quieres limpiar.</div></div></div>',
+              '<div class="admin-config-card-head"><div><h3>Reset seguro del entorno</h3><div class="subtle">Selecciona qu&eacute; capas operativas quieres limpiar.</div></div></div>',
               '<div class="admin-config-categories">',
                 categories.map((item) => (
                   '<label class="admin-config-category">' +
@@ -11114,17 +11347,17 @@
               getMaintenanceSummaryMarkup(),
               '<div class="actions compact">',
                 '<button id="maintenancePreviewBtn" class="btn-secondary" type="button">Actualizar vista previa</button>',
-                '<button id="maintenanceAuditBtn" class="btn-ghost" type="button">Ejecutar auditorÃ­a</button>',
+                '<button id="maintenanceAuditBtn" class="btn-ghost" type="button">Ejecutar auditor&iacute;a</button>',
                 canReset
                   ? '<button id="maintenanceResetBtn" class="btn-primary" type="button">Resetear entorno de pruebas</button>'
                   : '<button class="btn-primary" type="button" disabled>Reset solo para admin</button>',
               '</div>',
-              '<div class="admin-config-danger"><strong>ProtecciÃ³n activa:</strong> este reset solo limpia datos operativos. CatÃ¡logos maestros, semanas, perÃ­odos, facilitadores, alumnos, materias, submaterias y configuraciÃ³n base se conservan.</div>',
+              '<div class="admin-config-danger"><strong>Protecci&oacute;n activa:</strong> este reset solo limpia datos operativos. Cat&aacute;logos maestros, semanas, per&iacute;odos, facilitadores, alumnos, materias, submaterias y configuraci&oacute;n base se conservan.</div>',
             '</section>',
             '<section class="admin-config-card">',
               '<div class="admin-config-card-head"><div><h4>Vista previa</h4><div class="subtle">Conteo por hoja antes de ejecutar el reset.</div></div></div>',
               renderMaintenanceSheetRows(),
-              '<div class="admin-config-card-head"><div><h4>AuditorÃ­a</h4><div class="subtle">Chequeo rÃ¡pido de consistencia estructural y operativa.</div></div></div>',
+              '<div class="admin-config-card-head"><div><h4>Auditor&iacute;a</h4><div class="subtle">Chequeo r&aacute;pido de consistencia estructural y operativa.</div></div></div>',
               renderMaintenanceAuditBlock(),
             '</section>',
           '</div>',
@@ -11140,11 +11373,16 @@
         input.addEventListener('change', () => {
           const ui = getMaintenanceUi();
           ui.selectedCategories = Array.from(document.querySelectorAll('.admin-config-category-input:checked')).map((node) => node.dataset.maintenanceCategory);
+          invalidateMaintenancePreviewIfParamsChanged();
+          renderAdminConfiguracionModule();
         });
       });
       if ($('maintenanceTrashFilesInput')) {
         $('maintenanceTrashFilesInput').addEventListener('change', (event) => {
-          getMaintenanceUi().trashReportFiles = !!event.currentTarget.checked;
+          const ui = getMaintenanceUi();
+          ui.trashReportFiles = !!event.currentTarget.checked;
+          invalidateMaintenancePreviewIfParamsChanged();
+          renderAdminConfiguracionModule();
         });
       }
       if ($('maintenancePreviewBtn')) {
@@ -11173,31 +11411,31 @@
         renderAdminConfiguracionModule();
         setBanner(
           ((audit && audit.summary && audit.summary.issues) || 0) > 0
-            ? 'AuditorÃ­a completada con hallazgos. RevÃ­salos antes del reset.'
-            : 'AuditorÃ­a completada sin problemas crÃ­ticos detectados.',
+            ? 'Auditor\u00eda completada con hallazgos. Rev\u00edsalos antes del reset.'
+            : 'Auditor\u00eda completada sin problemas cr\u00edticos detectados.',
           ((audit && audit.summary && audit.summary.issues) || 0) > 0 ? 'warning' : 'success'
         );
       }, { button, key: 'auditarEntornoPruebas' });
     }
 
     async function resetMaintenanceEnvironment(button) {
-      if (!canResetTestEnvironment()) throw new Error('Solo admin puede resetear el entorno de pruebas.');
-      const ui = getMaintenanceUi();
-      if (!ui.selectedCategories.length) throw new Error('Selecciona al menos una categorÃ­a.');
-      if (!ui.preview) {
-        await loadMaintenancePreview({ keepAudit: true });
-      }
-      const preview = ui.preview || { total_rows: 0, per_sheet: [] };
-      const confirmation = [
-        'Se limpiarÃ¡n ' + String(preview.total_rows || 0) + ' filas en ' + String((preview.per_sheet || []).length || 0) + ' hojas.',
-        'CategorÃ­as: ' + ui.selectedCategories.join(', ') + '.',
-        ui.trashReportFiles ? 'Los PDFs/docs asociados en REPORTES_CACHE tambiÃ©n se mandarÃ¡n a papelera si existen.' : 'Los archivos fÃ­sicos de reportes se conservarÃ¡n.',
-        'La estructura del spreadsheet se mantiene.',
-        'Â¿Deseas continuar?'
-      ].join('\n');
-      if (!window.confirm(confirmation)) return;
-
+      const uiForActionKey = getMaintenanceUi();
       await handleAction('resetEntornoPruebas', async () => {
+        if (!canResetTestEnvironment()) throw new Error('Solo admin puede resetear el entorno de pruebas.');
+        const ui = getMaintenanceUi();
+        if (!ui.selectedCategories.length) throw new Error('Selecciona al menos una categor\u00eda.');
+        if (!isMaintenancePreviewCurrent()) {
+          throw new Error('Actualiza la vista previa antes de resetear. La selecci\u00f3n cambi\u00f3.');
+        }
+        const preview = ui.preview || { total_rows: 0, per_sheet: [] };
+        const confirmation = [
+          'Se limpiar\u00e1n ' + String(preview.total_rows || 0) + ' filas en ' + String((preview.per_sheet || []).length || 0) + ' hojas.',
+          'Categor\u00edas: ' + ui.selectedCategories.join(', ') + '.',
+          ui.trashReportFiles ? 'Los PDFs/docs asociados en REPORTES_CACHE tambi\u00e9n se mandar\u00e1n a papelera si existen.' : 'Los archivos f\u00edsicos de reportes se conservar\u00e1n.',
+          'La estructura del spreadsheet se mantiene.',
+          '\u00bfDeseas continuar?'
+        ].join('\n');
+        if (!window.confirm(confirmation)) return;
         const data = await api('resetEntornoPruebas', {
           categories: ui.selectedCategories,
           trash_report_files: !!ui.trashReportFiles,
@@ -11205,11 +11443,12 @@
           request_id: uid('RSTENV')
         });
         ui.preview = data.preview_after || null;
+        ui.previewSignature = getMaintenancePreviewSignature();
         ui.lastReset = data.last_reset || null;
         ui.audit = data.audit_after || null;
         await refreshAll({ silent: true });
         setBanner('Entorno de pruebas reseteado sin tocar la estructura base.', 'success');
-      }, { button, key: buildActionKey('resetEntornoPruebas', [ui.selectedCategories.join(','), ui.trashReportFiles ? 'trash' : 'keep']) });
+      }, { button, key: buildActionKey('resetEntornoPruebas', [uiForActionKey.selectedCategories.join(','), uiForActionKey.trashReportFiles ? 'trash' : 'keep']) });
     }
 
     function activateTab(tabName) {
@@ -11600,10 +11839,10 @@
     async function saveObservation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
-      if (!$('obsPlan').value) throw new Error('Selecciona una planeaciÃ³n.');
+      if (!$('obsPlan').value) throw new Error('Selecciona una planeaci\u00f3n.');
       if (!$('obsAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('obsPeriodo').value) throw new Error('Selecciona un perÃ­odo.');
-      if (!$('obsNota').value.trim()) throw new Error('Escribe la observaciÃ³n.');
+      if (!$('obsPeriodo').value) throw new Error('Selecciona un per\u00edodo.');
+      if (!$('obsNota').value.trim()) throw new Error('Escribe la observaci\u00f3n.');
       await api('crearObsAlumno', {
         planeacion_id: $('obsPlan').value,
         alumno_id: $('obsAlumno').value,
@@ -11617,14 +11856,14 @@
       });
       $('obsNota').value = '';
       $('obsRevision').checked = false;
-      setBanner('ObservaciÃ³n guardada.', 'success');
+      setBanner('Observaci\u00f3n guardada.', 'success');
     }
 
     async function saveEvaluation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
       if (!$('evaAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('evaPeriodo').value) throw new Error('Selecciona un perÃ­odo.');
+      if (!$('evaPeriodo').value) throw new Error('Selecciona un per\u00edodo.');
       if (!$('evaMateria').value) throw new Error('Selecciona una materia.');
       const data = await api('guardarEvaluacion', {
         alumno_id: $('evaAlumno').value,
@@ -11638,7 +11877,7 @@
         request_id: uid('EVA')
       });
       $('evaComentario').value = '';
-      setBanner('EvaluaciÃ³n guardada (' + data.evaluacion_id + ').', 'success');
+      setBanner('Evaluaci\u00f3n guardada (' + data.evaluacion_id + ').', 'success');
     }
 
     async function saveNote() {
@@ -11647,7 +11886,7 @@
       if (!$('notaAlumno').value) throw new Error('Selecciona un alumno.');
       if (!$('notaTexto').value.trim()) throw new Error('Escribe el texto de la nota.');
       if ($('notaAlcance').value === 'periodo' && !$('notaPeriodo').value) {
-        throw new Error('Selecciona un perÃ­odo para la nota.');
+        throw new Error('Selecciona un per\u00edodo para la nota.');
       }
       await api('crearNotaDirectora', {
         alumno_id: $('notaAlumno').value,
@@ -11659,7 +11898,7 @@
         request_id: uid('NTA')
       });
       $('notaTexto').value = '';
-      setBanner('Nota de direcciÃ³n guardada.', 'success');
+      setBanner('Nota de direcci\u00f3n guardada.', 'success');
     }
 
     async function generateReportNow() {
@@ -11669,7 +11908,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un perÃ­odo.');
+      if (!periodoId) throw new Error('Selecciona un per\u00edodo.');
       const data = await api('requestReporteAlumno', {
         alumno_id: alumnoId,
         periodo_id: periodoId,
@@ -11681,7 +11920,7 @@
         setBanner('El reporte ya estaba vigente y listo para abrir.', 'success');
         return;
       }
-      setBanner('Solicitud registrada. El worker generarÃ¡ o actualizarÃ¡ el reporte en segundo plano.', 'success');
+      setBanner('Solicitud registrada. El worker generar\u00e1 o actualizar\u00e1 el reporte en segundo plano.', 'success');
     }
 
     async function requestReport() {
@@ -11691,7 +11930,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un perÃ­odo.');
+      if (!periodoId) throw new Error('Selecciona un per\u00edodo.');
       const data = await api('regenerarReporteAlumno', {
         alumno_id: alumnoId,
         periodo_id: periodoId,
@@ -11699,7 +11938,7 @@
       });
       data._selection = { alumno_id: alumnoId, periodo_id: periodoId };
       renderReportResult(data);
-      setBanner('RegeneraciÃ³n forzada registrada. El worker armarÃ¡ una nueva versiÃ³n del PDF.', 'success');
+      setBanner('Regeneraci\u00f3n forzada registrada. El worker armar\u00e1 una nueva versi\u00f3n del PDF.', 'success');
     }
 
     async function checkReportStatus() {
@@ -11709,7 +11948,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un perÃ­odo.');
+      if (!periodoId) throw new Error('Selecciona un per\u00edodo.');
       const data = await api('getReporteAlumnoStatus', {
         alumno_id: alumnoId,
         periodo_id: periodoId
@@ -11737,7 +11976,7 @@
         } catch (err) {
           if (err && err.code === 'INVALID_SESSION') {
             clearSessionScopedState();
-            setBanner('Tu sesiÃ³n expirÃ³ o ya no es vÃ¡lida. Vuelve a iniciar sesiÃ³n.', 'error', { anchor: feedbackAnchor });
+            setBanner('Tu sesi\u00f3n expir\u00f3 o ya no es v\u00e1lida. Vuelve a iniciar sesi\u00f3n.', 'error', { anchor: feedbackAnchor });
             return;
           }
           if (showPlanEditorValidationError(err)) return;
@@ -11878,7 +12117,7 @@
     async function saveGeneralObservation(button, planId) {
       const input = $('obs-general-' + planId);
       const texto = input ? input.value.trim() : '';
-      if (!texto) throw new Error('Escribe la observaciÃ³n general.');
+      if (!texto) throw new Error('Escribe la observaci\u00f3n general.');
       await handleAction('crearObsSemana', async () => {
         const previousValue = input ? input.value : '';
         if (input) input.value = '';
@@ -11887,7 +12126,7 @@
           await refreshSinglePlaneacionSurface(planId, {
             snapshotKind: 'obs_general'
           });
-          setBanner('ObservaciÃ³n general guardada.', 'success');
+          setBanner('Observaci\u00f3n general guardada.', 'success');
         } catch (error) {
           if (input) input.value = previousValue;
           throw error;
@@ -11898,13 +12137,13 @@
     async function saveAlumnoFinalObservation(button, planId, alumnoId) {
       const input = $('obs-final-' + planId + '-' + alumnoId);
       const nota = input ? input.value.trim() : '';
-      if (!nota) throw new Error('Escribe la observaciÃ³n final del alumno.');
+      if (!nota) throw new Error('Escribe la observaci\u00f3n final del alumno.');
       await handleAction('guardarObsAlumnoFinal', async () => {
         await persistAlumnoFinalObservation(planId, alumnoId, nota);
         await refreshSinglePlaneacionSurface(planId, {
           snapshotKind: 'obs_final_alumno'
         });
-        setBanner('ObservaciÃ³n final por alumno guardada.', 'success');
+        setBanner('Observaci\u00f3n final por alumno guardada.', 'success');
       }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
     }
 
@@ -11916,10 +12155,10 @@
 
     async function saveAllAlumnoFinalObservations(button, planId) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       const payloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
-      if (!payloads.length) throw new Error('Escribe al menos una observaciÃ³n final.');
+      if (!payloads.length) throw new Error('Escribe al menos una observaci\u00f3n final.');
 
       await handleAction('guardarObsAlumnoFinalLote', async () => {
         await persistAlumnoFinalObservationBatch(planId, payloads);
@@ -11947,7 +12186,7 @@
         key: buildActionKey('editPlanLoad', [planId]),
         busyText: 'Abriendo...'
       });
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       loadPlanIntoEditor(plan);
       activateTab('planeaciones');
     }
@@ -11955,7 +12194,7 @@
     function buildOpenPlanSaveRequest(plan, draft) {
       const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha vÃ¡lida.');
+      if (!semana) throw new Error('Selecciona una fecha v\u00e1lida.');
       const materiaId = String((draft && draft.materia_id) || (plan && plan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
       const submateriaId = String((draft && draft.submateria_id) || '').trim();
@@ -12016,9 +12255,9 @@
 
     async function persistOpenPlanDraft(button, planId, draft, options = {}) {
       const plan = getPlanById(planId);
-      if (!plan || !draft) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan || !draft) throw new Error('Planeaci\u00f3n no encontrada.');
       const request = buildOpenPlanSaveRequest(plan, draft);
-      const successMessage = options.successMessage || 'PlaneaciÃ³n actualizada.';
+      const successMessage = options.successMessage || 'Planeaci\u00f3n actualizada.';
       const actionLabel = options.actionLabel || 'guardarPlaneacionCompletaInline';
       const actionKey = options.actionKey || buildActionKey(actionLabel, [planId, request.fallbackDate, request.alumnosIds.join(',')]);
       await handleAction(actionLabel, async () => {
@@ -12059,7 +12298,7 @@
       const plan = getPlanById(planId);
       const draft = getOpenPlanDraft(plan);
       await persistOpenPlanDraft(button, planId, draft, {
-        successMessage: 'PlaneaciÃ³n actualizada.',
+        successMessage: 'Planeaci\u00f3n actualizada.',
         actionLabel: 'guardarPlaneacionCompletaInline',
         forceAlertas: planDraftAffectsMaterialAlerts(draft)
       });
@@ -12105,7 +12344,7 @@
 
     async function saveMultiGroupShared(button, entryKey) {
       const entry = getPlaneacionEntryByKey(entryKey);
-      if (!entry || !entry.isMulti) throw new Error('PlaneaciÃ³n multigrupo no encontrada.');
+      if (!entry || !entry.isMulti) throw new Error('Planeaci\u00f3n multigrupo no encontrada.');
       const draft = getMultiGroupSharedDraft(entry);
       await handleAction('guardarPlaneacionMultigrupo', async () => {
         await persistMultiGroupSharedApi(entry, draft);
@@ -12254,7 +12493,7 @@
 
     function buildPlanSaveTransactionBundle(config = {}) {
       const normalizedPlanId = String(config.planId || '').trim();
-      if (!normalizedPlanId) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!normalizedPlanId) throw new Error('Planeaci\u00f3n no encontrada.');
       if (!state.ui) state.ui = {};
       if (!state.ui.pendingPlanSaveTransactions) state.ui.pendingPlanSaveTransactions = {};
       const fingerprint = buildPlanSaveTransactionFingerprint(config);
@@ -12645,7 +12884,7 @@
       if (retryable && shouldNotifyUser) {
         setBanner(
           String((error && error.code) || '').trim() === 'INVALID_SESSION'
-            ? 'Hay cambios guardados localmente pendientes de sincronizar. Vuelve a iniciar sesiÃ³n.'
+            ? 'Hay cambios guardados localmente pendientes de sincronizar. Vuelve a iniciar sesi\u00f3n.'
             : 'Hay cambios guardados localmente pendientes de sincronizar. Seguiremos intentando.',
           'info'
         );
@@ -12711,9 +12950,9 @@
 
     async function refreshSinglePlaneacionSurface(planId, options = {}) {
       const normalizedPlanId = String(planId || '').trim();
-      if (!normalizedPlanId) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!normalizedPlanId) throw new Error('Planeaci\u00f3n no encontrada.');
       const updatedPlan = await fetchPlaneacionDetalle(normalizedPlanId);
-      if (!updatedPlan || !updatedPlan.planeacion_id) throw new Error('No se pudo recargar la planeaciÃ³n.');
+      if (!updatedPlan || !updatedPlan.planeacion_id) throw new Error('No se pudo recargar la planeaci\u00f3n.');
       upsertPlaneacionRow(updatedPlan);
       syncInlineSavedPlanDraft(normalizedPlanId, updatedPlan, options);
       persistCurrentBootSnapshot(options.snapshotKind || 'planeacion_inline_save');
@@ -12815,7 +13054,7 @@
 
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
       const plan = providedPlan || getPlanById(planId);
-      if (!plan || !draft) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan || !draft) throw new Error('Planeaci\u00f3n no encontrada.');
       const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
       const shouldUseLiteSave = shouldUseLightOpenPlanSave(plan, draft, request);
       const trackingChanged = didOpenPlanActivityProgressChange(plan, request);
@@ -12925,12 +13164,12 @@
     }
 
     function buildMultiGroupSharedSavePayload(entry, draft) {
-      if (!entry || !entry.isMulti) throw new Error('PlaneaciÃ³n multigrupo no encontrada.');
+      if (!entry || !entry.isMulti) throw new Error('Planeaci\u00f3n multigrupo no encontrada.');
       if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
       const selectedPlan = getOpenPlaneacionEntry(entry) || entry.representative || null;
       const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha vÃ¡lida para el multigrupo.');
+      if (!semana) throw new Error('Selecciona una fecha v\u00e1lida para el multigrupo.');
       const materiaId = String((draft && draft.materia_id) || (selectedPlan && selectedPlan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
       const submateriaId = String(((draft && draft.submateria_id) || '')).trim();
@@ -12971,7 +13210,7 @@
 
     async function savePlanChanges(button, planId, entryKey) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = entryKey ? getPlaneacionEntryByKey(entryKey) : null;
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
@@ -13122,13 +13361,13 @@
         let savedPlanResponse = null;
         try {
           const compositeResponse = await persistPlanChangesCompositeApi(combinedSaveRequest);
-          if (generalText) savedParts.push('observaciÃ³n general');
+          if (generalText) savedParts.push('observaci\u00f3n general');
           if (finalPayloads.length) savedParts.push('observaciones finales');
           if (shouldSavePlan) {
             savedPlanResponse = compositeResponse && compositeResponse.plan_save
               ? compositeResponse.plan_save
               : (compositeResponse && compositeResponse.planeacion ? { planeacion: compositeResponse.planeacion } : null);
-            savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeaciÃ³n');
+            savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeaci\u00f3n');
           }
           if (shouldSaveShared) {
             const freshEntry = getPlaneacionEntryByKey(entryKey) || entry;
@@ -13242,14 +13481,14 @@
     async function markPlanMaterialReady(button, planId) {
       if (!window.confirm('Esto marcará como listo el material pendiente de esta planeación.')) return;
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       if (entry && entry.isMulti) {
         const draft = getMultiGroupSharedDraft(entry);
-        if (!draft) throw new Error('PlaneaciÃ³n multigrupo no encontrada.');
+        if (!draft) throw new Error('Planeaci\u00f3n multigrupo no encontrada.');
         const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
         if (!pendingActivities.length) {
-          setBanner('Ya no hay material pendiente en esta planeaciÃ³n multigrupo.', 'info', { button });
+          setBanner('Ya no hay material pendiente en esta planeaci\u00f3n multigrupo.', 'info', { button });
           return;
         }
         pendingActivities.forEach((activity) => {
@@ -13269,10 +13508,10 @@
         return;
       }
       const draft = syncOpenPlanDraftFromVisibleControls(getOpenPlanDraft(plan));
-      if (!draft) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!draft) throw new Error('Planeaci\u00f3n no encontrada.');
       const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
       if (!pendingActivities.length) {
-        setBanner('Ya no hay material pendiente en esta planeaciÃ³n.', 'info', { button });
+        setBanner('Ya no hay material pendiente en esta planeaci\u00f3n.', 'info', { button });
         return;
       }
       const previousPlanSnapshot = cloneJsonSafe(plan, plan);
@@ -13349,7 +13588,7 @@
       await handleAction('aprobarPlaneacionPendiente', async () => {
         await api('aprobarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('APP') });
         await refreshPlaneacionesSurface();
-        setBanner('PlaneaciÃ³n aprobada.', 'success');
+        setBanner('Planeaci\u00f3n aprobada.', 'success');
       }, { button, key: buildActionKey('aprobarPlaneacionPendiente', [planId]) });
     }
 
@@ -13363,7 +13602,7 @@
           request_id: uid('REJ')
         });
         await refreshPlaneacionesSurface();
-        setBanner('PlaneaciÃ³n rechazada.', 'success');
+        setBanner('Planeaci\u00f3n rechazada.', 'success');
       }, { button, key: buildActionKey('rechazarPlaneacionPendiente', [planId, comentario.trim().slice(0, 30)]) });
     }
 
@@ -13371,7 +13610,7 @@
       await handleAction('reenviarPlaneacionPendiente', async () => {
         await api('reenviarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('REAPP') });
         await refreshPlaneacionesSurface();
-        setBanner('PlaneaciÃ³n reenviada a aprobaciÃ³n.', 'success');
+        setBanner('Planeaci\u00f3n reenviada a aprobaci\u00f3n.', 'success');
       }, { button, key: buildActionKey('reenviarPlaneacionPendiente', [planId]) });
     }
 
@@ -13582,7 +13821,7 @@
 
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       if (getClosePlanSyncBlock(planId)) {
         openClosePlanModal(planId);
         return;
@@ -13603,7 +13842,7 @@
       const planId = modal ? String(modal.dataset.planId || '').trim() : '';
       if (!planId) return;
       let plan = getPlanById(planId);
-      if (!plan) throw new Error('PlaneaciÃ³n no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const syncBlock = syncClosePlanModalState(planId);
       if (syncBlock) {
         if (syncBlock.kind === 'syncing') scheduleClosePlanSyncWatch(planId);
@@ -13950,6 +14189,7 @@
         clearPlanEditorValidation('planSubmateria');
         state.planEditor.selectedSubmateriaId = event.currentTarget.value || '';
       });
+      if ($('planTaller')) $('planTaller').addEventListener('change', handlePlanTallerChanged);
       $('planGruposChecklist').addEventListener('change', handlePlanGroupChecklistChange);
       $('planAlumnosChecklist').addEventListener('change', () => clearPlanEditorValidation('planAlumnosChecklist'));
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
@@ -14119,4 +14359,3 @@
     }
 
     boot();
-
