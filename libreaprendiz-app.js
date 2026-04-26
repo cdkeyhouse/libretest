@@ -1872,6 +1872,13 @@
 
     function formatApiError(err) {
       if (!err) return 'Error desconocido.';
+      const message = String(err.message || err || '').trim();
+      if (
+        String(err.code || '').trim().toUpperCase() === 'SERVER_ERROR' &&
+        message.toLowerCase().includes('no cuentas con el permiso necesario para acceder al documento solicitado')
+      ) {
+        return 'No se pudo guardar porque el sistema no tiene permiso para escribir en la base de datos. Revisa permisos con admin.';
+      }
       return err.code ? err.code + ': ' + err.message : err.message || String(err);
     }
 
@@ -9429,10 +9436,12 @@
       const week = getWeekByDateOrDraft(resolvedDate);
       const hint = week ? getSemanaHintText(week) : '';
       host.textContent = week
-        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' \u00b7 ')
+        ? (week.draft
+          ? 'Semana no configurada: ' + formatSemanaLabel(week)
+          : [formatSemanaLabel(week), hint].filter(Boolean).join(' \u00b7 '))
         : 'Selecciona una fecha.';
       host.className = 'inline-note';
-      if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
+      if (week) host.classList.add(week.draft ? 'is-closed' : (String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open'));
     }
 
     function handlePlanFechaChanged(event) {
@@ -11650,6 +11659,9 @@
       const fechaPlaneacion = $('planFecha').value || fallbackDate;
       const semana = getWeekByDateOrDraft(fechaPlaneacion);
       if (!semana) throw createPlanEditorValidationError('Selecciona una fecha valida para construir la semana.', 'planFecha');
+      if (semana.draft) {
+        throw createPlanEditorValidationError('Esta semana no esta configurada. Elige una fecha dentro de una semana disponible o pide a admin agregarla.', 'planFecha');
+      }
       const materiaId = String($('planMateria').value || '').trim();
       const fraseSemana = $('planFrase').value.trim();
       if (!materiaId) throw createPlanEditorValidationError('Selecciona una materia.', 'planMateria');
