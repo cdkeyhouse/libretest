@@ -6181,6 +6181,35 @@
       });
     }
 
+    function renderTallerMembershipSelectionMarkup(visibleCandidates, selectedIds) {
+      const selectedSet = selectedIds instanceof Set
+        ? selectedIds
+        : new Set((state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean));
+      const rows = Array.isArray(visibleCandidates) ? visibleCandidates : getVisibleTallerCandidateAlumnos();
+      return [
+        '<div class="subtle">' + escapeHtml(String(selectedSet.size)) + ' alumno(s) seleccionado(s). Desmarca para quitar del taller.</div>',
+        (rows.length
+          ? '<div class="checklist admin-taller-membership-candidates">' + rows.map((row) => {
+              const alumnoId = String(row.alumno_id || '').trim();
+              return '<label class="admin-taller-membership-candidate">' +
+                '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedSet.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
+                '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matr\u00edcula') + ' - ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
+              '</label>';
+            }).join('') + '</div>'
+          : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta b&uacute;squeda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+      ].join('');
+    }
+
+    function refreshTallerMembershipCandidateList() {
+      const host = $('adminTallerMembershipCandidateList');
+      if (!host) {
+        renderAdminTalleresModule();
+        return;
+      }
+      const selectedIds = new Set((state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean));
+      host.innerHTML = renderTallerMembershipSelectionMarkup(getVisibleTallerCandidateAlumnos(), selectedIds);
+    }
+
     function replaceTallerAlumnoRelations(tallerId, activeRows) {
       const targetId = String(tallerId || '').trim();
       const nextRows = Array.isArray(activeRows) ? activeRows.slice() : [];
@@ -6210,7 +6239,7 @@
       if (checked) selected.add(id);
       else selected.delete(id);
       state.talleresUi.membershipSelectedAlumnoIds = Array.from(selected);
-      renderAdminTalleresModule();
+      refreshTallerMembershipCandidateList();
     }
 
     function toggleAllVisibleTallerAlumnos(nextChecked) {
@@ -6222,7 +6251,7 @@
         else selected.delete(id);
       });
       state.talleresUi.membershipSelectedAlumnoIds = Array.from(selected);
-      renderAdminTalleresModule();
+      refreshTallerMembershipCandidateList();
     }
 
     function getAdminTalleresModuleTemplate() {
@@ -6446,16 +6475,7 @@
                     '<button id="adminTallerMembershipSaveBtn" class="btn-primary" type="button" onclick="saveTallerMemberships(this)">Guardar cambios</button>' +
                   '</div>' +
                 '</div>' +
-                '<div class="subtle">' + escapeHtml(String(selectedIds.size)) + ' alumno(s) seleccionado(s). Desmarca para quitar del taller.</div>' +
-                (visibleCandidates.length
-                  ? '<div class="checklist admin-taller-membership-candidates">' + visibleCandidates.map((row) => {
-                      const alumnoId = String(row.alumno_id || '').trim();
-                      return '<label class="admin-taller-membership-candidate">' +
-                        '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedIds.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
-                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matr\u00edcula') + ' - ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
-                      '</label>';
-                    }).join('') + '</div>'
-                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta b&uacute;squeda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+                '<div id="adminTallerMembershipCandidateList">' + renderTallerMembershipSelectionMarkup(visibleCandidates, selectedIds) + '</div>'
               : ''),
           '</div>',
         '</div>'
@@ -6466,11 +6486,11 @@
         if ($('adminTallerMembershipSearch')) $('adminTallerMembershipSearch').value = state.talleresUi.membershipSearch || '';
         if ($('adminTallerMembershipSearch')) $('adminTallerMembershipSearch').addEventListener('input', (event) => {
           state.talleresUi.membershipSearch = event.currentTarget.value;
-          renderAdminTalleresModule();
+          refreshTallerMembershipCandidateList();
         });
         if ($('adminTallerMembershipGroup')) $('adminTallerMembershipGroup').addEventListener('change', (event) => {
           state.talleresUi.membershipGroup = event.currentTarget.value;
-          renderAdminTalleresModule();
+          refreshTallerMembershipCandidateList();
         });
       }
     }
