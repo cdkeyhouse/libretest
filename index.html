@@ -4363,13 +4363,16 @@
 
       #planAlumnosChecklist .group-block,
       .plan-open-editor .group-block {
-        padding: 10px 12px;
-        border-radius: 16px;
+        padding: 8px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.025);
       }
 
       #planAlumnosChecklist .group-block-head,
       .plan-open-editor .group-block-head {
         margin-bottom: 6px;
+        color: var(--text-strong);
       }
 
       #planAlumnosChecklist .group-block-head strong,
@@ -4377,23 +4380,39 @@
         font-size: 0.96rem;
       }
 
+      #planAlumnosChecklist .group-block-head .mini {
+        display: inline-block;
+        margin-left: 10px;
+        color: var(--text-dim);
+        font-weight: 700;
+      }
+
       #planAlumnosChecklist .checklist,
       .plan-open-students {
         display: grid;
         max-height: none;
         overflow: visible;
-        padding: 8px 10px;
-        gap: 8px 12px;
+        padding: 6px;
+        gap: 7px 10px;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      #planAlumnosChecklist .plan-alumnos-flat {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       }
 
       #planAlumnosChecklist .check-item,
       .plan-open-students .check-item {
         align-items: center;
-        padding: 6px 8px;
+        padding: 9px 10px;
         min-height: 0;
         border-radius: 12px;
-        background: rgba(255,255,255,0.03);
+        background: rgba(255,255,255,0.055);
+        border: 1px solid rgba(255,255,255,0.07);
+      }
+
+      #planAlumnosChecklist .check-item input[type="checkbox"] {
+        flex: 0 0 auto;
       }
 
       #planAlumnosChecklist .check-item span,
@@ -4412,6 +4431,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        color: var(--text-strong);
       }
 
       #planAlumnosChecklist .check-item .mini,
@@ -5358,11 +5378,6 @@
                     <div id="planSemanaResolved" class="inline-note">Selecciona una fecha para resolver la semana.</div>
                   </div>
                 </div>
-                <div id="planTallerField" hidden>
-                  <label for="planTaller">Taller (opcional)</label>
-                  <select id="planTaller"></select>
-                  <div id="planTallerNote" class="inline-note"></div>
-                </div>
                 <div>
                   <label for="planMateria">Materia</label>
                   <select id="planMateria"></select>
@@ -5662,7 +5677,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260425-facilitador-talleres-v1b"></script>
+<script defer src="./libreaprendiz-app.js?v=20260425-facilitador-talleres-v1c"></script>
 </body>
 </html>
 

@@ -7941,7 +7941,6 @@
       $('planFecha').value = '';
       $('planMateria').value = '';
       if ($('planSubmateria')) $('planSubmateria').value = '';
-      if ($('planTaller')) $('planTaller').value = '';
       $('planFrase').value = '';
       if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
       if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
@@ -7965,7 +7964,6 @@
       if ($('planFecha')) $('planFecha').value = '';
       if ($('planMateria')) $('planMateria').value = '';
       if ($('planSubmateria')) $('planSubmateria').value = '';
-      if ($('planTaller')) $('planTaller').value = '';
       if ($('planFrase')) $('planFrase').value = '';
       if ($('planGruposChecklist')) $('planGruposChecklist').innerHTML = '';
       if ($('planAlumnosChecklist')) $('planAlumnosChecklist').innerHTML = '';
@@ -8424,6 +8422,45 @@
       return getPlanSubmateriasForMateria(materiaId).length > 0;
     }
 
+    function normalizePlanCatalogLabel(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+    }
+
+    function isPlanTallerMateria(materiaId) {
+      const targetId = String(materiaId || '').trim();
+      if (!targetId) return false;
+      const materia = getMateriaById(targetId);
+      const label = normalizePlanCatalogLabel(materia ? (materia.nombre || materia.materia_id) : targetId);
+      return label === 'taller' || label === 'talleres';
+    }
+
+    function getDefaultPlanSubmateriaIdForMateria(materiaId) {
+      const submaterias = getPlanSubmateriasForMateria(materiaId);
+      return String((submaterias[0] && submaterias[0].submateria_id) || '').trim();
+    }
+
+    function getPlanEditorUsesTallerSelector(materiaId) {
+      return state.planEditor.mode !== 'edit' &&
+        isPlanTallerMateria(materiaId) &&
+        getPlanEditorTallerOptions().length > 0;
+    }
+
+    function getPlanEditorSelectedSubmateriaId(materiaId) {
+      const targetMateriaId = String(materiaId || ($('planMateria') && $('planMateria').value) || '').trim();
+      if (getPlanEditorUsesTallerSelector(targetMateriaId)) {
+        const fallbackId = getDefaultPlanSubmateriaIdForMateria(targetMateriaId);
+        if (!state.planEditor.selectedSubmateriaId && fallbackId) {
+          state.planEditor.selectedSubmateriaId = fallbackId;
+        }
+        return String(state.planEditor.selectedSubmateriaId || fallbackId || '').trim();
+      }
+      return String(($('planSubmateria') && $('planSubmateria').value) || state.planEditor.selectedSubmateriaId || '').trim();
+    }
+
     function getPlanMateriaDisplayLabel(plan, materiaRow) {
       const materia = materiaRow || getMateriaById(plan.materia_id);
       const materiaLabel = materia
@@ -8441,8 +8478,27 @@
       const select = $('planSubmateria');
       const materiaId = $('planMateria') ? $('planMateria').value : '';
       if (!field || !select) return;
+      const label = field.querySelector('label');
+      const useTallerSelector = getPlanEditorUsesTallerSelector(materiaId);
+      if (useTallerSelector) {
+        const talleres = getPlanEditorTallerOptions();
+        field.hidden = false;
+        if (label) label.textContent = 'Taller';
+        fillSelect(select, talleres, (item) => item.taller_id, (item) => item.nombre || item.taller_id, 'Selecciona taller');
+        const nextTallerId = String(state.planEditor.selectedTallerId || '').trim();
+        if (nextTallerId && talleres.some((item) => String(item.taller_id || '').trim() === nextTallerId)) {
+          select.value = nextTallerId;
+        } else {
+          select.value = '';
+          state.planEditor.selectedTallerId = '';
+        }
+        state.planEditor.selectedSubmateriaId = getDefaultPlanSubmateriaIdForMateria(materiaId);
+        select.disabled = !!(state.ui && state.ui.planeacionesCatalogosLoading);
+        return;
+      }
       const submaterias = getPlanSubmateriasForMateria(materiaId);
       field.hidden = !submaterias.length;
+      if (label) label.textContent = 'Submateria';
       fillSelect(select, submaterias, (item) => item.submateria_id, (item) => item.nombre || item.submateria_id, 'Selecciona submateria');
       const nextValue = preferredValue !== undefined ? String(preferredValue || '').trim() : String(state.planEditor.selectedSubmateriaId || '').trim();
       if (nextValue && submaterias.some((item) => item.submateria_id === nextValue)) {
@@ -9384,16 +9440,8 @@
         .sort((a, b) => String(a.nombre || a.taller_id).localeCompare(String(b.nombre || b.taller_id), 'es'));
     }
 
-    function getPlanEditorTallerById(tallerId) {
-      const targetId = String(tallerId || '').trim();
-      if (!targetId) return null;
-      return getPlanEditorTallerOptions().find((row) => String(row.taller_id || '').trim() === targetId) || null;
-    }
-
     function getSelectedPlanTallerId() {
-      const select = $('planTaller');
-      const fromSelect = select ? String(select.value || '').trim() : '';
-      return fromSelect || String(state.planEditor && state.planEditor.selectedTallerId || '').trim();
+      return String(state.planEditor && state.planEditor.selectedTallerId || '').trim();
     }
 
     function getPlanTallerAlumnoIdSet(tallerId) {
@@ -9424,40 +9472,6 @@
         if (groupId) groupIds.add(groupId);
       });
       return Array.from(groupIds);
-    }
-
-    function renderPlanTallerSelect() {
-      const field = $('planTallerField');
-      const select = $('planTaller');
-      const note = $('planTallerNote');
-      if (!field || !select) return;
-      const isEdit = state.planEditor.mode === 'edit';
-      const options = getPlanEditorTallerOptions();
-      field.hidden = isEdit || !options.length;
-      if (field.hidden) {
-        if (!isEdit) state.planEditor.selectedTallerId = '';
-        select.value = '';
-        if (note) note.textContent = '';
-        return;
-      }
-      const preferredValue = String(state.planEditor.selectedTallerId || '').trim();
-      fillSelect(select, options, (row) => row.taller_id, (row) => row.nombre || row.taller_id, 'Sin taller');
-      if (preferredValue && options.some((row) => String(row.taller_id || '').trim() === preferredValue)) {
-        select.value = preferredValue;
-      }
-      state.planEditor.selectedTallerId = select.value || '';
-      const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
-      select.disabled = catalogsLoading || isEdit;
-      if (note) {
-        const selectedTallerId = select.value || '';
-        if (!selectedTallerId) {
-          note.textContent = 'Opcional: usa un taller para filtrar alumnos.';
-        } else {
-          const availableIds = getPlanTallerAlumnoIdSet(selectedTallerId);
-          const availableInCatalog = Array.from(availableIds).filter((alumnoId) => getCatalogIndex().alumnosById.has(alumnoId)).length;
-          note.textContent = String(availableInCatalog) + ' alumno(s) disponibles en tus grupos.';
-        }
-      }
     }
 
     function getAlumnoDisplaySnapshot(alumnoRow) {
@@ -9495,13 +9509,48 @@
         host.innerHTML = '<div class="empty">' + (getSelectedPlanTallerId() ? 'Selecciona un taller con alumnos disponibles o marca un grupo.' : 'Selecciona al menos un grupo para cargar alumnos.') + '</div>';
         return;
       }
+      const selectedTallerId = getSelectedPlanTallerId();
+      if (selectedTallerId) {
+        const seenAlumnoIds = new Set();
+        const alumnos = [];
+        groupIds.forEach((groupId) => {
+          getPlanEditorAlumnosByGroupId(groupId).forEach((alumno) => {
+            const alumnoId = String(alumno.alumno_id || '').trim();
+            if (!alumnoId || seenAlumnoIds.has(alumnoId)) return;
+            seenAlumnoIds.add(alumnoId);
+            alumnos.push(alumno);
+          });
+        });
+        const selectedCount = alumnos.filter((alumno) => selected.has(String(alumno.alumno_id || '').trim())).length;
+        host.innerHTML = '<div class="group-block is-taller-alumnos">' +
+          '<div class="group-block-head">' +
+            '<div><strong>Alumnos del taller</strong><span class="mini">' + escapeHtml(String(selectedCount)) + ' de ' + escapeHtml(String(alumnos.length)) + ' seleccionado(s)</span></div>' +
+          '</div>' +
+          '<div class="checklist plan-alumnos-flat">' +
+            (alumnos.length ? alumnos.map((alumno) => {
+              const alumnoId = String(alumno.alumno_id || '').trim();
+              const label = alumno.nombre_mostrado || alumno.nombre_completo || alumnoId;
+              const group = getCatalogIndex().gruposById.get(String(alumno.grupo_id || '').trim());
+              const groupLabel = group ? getGrupoDisplayName(group) : String(alumno.grupo_id || '').trim();
+              return (
+                '<label class="check-item">' +
+                  '<input type="checkbox" data-group-id="' + escapeHtml(alumno.grupo_id || '') + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) ? ' checked' : '') + '>' +
+                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? '<span class="mini">' + escapeHtml(groupLabel) + '</span>' : '') + '</span>' +
+                '</label>'
+              );
+            }).join('') : '<div class="empty">No hay alumnos activos en este taller para tus grupos.</div>') +
+          '</div>' +
+        '</div>';
+        return;
+      }
       host.innerHTML = groupIds.map((groupId) => {
         const group = getCatalogIndex().gruposById.get(String(groupId || '').trim());
         const alumnos = getPlanEditorAlumnosByGroupId(groupId);
+        const selectedCount = alumnos.filter((alumno) => selected.has(String(alumno.alumno_id || '').trim())).length;
         return (
             '<div class="group-block">' +
               '<div class="group-block-head">' +
-                '<div><strong>' + escapeHtml(group ? getGrupoDisplayName(group) : groupId) + '</strong></div>' +
+                '<div><strong>' + escapeHtml(group ? getGrupoDisplayName(group) : groupId) + '</strong><span class="mini">' + escapeHtml(String(selectedCount)) + ' de ' + escapeHtml(String(alumnos.length)) + ' seleccionado(s)</span></div>' +
               '</div>' +
             '<div class="checklist">' +
               (alumnos.length ? alumnos.map((alumno) => {
@@ -9530,29 +9579,21 @@
 
     function handlePlanTallerChanged(event) {
       if (state.planEditor.mode === 'edit') return;
-      const select = event && event.currentTarget ? event.currentTarget : $('planTaller');
+      const select = event && event.currentTarget ? event.currentTarget : $('planSubmateria');
       const tallerId = select ? String(select.value || '').trim() : '';
       state.planEditor.selectedTallerId = tallerId;
       clearPlanEditorValidation('planGruposChecklist');
       clearPlanEditorValidation('planAlumnosChecklist');
-      const taller = getPlanEditorTallerById(tallerId);
-      if (taller && taller.materia_id && $('planMateria')) {
-        $('planMateria').value = taller.materia_id;
-        state.planEditor.selectedSubmateriaId = '';
-        clearPlanEditorValidation('planMateria');
-        clearPlanEditorValidation('planSubmateria');
-        syncPlanSubmateriaSelect('');
-      }
+      clearPlanEditorValidation('planSubmateria');
+      state.planEditor.selectedSubmateriaId = getDefaultPlanSubmateriaIdForMateria($('planMateria') ? $('planMateria').value : '');
       if (tallerId) {
         const selectedGroupIds = new Set(getPlanTallerAvailableGroupIds(tallerId));
         Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
           input.checked = selectedGroupIds.has(String(input.value || '').trim());
         });
-        renderPlanTallerSelect();
         renderPlanAlumnosChecklist(new Set(Array.from(getPlanTallerAlumnoIdSet(tallerId))));
         return;
       }
-      renderPlanTallerSelect();
       renderPlanAlumnosChecklist(new Set(getSelectedPlanAlumnos()));
     }
 
@@ -9615,7 +9656,6 @@
       $('planFecha').disabled = !canEditDate;
       $('planMateria').disabled = catalogsLoading;
       if ($('planSubmateria')) $('planSubmateria').disabled = catalogsLoading;
-      if ($('planTaller')) $('planTaller').disabled = catalogsLoading || isEdit;
       $('planFrase').disabled = catalogsLoading;
       $('selectAllVisibleAlumnosBtn').disabled = catalogsLoading;
       $('clearVisibleAlumnosBtn').disabled = catalogsLoading;
@@ -9623,7 +9663,6 @@
       if (loadingNote) loadingNote.hidden = !catalogsLoading;
       renderPlanWeekResolved();
       syncPlanSubmateriaSelect();
-      renderPlanTallerSelect();
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
@@ -11558,9 +11597,12 @@
       const materiaId = String($('planMateria').value || '').trim();
       const fraseSemana = $('planFrase').value.trim();
       if (!materiaId) throw createPlanEditorValidationError('Selecciona una materia.', 'planMateria');
-      const selectedSubmateriaId = $('planSubmateria') ? $('planSubmateria').value : '';
+      const selectedSubmateriaId = getPlanEditorSelectedSubmateriaId(materiaId);
       if (materiaRequiresPlanSubmateria(materiaId) && !selectedSubmateriaId) {
         throw createPlanEditorValidationError('Selecciona una submateria.', 'planSubmateria');
+      }
+      if (getPlanEditorUsesTallerSelector(materiaId) && !getSelectedPlanTallerId()) {
+        throw createPlanEditorValidationError('Selecciona un taller.', 'planSubmateria');
       }
       const grupoIds = state.planEditor.mode === 'edit'
         ? (hasAdminPower ? getSelectedGroupIds() : [state.planEditor.lockedGrupoId])
@@ -14085,10 +14127,11 @@
     }
 
     function buildCreatePlanMutexKey() {
+      const materiaId = String($('planMateria') ? $('planMateria').value : '').trim();
       return buildActionKey('crearPlaneacion', [
         $('planFecha').value,
-        $('planMateria').value,
-        $('planSubmateria') ? $('planSubmateria').value : '',
+        materiaId,
+        getPlanEditorUsesTallerSelector(materiaId) ? getSelectedPlanTallerId() : getPlanEditorSelectedSubmateriaId(materiaId),
         getSelectedGroupIds().sort().join(','),
         getSelectedPlanAlumnos().sort().join(',')
       ]);
@@ -14153,7 +14196,7 @@
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
       $('savePlanBtn').addEventListener('click', (event) => handleAction('guardarPlaneacionCompleta', () => savePlanEditor(), {
         button: event.currentTarget,
-        key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+        key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, getPlanEditorSelectedSubmateriaId($('planMateria').value), getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
       if ($('savePlanDraftBtn')) $('savePlanDraftBtn').addEventListener('click', (event) => runCreatePlanAction(event.currentTarget, 'borrador'));
       if ($('savePlanActiveBtn')) $('savePlanActiveBtn').addEventListener('click', (event) => runCreatePlanAction(event.currentTarget, 'activa'));
@@ -14183,13 +14226,19 @@
         clearPlanEditorValidation('planMateria');
         clearPlanEditorValidation('planSubmateria');
         state.planEditor.selectedSubmateriaId = '';
+        state.planEditor.selectedTallerId = '';
         syncPlanSubmateriaSelect('');
+        renderPlanAlumnosChecklist(new Set(getSelectedPlanAlumnos()));
       });
       if ($('planSubmateria')) $('planSubmateria').addEventListener('change', (event) => {
         clearPlanEditorValidation('planSubmateria');
+        if (getPlanEditorUsesTallerSelector($('planMateria') ? $('planMateria').value : '')) {
+          handlePlanTallerChanged(event);
+          return;
+        }
+        state.planEditor.selectedTallerId = '';
         state.planEditor.selectedSubmateriaId = event.currentTarget.value || '';
       });
-      if ($('planTaller')) $('planTaller').addEventListener('change', handlePlanTallerChanged);
       $('planGruposChecklist').addEventListener('change', handlePlanGroupChecklistChange);
       $('planAlumnosChecklist').addEventListener('change', () => clearPlanEditorValidation('planAlumnosChecklist'));
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
