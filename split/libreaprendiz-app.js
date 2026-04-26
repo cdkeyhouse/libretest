@@ -1,4 +1,4 @@
-﻿    const STORAGE_KEYS = {
+    const STORAGE_KEYS = {
       session: 'la_v8_session',
       bootSnapshot: 'la_v8_boot_snapshot',
       planeacionOutbox: 'la_v8_planeacion_outbox'
@@ -7,6 +7,9 @@
     const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
     const OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
     const OPEN_PLAN_OBS_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
+    const OPEN_PLAN_DETAIL_PREFETCH_LIMIT = 10;
+    const OPEN_PLAN_DETAIL_PREFETCH_CONCURRENCY = 2;
+    const OPEN_PLAN_DETAIL_PREFETCH_DELAY_MS = 650;
     const LOGIN_PRELOAD_CATALOG_BLOCKS = ['materias', 'semanas', 'grupos'];
 
     function createEmptyAlumnoEditorState() {
@@ -31,6 +34,18 @@
       };
     }
 
+    function createEmptyAlumnoDeleteState() {
+      return {
+        expanded: false,
+        idsText: '',
+        trashReportFiles: true,
+        preview: null,
+        previewIds: [],
+        lastResult: null,
+        confirmationText: ''
+      };
+    }
+
     function createEmptyAlumnosUiState() {
       return {
         search: '',
@@ -51,6 +66,7 @@
         remoteHistoryFailedByAlumno: {},
         historyByAlumno: {},
         notesByAlumno: {},
+        deleteControl: createEmptyAlumnoDeleteState(),
         mockRows: []
       };
     }
@@ -165,12 +181,13 @@
         selectedCategories: ['planeaciones', 'seguimiento', 'evaluaciones', 'reportes'],
         trashReportFiles: true,
         preview: null,
+        previewSignature: '',
         audit: null,
         lastReset: null
       };
     }
 
-    const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbw_uv4htKdG-Qur5DZysZgdbOdQ8kCeGJiIkErJut3-U7QQqGq8TV3HwggGaJfGIqgqyw/exec';
+    const FIXED_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwV-oW-muzvKxlc3zmsQWIN7jQViq7fKZltWAuKsErx9Hej8Q59FV0AlzXFCsPdjxBA/exec';
     const BRAND_LOGO = 'data:image/png;base64,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';
     const DEFAULT_PERIODS = '';
     const PLANEACIONES_PAGE_SIZE = 30;
@@ -225,6 +242,10 @@
         fastPlaneacionesBootPromise: null,
         planeacionesRestoreLock: false,
         adminModuleLoading: {},
+        adminCatalogPrefetchPromise: null,
+        adminCatalogPrefetchDone: false,
+        adminNotificationsPrefetchPromise: null,
+        adminNotificationsPrefetchDone: false,
         notificationEditorExpanded: false,
         notificationFilter: 'activas',
         planeacionesMateriaFilter: '',
@@ -234,8 +255,11 @@
         restoreSnapshotSyncing: false,
         planeacionOutboxProcessing: false,
         planeacionOutboxRetryTimer: null,
+        closePlanSyncWatchTimer: null,
+        adminModuleErrors: {},
         pendingPlanSaveTransactions: {},
-        planDetailPromises: {}
+        planDetailPromises: {},
+        planeacionDetailPrefetchRunning: false
       },
       alumnosUi: createEmptyAlumnosUiState(),
       facilitadoresUi: createEmptyFacilitadoresUiState(),
@@ -248,6 +272,7 @@
         planId: '',
         lockedSemanaId: '',
         lockedGrupoId: '',
+        selectedTallerId: '',
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: []
@@ -296,12 +321,113 @@
     const $ = (id) => document.getElementById(id);
 
     function ensureAdminShellMarkupLoaded() {
-      if ($('adminShell')) return true;
+      if ($('adminShell')) {
+        startAdminTextNormalizer();
+        return true;
+      }
       const mount = $('adminShellMount');
       const template = $('adminShellTemplate');
       if (!mount || !template || !template.content) return false;
       mount.replaceChildren(template.content.cloneNode(true));
+      startAdminTextNormalizer();
       return !!$('adminShell');
+    }
+
+    function normalizeMojibakeText(value) {
+      let text = String(value == null ? '' : value);
+      if (!/[\u00c2\u00c3\u00e2\ufffd?]/.test(text)) return text;
+      [
+        [/\u00c3\u00a1/g, '\u00e1'],
+        [/\u00c3\u00a9/g, '\u00e9'],
+        [/\u00c3\u00ad/g, '\u00ed'],
+        [/\u00c3\u00b3/g, '\u00f3'],
+        [/\u00c3\u00ba/g, '\u00fa'],
+        [/\u00c3\u00b1/g, '\u00f1'],
+        [/\u00c3\u00bc/g, '\u00fc'],
+        [/\u00c3\u0081/g, '\u00c1'],
+        [/\u00c3\u0089/g, '\u00c9'],
+        [/\u00c3\u008d/g, '\u00cd'],
+        [/\u00c3\u0093/g, '\u00d3'],
+        [/\u00c3\u009a/g, '\u00da'],
+        [/\u00c3\u0091/g, '\u00d1'],
+        [/\u00c2\u00bf/g, '\u00bf'],
+        [/\u00c2\u00a1/g, '\u00a1'],
+        [/\u00c2\u00b7/g, '\u00b7'],
+        [/\u00e2\u20ac\u0153/g, '"'],
+        [/\u00e2\u20ac\u009d/g, '"'],
+        [/\u00e2\u20ac\u2122/g, "'"],
+        [/\u00e2\u20ac\u201d/g, '-'],
+        [/\u00e2\u20ac\u201c/g, '-'],
+        [/\u00e2\u0153\u201c/g, '\u2713'],
+        [/\u00e2\u0153\u2022/g, '\u00d7'],
+        [/\u00c2/g, '']
+      ].forEach(([pattern, replacement]) => {
+        text = text.replace(pattern, replacement);
+      });
+      return text
+        .replace(/Planeaci\?nes/g, 'Planeaciones')
+        .replace(/planeaci\?n/g, 'planeacion')
+        .replace(/sesi\?n/g, 'sesion')
+        .replace(/pedag\?gico/g, 'pedagogico');
+    }
+
+    function normalizeAdminTextNode(node) {
+      if (!node || node.nodeType !== Node.TEXT_NODE) return;
+      const next = normalizeMojibakeText(node.nodeValue);
+      if (next !== node.nodeValue) node.nodeValue = next;
+    }
+
+    function normalizeAdminElementText(root) {
+      if (!root || !canUseAdminShell()) return;
+      const skipTags = new Set(['SCRIPT', 'STYLE', 'TEMPLATE']);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node && node.parentElement;
+          if (!parent || skipTags.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      let node = walker.nextNode();
+      while (node) {
+        normalizeAdminTextNode(node);
+        node = walker.nextNode();
+      }
+      root.querySelectorAll('[placeholder], [title], [aria-label]').forEach((el) => {
+        ['placeholder', 'title', 'aria-label'].forEach((attr) => {
+          if (!el.hasAttribute(attr)) return;
+          const current = el.getAttribute(attr);
+          const next = normalizeMojibakeText(current);
+          if (next !== current) el.setAttribute(attr, next);
+        });
+      });
+    }
+
+    function startAdminTextNormalizer() {
+      const shell = $('adminShell');
+      if (!shell || shell.dataset.textNormalizerReady === 'true') return;
+      shell.dataset.textNormalizerReady = 'true';
+      normalizeAdminElementText(shell);
+      if (typeof MutationObserver !== 'function') return;
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'characterData') {
+            normalizeAdminTextNode(mutation.target);
+            return;
+          }
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              normalizeAdminTextNode(node);
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+              normalizeAdminElementText(node);
+            }
+          });
+        });
+      });
+      observer.observe(shell, {
+        subtree: true,
+        childList: true,
+        characterData: true
+      });
     }
 
     function tryShowDatePicker(input) {
@@ -525,8 +651,8 @@
 
     function getPlaneacionesEditorCatalogBlocks() {
       return canUseAdminShell()
-        ? ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas']
-        : ['alumnos', 'submaterias'];
+        ? ['alumnos', 'facilitadores', 'grupos', 'materias', 'submaterias', 'semanas', 'talleres', 'alumno_talleres']
+        : ['alumnos', 'submaterias', 'talleres', 'alumno_talleres'];
     }
 
     function getCatalogBlocksForModuleWithScope(moduleName, options = {}) {
@@ -562,6 +688,97 @@
 
     function adminModuleNeedsCatalogos(moduleName) {
       return ['planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias', 'talleres'].includes(String(moduleName || '').trim());
+    }
+
+    function getAdminCatalogPrefetchModules() {
+      return ['alumnos', 'materias', 'talleres', 'facilitadores'];
+    }
+
+    function hasAdminCatalogPrefetchWork() {
+      return getAdminCatalogPrefetchModules()
+        .some((moduleName) => getMissingCatalogBlocks(getAdminModuleCatalogBlocks(moduleName)).length > 0);
+    }
+
+    function hasAdminNotificationsPrefetchWork() {
+      return !Array.isArray(state.notificaciones) || state.notificaciones.length === 0;
+    }
+
+    function scheduleAdminCatalogPrefetch(delay = 520) {
+      if (!canUseAdminShell() || !state.ui) return;
+      if (state.ui.adminCatalogPrefetchPromise || state.ui.adminCatalogPrefetchDone) return;
+      if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+      if (!hasAdminCatalogPrefetchWork()) {
+        state.ui.adminCatalogPrefetchDone = true;
+        return;
+      }
+      scheduleUiDebounce('admin-catalog-prefetch', () => {
+        if (!canUseAdminShell() || !state.ui || state.ui.adminCatalogPrefetchPromise) return;
+        if (state.ui.adminCatalogPrefetchDone) return;
+        if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+        if (!hasAdminCatalogPrefetchWork()) {
+          state.ui.adminCatalogPrefetchDone = true;
+          return;
+        }
+        state.ui.adminCatalogPrefetchPromise = prefetchAdminCatalogsSequentially()
+          .finally(() => {
+            if (!state.ui) return;
+            state.ui.adminCatalogPrefetchPromise = null;
+            state.ui.adminCatalogPrefetchDone = !hasAdminCatalogPrefetchWork();
+          });
+      }, delay);
+    }
+
+    function scheduleAdminNotificationsPrefetch(delay = 1100) {
+      if (!canUseAdminShell() || !state.ui) return;
+      if (state.ui.adminNotificationsPrefetchPromise || state.ui.adminNotificationsPrefetchDone) return;
+      if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+      if (!hasAdminNotificationsPrefetchWork()) {
+        state.ui.adminNotificationsPrefetchDone = true;
+        return;
+      }
+      scheduleUiDebounce('admin-notificaciones-prefetch', () => {
+        if (!canUseAdminShell() || !state.ui || state.ui.adminNotificationsPrefetchPromise) return;
+        if (state.ui.adminNotificationsPrefetchDone) return;
+        if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+        if (!hasAdminNotificationsPrefetchWork()) {
+          state.ui.adminNotificationsPrefetchDone = true;
+          return;
+        }
+        state.ui.adminNotificationsPrefetchPromise = scheduleAfterPaint(
+          () => refreshNotificaciones({ force: true, limit: 100 }),
+          140
+        )
+          .then(() => {
+            if (String(state.activeAdminModule || '').trim() === 'dashboard') {
+              renderAdminShell();
+              renderInstitutionalNotices();
+              syncRoleUi();
+            }
+          })
+          .catch(() => null)
+          .finally(() => {
+            if (!state.ui) return;
+            state.ui.adminNotificationsPrefetchPromise = null;
+            state.ui.adminNotificationsPrefetchDone = !hasAdminNotificationsPrefetchWork();
+          });
+      }, delay);
+    }
+
+    async function prefetchAdminCatalogsSequentially() {
+      if (!canUseAdminShell()) return;
+      for (const moduleName of getAdminCatalogPrefetchModules()) {
+        if (!canUseAdminShell() || String(state.activeAdminModule || '').trim() !== 'dashboard') return;
+        const blocks = getMissingCatalogBlocks(getAdminModuleCatalogBlocks(moduleName));
+        if (!blocks.length) continue;
+        try {
+          await scheduleAfterPaint(() => refreshCatalogos({ blocks }), 160);
+          if (String(state.activeAdminModule || '').trim() === 'dashboard') {
+            renderAdminShell();
+          }
+        } catch (_) {
+          return;
+        }
+      }
     }
 
     function getCurrentCatalogBlocks() {
@@ -656,7 +873,7 @@
         listo: 'Listo',
         obsoleto: 'Obsoleto',
         error: 'Error',
-        inexistente: 'Sin caché'
+        inexistente: 'Sin cach\u00e9'
       })[String(status || '').trim().toLowerCase()] || (status || 'Sin estado');
     }
 
@@ -676,19 +893,19 @@
 
       if (!data) {
         return compact
-          ? '<div class="subtle">Todavía no hay una consulta de reporte.</div>'
-          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>Aún no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y período para generar o revisar el PDF.</div></div></div>';
+          ? '<div class="subtle">Todav&iacute;a no hay una consulta de reporte.</div>'
+          : '<div class="admin-reporte-ciclo-result-empty"><div><strong>A&uacute;n no hay una consulta activa.</strong><div class="subtle">Selecciona alumno y per&iacute;odo para generar o revisar el PDF.</div></div></div>';
       }
 
       const status = String(data.status || data.estado || '').trim().toLowerCase();
       const rows = [
-        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' · ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
-        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Período</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
+        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' - ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
+        periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Per&iacute;odo</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
         data.url ? '<div class="admin-reporte-ciclo-result-row"><span>PDF</span><strong><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></strong></div>' : '',
-        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Versión de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
-        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>Versión PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
+        data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Versi&oacute;n de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
+        data.version_pdf ? '<div class="admin-reporte-ciclo-result-row"><span>Versi&oacute;n PDF</span><div class="code">' + escapeHtml(data.version_pdf) + '</div></div>' : '',
         data.started_at ? '<div class="admin-reporte-ciclo-result-row"><span>Inicio</span><strong>' + escapeHtml(formatFechaHumana(data.started_at)) + '</strong></div>' : '',
-        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>Finalización</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
+        data.finished_at ? '<div class="admin-reporte-ciclo-result-row"><span>Finalizaci&oacute;n</span><strong>' + escapeHtml(formatFechaHumana(data.finished_at)) + '</strong></div>' : '',
         data.next_retry_at ? '<div class="admin-reporte-ciclo-result-row"><span>Reintento</span><strong>' + escapeHtml(formatFechaHumana(data.next_retry_at)) + '</strong></div>' : '',
         data.error_message ? '<div class="admin-reporte-ciclo-result-row"><span>Error</span><strong>' + escapeHtml(data.error_message) + '</strong></div>' : '',
         data._meta && data._meta.message ? '<div class="admin-reporte-ciclo-result-row"><span>Info</span><strong>' + escapeHtml(data._meta.message) + '</strong></div>' : '',
@@ -699,8 +916,8 @@
         return [
           '<div><strong>Estado:</strong> ' + escapeHtml(getReportStatusLabel(status)) + '</div>',
           data && data.url ? '<div><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></div>' : '',
-          data && data.version_datos ? '<div><strong>Versión datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
-          data && data.version_pdf ? '<div><strong>Versión PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
+          data && data.version_datos ? '<div><strong>Versi&oacute;n datos:</strong> <span class="code">' + escapeHtml(data.version_datos) + '</span></div>' : '',
+          data && data.version_pdf ? '<div><strong>Versi&oacute;n PDF:</strong> <span class="code">' + escapeHtml(data.version_pdf) + '</span></div>' : '',
           data && data.error_message ? '<div><strong>Error:</strong> ' + escapeHtml(data.error_message) + '</div>' : '',
           data && data._meta && data._meta.message ? '<div><strong>Info:</strong> ' + escapeHtml(data._meta.message) + '</div>' : '',
           Array.isArray(warnings) && warnings.length ? '<div><strong>Warnings:</strong><div class="tag-cloud">' + warnings.map((warning) => '<span class="tag">' + escapeHtml(warning) + '</span>').join('') + '</div></div>' : '',
@@ -757,6 +974,8 @@
         state.ui.planeacionesMateriaFilter = '';
         state.ui.multiGroupActiveChildByLote = {};
         state.ui.restoreSnapshotSyncing = false;
+        state.ui.adminNotificationsPrefetchPromise = null;
+        state.ui.adminNotificationsPrefetchDone = false;
         state.ui.planeacionOutboxProcessing = false;
         state.ui.pendingPlanSaveTransactions = {};
         state.ui.planDetailPromises = {};
@@ -849,6 +1068,17 @@
       return [action].concat((parts || []).map(normalizeActionKeyPart)).join(':');
     }
 
+    function shouldLetAdminPanelBusyButtonGrow(button) {
+      return !!(button && button.closest && button.closest([
+        '.admin-alumnos-panel-actions',
+        '.admin-facilitadores-inline-actions',
+        '.admin-facilitadores-assignment-actions',
+        '.admin-materias-inline-actions',
+        '.admin-materias-variant-actions',
+        '.admin-taller-membership-actions'
+      ].join(',')));
+    }
+
     function setButtonBusy(button, busy, busyText = 'Procesando...') {
       if (!button) return;
       if (busy) {
@@ -862,6 +1092,11 @@
         if (button.classList.contains('btn-open-plan')) {
           if (button.offsetWidth) {
             button.style.minWidth = Math.max(button.offsetWidth, 108) + 'px';
+          }
+          button.style.width = '';
+        } else if (shouldLetAdminPanelBusyButtonGrow(button)) {
+          if (button.offsetWidth) {
+            button.style.minWidth = button.offsetWidth + 'px';
           }
           button.style.width = '';
         } else if (button.offsetWidth) {
@@ -900,6 +1135,34 @@
         }
         button.style.width = '';
       }, Math.max(300, Number(duration || 0)));
+    }
+
+    function captureScrollAnchor(element, targetId) {
+      const target = targetId ? $(targetId) : null;
+      const anchorElement = target || element;
+      if (!anchorElement || typeof anchorElement.getBoundingClientRect !== 'function') return null;
+      const rect = anchorElement.getBoundingClientRect();
+      return {
+        targetId: String(targetId || '').trim(),
+        top: rect.top,
+        scrollX: Number(window.scrollX || window.pageXOffset || 0),
+        scrollY: Number(window.scrollY || window.pageYOffset || 0)
+      };
+    }
+
+    function restoreScrollAnchor(anchor) {
+      if (!anchor) return;
+      window.requestAnimationFrame(() => {
+        const target = anchor.targetId ? $(anchor.targetId) : null;
+        if (target && typeof target.getBoundingClientRect === 'function') {
+          const delta = target.getBoundingClientRect().top - Number(anchor.top || 0);
+          if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+          return;
+        }
+        if (Number.isFinite(anchor.scrollY)) {
+          window.scrollTo(Number(anchor.scrollX || 0), Number(anchor.scrollY || 0));
+        }
+      });
     }
 
     function captureFeedbackAnchor(button) {
@@ -1520,7 +1783,7 @@
         }
         if (item.retryable === false) return 'No se pudo sincronizar. Revisa y vuelve a guardar.';
         if (String(item.lastErrorCode || '').trim() === 'INVALID_SESSION') {
-          return 'Pendiente de sincronizar. Vuelve a iniciar sesión para terminar.';
+          return 'Pendiente de sincronizar. Vuelve a iniciar sesi\u00f3n para terminar.';
         }
         return 'Guardado local pendiente. Reintentaremos en segundo plano.';
       }
@@ -1651,11 +1914,18 @@
     }
 
     function ensureLoggedIn() {
-      if (!state.session || !state.session.token) throw new Error('Primero inicia sesión.');
+      if (!state.session || !state.session.token) throw new Error('Primero inicia sesi\u00f3n.');
     }
 
     function formatApiError(err) {
       if (!err) return 'Error desconocido.';
+      const message = String(err.message || err || '').trim();
+      if (
+        String(err.code || '').trim().toUpperCase() === 'SERVER_ERROR' &&
+        message.toLowerCase().includes('no cuentas con el permiso necesario para acceder al documento solicitado')
+      ) {
+        return 'No se pudo guardar porque el sistema no tiene permiso para escribir en la base de datos. Revisa permisos con admin.';
+      }
       return err.code ? err.code + ': ' + err.message : err.message || String(err);
     }
 
@@ -1666,7 +1936,7 @@
     function isTruthyValue(value) {
       if (value === true) return true;
       const normalized = String(value == null ? '' : value).trim().toLowerCase();
-      return normalized === 'si' || normalized === 'sí' || normalized === 'true' || normalized === '1' || normalized === 'x' || normalized === 'yes';
+      return normalized === 'si' || normalized === 's\u00ed' || normalized === 'true' || normalized === '1' || normalized === 'x' || normalized === 'yes';
     }
 
     function canUseReportes() {
@@ -1685,7 +1955,7 @@
 
     function ensureCanUseReportes() {
       if (!canUseReportes()) {
-        throw new Error('Los reportes solo están disponibles para dirección y admin.');
+        throw new Error('Los reportes solo est\u00e1n disponibles para direcci\u00f3n y admin.');
       }
     }
 
@@ -1709,7 +1979,7 @@
 
     function ensureBackendPeriodsReady() {
       if (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length) {
-        throw new Error('El backend no devolvió períodos activos. Revisa la hoja PERIODOS antes de continuar.');
+        throw new Error('El backend no devolvi\u00f3 per\u00edodos activos. Revisa la hoja PERIODOS antes de continuar.');
       }
     }
 
@@ -1728,7 +1998,7 @@
       try {
         json = JSON.parse(text);
       } catch (_) {
-        throw new Error('El backend respondio algo no JSON: ' + text.slice(0, 180));
+        throw new Error('El backend respondi\u00f3 algo no JSON: ' + text.slice(0, 180));
       }
 
       if (!json.ok) {
@@ -1750,8 +2020,8 @@
       const json = await response.json();
       if (!json.ok) throw new Error(json.error || 'Ping fallido');
       setBanner(
-        'Conexión activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
-        ' | módulo de reportes ' + (json.data && json.data.report_module || '-'),
+        'Conexi\u00f3n activa con Libre Aprendiz. Backend ' + (json.data && json.data.version || '-') +
+        ' | m\u00f3dulo de reportes ' + (json.data && json.data.report_module || '-'),
         'success'
       );
     }
@@ -1797,7 +2067,7 @@
         clearLoginInputs();
         renderAll();
         saveSession(null);
-        setBanner('No había una sesión activa.', 'info');
+        setBanner('No hab\u00eda una sesi\u00f3n activa.', 'info');
         return;
       }
       let remoteLogoutFailed = false;
@@ -1810,7 +2080,7 @@
       clearLoadedData();
       clearLoginInputs();
       renderAll();
-      setBanner(remoteLogoutFailed ? 'Sesión local cerrada.' : 'Sesión cerrada.', remoteLogoutFailed ? 'info' : 'success');
+      setBanner(remoteLogoutFailed ? 'Sesi\u00f3n local cerrada.' : 'Sesi\u00f3n cerrada.', remoteLogoutFailed ? 'info' : 'success');
     }
 
     async function refreshCatalogos(options = {}) {
@@ -2185,6 +2455,8 @@
       renderAlertas();
       renderInstitutionalNotices();
       syncRoleUi();
+      scheduleAdminCatalogPrefetch();
+      scheduleAdminNotificationsPrefetch();
 
       const deferredPromise = Promise.resolve();
 
@@ -2270,7 +2542,7 @@
         renderAll();
       }
       if (requestedCatalogBlocks.includes('periodos') && (!Array.isArray(state.catalogos.periodos) || !state.catalogos.periodos.length)) {
-        setBanner('Faltan períodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
+        setBanner('Faltan per\u00edodos activos en el backend. Revisa la hoja PERIODOS.', 'error');
         return;
       }
     }
@@ -2290,8 +2562,10 @@
       if (includeStats) renderStats();
       if (canUseAdminShell()) renderAdminShell();
       if (includePlaneaciones && isPlaneacionesSurfaceVisible()) {
+        renderPlaneacionesFilterSelects();
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
+        scheduleVisiblePlaneacionDetailPrefetch();
       }
       if (includeAlertas && isAlertasSurfaceVisible()) renderAlertas();
     }
@@ -2308,6 +2582,86 @@
       timers[key] = window.setTimeout(() => {
         delete timers[key];
         fn();
+      }, delay);
+    }
+
+    function canPrefetchPlaneacionDetail(plan) {
+      if (!plan || !plan.planeacion_id) return false;
+      const status = String(plan.estado || '').trim();
+      if (['cerrada', 'archivada', 'cierre_pendiente'].includes(status)) return false;
+      if (isPlaneacionPendingCreation(plan)) return false;
+      if (['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan))) return false;
+      return !(plan.detail_loaded && hasUsableOpenPlanDetail(plan));
+    }
+
+    function getVisiblePlaneacionDetailPrefetchIds() {
+      if (!state.session || !state.session.token) return [];
+      if (!state.ui || state.ui.planeacionesLoading || !state.ui.planeacionesLoaded) return [];
+      if (!isPlaneacionesSurfaceVisible()) return [];
+      const seen = new Set();
+      return getVisiblePlaneaciones()
+        .map((plan, index) => ({ plan, index }))
+        .filter(({ plan }) => {
+          const planId = String((plan && plan.planeacion_id) || '').trim();
+          if (!planId || seen.has(planId)) return false;
+          seen.add(planId);
+          return canPrefetchPlaneacionDetail(plan);
+        })
+        .slice(0, OPEN_PLAN_DETAIL_PREFETCH_LIMIT)
+        .map(({ plan }) => String(plan.planeacion_id || '').trim())
+        .filter(Boolean);
+    }
+
+    async function prefetchVisiblePlaneacionDetails() {
+      if (!state.ui || state.ui.planeacionDetailPrefetchRunning) return;
+      const planIds = getVisiblePlaneacionDetailPrefetchIds();
+      if (!planIds.length) return;
+      state.ui.planeacionDetailPrefetchRunning = true;
+      try {
+        let nextIndex = 0;
+        const loadNext = async () => {
+          while (nextIndex < planIds.length) {
+            const planId = planIds[nextIndex];
+            nextIndex += 1;
+            if (!isPlaneacionesSurfaceVisible()) break;
+            const currentPlan = getPlanById(planId);
+            if (!canPrefetchPlaneacionDetail(currentPlan)) continue;
+            try {
+              await ensurePlaneacionDetailLoaded(planId, { silent: true });
+            } catch (_) {}
+          }
+        };
+        const workerCount = Math.min(OPEN_PLAN_DETAIL_PREFETCH_CONCURRENCY, planIds.length);
+        await Promise.all(Array.from({ length: workerCount }, loadNext));
+      } finally {
+        if (state.ui) state.ui.planeacionDetailPrefetchRunning = false;
+      }
+    }
+
+    function prioritizePlaneacionDetailPrefetch(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !state.session || !state.session.token) return;
+      if (!isPlaneacionesSurfaceVisible()) return;
+      const currentPlan = getPlanById(normalizedPlanId);
+      if (!canPrefetchPlaneacionDetail(currentPlan)) return;
+      ensurePlaneacionDetailLoaded(normalizedPlanId, { silent: true }).catch(() => {});
+    }
+
+    function buildOpenPlanPrefetchIntentAttrs(planId) {
+      const escapedPlanId = escapeJsAttrValue(planId);
+      const action = "prioritizePlaneacionDetailPrefetch('" + escapedPlanId + "')";
+      return ' onpointerenter="' + action + '"' +
+        ' onpointerdown="' + action + '"' +
+        ' onfocus="' + action + '"' +
+        ' ontouchstart="' + action + '"';
+    }
+
+    function scheduleVisiblePlaneacionDetailPrefetch(delay = OPEN_PLAN_DETAIL_PREFETCH_DELAY_MS) {
+      if (!state.session || !state.session.token) return;
+      if (!state.ui || !state.ui.planeacionesLoaded) return;
+      if (!isPlaneacionesSurfaceVisible()) return;
+      scheduleUiDebounce('planeacion-detail-prefetch', () => {
+        prefetchVisiblePlaneacionDetails().catch(() => {});
       }, delay);
     }
 
@@ -2346,6 +2700,10 @@
       const normalized = String(moduleName || '').trim();
       if (isAdminModuleLoading(normalized)) {
         renderAdminModulePlaceholder(normalized);
+        return;
+      }
+      if (getAdminModuleError(normalized)) {
+        renderAdminModuleError(normalized);
         return;
       }
       if (adminModuleNeedsCatalogos(normalized) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(normalized))) {
@@ -2394,17 +2752,33 @@
       else delete state.ui.adminModuleLoading[key];
     }
 
+    function getAdminModuleError(moduleName) {
+      const key = String(moduleName || '').trim();
+      return String(state.ui && state.ui.adminModuleErrors && state.ui.adminModuleErrors[key] || '').trim();
+    }
+
+    function setAdminModuleError(moduleName, message) {
+      const key = String(moduleName || '').trim();
+      if (!key || !state.ui) return;
+      if (!state.ui.adminModuleErrors || typeof state.ui.adminModuleErrors !== 'object') {
+        state.ui.adminModuleErrors = {};
+      }
+      const normalizedMessage = String(message || '').trim();
+      if (normalizedMessage) state.ui.adminModuleErrors[key] = normalizedMessage;
+      else delete state.ui.adminModuleErrors[key];
+    }
+
     function getAdminModulePlaceholderCopy(moduleName) {
       switch (String(moduleName || '').trim()) {
         case 'planeaciones':
           return {
             title: 'Cargando planeaciones',
-            body: 'Preparamos filtros y herramientas del módulo sin frenar la vista principal.'
+            body: 'Preparamos filtros y herramientas del m\u00f3dulo sin frenar la vista principal.'
           };
         case 'alumnos':
           return {
             title: 'Cargando alumnos',
-            body: 'Se están hidratando grupos y fichas base para que el listado responda más rápido.'
+            body: 'Se est\u00e1n hidratando grupos y fichas base para que el listado responda m\u00e1s r\u00e1pido.'
           };
         case 'facilitadores':
           return {
@@ -2414,28 +2788,53 @@
         case 'materias':
           return {
             title: 'Cargando materias',
-            body: 'Se están organizando materias base y variantes activas.'
+            body: 'Se est\u00e1n organizando materias base y variantes activas.'
           };
         case 'talleres':
           return {
             title: 'Cargando talleres',
-            body: 'Preparamos catálogo base y relaciones activas sin congelar la navegación.'
+            body: 'Preparamos cat\u00e1logo base y relaciones activas sin congelar la navegaci\u00f3n.'
           };
         case 'notificaciones':
           return {
             title: 'Cargando notificaciones',
-            body: 'Se está preparando la bandeja activa y el editor institucional.'
+            body: 'Se est\u00e1 preparando la bandeja activa y el editor institucional.'
           };
         case 'reporte-ciclo':
           return {
             title: 'Cargando reporte de ciclo',
-            body: 'Se están preparando alumnos y periodos para este módulo.'
+            body: 'Se est\u00e1n preparando alumnos y per\u00edodos para este m\u00f3dulo.'
           };
         default:
           return {
-            title: 'Cargando módulo',
-            body: 'Preparamos la información necesaria para mostrar este panel.'
+            title: 'Cargando m\u00f3dulo',
+            body: 'Preparamos la informaci\u00f3n necesaria para mostrar este panel.'
           };
+      }
+    }
+
+    function getAdminModuleDisplayName(moduleName) {
+      switch (String(moduleName || '').trim()) {
+        case 'dashboard':
+          return 'Dashboard';
+        case 'planeaciones':
+          return 'Planeaciones';
+        case 'alumnos':
+          return 'Alumnos';
+        case 'notificaciones':
+          return 'Notificaciones';
+        case 'reporte-ciclo':
+          return 'Reporte de ciclo';
+        case 'facilitadores':
+          return 'Facilitadores';
+        case 'materias':
+          return 'Materias';
+        case 'talleres':
+          return 'Talleres';
+        case 'configuracion':
+          return 'Configuraci\u00f3n';
+        default:
+          return 'M\u00f3dulo';
       }
     }
 
@@ -2448,6 +2847,224 @@
           '<h3>' + escapeHtml(copy.title) + '</h3>' +
           '<p>' + escapeHtml(copy.body) + '</p>' +
         '</article>';
+    }
+
+    function renderAdminModuleError(moduleName) {
+      const normalized = String(moduleName || '').trim();
+      const panel = $('admin-panel-' + normalized);
+      if (!panel) return;
+      const message = getAdminModuleError(normalized) || 'No se pudo cargar este m\u00f3dulo.';
+      panel.innerHTML =
+        '<article class="admin-placeholder">' +
+          '<h3>No se pudo cargar ' + escapeHtml(getAdminModuleDisplayName(normalized)) + '</h3>' +
+          '<p>' + escapeHtml(message) + '</p>' +
+          '<div class="actions compact">' +
+            '<button class="btn-secondary" type="button" onclick="activateAdminModule(\'' + escapeJsAttrValue(normalized) + '\')">Reintentar</button>' +
+          '</div>' +
+        '</article>';
+    }
+
+    function getAdminNotificationsModuleTemplate() {
+      return [
+        '<article class="admin-toolbar">',
+          '<div class="admin-toolbar-head">',
+            '<div class="admin-notification-head-copy">',
+              '<h3>Notificaciones globales</h3>',
+              '<p class="subtle">Gestiona y envia avisos globales para facilitadores.</p>',
+            '</div>',
+            '<div class="admin-notification-toolbar-actions">',
+              '<button id="adminNotificationFilterActiveBtn" class="btn-ghost" type="button">Ver activas</button>',
+              '<button id="adminNotificationFilterScheduledBtn" class="btn-ghost" type="button">Ver programadas</button>',
+              '<button id="adminNotificationFilterDraftBtn" class="btn-ghost" type="button">Ver borradores / archivadas</button>',
+              '<button id="adminNotificationFilterClosedBtn" class="btn-ghost" type="button">Ver cerradas</button>',
+              '<button id="adminNotificationNewBtn" class="btn-primary" type="button">Nueva notificaci&oacute;n</button>',
+            '</div>',
+          '</div>',
+          '<div id="adminNotificationEditor" class="admin-notification-editor" hidden>',
+            '<div class="admin-notification-section-head">',
+              '<h4 id="adminNotificationEditorTitle">Nueva notificaci&oacute;n</h4>',
+            '</div>',
+            '<div class="admin-notification-editor-layout">',
+              '<div class="admin-notification-editor-main">',
+                '<div>',
+                  '<label for="adminNotificationTitle">T&iacute;tulo</label>',
+                  '<input id="adminNotificationTitle" type="text" maxlength="150" placeholder="T&iacute;tulo">',
+                '</div>',
+                '<div>',
+                  '<label for="adminNotificationMessage">Mensaje</label>',
+                  '<textarea id="adminNotificationMessage" placeholder="Ingresa el mensaje que ser&aacute; visible para los facilitadores."></textarea>',
+                '</div>',
+              '</div>',
+              '<div class="admin-notification-editor-side">',
+                '<div class="admin-notification-inline-grid">',
+                  '<div>',
+                    '<label for="adminNotificationPriority">Prioridad</label>',
+                    '<select id="adminNotificationPriority">',
+                      '<option value="normal">Normal</option>',
+                      '<option value="alta">Alta</option>',
+                    '</select>',
+                  '</div>',
+                  '<div>',
+                    '<label for="adminNotificationStart">Fecha de inicio</label>',
+                    '<input id="adminNotificationStart" type="date">',
+                  '</div>',
+                  '<div>',
+                    '<label for="adminNotificationEnd">Fecha de cierre</label>',
+                    '<input id="adminNotificationEnd" type="date">',
+                  '</div>',
+                '</div>',
+                '<div>',
+                  '<label for="adminNotificationAudience">Dirigido a</label>',
+                  '<select id="adminNotificationAudience">',
+                    '<option value="todos">Todos los facilitadores</option>',
+                    '<option value="especificos">Facilitadores espec&iacute;ficos</option>',
+                  '</select>',
+                '</div>',
+                '<div id="adminNotificationAudienceList" class="notification-audience-checklist" hidden></div>',
+                '<div class="actions compact admin-notification-editor-actions">',
+                  '<button id="adminNotificationSaveDraftBtn" class="btn-secondary" type="button">Guardar borrador</button>',
+                  '<button id="adminNotificationPublishBtn" class="btn-primary" type="button">Publicar</button>',
+                  '<button id="adminNotificationCancelBtn" class="btn-ghost" type="button">Cancelar</button>',
+                '</div>',
+              '</div>',
+            '</div>',
+          '</div>',
+          '<div id="adminNotificationFeedback" class="inline-feedback"></div>',
+          '<div class="admin-notification-section-head">',
+            '<h4 id="adminNotificationListTitle">Notificaciones activas</h4>',
+          '</div>',
+          '<div id="adminNotificationsList" class="admin-notification-list"></div>',
+        '</article>'
+      ].join('');
+    }
+
+    function ensureAdminNotificationsModuleTemplate() {
+      const panel = $('admin-panel-notificaciones');
+      if (!panel || $('adminNotificationsList')) return false;
+      panel.innerHTML = getAdminNotificationsModuleTemplate();
+      return true;
+    }
+
+    function bindAdminNotificationsTemplateEvents() {
+      const bind = (id, eventName, handler) => {
+        const node = $(id);
+        if (!node || (node.dataset && node.dataset.adminTemplateBound)) return;
+        node.addEventListener(eventName, handler);
+        if (node.dataset) node.dataset.adminTemplateBound = '1';
+      };
+      bind('adminNotificationNewBtn', 'click', () => openNotificationEditor());
+      bind('adminNotificationFilterActiveBtn', 'click', () => setNotificationFilter('activas'));
+      bind('adminNotificationFilterScheduledBtn', 'click', () => setNotificationFilter('programadas'));
+      bind('adminNotificationFilterDraftBtn', 'click', () => setNotificationFilter('borradores'));
+      bind('adminNotificationFilterClosedBtn', 'click', () => setNotificationFilter('cerradas'));
+      bind('adminNotificationTitle', 'input', (event) => updateNotificationEditorField('titulo', event.currentTarget.value));
+      bind('adminNotificationMessage', 'input', (event) => updateNotificationEditorField('mensaje', event.currentTarget.value));
+      bind('adminNotificationPriority', 'change', (event) => updateNotificationEditorField('prioridad', event.currentTarget.value));
+      bind('adminNotificationStart', 'change', (event) => updateNotificationEditorField('fecha_inicio', event.currentTarget.value));
+      bind('adminNotificationEnd', 'change', (event) => updateNotificationEditorField('fecha_cierre', event.currentTarget.value));
+      bind('adminNotificationAudience', 'change', (event) => updateNotificationEditorField('visible_para', event.currentTarget.value));
+      bind('adminNotificationSaveDraftBtn', 'click', (event) => saveNotificationEditor(event.currentTarget, 'borrador'));
+      bind('adminNotificationPublishBtn', 'click', (event) => saveNotificationEditor(event.currentTarget, 'publicada'));
+      bind('adminNotificationCancelBtn', 'click', () => {
+        resetNotificationEditor();
+        renderNotificationsAdmin();
+      });
+    }
+
+    function getAdminReporteCicloModuleTemplate() {
+      return [
+        '<article class="admin-toolbar admin-reporte-ciclo-module">',
+          '<div class="admin-alumnos-head admin-reporte-ciclo-head">',
+            '<div class="admin-alumnos-head-copy admin-reporte-ciclo-copy">',
+              '<h3>Reporte de ciclo</h3>',
+              '<p class="subtle">Genera, regenera y monitorea el PDF acad&eacute;mico familiar por alumno y per&iacute;odo sin salir del adminShell.</p>',
+            '</div>',
+            '<div class="admin-reporte-ciclo-kpis">',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiAlumnos">0</strong><span>Alumnos</span></div>',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPeriodos">0</strong><span>Per&iacute;odos</span></div>',
+              '<div class="admin-reporte-ciclo-kpi"><strong id="adminReporteKpiPdf">Sin consulta</strong><span>&Uacute;ltimo estado</span></div>',
+            '</div>',
+          '</div>',
+          '<div class="admin-reporte-ciclo-layout">',
+            '<div class="admin-reporte-ciclo-main">',
+              '<div class="admin-reporte-ciclo-request">',
+                '<div class="admin-reporte-ciclo-grid">',
+                  '<div class="field"><label for="adminReportAlumno">Alumno</label><select id="adminReportAlumno"></select></div>',
+                  '<div class="field"><label for="adminReportPeriodo">Per&iacute;odo</label><select id="adminReportPeriodo"></select></div>',
+                '</div>',
+                '<div class="admin-reporte-ciclo-actions actions compact">',
+                  '<button id="adminGenerateNowBtn" class="btn-primary" type="button">Solicitar / actualizar</button>',
+                  '<button id="adminRequestReportBtn" class="btn-secondary" type="button">Forzar regeneraci&oacute;n</button>',
+                  '<button id="adminStatusReportBtn" class="btn-ghost" type="button">Revisar estado</button>',
+                '</div>',
+                '<div class="admin-reporte-ciclo-helper subtle">El PDF se genera desde backend y puede quedar listo de inmediato o unos segundos despu&eacute;s, seg&uacute;n el estado del cach&eacute;.</div>',
+              '</div>',
+              '<div class="admin-reporte-ciclo-preview-card">',
+                '<div class="admin-alumnos-section-head"><h4>Vista del documento</h4></div>',
+                '<div id="adminReportSelectionSummary" class="admin-reporte-ciclo-summary"></div>',
+                '<div class="admin-reporte-ciclo-preview">',
+                  '<div class="admin-reporte-ciclo-preview-sheet">',
+                    '<div class="admin-reporte-ciclo-preview-header"><div class="admin-reporte-ciclo-preview-logo">LA</div><div><strong>Libre Aprendiz</strong><span>Reporte acad&eacute;mico para familias</span></div></div>',
+                    '<div class="admin-reporte-ciclo-preview-strip"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>',
+                    '<div class="admin-reporte-ciclo-preview-block"><div><strong id="adminReportPreviewAlumno">Selecciona un alumno</strong><span id="adminReportPreviewMeta">Grupo, matr&iacute;cula y facilitadora se resolver&aacute;n aqu&iacute;.</span></div><div class="admin-reporte-ciclo-badge" id="adminReportPreviewPeriodo">Per&iacute;odo</div></div>',
+                    '<div class="admin-reporte-ciclo-preview-section">',
+                      '<div class="admin-reporte-ciclo-preview-section-head"><div class="admin-reporte-ciclo-dot"></div><strong>ACTIVIDADES POR MATERIA</strong><span>Estado de realizaci&oacute;n</span></div>',
+                      '<div class="admin-reporte-ciclo-preview-row"><span class="is-done">&#10003;</span><div>Actividad registrada del periodo</div><small>Sem 1</small></div>',
+                      '<div class="admin-reporte-ciclo-preview-row"><span class="is-pending"></span><div>Actividad pendiente o sin dato visible</div><small>Sem 2</small></div>',
+                      '<div class="admin-reporte-ciclo-preview-row"><span class="is-no">&times;</span><div>Actividad marcada como no realizada</div><small>Sem 3</small></div>',
+                    '</div>',
+                  '</div>',
+                '</div>',
+              '</div>',
+            '</div>',
+            '<aside class="admin-alumnos-panel admin-reporte-ciclo-side">',
+              '<div class="admin-alumnos-panel-head"><h4>Estado y PDF</h4></div>',
+              '<div id="adminReportResult" class="admin-reporte-ciclo-result"></div>',
+              '<div class="admin-reporte-ciclo-notes">',
+                '<div class="admin-reporte-ciclo-note"><strong>Incluye</strong><span>Encabezado institucional, datos del alumno, actividades por materia y pie familiar.</span></div>',
+                '<div class="admin-reporte-ciclo-note"><strong>No incluye</strong><span>Observaciones internas, notas de direcci&oacute;n, IDs t&eacute;cnicos ni estados administrativos.</span></div>',
+                '<div class="admin-reporte-ciclo-note"><strong>Salida final</strong><span>PDF en Drive con URL directa para abrir y compartir dentro de la operaci&oacute;n escolar.</span></div>',
+              '</div>',
+            '</aside>',
+          '</div>',
+        '</article>'
+      ].join('');
+    }
+
+    function ensureAdminReporteCicloModuleTemplate() {
+      const panel = $('admin-panel-reporte-ciclo');
+      if (!panel || $('adminReportAlumno')) return false;
+      panel.innerHTML = getAdminReporteCicloModuleTemplate();
+      return true;
+    }
+
+    function bindAdminReporteCicloTemplateEvents() {
+      const bind = (id, eventName, handler) => {
+        const node = $(id);
+        if (!node || (node.dataset && node.dataset.adminTemplateBound)) return;
+        node.addEventListener(eventName, handler);
+        if (node.dataset) node.dataset.adminTemplateBound = '1';
+      };
+      bind('adminReportAlumno', 'change', (event) => {
+        setReporteSelection('alumno_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      bind('adminReportPeriodo', 'change', (event) => {
+        setReporteSelection('periodo_id', event.currentTarget.value);
+        renderAdminReporteCicloModule();
+      });
+      bind('adminGenerateNowBtn', 'click', (event) => handleAction('requestReporteAlumno', generateReportNow, {
+        button: event.currentTarget,
+        key: buildActionKey('requestReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      bind('adminRequestReportBtn', 'click', (event) => handleAction('regenerarReporteAlumno', requestReport, {
+        button: event.currentTarget,
+        key: buildActionKey('regenerarReporteAlumno', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
+      bind('adminStatusReportBtn', 'click', (event) => handleAction('getReporteAlumnoStatus', checkReportStatus, {
+        button: event.currentTarget,
+        key: buildActionKey('getReporteAlumnoStatus', [getSelectedReporteAlumnoId(), getSelectedReportePeriodoId()])
+      }));
     }
 
     function renderAdminModuleSurface(moduleName = state.activeAdminModule, options = {}) {
@@ -2500,9 +3117,9 @@
       if (reportPanel) reportPanel.hidden = facilitatorMode || adminMode || !canViewReportes;
       if (estadoFilter) {
         Array.from(estadoFilter.options).forEach((option) => {
-          option.hidden = facilitatorMode && ['rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(option.value);
+          option.hidden = facilitatorMode && ['borrador_pendiente_aprobacion', 'rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(option.value);
         });
-        if (facilitatorMode && ['rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(estadoFilter.value)) {
+        if (facilitatorMode && ['borrador_pendiente_aprobacion', 'rechazada', 'cierre_pendiente', 'cerrada', 'archivada'].includes(estadoFilter.value)) {
           estadoFilter.value = '';
         }
       }
@@ -2540,7 +3157,7 @@
         badge.className = 'pill';
         info.textContent = 'Aún no hay una sesión activa.';
         if (workspaceSessionCopy) {
-          workspaceSessionCopy.innerHTML = '<strong>Sin sesion</strong><span class="mini">Libre Aprendiz</span>';
+          workspaceSessionCopy.innerHTML = '<strong>Sin sesión</strong><span class="mini">Libre Aprendiz</span>';
         }
         if (logoutBtn) logoutBtn.hidden = true;
         if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = true;
@@ -2603,7 +3220,7 @@
 
     async function loadMorePlaneaciones(button) {
       if (!state.ui || state.ui.planeacionesLoadingMore || !state.ui.planeacionesHasMore) return;
-      await handleAction('cargar más planeaciones', async () => {
+      await handleAction('cargar m\u00e1s planeaciones', async () => {
         await refreshPlaneaciones({ append: true });
         renderPlaneacionesList();
       }, {
@@ -2650,20 +3267,37 @@
         state.ui.notificationFilter = 'activas';
       }
       state.activeAdminModule = nextModule;
+      setAdminModuleError(nextModule, '');
       renderAdminShell();
-      const bootstrappingNotificationsModule = nextModule === 'notificaciones' && !Array.isArray(state.notificaciones).length;
+      const bootstrappingNotificationsModule = nextModule === 'notificaciones' && (!Array.isArray(state.notificaciones) || !state.notificaciones.length);
       if (bootstrappingNotificationsModule) {
         setAdminModuleLoading(nextModule, true);
+        renderAdminShell();
         renderActiveAdminModule(nextModule);
-        refreshAdminModuleSurface(nextModule, {
-          includeStats: true,
-          refreshNotificaciones: true
-        })
+        const pendingNotificationsPrefetch = state.ui && state.ui.adminNotificationsPrefetchPromise;
+        const loadNotifications = pendingNotificationsPrefetch
+          ? pendingNotificationsPrefetch.then(() => {
+              if (Array.isArray(state.notificaciones) && state.notificaciones.length) {
+                return null;
+              }
+              return refreshAdminModuleSurface(nextModule, {
+                includeStats: true,
+                refreshNotificaciones: true
+              });
+            })
+          : refreshAdminModuleSurface(nextModule, {
+              includeStats: true,
+              refreshNotificaciones: true
+            });
+        loadNotifications
           .then(() => {
             setAdminModuleLoading(nextModule, false);
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           })
-          .catch(() => {
+          .catch((err) => {
             setAdminModuleLoading(nextModule, false);
+            setAdminModuleError(nextModule, formatApiError(err));
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           });
       }
       if (nextModule === 'planeaciones' && state.ui && !state.ui.planeacionesLoaded) {
@@ -2673,6 +3307,7 @@
       }
       if (!bootstrappingNotificationsModule && adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(nextModule))) {
         setAdminModuleLoading(nextModule, true);
+        renderAdminShell();
         renderActiveAdminModule(nextModule);
         refreshCatalogos({ blocks: getMissingCatalogBlocks(getAdminModuleCatalogBlocks(nextModule)) })
           .then(() => {
@@ -2684,20 +3319,25 @@
               renderAdminModuleSurface(nextModule, { includeStats: false });
             }
           })
-          .catch(() => {
+          .catch((err) => {
             setAdminModuleLoading(nextModule, false);
+            setAdminModuleError(nextModule, formatApiError(err));
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           });
       }
       if (nextModule === 'configuracion' && !getMaintenanceUi().preview) {
         setAdminModuleLoading(nextModule, true);
+        renderAdminShell();
         renderActiveAdminModule(nextModule);
         loadMaintenancePreview({ keepAudit: true })
           .then(() => {
             setAdminModuleLoading(nextModule, false);
             renderAdminModuleSurface(nextModule, { includeStats: false });
           })
-          .catch(() => {
+          .catch((err) => {
             setAdminModuleLoading(nextModule, false);
+            setAdminModuleError(nextModule, formatApiError(err));
+            renderAdminModuleSurface(nextModule, { includeStats: false });
           });
       }
       if (nextModule === 'planeaciones') {
@@ -2736,7 +3376,7 @@
         $('adminShellTitle').textContent = 'Centro de control' + (user ? ' de ' + (user.nombre || user.nombre_mostrado || user.facilitador_id || '') : '');
       }
       if ($('adminRolePill')) {
-        $('adminRolePill').textContent = user ? (user.rol === 'admin' ? 'Admin' : 'Directora') : 'Administración';
+        $('adminRolePill').textContent = user ? (user.rol === 'admin' ? 'Admin' : 'Directora') : 'Administraci\u00f3n';
       }
       if ($('adminKpiOpenPlans')) $('adminKpiOpenPlans').textContent = String(openPlans);
       if ($('adminKpiClosedPlans')) $('adminKpiClosedPlans').textContent = String(closedPlans);
@@ -2755,11 +3395,27 @@
       if ($('adminCountReportes')) $('adminCountReportes').textContent = getReportStatusLabel(getReportSelectionState().lastResult && (getReportSelectionState().lastResult.status || getReportSelectionState().lastResult.estado) || 'PDF');
 
       document.querySelectorAll('.admin-nav-btn').forEach((btn) => {
-        btn.classList.toggle('is-active', btn.dataset.adminModule === state.activeAdminModule);
+        const moduleName = String(btn.dataset.adminModule || '').trim();
+        const isActive = moduleName === state.activeAdminModule;
+        const isLoading = isAdminModuleLoading(moduleName);
+        if (!btn.dataset.defaultText) btn.dataset.defaultText = btn.textContent;
+        btn.classList.toggle('is-active', isActive);
+        btn.classList.toggle('is-loading', isLoading);
+        if (isLoading) {
+          btn.setAttribute('aria-busy', 'true');
+          btn.textContent = btn.dataset.defaultText + ' - Cargando...';
+        } else {
+          btn.removeAttribute('aria-busy');
+          btn.textContent = btn.dataset.defaultText;
+        }
       });
       document.querySelectorAll('.admin-panel').forEach((panel) => {
         panel.classList.toggle('is-active', panel.id === 'admin-panel-' + state.activeAdminModule);
       });
+      if (String(state.activeAdminModule || '').trim() === 'dashboard') {
+        scheduleAdminCatalogPrefetch(900);
+        scheduleAdminNotificationsPrefetch(1180);
+      }
     }
 
     function getTodayYmdLocal() {
@@ -2806,7 +3462,7 @@
         const row = (state.catalogos.facilitadores || []).find((item) => item.facilitador_id === id);
         return row ? (row.nombre_mostrado || row.nombre_completo || row.facilitador_id) : id;
       }).filter(Boolean);
-      return names.length ? names.join(', ') : 'Facilitadores específicos';
+      return names.length ? names.join(', ') : 'Facilitadores espec\u00edficos';
     }
 
     function setNotificationEditorExpanded(next) {
@@ -2880,18 +3536,18 @@
       const diff = Math.round((today.getTime() - target.getTime()) / 86400000);
       if (diff <= 0) return 'Hoy';
       if (diff === 1) return 'Ayer';
-      return 'Hace ' + diff + ' días';
+      return 'Hace ' + diff + ' d\u00edas';
     }
 
     function getNotificationActionMessage(action, status) {
-      if (action === 'publicarNotificacion') return 'Notificación publicada.';
-      if (action === 'despublicarNotificacion') return 'La notificación volvió a borrador.';
-      if (action === 'cerrarNotificacion') return 'Notificación cerrada.';
-      if (action === 'archivarNotificacion') return 'Notificación archivada.';
-      if (action === 'duplicarNotificacion') return 'Se creó una copia en borrador.';
-      if (status === 'publicada') return 'Notificación publicada.';
+      if (action === 'publicarNotificacion') return 'Notificaci\u00f3n publicada.';
+      if (action === 'despublicarNotificacion') return 'La notificaci\u00f3n volvi\u00f3 a borrador.';
+      if (action === 'cerrarNotificacion') return 'Notificaci\u00f3n cerrada.';
+      if (action === 'archivarNotificacion') return 'Notificaci\u00f3n archivada.';
+      if (action === 'duplicarNotificacion') return 'Se cre\u00f3 una copia en borrador.';
+      if (status === 'publicada') return 'Notificaci\u00f3n publicada.';
       if (status === 'borrador') return 'Borrador guardado.';
-      return 'Notificación actualizada.';
+      return 'Notificaci\u00f3n actualizada.';
     }
 
     function getNotificationBusyText(action) {
@@ -2926,6 +3582,8 @@
     function renderNotificationsAdmin() {
       const panel = $('admin-panel-notificaciones');
       if (!panel || !canUseAdminShell()) return;
+      const rebuiltTemplate = ensureAdminNotificationsModuleTemplate();
+      if (rebuiltTemplate) bindAdminNotificationsTemplateEvents();
       const activeBtn = $('adminNotificationFilterActiveBtn');
       const scheduledBtn = $('adminNotificationFilterScheduledBtn');
       const draftBtn = $('adminNotificationFilterDraftBtn');
@@ -2948,7 +3606,7 @@
       if (start) start.value = state.notificationEditor.fecha_inicio || '';
       if (end) end.value = state.notificationEditor.fecha_cierre || '';
       if (audience) audience.value = state.notificationEditor.visible_para || 'todos';
-      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificación' : 'Nueva notificación';
+      if (editorTitle) editorTitle.textContent = state.notificationEditor.notificacion_id ? 'Editar notificaci\u00f3n' : 'Nueva notificaci\u00f3n';
       if (listTitle) listTitle.textContent = getNotificationFilterTitle();
       const filter = (state.ui && state.ui.notificationFilter) || 'activas';
       if (activeBtn) activeBtn.classList.toggle('is-active', filter === 'activas');
@@ -2960,17 +3618,17 @@
       if (!list) return;
       const rows = getFilteredAdminNotifications();
       if (!rows.length) {
-        list.innerHTML = '<div class="empty">Todavía no hay notificaciones en esta vista.</div>';
+        list.innerHTML = '<div class="empty">Todav\u00eda no hay notificaciones en esta vista.</div>';
         return;
       }
       list.innerHTML = '<div class="admin-notification-list-table">' +
         '<div class="admin-notification-list-header">' +
-          '<div>Título</div>' +
+          '<div>T&iacute;tulo</div>' +
           '<div>Estado</div>' +
           '<div>Vigencia</div>' +
           '<div>Prioridad</div>' +
           '<div>Audiencia</div>' +
-          '<div>Ášltima actualización</div>' +
+          '<div>&Uacute;ltima actualizaci&oacute;n</div>' +
           '<div>Acciones</div>' +
         '</div>' +
         rows.map((row) => {
@@ -2993,7 +3651,7 @@
         }
         return '<article class="admin-notification-row' + (high ? ' is-high' : '') + '">' +
           '<div class="admin-notification-title">' +
-            '<strong>' + escapeHtml(row.titulo || 'Sin título') + '</strong>' +
+            '<strong>' + escapeHtml(row.titulo || 'Sin titulo') + '</strong>' +
             '<div class="admin-notification-message mini">' + escapeHtml(row.mensaje || '') + '</div>' +
           '</div>' +
           '<div class="admin-notification-meta-stack">' +
@@ -3096,7 +3754,7 @@
             : 'borrador';
           const saved = await api('guardarNotificacion', buildNotificationPayload(saveStatus));
           const notificationId = (saved && saved.notificacion_id) || state.notificationEditor.notificacion_id || '';
-          if (!notificationId) throw new Error('No se pudo preparar la notificación para publicar.');
+          if (!notificationId) throw new Error('No se pudo preparar la notificaci\u00f3n para publicar.');
           await api('publicarNotificacion', {
             notificacion_id: notificationId,
             request_id: uid('NOTIP')
@@ -3113,7 +3771,7 @@
         });
         setBanner(
           targetStatus === 'publicada'
-            ? (isEditing ? 'Notificación actualizada y publicada.' : 'Notificación publicada.')
+            ? (isEditing ? 'Notificaci\u00f3n actualizada y publicada.' : 'Notificaci\u00f3n publicada.')
             : (isEditing ? 'Cambios del borrador guardados.' : 'Borrador guardado. Puedes verlo en Ver borradores / archivadas.'),
           'success'
         );
@@ -3216,6 +3874,75 @@
       if (status === 'egresado') return 'Egresado';
       if (status === 'archivado') return 'Archivado';
       return 'Activo';
+    }
+
+    function compactAlumnoHistoryText(value, maxLength = 120) {
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
+      if (!text || text.length <= maxLength) return text;
+      return text.slice(0, Math.max(0, maxLength - 3)).trim() + '...';
+    }
+
+    function formatAlumnoHistoryValue(value) {
+      const text = compactAlumnoHistoryText(value, 90);
+      return text ? '"' + text + '"' : 'sin dato';
+    }
+
+    function buildAlumnoFichaHistoryDetail(before, after, statusNote) {
+      if (!before) return 'Se agreg\u00f3 un nuevo alumno al cat\u00e1logo.';
+      const changes = [];
+      const addTextChange = (label, previousValue, nextValue) => {
+        const previousText = String(previousValue || '').trim();
+        const nextText = String(nextValue || '').trim();
+        if (previousText === nextText) return;
+        changes.push(label + ': ' + formatAlumnoHistoryValue(previousText) + ' -> ' + formatAlumnoHistoryValue(nextText) + '.');
+      };
+      addTextChange('Matr\u00edcula', before.matricula, after.matricula);
+      addTextChange('Nombre completo', before.nombre_completo, after.nombre_completo);
+      addTextChange('Alias visible', before.nombre_mostrado, after.nombre_mostrado);
+      const previousGroup = String(before.grupo_id || '').trim();
+      const nextGroup = String(after.grupo_id || '').trim();
+      if (previousGroup !== nextGroup) {
+        changes.push('Grupo: ' + getGrupoNombre(previousGroup) + ' -> ' + getGrupoNombre(nextGroup) + '.');
+      }
+      const previousStatus = getAlumnoStatusVisual(before);
+      const nextStatus = getAlumnoStatusVisual({ estatus: after.estatus });
+      if (previousStatus !== nextStatus) {
+        changes.push('Estatus: ' + getAlumnoStatusLabel(previousStatus) + ' -> ' + getAlumnoStatusLabel(nextStatus) + '. Nota: ' + compactAlumnoHistoryText(statusNote, 160));
+      }
+      const previousNotes = String(getAlumnoAdminNotes(before.alumno_id, before.notas_internas || '') || '').trim();
+      const nextNotes = String(after.notas_internas || '').trim();
+      if (previousNotes !== nextNotes) {
+        if (nextNotes && previousNotes) {
+          changes.push('Observaci\u00f3n administrativa actualizada: ' + formatAlumnoHistoryValue(nextNotes) + '.');
+        } else if (nextNotes) {
+          changes.push('Observaci\u00f3n administrativa agregada: ' + formatAlumnoHistoryValue(nextNotes) + '.');
+        } else {
+          changes.push('Observaci\u00f3n administrativa eliminada.');
+        }
+      }
+      return changes.join(' ') || 'Se guard\u00f3 la ficha sin cambios visibles.';
+    }
+
+    function requestAlumnoStatusHistoryNote(alumno, nextStatus, title) {
+      const fromLabel = getAlumnoStatusLabel(getAlumnoStatusVisual(alumno));
+      const toLabel = getAlumnoStatusLabel(getAlumnoStatusVisual({ estatus: nextStatus }));
+      const promptText = [
+        'Nota obligatoria para historial.',
+        (title || 'Cambio de estatus') + ': ' + fromLabel + ' -> ' + toLabel + '.',
+        'Ejemplo: falta de pago, regreso autorizado, cierre administrativo.'
+      ].join('\n');
+      const value = window.prompt(promptText, '');
+      if (value === null) return null;
+      const note = String(value || '').trim();
+      if (!note) {
+        setBanner('Captura una nota para guardar el cambio de estatus.', 'error');
+        return null;
+      }
+      return note;
+    }
+
+    function buildAlumnoStatusHistoryDetail(baseDetail, statusNote) {
+      return String(baseDetail || 'Se actualiz\u00f3 el estatus del alumno.').trim() + ' Nota: ' + compactAlumnoHistoryText(statusNote, 160);
     }
 
     function getAlumnoStatusBadgeClass(status) {
@@ -3345,7 +4072,7 @@
           entry_id: 'seed-alta-' + alumno.alumno_id,
           tipo: 'alta',
           titulo: 'Alta de alumno',
-          detalle: 'Registro inicial del alumno en el catálogo.',
+          detalle: 'Registro inicial del alumno en el cat\u00e1logo.',
           fecha: alumno.fecha_alta
         });
       }
@@ -3354,7 +4081,7 @@
           entry_id: 'seed-archivado-' + alumno.alumno_id,
           tipo: 'archivado',
           titulo: 'Alumno archivado',
-          detalle: 'Se marcó como archivado dentro del catálogo escolar.',
+          detalle: 'Se marc\u00f3 como archivado dentro del cat\u00e1logo escolar.',
           fecha: alumno.archivado_at || alumno.fecha_baja
         });
       }
@@ -3364,7 +4091,7 @@
           entry_id: 'seed-pausa-' + alumno.alumno_id,
           tipo: 'pausa',
           titulo: 'Alumno en pausa',
-          detalle: 'El alumno quedó en pausa dentro del catálogo.',
+          detalle: 'El alumno qued\u00f3 en pausa dentro del cat\u00e1logo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -3373,7 +4100,7 @@
           entry_id: 'seed-inactivo-' + alumno.alumno_id,
           tipo: 'inactivo',
           titulo: 'Alumno inactivo',
-          detalle: 'El alumno quedó marcado como inactivo en el catálogo.',
+          detalle: 'El alumno qued\u00f3 marcado como inactivo en el cat\u00e1logo.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -3382,7 +4109,7 @@
           entry_id: 'seed-egresado-' + alumno.alumno_id,
           tipo: 'egresado',
           titulo: 'Alumno egresado',
-          detalle: 'El alumno quedó registrado como egresado.',
+          detalle: 'El alumno qued\u00f3 registrado como egresado.',
           fecha: alumno.fecha_baja || alumno.fecha_alta || ''
         });
       }
@@ -3438,7 +4165,9 @@
     }
 
     function getAdminAlumnosCount() {
-      return buildAlumnoSourceRows().length;
+      return buildAlumnoSourceRows()
+        .filter((row) => getAlumnoStatusVisual(row) === 'activo')
+        .length;
     }
 
     function getAlumnoListTitle() {
@@ -3541,27 +4270,33 @@
     }
 
     async function saveAlumnoEditor(button) {
-      ensureLoggedIn();
       const editor = state.alumnosUi.editor || createEmptyAlumnoEditorState();
       const fullName = composeAlumnoNombreCompleto(editor.nombres, editor.apellidos);
-      if (!String(editor.matricula || '').trim()) throw new Error('Captura la matrícula del alumno.');
-      if (!fullName) throw new Error('Captura el nombre del alumno.');
-      if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
       const editing = state.alumnosUi.editorMode === 'edit';
       const existingId = editing ? state.alumnosUi.selectedAlumnoId : '';
       const existingAlumno = editing ? getAlumnoById(existingId) : null;
       const previousStatus = existingAlumno ? getAlumnoStatusVisual(existingAlumno) : 'activo';
       const nextStatus = getAlumnoStatusVisual({ estatus: String(editor.estatus || 'activo').trim() });
-      if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasará a pausa y seguirá visible dentro del catálogo administrativo.')) return;
       await handleAction('guardarAlumno', async () => {
+        ensureLoggedIn();
+        if (!String(editor.matricula || '').trim()) throw new Error('Captura la matr\u00edcula del alumno.');
+        if (!fullName) throw new Error('Captura el nombre del alumno.');
+        if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
+        if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasar\u00e1 a pausa y seguir\u00e1 visible dentro del cat\u00e1logo administrativo.')) return;
+        const statusNote = editing && previousStatus !== nextStatus
+          ? requestAlumnoStatusHistoryNote(existingAlumno, String(editor.estatus || 'activo').trim(), 'Cambio desde ficha')
+          : '';
+        if (editing && previousStatus !== nextStatus && statusNote === null) return;
         const payload = {
           alumno_id: existingId,
           matricula: String(editor.matricula || '').trim(),
           nombre_completo: fullName,
           nombre_mostrado: composeAlumnoNombreMostrado(editor.nombres, editor.alias, fullName),
           grupo_id: String(editor.grupo_id || '').trim(),
-          estatus: String(editor.estatus || 'activo').trim()
+          estatus: String(editor.estatus || 'activo').trim(),
+          notas_internas: String(editor.notas_internas || '').trim()
         };
+        if (statusNote) payload.motivo = statusNote;
         const response = await api('guardarAlumno', payload);
         const savedId = (response && response.alumno_id) || existingId || '';
         const savedAlumno = response && response.alumno ? response.alumno : null;
@@ -3573,7 +4308,7 @@
             savedId,
             editing ? 'edicion' : 'alta',
             editing ? 'Ficha actualizada' : 'Alta de alumno',
-            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agregó un nuevo alumno al catálogo.',
+            editing ? buildAlumnoFichaHistoryDetail(existingAlumno, payload, statusNote) : 'Se agreg\u00f3 un nuevo alumno al cat\u00e1logo.',
             new Date().toISOString()
           );
           invalidateAlumnoHistorialCache(savedId);
@@ -3605,7 +4340,7 @@
     async function updateAlumnoStatus(alumnoId, nextStatus, button, options) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
-      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
       const currentStatus = getAlumnoStatusVisual(alumno);
       const targetStatus = String(nextStatus || '').trim().toLowerCase();
       const meta = Object.assign({
@@ -3613,10 +4348,12 @@
         actionKey: 'guardarAlumno:estatus',
         historyType: targetStatus || 'estado',
         historyTitle: 'Estado actualizado',
-        historyDetail: 'Se actualizó el estatus del alumno.',
+        historyDetail: 'Se actualiz\u00f3 el estatus del alumno.',
         successMessage: 'Estatus actualizado.'
       }, options || {});
       if (meta.confirmText && !confirm(meta.confirmText)) return;
+      const statusNote = requestAlumnoStatusHistoryNote(alumno, targetStatus, meta.historyTitle);
+      if (statusNote === null) return;
       await handleAction(meta.actionKey, async () => {
         await api('guardarAlumno', {
           alumno_id: alumno.alumno_id,
@@ -3624,7 +4361,8 @@
           nombre_completo: alumno.nombre_completo,
           nombre_mostrado: alumno.nombre_mostrado || alumno.nombre_completo,
           grupo_id: alumno.grupo_id,
-          estatus: targetStatus
+          estatus: targetStatus,
+          motivo: statusNote
         });
         applyPatchedAlumnoCatalogRow(alumno.alumno_id, {
           estatus: targetStatus,
@@ -3645,7 +4383,7 @@
           });
           bumpAlumnosSourceRevision();
         }
-        pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
+        pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, buildAlumnoStatusHistoryDetail(meta.historyDetail, statusNote), new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         renderAdminModuleSurface('alumnos');
@@ -3655,11 +4393,11 @@
 
     function pauseAlumno(alumnoId, button) {
       return updateAlumnoStatus(alumnoId, 'pausa', button, {
-        confirmText: 'El alumno quedará en pausa y seguirá visible dentro del catálogo administrativo.',
+        confirmText: 'El alumno quedar\u00e1 en pausa y seguir\u00e1 visible dentro del cat\u00e1logo administrativo.',
         actionKey: 'guardarAlumno:pausa',
         historyType: 'pausa',
         historyTitle: 'Alumno en pausa',
-        historyDetail: 'Se pausó temporalmente al alumno dentro del catálogo.',
+        historyDetail: 'Se paus\u00f3 temporalmente al alumno dentro del cat\u00e1logo.',
         successMessage: 'Alumno en pausa.'
       });
     }
@@ -3668,7 +4406,7 @@
       ensureLoggedIn();
       const cambio = state.alumnosUi.cambioGrupo || createEmptyAlumnoCambioState();
       const alumno = getAlumnoById(cambio.alumno_id);
-      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
       if (!String(cambio.nuevo_grupo_id || '').trim()) throw new Error('Selecciona el nuevo grupo.');
       if (String(cambio.nuevo_grupo_id || '').trim() === String(alumno.grupo_id || '').trim()) {
         throw new Error('Selecciona un grupo diferente al actual.');
@@ -3690,7 +4428,7 @@
           alumno.alumno_id,
           'grupo',
           'Cambio de grupo',
-          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' · ' + String(cambio.motivo || '').trim() : ''),
+          'De ' + getGrupoNombre(alumno.grupo_id) + ' a ' + getGrupoNombre(cambio.nuevo_grupo_id) + (String(cambio.motivo || '').trim() ? ' \u00b7 ' + String(cambio.motivo || '').trim() : ''),
           new Date().toISOString()
         );
         invalidateAlumnoHistorialCache(alumno.alumno_id);
@@ -3710,10 +4448,12 @@
       if (alumno && getAlumnoStatusVisual(alumno) === 'activo') {
         throw new Error('Primero pausa o cambia el estatus del alumno antes de archivarlo.');
       }
-      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
-      if (!confirm('El alumno pasará a archivados y saldrá de las vistas activas.')) return;
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
+      if (!confirm('El alumno pasar\u00e1 a archivados y saldr\u00e1 de las vistas activas.')) return;
+      const statusNote = requestAlumnoStatusHistoryNote(alumno, 'baja', 'Archivar alumno');
+      if (statusNote === null) return;
       await handleAction('archivarAlumno', async () => {
-        await api('archivarAlumno', { alumno_id: alumno.alumno_id });
+        await api('archivarAlumno', { alumno_id: alumno.alumno_id, motivo: statusNote });
         const archivedAt = new Date().toISOString();
         applyPatchedAlumnoCatalogRow(alumno.alumno_id, {
           estatus: 'baja',
@@ -3728,7 +4468,7 @@
           archivado_at: archivedAt
         });
         bumpAlumnosSourceRevision();
-        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retiró del listado activo del catálogo.', new Date().toISOString());
+        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', buildAlumnoStatusHistoryDetail('Se retir\u00f3 del listado activo del cat\u00e1logo.', statusNote), new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
@@ -3737,21 +4477,213 @@
       }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]), busyText: button ? button.textContent : 'Archivar' });
     }
 
+    function getAlumnoDeleteControlState() {
+      if (!state.alumnosUi) state.alumnosUi = createEmptyAlumnosUiState();
+      if (!state.alumnosUi.deleteControl) state.alumnosUi.deleteControl = createEmptyAlumnoDeleteState();
+      return state.alumnosUi.deleteControl;
+    }
+
+    function parseAlumnoDeleteIdsText(value) {
+      return String(value || '')
+        .split(/[\s,;]+/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .filter((item, index, arr) => arr.indexOf(item) === index);
+    }
+
+    function fallbackCopyText(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = String(text || '');
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      if (!copied) throw new Error('No se pudo copiar el ID.');
+    }
+
+    async function copyAlumnoId(alumnoId, button) {
+      const id = String(alumnoId || '').trim();
+      if (!id) throw new Error('No hay alumno_id para copiar.');
+      const originalText = button ? button.textContent : '';
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(id);
+        } else {
+          fallbackCopyText(id);
+        }
+        if (button) {
+          button.textContent = 'Copiado';
+          window.setTimeout(() => {
+            if (button) button.textContent = originalText || 'Copiar ID';
+          }, 1200);
+        }
+        setBanner('ID de alumno copiado.', 'success');
+      } catch (err) {
+        fallbackCopyText(id);
+        setBanner('ID de alumno copiado.', 'success');
+      }
+    }
+
+    function toggleAlumnoDeleteControl(forceExpanded) {
+      const control = getAlumnoDeleteControlState();
+      control.expanded = typeof forceExpanded === 'boolean' ? forceExpanded : !control.expanded;
+      renderAdminAlumnosModule();
+      if (control.expanded) {
+        window.setTimeout(() => {
+          const panel = $('adminAlumnoDeleteControl');
+          if (panel && typeof panel.scrollIntoView === 'function') {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 40);
+      }
+    }
+
+    function formatAlumnoDeleteRowsBySheet(rowsBySheet) {
+      const rows = rowsBySheet && typeof rowsBySheet === 'object' ? rowsBySheet : {};
+      const labels = {
+        ALUMNOS: 'Alumnos',
+        PLANEACION_ALUMNOS: 'Relación con planeaciones',
+        OBS_ALUMNO: 'Observaciones de alumno',
+        ALERTAS: 'Alertas',
+        EVALUACIONES: 'Evaluaciones',
+        ALUMNO_TALLER: 'Talleres',
+        ALUMNO_REFUERZO: 'Refuerzos',
+        NOTAS_DIRECTORA: 'Notas dirección',
+        REPORTES_CACHE: 'Reportes'
+      };
+      return Object.keys(labels)
+        .filter((key) => Number(rows[key] || 0) > 0)
+        .map((key) => '<div class="admin-alumnos-readonly"><span>' + escapeHtml(labels[key]) + '</span><strong>' + escapeHtml(String(rows[key] || 0)) + '</strong></div>')
+        .join('');
+    }
+
+    function removeDeletedAlumnosFromClient(alumnoIds) {
+      const ids = new Set((alumnoIds || []).map((id) => String(id || '').trim()).filter(Boolean));
+      if (!ids.size) return;
+      if (Array.isArray(state.catalogos.alumnos)) {
+        state.catalogos.alumnos = state.catalogos.alumnos.filter((row) => !ids.has(String(row.alumno_id || '').trim()));
+      }
+      ids.forEach((id) => {
+        delete state.alumnosUi.archivedShadow[id];
+        delete state.alumnosUi.remoteHistoryByAlumno[id];
+        delete state.alumnosUi.remoteHistoryLoadedByAlumno[id];
+        delete state.alumnosUi.remoteHistoryFailedByAlumno[id];
+        delete state.alumnosUi.historyByAlumno[id];
+        delete state.alumnosUi.notesByAlumno[id];
+      });
+      if (ids.has(String(state.alumnosUi.selectedAlumnoId || '').trim())) closeAlumnoEditor();
+      if (ids.has(String(state.alumnosUi.historialAlumnoId || '').trim())) closeAlumnoHistorial();
+      if (ids.has(String(state.alumnosUi.cambioGrupo && state.alumnosUi.cambioGrupo.alumno_id || '').trim())) closeCambioGrupo();
+      bumpAlumnosSourceRevision();
+    }
+
+    function renderAlumnoDeletePreview() {
+      const previewHost = $('adminAlumnoDeletePreview');
+      if (!previewHost) return;
+      const control = getAlumnoDeleteControlState();
+      const preview = control.preview;
+      const result = control.lastResult;
+      const data = result || preview;
+      if (!data) {
+        previewHost.innerHTML = '<div class="admin-alumnos-empty" style="min-height:120px;"><div><strong>Sin vista previa.</strong><div class="subtle">Escribe uno o varios alumno_id para revisar el impacto antes de borrar.</div></div></div>';
+        return;
+      }
+      const alumnos = Array.isArray(data.alumnos) ? data.alumnos : [];
+      const missing = Array.isArray(data.missing_alumno_ids) ? data.missing_alumno_ids : [];
+      const affectedPlans = Array.isArray(data.planeaciones_afectadas) ? data.planeaciones_afectadas : [];
+      const emptyPlans = Array.isArray(data.planeaciones_que_quedan_sin_alumnos) ? data.planeaciones_que_quedan_sin_alumnos : [];
+      const deletedRows = result && result.deleted_rows ? result.deleted_rows : null;
+      const rowsBySheet = deletedRows || data.rows_by_sheet || {};
+      const reportFiles = data.report_files || (data.before_preview && data.before_preview.report_files) || {};
+      const planeacionRows = affectedPlans.length
+        ? affectedPlans.slice(0, 8).map((plan) => {
+            const materia = plan.materia_nombre || plan.materia_id || 'Sin materia';
+            return '<div class="admin-alumnos-readonly"><span>' + escapeHtml(plan.planeacion_id || '-') + '</span><strong>' + escapeHtml(materia + ' · ' + (plan.alumnos_antes || 0) + ' -> ' + (plan.alumnos_despues || 0)) + '</strong></div>';
+          }).join('')
+        : '<div class="admin-alumnos-empty" style="min-height:88px;"><div><strong>Sin planeaciones afectadas.</strong></div></div>';
+      previewHost.innerHTML = [
+        '<div class="admin-alumnos-mini-grid">',
+          '<div class="admin-alumnos-readonly"><span>Alumnos encontrados</span><strong>' + escapeHtml(String(alumnos.length || 0)) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Filas afectadas</span><strong>' + escapeHtml(String(data.total_rows || Object.values(rowsBySheet).reduce((sum, count) => sum + Number(count || 0), 0))) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Planeaciones afectadas</span><strong>' + escapeHtml(String(affectedPlans.length || 0)) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Quedan sin alumnos</span><strong>' + escapeHtml(String(emptyPlans.length || 0)) + '</strong></div>',
+        '</div>',
+        missing.length ? '<div class="admin-config-danger"><strong>No encontrados:</strong> ' + escapeHtml(missing.join(', ')) + '</div>' : '',
+        '<div class="admin-alumnos-mini-grid">' + (formatAlumnoDeleteRowsBySheet(rowsBySheet) || '<div class="admin-alumnos-readonly"><span>Registros asociados</span><strong>0</strong></div>') + '</div>',
+        '<div class="admin-alumnos-mini-grid">',
+          '<div class="admin-alumnos-readonly"><span>PDFs de reporte</span><strong>' + escapeHtml(String(reportFiles.pdf_files || 0)) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Docs de reporte</span><strong>' + escapeHtml(String(reportFiles.doc_files || 0)) + '</strong></div>',
+        '</div>',
+        '<div class="admin-alumnos-section-head"><div><h4>Planeaciones</h4><div class="subtle">Se conserva la planeación; solo se retira el alumno y se recalcula el conteo.</div></div></div>',
+        '<div class="admin-alumnos-mini-grid">' + planeacionRows + '</div>'
+      ].join('');
+    }
+
+    async function previewAlumnoDeleteControl(button) {
+      ensureLoggedIn();
+      const control = getAlumnoDeleteControlState();
+      const ids = parseAlumnoDeleteIdsText(control.idsText);
+      await handleAction('previewBorradoAlumnos', async () => {
+        if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
+        const preview = await api('previewBorradoAlumnos', { alumno_ids: ids });
+        control.preview = preview;
+        control.previewIds = ids.slice();
+        control.lastResult = null;
+        control.confirmationText = '';
+        renderAdminAlumnosModule();
+      }, { button, key: buildActionKey('previewBorradoAlumnos', ids), busyText: 'Revisando' });
+    }
+
+    async function executeAlumnoDeleteControl(button) {
+      ensureLoggedIn();
+      const control = getAlumnoDeleteControlState();
+      const ids = parseAlumnoDeleteIdsText(control.idsText);
+      await handleAction('borrarAlumnosControlado', async () => {
+        const previewIds = Array.isArray(control.previewIds) ? control.previewIds : [];
+        const samePreviewIds = ids.length === previewIds.length && ids.every((id, index) => id === previewIds[index]);
+        if (!ids.length) throw new Error('Escribe al menos un alumno_id.');
+        if (String(control.confirmationText || '').trim() !== 'BORRAR_ALUMNOS') {
+          throw new Error('Escribe BORRAR_ALUMNOS para confirmar.');
+        }
+        if (!control.preview || !Array.isArray(control.preview.alumnos) || !control.preview.alumnos.length) {
+          throw new Error('Primero genera una vista previa con alumnos existentes.');
+        }
+        if (!samePreviewIds) {
+          throw new Error('Actualiza la vista previa antes de borrar. Los IDs cambiaron.');
+        }
+        if (!confirm('Se borrar\u00e1n por completo los alumnos encontrados y sus datos asociados. Esta acci\u00f3n no se puede deshacer desde la app.')) return;
+        const result = await api('borrarAlumnosControlado', {
+          alumno_ids: ids,
+          confirmation_code: 'BORRAR_ALUMNOS',
+          trash_report_files: !!control.trashReportFiles
+        });
+        control.lastResult = result;
+        control.preview = result.before_preview || control.preview;
+        control.confirmationText = '';
+        removeDeletedAlumnosFromClient(result.deleted_alumno_ids || ids);
+        renderAdminModuleSurface('alumnos');
+        setBanner('Borrado controlado completado.', 'success');
+      }, { button, key: buildActionKey('borrarAlumnosControlado', ids), busyText: 'Borrando' });
+    }
+
     async function reactivateAlumno(alumnoId, button) {
       ensureLoggedIn();
       const alumno = getAlumnoById(alumnoId);
-      if (!alumno) throw new Error('No se encontró el alumno seleccionado.');
+      if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
       if (!String(alumno.grupo_id || '').trim()) {
         openCambioGrupo(alumnoId);
         setBanner('Selecciona primero un grupo para reactivar al alumno.', 'info');
         return;
       }
       return updateAlumnoStatus(alumnoId, 'activo', button, {
-        confirmText: 'El alumno volverá al catálogo activo.',
+        confirmText: 'El alumno volver\u00e1 al cat\u00e1logo activo.',
         actionKey: 'reactivarAlumno',
         historyType: 'reactivado',
         historyTitle: 'Alumno reactivado',
-        historyDetail: 'Se devolvió al alumno al catálogo activo.',
+        historyDetail: 'Se devolvi\u00f3 al alumno al cat\u00e1logo activo.',
         successMessage: 'Alumno reactivado.'
       });
     }
@@ -3771,6 +4703,7 @@
       if (!alumno) return '';
       const visualStatus = getAlumnoStatusVisual(alumno);
       const buttons = [
+        '<button class="btn-ghost" type="button" onclick="copyAlumnoId(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this)">Copiar ID</button>',
         '<button class="btn-ghost" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(alumno.alumno_id) + '\')">Ver historial</button>'
       ];
       if (visualStatus === 'activo') {
@@ -3804,6 +4737,15 @@
       if ($('adminAlumnoNotas')) $('adminAlumnoNotas').value = state.alumnosUi.editor.notas_internas || '';
       fillSelect($('adminAlumnoGrupo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Selecciona grupo');
       if ($('adminAlumnoGrupo')) $('adminAlumnoGrupo').value = state.alumnosUi.editor.grupo_id || '';
+      if ($('adminAlumnoIdentity')) {
+        $('adminAlumnoIdentity').hidden = !selectedAlumno;
+        $('adminAlumnoIdentity').innerHTML = selectedAlumno
+          ? [
+              '<div class="admin-alumnos-readonly"><span>Alumno ID</span><strong>' + escapeHtml(selectedAlumno.alumno_id || '-') + '</strong></div>',
+              '<div class="admin-alumnos-readonly"><span>Matr&iacute;cula</span><strong>' + escapeHtml(selectedAlumno.matricula || '-') + '</strong></div>'
+            ].join('')
+          : '';
+      }
       if ($('adminAlumnoQuickActions')) {
         $('adminAlumnoQuickActions').hidden = !selectedAlumno;
         $('adminAlumnoQuickActions').innerHTML = selectedAlumno ? buildAlumnoQuickActionsMarkup(selectedAlumno) : '';
@@ -3836,7 +4778,7 @@
       const remoteFailed = !!(state.alumnosUi.remoteHistoryFailedByAlumno && state.alumnosUi.remoteHistoryFailedByAlumno[alumnoId]);
       if ($('adminAlumnoHistorialLabel')) {
         $('adminAlumnoHistorialLabel').textContent = alumno
-          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ' + (alumno.matricula || alumno.alumno_id))
+          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ID: ' + alumno.alumno_id + ' · ' + (alumno.matricula || 'sin matrícula'))
           : 'Seguimiento del alumno.';
       }
       const historyFoot = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('.admin-alumnos-history-foot') : null;
@@ -3851,7 +4793,7 @@
       }
       const rows = getAlumnoHistorial(state.alumnosUi.historialAlumnoId);
       if (!rows.length) {
-        host.innerHTML = '<div class="admin-alumnos-empty">Todavía no hay movimientos registrados para este alumno.</div>';
+        host.innerHTML = '<div class="admin-alumnos-empty">Todav&iacute;a no hay movimientos registrados para este alumno.</div>';
         return;
       }
       host.innerHTML = rows.map((row) => {
@@ -3862,6 +4804,18 @@
           '<div class="mini">' + escapeHtml(ymd ? formatFechaHumana(ymd) : 'Sin fecha') + '</div>' +
         '</article>';
       }).join('');
+    }
+
+    function renderAlumnoDeleteControl() {
+      const panel = $('adminAlumnoDeleteControl');
+      if (!panel) return;
+      const control = getAlumnoDeleteControlState();
+      panel.hidden = getCurrentRole() !== 'admin' || !control.expanded;
+      if (panel.hidden) return;
+      if ($('adminAlumnoDeleteIds')) $('adminAlumnoDeleteIds').value = control.idsText || '';
+      if ($('adminAlumnoDeleteConfirm')) $('adminAlumnoDeleteConfirm').value = control.confirmationText || '';
+      if ($('adminAlumnoDeleteTrashFiles')) $('adminAlumnoDeleteTrashFiles').checked = control.trashReportFiles !== false;
+      renderAlumnoDeletePreview();
     }
 
     function renderAdminAlumnosList() {
@@ -3891,7 +4845,7 @@
           ];
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
-            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button></div>' +
+            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button><div class="mini">ID: ' + escapeHtml(row.alumno_id || '-') + '</div></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
             '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
@@ -3907,14 +4861,15 @@
         '<article class="admin-toolbar admin-alumnos-module">',
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
-              '<h3>Catálogo de alumnos</h3>',
-              '<p class="subtle">Administra altas, edición, cambios de grupo y estatus del catálogo escolar.</p>',
+              '<h3>Cat&aacute;logo de alumnos</h3>',
+              '<p class="subtle">Administra altas, edici&oacute;n, cambios de grupo y estatus del cat&aacute;logo escolar.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminAlumnosSearch">',
                 '<span>Buscar</span>',
-                '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matrícula o nombre">',
+                '<input id="adminAlumnosSearch" type="search" placeholder="Buscar por matr&iacute;cula o nombre">',
               '</label>',
+              '<button id="adminAlumnoDeleteToggleBtn" class="btn-secondary" type="button">Borrado controlado</button>',
               '<button id="adminAlumnoNewBtn" class="btn-primary" type="button">Nuevo alumno</button>',
             '</div>',
           '</div>',
@@ -3937,7 +4892,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminAlumnosListTitle">Alumnos activos</h4>',
-                  '<div id="adminAlumnosListMeta" class="subtle">Listado del catálogo escolar.</div>',
+                  '<div id="adminAlumnosListMeta" class="subtle">Listado del cat&aacute;logo escolar.</div>',
                 '</div>',
               '</div>',
               '<div id="adminAlumnosList" class="admin-alumnos-list"></div>',
@@ -3951,9 +4906,10 @@
                   '</div>',
                 '</div>',
                 '<div id="adminAlumnoQuickActions" class="actions compact admin-alumnos-panel-actions" hidden></div>',
+                '<div id="adminAlumnoIdentity" class="admin-alumnos-mini-grid" hidden></div>',
                 '<div class="admin-alumnos-editor-grid">',
                   '<label class="field">',
-                    '<span>Matrícula</span>',
+                    '<span>Matr&iacute;cula</span>',
                     '<input id="adminAlumnoMatricula" type="text" maxlength="50" placeholder="Ej. A-1024">',
                   '</label>',
                   '<label class="field">',
@@ -3982,8 +4938,8 @@
                     '</select>',
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
-                    '<span>Observación administrativa</span>',
-                    '<textarea id="adminAlumnoNotas" rows="4" placeholder="Notas internas para administración"></textarea>',
+                    '<span>Observaci&oacute;n administrativa</span>',
+                    '<textarea id="adminAlumnoNotas" rows="4" placeholder="Notas internas para administraci&oacute;n"></textarea>',
                   '</label>',
                 '</div>',
                 '<div class="actions compact admin-alumnos-panel-actions">',
@@ -4000,7 +4956,7 @@
                 '</div>',
                 '<div class="admin-alumnos-mini-grid">',
                   '<div class="admin-alumnos-readonly">',
-                    '<span>Matrícula</span>',
+                    '<span>Matr&iacute;cula</span>',
                     '<strong id="adminAlumnoCambioMatricula">-</strong>',
                   '</div>',
                   '<div class="admin-alumnos-readonly">',
@@ -4038,6 +4994,34 @@
                   '<button id="adminAlumnoHistorialCloseBtn" class="btn-ghost" type="button">Cerrar</button>',
                 '</div>',
               '</section>',
+              '<section id="adminAlumnoDeleteControl" class="admin-alumnos-panel" hidden>',
+                '<div class="admin-alumnos-panel-head">',
+                  '<div>',
+                    '<h4>Borrado controlado</h4>',
+                    '<div class="subtle">Solo para alumnos de prueba. Revisa impacto antes de ejecutar.</div>',
+                  '</div>',
+                '</div>',
+                '<div class="admin-config-danger"><strong>Acci&oacute;n irreversible:</strong> borra el alumno y sus observaciones, alertas, evaluaciones, talleres, refuerzos, notas, reportes y relaci&oacute;n con planeaciones.</div>',
+                '<div class="admin-alumnos-editor-grid">',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Alumno IDs</span>',
+                    '<textarea id="adminAlumnoDeleteIds" rows="4" placeholder="ALU-123&#10;ALU-456"></textarea>',
+                  '</label>',
+                  '<label class="field admin-alumnos-field-full">',
+                    '<span>Confirmaci&oacute;n</span>',
+                    '<input id="adminAlumnoDeleteConfirm" type="text" placeholder="Escribe BORRAR_ALUMNOS para ejecutar">',
+                  '</label>',
+                  '<label class="admin-alumnos-field-full" style="display:flex;gap:10px;align-items:center;">',
+                    '<input id="adminAlumnoDeleteTrashFiles" type="checkbox">',
+                    '<span>Mover PDFs/DOC de reportes a papelera</span>',
+                  '</label>',
+                '</div>',
+                '<div class="actions compact admin-alumnos-panel-actions">',
+                  '<button id="adminAlumnoDeletePreviewBtn" class="btn-secondary" type="button">Vista previa</button>',
+                  '<button id="adminAlumnoDeleteExecuteBtn" class="btn-danger" type="button">Borrar alumnos</button>',
+                '</div>',
+                '<div id="adminAlumnoDeletePreview" class="admin-alumnos-history"></div>',
+              '</section>',
             '</aside>',
           '</div>',
         '</article>'
@@ -4063,6 +5047,12 @@
       if ($('adminAlumnosFilterInactiveBtn')) $('adminAlumnosFilterInactiveBtn').classList.toggle('is-active', filter === 'inactivos');
       if ($('adminAlumnosFilterGraduatedBtn')) $('adminAlumnosFilterGraduatedBtn').classList.toggle('is-active', filter === 'egresados');
       if ($('adminAlumnosFilterArchivedBtn')) $('adminAlumnosFilterArchivedBtn').classList.toggle('is-active', filter === 'archivados');
+      const deleteControl = getAlumnoDeleteControlState();
+      if ($('adminAlumnoDeleteToggleBtn')) {
+        $('adminAlumnoDeleteToggleBtn').hidden = getCurrentRole() !== 'admin';
+        $('adminAlumnoDeleteToggleBtn').textContent = deleteControl.expanded ? 'Ocultar borrado' : 'Borrado controlado';
+        $('adminAlumnoDeleteToggleBtn').setAttribute('aria-expanded', deleteControl.expanded ? 'true' : 'false');
+      }
       const headTitle = panel.querySelector('.admin-alumnos-head-copy h3');
       if (headTitle) headTitle.textContent = 'Cat\u00e1logo de alumnos';
       const headSubtitle = panel.querySelector('.admin-alumnos-head-copy .subtle');
@@ -4083,6 +5073,7 @@
       renderAlumnoEditor();
       renderAlumnoCambioGrupo();
       renderAlumnoHistorial();
+      renderAlumnoDeleteControl();
     }
 
     function bindAdminAlumnosEvents() {
@@ -4118,6 +5109,7 @@
         state.alumnosUi.filter = 'archivados';
         renderAdminAlumnosModule();
       });
+      if ($('adminAlumnoDeleteToggleBtn')) $('adminAlumnoDeleteToggleBtn').addEventListener('click', () => toggleAlumnoDeleteControl());
       if ($('adminAlumnoNewBtn')) $('adminAlumnoNewBtn').addEventListener('click', () => openAlumnoEditor('new'));
       if ($('adminAlumnoMatricula')) $('adminAlumnoMatricula').addEventListener('input', (event) => { state.alumnosUi.editor.matricula = event.currentTarget.value; });
       if ($('adminAlumnoNombres')) $('adminAlumnoNombres').addEventListener('input', (event) => {
@@ -4148,6 +5140,24 @@
         closeAlumnoHistorial();
         renderAdminAlumnosModule();
       });
+      if ($('adminAlumnoDeleteIds')) $('adminAlumnoDeleteIds').addEventListener('input', (event) => {
+        const control = getAlumnoDeleteControlState();
+        control.idsText = event.currentTarget.value;
+        control.preview = null;
+        control.previewIds = [];
+        control.lastResult = null;
+        control.confirmationText = '';
+        if ($('adminAlumnoDeleteConfirm')) $('adminAlumnoDeleteConfirm').value = '';
+        renderAlumnoDeletePreview();
+      });
+      if ($('adminAlumnoDeleteTrashFiles')) $('adminAlumnoDeleteTrashFiles').addEventListener('change', (event) => {
+        getAlumnoDeleteControlState().trashReportFiles = !!event.currentTarget.checked;
+      });
+      if ($('adminAlumnoDeleteConfirm')) $('adminAlumnoDeleteConfirm').addEventListener('input', (event) => {
+        getAlumnoDeleteControlState().confirmationText = event.currentTarget.value;
+      });
+      if ($('adminAlumnoDeletePreviewBtn')) $('adminAlumnoDeletePreviewBtn').addEventListener('click', (event) => previewAlumnoDeleteControl(event.currentTarget));
+      if ($('adminAlumnoDeleteExecuteBtn')) $('adminAlumnoDeleteExecuteBtn').addEventListener('click', (event) => executeAlumnoDeleteControl(event.currentTarget));
     }
 
     function canManageFacilitadoresCatalog() {
@@ -4340,23 +5350,23 @@
 
     function getFacilitadorMatrixCellState(facilitadorId, asignacion, semana) {
       if (!isAssignmentActiveForSemana(asignacion, semana)) {
-        return { code: 'na', label: 'â€”', title: 'Sin asignación activa en esta semana' };
+        return { code: 'na', label: '\u2014', title: 'Sin asignaci\u00f3n activa en esta semana' };
       }
       const plan = getFacilitadorPlanForCell(facilitadorId, asignacion, semana.semana_id);
       if (!plan) {
-        return { code: 'missing', label: 'Falta', title: 'No existe una planeación registrada para esta asignación en la semana.' };
+        return { code: 'missing', label: 'Falta', title: 'No existe una planeaci\u00f3n registrada para esta asignaci\u00f3n en la semana.' };
       }
       if (getFacilitadorPlanAlertCount(plan.planeacion_id)) {
-        return { code: 'alert', label: 'Alerta', title: 'La planeación tiene alertas abiertas.' };
+        return { code: 'alert', label: 'Alerta', title: 'La planeaci\u00f3n tiene alertas abiertas.' };
       }
       const status = String(plan.estado || '').trim();
       if (status === 'cierre_pendiente') {
-        return { code: 'pending', label: 'Cierre', title: 'La planeación quedó en cierre pendiente.' };
+        return { code: 'pending', label: 'Cierre', title: 'La planeaci\u00f3n qued\u00f3 en cierre pendiente.' };
       }
       if (status === 'cerrada' || status === 'archivada') {
-        return { code: 'closed', label: 'Cerrada', title: 'La planeación ya cerró su ciclo operativo.' };
+        return { code: 'closed', label: 'Cerrada', title: 'La planeaci\u00f3n ya cerr\u00f3 su ciclo operativo.' };
       }
-      return { code: 'ok', label: 'Lista', title: 'La planeación está registrada y operativa.' };
+      return { code: 'ok', label: 'Lista', title: 'La planeaci\u00f3n est\u00e1 registrada y operativa.' };
     }
 
     function buildFacilitadorPulse(facilitadorId) {
@@ -4398,7 +5408,7 @@
       if (pulse.faltantes) parts.push(pulse.faltantes + ' faltante(s)');
       if (pulse.cierresPendientes) parts.push(pulse.cierresPendientes + ' cierre(s)');
       if (pulse.alertasAbiertas) parts.push(pulse.alertasAbiertas + ' alerta(s)');
-      return parts.join(' · ') || 'Sin pendientes críticos';
+      return parts.join(' \u00b7 ') || 'Sin pendientes cr\u00edticos';
     }
 
     function closeFacilitadorEditor() {
@@ -4435,7 +5445,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Facilitadores</h3>',
-              '<p class="subtle">Administra accesos, asignaciones y pulso semanal del equipo académico.</p>',
+              '<p class="subtle">Administra accesos, asignaciones y pulso semanal del equipo acad&eacute;mico.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminFacilitadoresSearch">',
@@ -4506,7 +5516,7 @@
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
                     '<span>PIN temporal</span>',
-                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar · requerido al crear">',
+                    '<input id="adminFacilitadorPinInput" type="password" maxlength="20" placeholder="Opcional al editar &middot; requerido al crear">',
                   '</label>',
                 '</div>',
                 '<div class="actions compact admin-alumnos-panel-actions">',
@@ -4597,7 +5607,7 @@
       if (!host) return;
       const facilitador = getFacilitadorById(state.facilitadoresUi.selectedFacilitadorId);
       if (!facilitador) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">Aquí aparecerán sus asignaciones, pulso semanal y accesos rápidos.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">Aqu&iacute; aparecer&aacute;n sus asignaciones, pulso semanal y accesos r&aacute;pidos.</div></div></div>';
         return;
       }
       const visualStatus = getFacilitadorVisualStatus(facilitador);
@@ -4612,7 +5622,7 @@
           '<div class="admin-facilitadores-identity">',
             '<div>',
               '<strong>' + escapeHtml(facilitador.nombre_mostrado || facilitador.nombre_completo || facilitador.facilitador_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' · ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
+              '<div class="mini">' + escapeHtml(facilitador.facilitador_id) + ' &middot; ' + escapeHtml(facilitador.rol || 'facilitador') + '</div>',
             '</div>',
             '<span class="admin-alumnos-badge ' + getFacilitadorStatusBadgeClass(visualStatus) + '">' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</span>',
           '</div>',
@@ -4627,7 +5637,7 @@
           '</div>',
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Alta</span><strong>' + escapeHtml(facilitador.fecha_alta ? formatFechaHumana(facilitador.fecha_alta) : 'Sin fecha') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Ášltima actividad</span><strong>' + escapeHtml(getFacilitadorUpdatedLabel(facilitador)) + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Ultima actividad</span><strong>' + escapeHtml(getFacilitadorUpdatedLabel(facilitador)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Asignaciones activas</span><strong>' + escapeHtml(String(asignaciones.filter((item) => item.activa && !item.archivado_at).length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Estado operativo</span><strong>' + escapeHtml(getFacilitadorStatusLabel(visualStatus)) + '</strong></div>',
           '</div>',
@@ -4639,8 +5649,8 @@
             '<div class="admin-facilitadores-kpi"><strong>' + escapeHtml(String(pulse.alertasAbiertas)) + '</strong><span>Alertas</span></div>',
           '</div>',
           (pinOpen && canManage ? renderFacilitadorPinBlock() : ''),
-          '<div class="admin-alumnos-section-head"><div><h4>Asignaciones</h4><div class="subtle">Relación grupo + materia que se espera de este facilitador.</div></div>' +
-            '<div class="actions compact">' + (canUseAdminShell() ? '<button class="btn-primary" type="button" onclick="openFacilitadorAsignacionEditor(\'new\')">Nueva asignación</button>' : '') + '</div></div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Asignaciones</h4><div class="subtle">Relaci&oacute;n grupo + materia que se espera de este facilitador.</div></div>' +
+            '<div class="actions compact">' + (canUseAdminShell() ? '<button class="btn-primary" type="button" onclick="openFacilitadorAsignacionEditor(\'new\')">Nueva asignaci&oacute;n</button>' : '') + '</div></div>',
           '<div class="admin-facilitadores-assignment-list">' + renderFacilitadorAssignmentsList(facilitador.facilitador_id) + '</div>',
           (asignacionOpen ? renderFacilitadorAsignacionEditor() : ''),
           '<div class="admin-alumnos-section-head"><div><h4>Pulso semanal</h4><div class="subtle">Semanas recientes cruzadas con asignaciones activas y planeaciones existentes.</div></div></div>',
@@ -4659,11 +5669,11 @@
         const periodo = [
           row.fecha_inicio ? ('Desde ' + formatFechaHumana(row.fecha_inicio)) : '',
           row.fecha_fin ? ('Hasta ' + formatFechaHumana(row.fecha_fin)) : ''
-        ].filter(Boolean).join(' · ') || 'Sin vigencia cerrada';
+        ].filter(Boolean).join(' \u00b7 ') || 'Sin vigencia cerrada';
         return [
           '<article class="admin-facilitadores-assignment-item">',
             '<div class="admin-facilitadores-assignment-copy">',
-              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
+              '<strong>' + escapeHtml(getGrupoNombre(row.grupo_id)) + ' &middot; ' + escapeHtml((materia && materia.nombre) || row.materia_id) + '</strong>',
               '<div class="mini">' + escapeHtml(periodo) + '</div>',
             '</div>',
             '<div class="admin-facilitadores-assignment-actions">',
@@ -4699,7 +5709,7 @@
       const asign = state.facilitadoresUi.asignacion || createEmptyFacilitadorAsignacionState();
       return [
         '<section class="admin-alumnos-panel">',
-          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignación' : 'Nueva asignación') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignaci\u00f3n' : 'Nueva asignaci\u00f3n') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
               '<span>Grupo</span>',
@@ -4720,7 +5730,7 @@
           '</div>',
           '<div class="actions compact admin-alumnos-panel-actions">',
             '<button class="btn-ghost" type="button" onclick="closeFacilitadorAsignacionPanel()">Cancelar</button>',
-            '<button class="btn-primary" type="button" onclick="saveFacilitadorAsignacion(this)">Guardar asignación</button>',
+            '<button class="btn-primary" type="button" onclick="saveFacilitadorAsignacion(this)">Guardar asignaci&oacute;n</button>',
           '</div>',
         '</section>'
       ].join('');
@@ -4730,19 +5740,19 @@
       const semanas = getFacilitadorRecentWeeks();
       const asignaciones = getFacilitadorAsignaciones(facilitadorId).filter((row) => row.activa);
       if (!semanas.length || !asignaciones.length) {
-        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todavía.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignación activa.</div></div></div>';
+        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todav&iacute;a.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignaci&oacute;n activa.</div></div></div>';
       }
       return [
         '<div class="admin-facilitadores-matrix-table">',
           '<div class="admin-facilitadores-matrix-header">',
-            '<div class="admin-facilitadores-matrix-label">Asignación</div>',
+            '<div class="admin-facilitadores-matrix-label">Asignaci&oacute;n</div>',
             semanas.map((semana) => '<div class="admin-facilitadores-matrix-cell">' + escapeHtml(formatSemanaLabel(semana)) + '</div>').join(''),
           '</div>',
           asignaciones.map((asignacion) => {
             const materia = (state.catalogos.materias || []).find((item) => item.materia_id === asignacion.materia_id);
             return [
               '<div class="admin-facilitadores-matrix-row">',
-                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' · ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
+                '<div class="admin-facilitadores-matrix-label">' + escapeHtml(getGrupoNombre(asignacion.grupo_id)) + ' &middot; ' + escapeHtml((materia && materia.nombre) || asignacion.materia_id) + '</div>',
                 semanas.map((semana) => {
                   const cell = getFacilitadorMatrixCellState(facilitadorId, asignacion, semana);
                   const css = cell.code === 'ok' ? 'is-ok' :
@@ -4856,7 +5866,6 @@
     }
 
     async function saveFacilitadorEditor(button) {
-      if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede editar facilitadores.');
       const mode = state.facilitadoresUi.editorMode || 'new';
       const payload = {
         facilitador_id: $('adminFacilitadorIdInput') ? $('adminFacilitadorIdInput').value.trim() : '',
@@ -4868,12 +5877,13 @@
         request_id: uid('FACED')
       };
       const pinPlano = $('adminFacilitadorPinInput') ? $('adminFacilitadorPinInput').value.trim() : '';
-      if (!payload.facilitador_id) throw new Error('Captura el Facilitador ID.');
-      if (!payload.nombre_completo) throw new Error('Captura el nombre completo.');
-      if (!payload.nombre_mostrado) throw new Error('Captura el nombre mostrado.');
-      if (mode === 'new' && !pinPlano) throw new Error('Captura un PIN temporal para el nuevo facilitador.');
-      if (pinPlano) payload.pin_plano = pinPlano;
       await handleAction('guardarFacilitador', async () => {
+        if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede editar facilitadores.');
+        if (!payload.facilitador_id) throw new Error('Captura el Facilitador ID.');
+        if (!payload.nombre_completo) throw new Error('Captura el nombre completo.');
+        if (!payload.nombre_mostrado) throw new Error('Captura el nombre mostrado.');
+        if (mode === 'new' && !pinPlano) throw new Error('Captura un PIN temporal para el nuevo facilitador.');
+        if (pinPlano) payload.pin_plano = pinPlano;
         const data = await api('guardarFacilitador', payload);
         if (data && data.facilitador) applySavedFacilitadorCatalogRow(data.facilitador);
         closeFacilitadorEditor();
@@ -4948,7 +5958,7 @@
       if (!canManageFacilitadoresCatalog()) throw new Error('Solo admin puede archivar facilitadores.');
       const row = getFacilitadorById(facilitadorId);
       if (!row) throw new Error('Facilitador no encontrado.');
-      if (!confirm('Esto archivará al facilitador y cerrará sus accesos operativos.')) return;
+      if (!confirm('Esto archivar\u00e1 al facilitador y cerrar\u00e1 sus accesos operativos.')) return;
       await handleAction('archivarFacilitador', async () => {
         await api('archivarFacilitador', {
           facilitador_id: row.facilitador_id,
@@ -5066,7 +6076,7 @@
         });
         closeFacilitadorAsignacionEditor();
         renderAdminModuleSurface('facilitadores');
-        setBanner('Asignación guardada.', 'success');
+        setBanner('Asignaci\u00f3n guardada.', 'success');
       }, {
         button,
         key: buildActionKey('guardarFacilitadorAsignacion', [facilitadorId, payload.grupo_id, payload.materia_id, payload.asignacion_id || 'new']),
@@ -5075,7 +6085,7 @@
     }
 
     async function archiveFacilitadorAsignacion(button, asignacionId) {
-      if (!confirm('Esta asignación dejará de contar para el pulso semanal del facilitador.')) return;
+      if (!confirm('Esta asignaci\u00f3n dejar\u00e1 de contar para el pulso semanal del facilitador.')) return;
       await handleAction('archivarFacilitadorAsignacion', async () => {
         await api('archivarFacilitadorAsignacion', {
           asignacion_id: asignacionId,
@@ -5094,7 +6104,7 @@
         });
         closeFacilitadorAsignacionEditor();
         renderAdminModuleSurface('facilitadores');
-        setBanner('Asignación retirada del pulso semanal.', 'success');
+        setBanner('Asignaci\u00f3n retirada del pulso semanal.', 'success');
       }, {
         button,
         key: buildActionKey('archivarFacilitadorAsignacion', [asignacionId]),
@@ -5120,7 +6130,7 @@
       });
       setBanner(
         state.ui && state.ui.planeacionesMateriaFilter
-          ? 'Planeaciones filtradas por asignación del facilitador.'
+          ? 'Planeaciones filtradas por asignaci\u00f3n del facilitador.'
           : 'Planeaciones filtradas por facilitador.',
         'info'
       );
@@ -5299,6 +6309,35 @@
       });
     }
 
+    function renderTallerMembershipSelectionMarkup(visibleCandidates, selectedIds) {
+      const selectedSet = selectedIds instanceof Set
+        ? selectedIds
+        : new Set((state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean));
+      const rows = Array.isArray(visibleCandidates) ? visibleCandidates : getVisibleTallerCandidateAlumnos();
+      return [
+        '<div class="subtle">' + escapeHtml(String(selectedSet.size)) + ' alumno(s) seleccionado(s). Desmarca para quitar del taller.</div>',
+        (rows.length
+          ? '<div class="checklist admin-taller-membership-candidates">' + rows.map((row) => {
+              const alumnoId = String(row.alumno_id || '').trim();
+              return '<label class="admin-taller-membership-candidate">' +
+                '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedSet.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
+                '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matr\u00edcula') + ' - ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
+              '</label>';
+            }).join('') + '</div>'
+          : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta b&uacute;squeda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+      ].join('');
+    }
+
+    function refreshTallerMembershipCandidateList() {
+      const host = $('adminTallerMembershipCandidateList');
+      if (!host) {
+        renderAdminTalleresModule();
+        return;
+      }
+      const selectedIds = new Set((state.talleresUi.membershipSelectedAlumnoIds || []).map((item) => String(item || '').trim()).filter(Boolean));
+      host.innerHTML = renderTallerMembershipSelectionMarkup(getVisibleTallerCandidateAlumnos(), selectedIds);
+    }
+
     function replaceTallerAlumnoRelations(tallerId, activeRows) {
       const targetId = String(tallerId || '').trim();
       const nextRows = Array.isArray(activeRows) ? activeRows.slice() : [];
@@ -5328,7 +6367,7 @@
       if (checked) selected.add(id);
       else selected.delete(id);
       state.talleresUi.membershipSelectedAlumnoIds = Array.from(selected);
-      renderAdminTalleresModule();
+      refreshTallerMembershipCandidateList();
     }
 
     function toggleAllVisibleTallerAlumnos(nextChecked) {
@@ -5340,7 +6379,7 @@
         else selected.delete(id);
       });
       state.talleresUi.membershipSelectedAlumnoIds = Array.from(selected);
-      renderAdminTalleresModule();
+      refreshTallerMembershipCandidateList();
     }
 
     function getAdminTalleresModuleTemplate() {
@@ -5349,7 +6388,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Talleres</h3>',
-              '<p class="subtle">Administra el catálogo base de talleres antes de asignar alumnos o crear planeaciones por taller.</p>',
+              '<p class="subtle">Administra el cat&aacute;logo base de talleres antes de asignar alumnos o crear planeaciones por taller.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminTalleresSearch">',
@@ -5378,7 +6417,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminTalleresListTitle">Talleres activos</h4>',
-                  '<div id="adminTalleresListMeta" class="subtle">Catálogo operativo base para futuros grupos mixtos.</div>',
+                  '<div id="adminTalleresListMeta" class="subtle">Cat&aacute;logo operativo base para futuros grupos mixtos.</div>',
                 '</div>',
               '</div>',
               '<div id="adminTalleresList" class="admin-alumnos-list"></div>',
@@ -5406,7 +6445,7 @@
                   '</label>',
                   '<label class="field admin-alumnos-field-full">',
                     '<span>Nombre</span>',
-                    '<input id="adminTallerNombreInput" type="text" maxlength="100" placeholder="Ej. Taller de futbol">',
+                    '<input id="adminTallerNombreInput" type="text" maxlength="100" placeholder="Ej. Taller de f&uacute;tbol">',
                   '</label>',
                   '<label class="field">',
                     '<span>Materia base</span>',
@@ -5460,7 +6499,7 @@
       if ($('adminTalleresListTitle')) $('adminTalleresListTitle').textContent = filter === 'todos' ? 'Todos los talleres' : (filter === 'archivados' ? 'Talleres archivados' : (filter === 'inactivos' ? 'Talleres inactivos' : 'Talleres activos'));
       if ($('adminTalleresListMeta')) $('adminTalleresListMeta').textContent = rows.length + ' taller(es) visibles en esta vista.';
       if (!rows.length) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay talleres para mostrar.</strong><div class="subtle">Crea el catálogo base del taller para pasar después a inscripciones y planeaciones.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>No hay talleres para mostrar.</strong><div class="subtle">Crea el cat&aacute;logo base del taller para pasar despu&eacute;s a inscripciones y planeaciones.</div></div></div>';
         return;
       }
       host.innerHTML = [
@@ -5480,7 +6519,7 @@
             return [
               '<article class="admin-talleres-row' + (selected ? ' is-selected' : '') + '" onclick="selectTaller(\'' + escapeJsAttrValue(row.taller_id) + '\')">',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.taller_id) + '</div></div>',
-                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos después') + '</div></div>',
+                '<div class="admin-alumnos-title"><strong>' + escapeHtml(row.nombre || row.taller_id) + '</strong><div class="mini">' + escapeHtml(row.archivado_at ? ('Archivado ' + formatFechaHumana(row.archivado_at)) : 'Listo para recibir alumnos despu\u00e9s') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</div></div>',
                 '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</div></div>',
                 '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getTallerStatusBadgeClass(row.estatus) + '">' + escapeHtml(getTallerStatusLabel(row.estatus)) + '</span></div>',
@@ -5497,7 +6536,7 @@
       if (!host) return;
       const taller = getTallerById(state.talleresUi.selectedTallerId);
       if (!taller) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">Aquí verás su materia base, responsable y el acceso rápido para editar el catálogo.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un taller</strong><div class="subtle">Aqu&iacute; ver&aacute;s su materia base, responsable y el acceso r&aacute;pido para editar el cat&aacute;logo.</div></div></div>';
         return;
       }
       const materia = (state.catalogos.materias || []).find((item) => item.materia_id === taller.materia_id);
@@ -5528,19 +6567,19 @@
           '<div class="admin-facilitadores-meta-grid">',
             '<div class="admin-alumnos-readonly"><span>Materia base</span><strong>' + escapeHtml((materia && materia.nombre) || 'Sin materia base') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Responsable</span><strong>' + escapeHtml((facilitador && (facilitador.nombre_mostrado || facilitador.nombre_completo)) || 'Sin responsable') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Ášltima actualización</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>&Uacute;ltima actualizaci&oacute;n</span><strong>' + escapeHtml(taller.fecha_actualizacion ? formatFechaHumana(taller.fecha_actualizacion) : 'Sin dato') + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Alumnos inscritos</span><strong>' + escapeHtml(String(activeMembers.length)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Grupos mezclados</span><strong>' + escapeHtml(representedGroups.length ? String(representedGroups.length) : '0') + '</strong></div>',
-            '<div class="admin-alumnos-readonly"><span>Siguiente paso</span><strong>Inscribir alumnos</strong></div>',
+            '<div class="admin-alumnos-readonly"><span>Gesti&oacute;n</span><strong>Editar alumnos</strong></div>',
           '</div>',
           '<div class="admin-taller-membership">',
             '<div class="admin-taller-membership-head">',
               '<div class="admin-taller-membership-copy">',
                 '<h4>Alumnos del taller</h4>',
-                '<div class="subtle">Selecciona alumnos activos de cualquier grupo sin moverlos de su grupo escolar.</div>',
+                '<div class="subtle">Marca o desmarca alumnos activos sin moverlos de su grupo escolar.</div>',
               '</div>',
               '<div class="admin-taller-membership-actions">',
-                (canManage && taller.estatus !== 'archivado' && !membershipOpen ? '<button class="btn-primary" type="button" onclick="openTallerMembershipEditor(\'' + escapeJsAttrValue(taller.taller_id) + '\')">Inscribir alumnos</button>' : ''),
+                (canManage && taller.estatus !== 'archivado' && !membershipOpen ? '<button class="btn-primary" type="button" onclick="openTallerMembershipEditor(\'' + escapeJsAttrValue(taller.taller_id) + '\')">Editar alumnos</button>' : ''),
                 (canManage && membershipOpen ? '<button class="btn-ghost" type="button" onclick="cancelTallerMembershipEditor()">Cancelar</button>' : ''),
               '</div>',
             '</div>',
@@ -5550,30 +6589,21 @@
                     const alumno = row.alumno || {};
                     return '<span class="admin-taller-member-chip"><span>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || row.alumno_id) + '</span><span class="mini">' + escapeHtml(getGrupoNombre(alumno.grupo_id)) + '</span></span>';
                   }).join('') + '</div>'
-                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso rápido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
+                : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso r&aacute;pido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
             '</div>',
             (membershipOpen
               ? '<div class="admin-taller-membership-head">' +
                   '<div class="admin-taller-membership-tools">' +
-                    '<label class="field" for="adminTallerMembershipSearch"><span>Buscar alumno</span><input id="adminTallerMembershipSearch" type="search" placeholder="Nombre, matrícula o grupo"></label>' +
+                    '<label class="field" for="adminTallerMembershipSearch"><span>Buscar alumno</span><input id="adminTallerMembershipSearch" type="search" placeholder="Nombre, matr&iacute;cula o grupo"></label>' +
                     '<label class="field" for="adminTallerMembershipGroup"><span>Grupo</span><select id="adminTallerMembershipGroup"></select></label>' +
                   '</div>' +
                   '<div class="admin-taller-membership-actions">' +
                     '<button class="btn-ghost" type="button" onclick="toggleAllVisibleTallerAlumnos(true)">Seleccionar visibles</button>' +
                     '<button class="btn-ghost" type="button" onclick="toggleAllVisibleTallerAlumnos(false)">Limpiar visibles</button>' +
-                    '<button id="adminTallerMembershipSaveBtn" class="btn-primary" type="button" onclick="saveTallerMemberships(this)">Guardar alumnos</button>' +
+                    '<button id="adminTallerMembershipSaveBtn" class="btn-primary" type="button" onclick="saveTallerMemberships(this)">Guardar cambios</button>' +
                   '</div>' +
                 '</div>' +
-                '<div class="subtle">' + escapeHtml(String(selectedIds.size)) + ' alumno(s) listos para este taller.</div>' +
-                (visibleCandidates.length
-                  ? '<div class="checklist admin-taller-membership-candidates">' + visibleCandidates.map((row) => {
-                      const alumnoId = String(row.alumno_id || '').trim();
-                      return '<label class="admin-taller-membership-candidate">' +
-                        '<input type="checkbox" value="' + escapeHtml(alumnoId) + '" ' + (selectedIds.has(alumnoId) ? 'checked' : '') + ' onchange="toggleTallerAlumnoDraft(\'' + escapeJsAttrValue(alumnoId) + '\', this.checked)">' +
-                        '<span><strong>' + escapeHtml(row.nombre_mostrado || row.nombre_completo || alumnoId) + '</strong><span class="mini">' + escapeHtml((row.matricula || 'Sin matrícula') + ' · ' + getGrupoNombre(row.grupo_id)) + '</span></span>' +
-                      '</label>';
-                    }).join('') + '</div>'
-                  : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>No hay alumnos para esta búsqueda.</strong><div class="subtle">Ajusta el grupo o el texto para seguir inscribiendo.</div></div></div>')
+                '<div id="adminTallerMembershipCandidateList">' + renderTallerMembershipSelectionMarkup(visibleCandidates, selectedIds) + '</div>'
               : ''),
           '</div>',
         '</div>'
@@ -5584,11 +6614,11 @@
         if ($('adminTallerMembershipSearch')) $('adminTallerMembershipSearch').value = state.talleresUi.membershipSearch || '';
         if ($('adminTallerMembershipSearch')) $('adminTallerMembershipSearch').addEventListener('input', (event) => {
           state.talleresUi.membershipSearch = event.currentTarget.value;
-          renderAdminTalleresModule();
+          refreshTallerMembershipCandidateList();
         });
         if ($('adminTallerMembershipGroup')) $('adminTallerMembershipGroup').addEventListener('change', (event) => {
           state.talleresUi.membershipGroup = event.currentTarget.value;
-          renderAdminTalleresModule();
+          refreshTallerMembershipCandidateList();
         });
       }
     }
@@ -5673,7 +6703,6 @@
     }
 
     async function saveTallerEditor(button) {
-      if (!canManageTalleresCatalog()) throw new Error('No tienes permiso para editar talleres.');
       const mode = state.talleresUi.editorMode || 'new';
       const payload = {
         taller_id: $('adminTallerIdInput') ? $('adminTallerIdInput').value.trim() : '',
@@ -5683,9 +6712,10 @@
         estatus: $('adminTallerStatusInput') ? $('adminTallerStatusInput').value : 'activo',
         request_id: uid('TAL')
       };
-      if (!payload.taller_id) throw new Error('Captura el taller ID.');
-      if (!payload.nombre) throw new Error('Captura el nombre del taller.');
       await handleAction('guardarTaller', async () => {
+        if (!canManageTalleresCatalog()) throw new Error('No tienes permiso para editar talleres.');
+        if (!payload.taller_id) throw new Error('Captura el taller ID.');
+        if (!payload.nombre) throw new Error('Captura el nombre del taller.');
         const data = await api('guardarTaller', payload);
         if (data && data.taller) applySavedTallerCatalogRow(data.taller);
         closeTallerEditor();
@@ -5719,7 +6749,7 @@
     }
 
     async function archiveTaller(button, tallerId) {
-      if (!window.confirm('Esto archivará el taller del catálogo base.')) return;
+      if (!window.confirm('Esto archivar\u00e1 el taller del cat\u00e1logo base.')) return;
       await handleAction('archivarTaller', async () => {
         await api('archivarTaller', {
           taller_id: tallerId,
@@ -5979,7 +7009,7 @@
           '<div class="admin-toolbar-head admin-alumnos-head">',
             '<div class="admin-alumnos-head-copy">',
               '<h3>Materias</h3>',
-              '<p class="subtle">Administra el catálogo base y sus variantes operativas.</p>',
+              '<p class="subtle">Administra el cat&aacute;logo base y sus variantes operativas.</p>',
             '</div>',
             '<div class="admin-alumnos-head-actions">',
               '<label class="admin-alumnos-search" for="adminMateriasSearch">',
@@ -6008,7 +7038,7 @@
               '<div class="admin-alumnos-section-head">',
                 '<div>',
                   '<h4 id="adminMateriasListTitle">Materias activas</h4>',
-                  '<div id="adminMateriasListMeta" class="subtle">Catálogo base, estructura y orden visual.</div>',
+                  '<div id="adminMateriasListMeta" class="subtle">Cat&aacute;logo base, estructura y orden visual.</div>',
                 '</div>',
               '</div>',
               '<div id="adminMateriasList" class="admin-alumnos-list"></div>',
@@ -6019,7 +7049,7 @@
                 '<div class="admin-alumnos-panel-head">',
                   '<div>',
                     '<h4 id="adminMateriaEditorTitle">Nueva materia</h4>',
-                    '<div class="subtle">Define catálogo base, estructura y estatus operativo.</div>',
+                    '<div class="subtle">Define cat&aacute;logo base, estructura y estatus operativo.</div>',
                   '</div>',
                 '</div>',
                 '<div class="admin-alumnos-editor-grid">',
@@ -6114,8 +7144,8 @@
             const subRows = getSubmateriasForMateria(row.materia_id);
             const actions = [
               '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); openMateriaEditor(\'edit\', \'' + escapeJsAttrValue(row.materia_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'up\')">â†‘</button>',
-              '<button class="btn-ghost" type="button" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'down\')">â†“</button>',
+              '<button class="btn-ghost" type="button" title="Subir materia" aria-label="Subir materia" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'up\')">&uarr;</button>',
+              '<button class="btn-ghost" type="button" title="Bajar materia" aria-label="Bajar materia" onclick="event.stopPropagation(); moveMateria(this, \'' + escapeJsAttrValue(row.materia_id) + '\', \'down\')">&darr;</button>',
               '<button class="btn-secondary" type="button" onclick="event.stopPropagation(); selectMateria(\'' + escapeJsAttrValue(row.materia_id) + '\')">Ver panel</button>'
             ];
             return [
@@ -6138,7 +7168,7 @@
       if (!host) return;
       const materia = getSelectedMateria();
       if (!materia) {
-        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">Aquí aparecerá su estructura, variantes y acciones operativas.</div></div></div>';
+        host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona una materia</strong><div class="subtle">Aqu&iacute; aparecer&aacute; su estructura, variantes y acciones operativas.</div></div></div>';
         return;
       }
       const subRows = getSubmateriasForMateria(materia.materia_id);
@@ -6149,7 +7179,7 @@
           '<div class="admin-materias-identity">',
             '<div>',
               '<strong>' + escapeHtml(materia.nombre || materia.materia_id) + '</strong>',
-              '<div class="mini">' + escapeHtml(materia.materia_id) + ' · ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
+              '<div class="mini">' + escapeHtml(materia.materia_id) + ' &middot; ' + escapeHtml(getMateriaStructureLabel(materia)) + '</div>',
             '</div>',
             '<div class="admin-materias-structure">',
               '<span class="admin-alumnos-badge">' + escapeHtml(getMateriaStructureLabel(materia)) + '</span>',
@@ -6170,7 +7200,7 @@
             '<div class="admin-alumnos-readonly"><span>Estructura</span><strong>' + escapeHtml(getMateriaStructureLabel(materia)) + '</strong></div>',
             '<div class="admin-alumnos-readonly"><span>Variantes registradas</span><strong>' + escapeHtml(String(subRows.length)) + '</strong></div>',
           '</div>',
-          '<div class="admin-alumnos-section-head"><div><h4>Variantes</h4><div class="subtle">' + escapeHtml(materiaHasVariants(materia) ? 'Submaterias de operación para esta materia base.' : 'Materia simple sin variantes registradas.') + '</div></div></div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Variantes</h4><div class="subtle">' + escapeHtml(materiaHasVariants(materia) ? 'Submaterias de operaci\u00f3n para esta materia base.' : 'Materia simple sin variantes registradas.') + '</div></div></div>',
           (materiaHasVariants(materia) ? renderMateriaVariantsList(materia) : '<div class="admin-alumnos-empty" style="min-height:136px;"><div><strong>Materia simple.</strong><div class="subtle">Esta materia no usa submaterias operativas en este momento.</div></div></div>'),
           (state.materiasUi.subEditorOpen && String(state.materiasUi.subEditor.materia_id || '').trim() === materia.materia_id ? renderSubmateriaEditor() : ''),
         '</div>'
@@ -6180,15 +7210,15 @@
     function renderMateriaVariantsList(materia) {
       const subRows = getSubmateriasForMateria(materia.materia_id);
       if (!subRows.length) {
-        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin variantes registradas.</strong><div class="subtle">Agrega submaterias para especializar la operación sin duplicar la materia base.</div></div></div>';
+        return '<div class="admin-alumnos-empty" style="min-height:140px;"><div><strong>Sin variantes registradas.</strong><div class="subtle">Agrega submaterias para especializar la operaci&oacute;n sin duplicar la materia base.</div></div></div>';
       }
       return [
         '<div class="admin-materias-variants">',
           subRows.map((row) => {
             const actions = [
               '<button class="btn-ghost" type="button" onclick="openSubmateriaEditor(\'edit\', \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Editar</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'up\')">â†‘</button>',
-              '<button class="btn-ghost" type="button" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'down\')">â†“</button>',
+              '<button class="btn-ghost" type="button" title="Subir submateria" aria-label="Subir submateria" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'up\')">&uarr;</button>',
+              '<button class="btn-ghost" type="button" title="Bajar submateria" aria-label="Bajar submateria" onclick="moveSubmateria(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\', \'down\')">&darr;</button>',
               (row.estatus === 'activa'
                 ? '<button class="btn-secondary" type="button" onclick="toggleSubmateriaStatus(this, \'' + escapeJsAttrValue(materia.materia_id) + '\', \'' + escapeJsAttrValue(row.submateria_id) + '\')">Desactivar</button>'
                 : (row.estatus === 'inactiva'
@@ -6202,7 +7232,7 @@
               '<article class="admin-materias-variant-item">',
                 '<div class="admin-materias-variant-copy">',
                   '<strong>' + escapeHtml(row.nombre || row.submateria_id) + '</strong>',
-                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' · ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' · Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
+                  '<div class="mini">' + escapeHtml(row.submateria_id) + ' &middot; ' + escapeHtml(getMateriaStatusLabel(row.estatus)) + ' &middot; Orden ' + escapeHtml(String(row.orden || 0)) + '</div>',
                 '</div>',
                 '<div class="admin-materias-variant-actions">' + actions.join('') + '</div>',
               '</article>'
@@ -6233,7 +7263,7 @@
       const editor = state.materiasUi.subEditor || createEmptySubmateriaEditorState();
       return [
         '<section class="admin-alumnos-panel">',
-          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">Mantén la materia base limpia y administra sus variantes aquí.</div></div></div>',
+          '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(editor.submateria_id ? 'Editar submateria' : 'Nueva submateria') + '</h4><div class="subtle">Mant&eacute;n la materia base limpia y administra sus variantes aqu&iacute;.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
               '<span>Submateria ID</span>',
@@ -6291,11 +7321,28 @@
         estatus: $('adminMateriaStatusInput') ? $('adminMateriaStatusInput').value : 'activa',
         request_id: uid('MAT')
       };
-      if (!payload.materia_id) throw new Error('Captura la materia ID.');
-      if (!payload.nombre) throw new Error('Captura el nombre de la materia.');
       await handleAction('guardarMateria', async () => {
+        if (!payload.materia_id) throw new Error('Captura la materia ID.');
+        if (!payload.nombre) throw new Error('Captura el nombre de la materia.');
+        const currentMateria = getMateriaBaseRows().find((item) => item.materia_id === payload.materia_id) || {};
         const data = await api('guardarMateria', payload);
-        if (data && data.materia) applySavedMateriaCatalogRow(data.materia);
+        const backendMateria = data && data.materia ? data.materia : {};
+        const savedAt = String(backendMateria.fecha_actualizacion || new Date().toISOString());
+        const archivedAt = payload.estatus === 'archivada'
+          ? String(backendMateria.archivado_at || currentMateria.archivado_at || savedAt)
+          : '';
+        applySavedMateriaCatalogRow(Object.assign({}, currentMateria, backendMateria, {
+          materia_id: payload.materia_id,
+          nombre: payload.nombre,
+          activo: payload.estatus === 'activa',
+          admite_submaterias: payload.admite_submaterias,
+          estatus: payload.estatus,
+          fecha_actualizacion: savedAt,
+          archivado_at: archivedAt,
+          archivado_por: archivedAt
+            ? String(backendMateria.archivado_por || (state.session && state.session.usuario && state.session.usuario.facilitador_id) || '')
+            : ''
+        }));
         closeMateriaEditor();
         state.materiasUi.selectedMateriaId = data.materia_id || payload.materia_id;
         renderAdminModuleSurface('materias');
@@ -6374,7 +7421,7 @@
     }
 
     async function archiveMateria(button, materiaId) {
-      if (!window.confirm('Esto archivará la materia base y retirará sus variantes operativas visibles.')) return;
+      if (!window.confirm('Esto archivar\u00e1 la materia base y retirar\u00e1 sus variantes operativas visibles.')) return;
       await handleAction('archivarMateria', async () => {
         await api('archivarMateria', {
           materia_id: materiaId,
@@ -6408,7 +7455,7 @@
     async function toggleMateriaStatus(button, materiaId) {
       const row = getMateriaBaseRows().find((item) => item.materia_id === String(materiaId || '').trim());
       if (!row) throw new Error('Materia no encontrada.');
-      if (row.estatus === 'archivada') throw new Error('Usa la acción de reactivar para una materia archivada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acci\u00f3n de reactivar para una materia archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleMateriaStatus', async () => {
         await api('guardarMateria', {
@@ -6477,12 +7524,12 @@
       }, {
         button,
         key: buildActionKey('reordenarMateria', [materiaId, direction]),
-        busyText: direction === 'up' ? 'â†‘' : 'â†“'
+        busyText: direction === 'up' ? 'Subiendo...' : 'Bajando...'
       });
     }
 
     async function archiveSubmateria(button, materiaId, submateriaId) {
-      if (!window.confirm('Esta variante dejará de estar disponible en el catálogo operativo.')) return;
+      if (!window.confirm('Esta variante dejar\u00e1 de estar disponible en el cat\u00e1logo operativo.')) return;
       await handleAction('archivarSubmateria', async () => {
         await api('archivarSubmateria', {
           submateria_id: submateriaId,
@@ -6507,7 +7554,7 @@
     async function toggleSubmateriaStatus(button, materiaId, submateriaId) {
       const row = getSubmateriasForMateria(materiaId).find((item) => item.submateria_id === String(submateriaId || '').trim());
       if (!row) throw new Error('Submateria no encontrada.');
-      if (row.estatus === 'archivada') throw new Error('Usa la acción de reactivar para una submateria archivada.');
+      if (row.estatus === 'archivada') throw new Error('Usa la acci\u00f3n de reactivar para una submateria archivada.');
       const nextStatus = row.estatus === 'activa' ? 'inactiva' : 'activa';
       await handleAction('toggleSubmateriaStatus', async () => {
         await api('guardarSubmateria', {
@@ -6580,7 +7627,7 @@
       }, {
         button,
         key: buildActionKey('reordenarSubmateria', [submateriaId, direction]),
-        busyText: direction === 'up' ? 'â†‘' : 'â†“'
+        busyText: direction === 'up' ? 'Subiendo...' : 'Bajando...'
       });
     }
 
@@ -6630,7 +7677,7 @@
     function renderPeriodSelects() {
       const periods = getAvailablePeriods();
       ['obsPeriodo', 'evaPeriodo', 'notaPeriodo', 'repPeriodo'].forEach((id) => {
-        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona período');
+        fillSelect($(id), periods, (p) => p.id, (p) => p.id + ' - ' + p.name, 'Selecciona per\u00edodo');
       });
       const reportUi = getReportSelectionState();
       if ($('repPeriodo') && reportUi.periodo_id) $('repPeriodo').value = reportUi.periodo_id;
@@ -6656,6 +7703,8 @@
         lockedSemanaId: '',
         lockedGrupoId: '',
         selectedSubmateriaId: '',
+        selectedTallerId: '',
+        validationErrors: {},
         lastKnownUpdatedAt: '',
         lastKnownActivitiesVersion: '',
         activities: [createEmptyActivityDraft()]
@@ -6665,14 +7714,14 @@
     function normalizeMaterialStatus(value) {
       const raw = String(value == null ? '' : value).trim().toLowerCase();
       if (!raw) return 'no_requiere';
-      if (['listo', 'si', 'sí', 'true', '1'].includes(raw)) return 'listo';
+      if (['listo', 'si', 's\u00ed', 'true', '1'].includes(raw)) return 'listo';
       if (['no_listo', 'no', 'false', '0'].includes(raw)) return 'no_listo';
       return 'no_requiere';
     }
 
     function normalizeRealizadaStatus(value) {
       const raw = String(value == null ? '' : value).trim().toLowerCase();
-      if (['si', 'sí', 'true', '1'].includes(raw)) return 'si';
+      if (['si', 's\u00ed', 'true', '1'].includes(raw)) return 'si';
       if (['no', 'false', '0'].includes(raw)) return 'no';
       return '';
     }
@@ -6708,6 +7757,25 @@
 
     function getSortedSemanas() {
       return [...state.catalogos.semanas].sort((a, b) => toYmdFrontend_(a.fecha_inicio).localeCompare(toYmdFrontend_(b.fecha_inicio)));
+    }
+
+    function getPlaneacionesFilterSemanas() {
+      if (getCurrentRole() !== 'facilitador') return getSortedSemanas();
+      const weekIds = new Set(getVisiblePlaneaciones()
+        .map((plan) => String(plan && plan.semana_id || '').trim())
+        .filter(Boolean));
+      if (!weekIds.size) return [];
+      const known = getSortedSemanas().filter((semana) => weekIds.has(String(semana && semana.semana_id || '').trim()));
+      const knownIds = new Set(known.map((semana) => String(semana && semana.semana_id || '').trim()));
+      const unknown = Array.from(weekIds)
+        .filter((semanaId) => !knownIds.has(semanaId))
+        .map((semanaId) => ({
+          semana_id: semanaId,
+          fecha_inicio: '',
+          fecha_fin: '',
+          nombre_visible: semanaId
+        }));
+      return known.concat(unknown);
     }
 
     function getWeekById(semanaId) {
@@ -6785,7 +7853,7 @@
     function getPlanStatusLabel(status) {
       return ({
         borrador: 'Borrador',
-        borrador_pendiente_aprobacion: 'Pendiente de aprobación',
+        borrador_pendiente_aprobacion: 'Pendiente de aprobaci\u00f3n',
         rechazada: 'Rechazada',
         activa: 'Activa',
         cierre_pendiente: 'Cierre pendiente',
@@ -6794,34 +7862,52 @@
       })[String(status || '').trim()] || String(status || 'Sin estado');
     }
 
+    function getPlanStatusFilterOptions() {
+      const statusOrder = ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente', 'cerrada', 'archivada'];
+      if (getCurrentRole() !== 'facilitador') {
+        return statusOrder.map((status) => ({
+          value: status,
+          label: getPlanStatusLabel(status)
+        }));
+      }
+      const visibleStatuses = new Set(getVisiblePlaneaciones()
+        .map((plan) => String(plan && plan.estado || '').trim())
+        .filter(Boolean));
+      return ['borrador', 'activa']
+        .filter((status) => visibleStatuses.has(status))
+        .map((status) => ({
+          value: status,
+          label: getPlanStatusLabel(status)
+        }));
+    }
+
     function getPlanLocalSaveState(plan) {
       return String((plan && plan._local_save_state) || '').trim().toLowerCase();
     }
 
     function isPlaneacionLocalSavePending(plan) {
-      return ['creating', 'saving', 'activating', 'sync_error'].includes(getPlanLocalSaveState(plan));
+      return ['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan));
     }
 
     function getPlanStatusBadgeMeta(plan) {
       const localState = getPlanLocalSaveState(plan);
       const baseClass = String((plan && plan.estado) || '').trim();
       if (localState === 'creating') {
-        const isActiveTarget = String((plan && plan.estado) || '').trim() === 'activa';
         return {
-          className: ('is-local-pending ' + baseClass).trim(),
-          label: isActiveTarget ? 'Activando...' : 'Creando...'
+          className: baseClass,
+          label: getPlanStatusLabel(plan && plan.estado)
         };
       }
       if (localState === 'saving') {
         return {
-          className: ('is-local-pending ' + baseClass).trim(),
-          label: 'Guardando...'
+          className: baseClass,
+          label: getPlanStatusLabel(plan && plan.estado)
         };
       }
       if (localState === 'activating') {
         return {
-          className: ('is-local-pending ' + baseClass).trim(),
-          label: 'Activando...'
+          className: baseClass,
+          label: getPlanStatusLabel(plan && plan.estado)
         };
       }
       if (localState === 'sync_error') {
@@ -6839,24 +7925,24 @@
     function getPlanLocalFeedbackMarkup(plan) {
       const message = String((plan && plan._local_save_message) || '').trim();
       const localState = getPlanLocalSaveState(plan);
-      if (localState === 'activating') {
-        return '';
-      }
-      if (localState === 'saving') return '';
       if (localState === 'saved') return '';
-      if (!message) return '';
+      if (!message && !['saving', 'activating'].includes(localState)) return '';
       const compactLabel = ({
-        creating: 'Creando',
+        creating: 'Sincronizando',
         saving: 'Sincronizando',
-        activating: 'Activando',
+        activating: 'Sincronizando',
+        syncing: 'Sincronizando',
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
       const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
+      const messageMarkup = ['creating', 'saving', 'syncing', 'activating'].includes(localState)
+        ? ''
+        : '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>';
       return (
         '<div class="plan-inline-feedback ' + toneClass + '">' +
           '<span class="plan-inline-feedback-dot" aria-hidden="true"></span>' +
           '<span class="plan-inline-feedback-label">' + escapeHtml(compactLabel) + '</span>' +
-          '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>' +
+          messageMarkup +
         '</div>'
       );
     }
@@ -6920,6 +8006,105 @@
       return Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
     }
 
+    function createPlanEditorValidationError(message, fieldId) {
+      const error = new Error(message);
+      error.isPlanEditorValidation = true;
+      error.focusTargetId = fieldId || '';
+      return error;
+    }
+
+    function getPlanEditorValidationErrors() {
+      if (!state.planEditor) return {};
+      if (!state.planEditor.validationErrors || typeof state.planEditor.validationErrors !== 'object') {
+        state.planEditor.validationErrors = {};
+      }
+      return state.planEditor.validationErrors;
+    }
+
+    function getPlanEditorFieldErrorId(fieldId) {
+      return 'planFieldError-' + String(fieldId || '').trim();
+    }
+
+    function getPlanEditorFieldErrorHost(fieldId) {
+      const target = $(fieldId);
+      if (!target) return null;
+      if (fieldId === 'planGruposChecklist' || fieldId === 'planAlumnosChecklist' || fieldId === 'planActivitiesList') {
+        return target.parentElement || target;
+      }
+      return target.closest('.plan-date-detected-field') || target.parentElement || target;
+    }
+
+    function ensurePlanEditorFieldErrorNode(fieldId) {
+      const normalizedFieldId = String(fieldId || '').trim();
+      if (!normalizedFieldId) return null;
+      let node = $(getPlanEditorFieldErrorId(normalizedFieldId));
+      if (node) return node;
+      const host = getPlanEditorFieldErrorHost(normalizedFieldId);
+      if (!host) return null;
+      node = document.createElement('div');
+      node.id = getPlanEditorFieldErrorId(normalizedFieldId);
+      node.className = 'plan-field-error';
+      node.setAttribute('role', 'alert');
+      node.hidden = true;
+      host.appendChild(node);
+      return node;
+    }
+
+    function renderPlanEditorValidation() {
+      const errors = getPlanEditorValidationErrors();
+      ['planFecha', 'planMateria', 'planSubmateria', 'planGruposChecklist', 'planAlumnosChecklist', 'planActivitiesList'].forEach((fieldId) => {
+        const target = $(fieldId);
+        if (!target) return;
+        const message = String(errors[fieldId] || '').trim();
+        const node = ensurePlanEditorFieldErrorNode(fieldId);
+        if (node) {
+          node.textContent = message;
+          node.hidden = !message;
+        }
+        target.classList.toggle('plan-field-invalid', !!message);
+        if (message) {
+          target.setAttribute('aria-invalid', 'true');
+          if (node) target.setAttribute('aria-describedby', node.id);
+        } else {
+          target.removeAttribute('aria-invalid');
+          if (node && target.getAttribute('aria-describedby') === node.id) {
+            target.removeAttribute('aria-describedby');
+          }
+        }
+      });
+    }
+
+    function clearPlanEditorValidation(fieldId) {
+      const errors = getPlanEditorValidationErrors();
+      if (fieldId) {
+        delete errors[String(fieldId || '').trim()];
+      } else {
+        state.planEditor.validationErrors = {};
+      }
+      renderPlanEditorValidation();
+    }
+
+    function showPlanEditorValidationError(error) {
+      if (!(error && error.isPlanEditorValidation)) return false;
+      const fieldId = String(error.focusTargetId || '').trim();
+      if (!fieldId) return false;
+      const errors = getPlanEditorValidationErrors();
+      Object.keys(errors).forEach((key) => delete errors[key]);
+      errors[fieldId] = error.message || 'Revisa este campo.';
+      if (state.ui) state.ui.planBuilderExpanded = true;
+      renderPlanBuilderVisibility();
+      renderPlanEditorValidation();
+      const target = $(fieldId);
+      const scrollTarget = getPlanEditorFieldErrorHost(fieldId) || target || $('planBuilderCard');
+      if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
+        scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (target && typeof target.focus === 'function' && !['planGruposChecklist', 'planAlumnosChecklist', 'planActivitiesList'].includes(fieldId)) {
+        window.setTimeout(() => target.focus({ preventScroll: true }), 120);
+      }
+      return true;
+    }
+
     function resetPlanEditor() {
       state.planEditor = emptyPlanEditorState();
       state.openPlanId = '';
@@ -6940,7 +8125,7 @@
       }
       if ($('planeacionesSectionCopy')) {
         $('planeacionesSectionCopy').textContent = canUseAdminShell()
-          ? 'Consulta histórico, filtra y corrige cualquier planeación del sistema.'
+          ? 'Consulta hist\u00f3rico, filtra y corrige cualquier planeaci\u00f3n del sistema.'
           : 'Aquí puedes editar, observar y cerrar las planeaciones que siguen en trabajo.';
       }
     }
@@ -6970,6 +8155,7 @@
         lockedSemanaId: plan.semana_id,
         lockedGrupoId: plan.grupo_id,
         selectedSubmateriaId: plan.submateria_id || '',
+        selectedTallerId: '',
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
         activities: (plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
@@ -7039,6 +8225,7 @@
         finalObservationsByKey,
         lastKnownUpdatedAt: plan.fecha_actualizacion || '',
         lastKnownActivitiesVersion: plan.actividades_version_actual || '',
+        generalObservationDirty: false,
         activitiesDirty: false
       };
     }
@@ -7066,6 +8253,29 @@
         (currentPlan && currentPlan._draft_final_observations_by_key) || {},
         (currentDraft && currentDraft.finalObservationsByKey) || {}
       );
+      return nextDraft;
+    }
+
+    function preserveOpenPlanDraftLocalEdits(planId, draft, planLike = null) {
+      const nextDraft = preserveOpenPlanDraftLocalNotes(planId, draft, planLike);
+      const normalizedPlanId = String(planId || (nextDraft && nextDraft.planId) || '').trim();
+      const currentDraft = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? state.openPlanDraft
+        : null;
+      if (!nextDraft || !currentDraft) return nextDraft;
+      ['fecha_planeacion', 'frase_semana', 'materia_id', 'submateria_id'].forEach((field) => {
+        if (currentDraft[field] !== undefined) nextDraft[field] = currentDraft[field];
+      });
+      if (Array.isArray(currentDraft.alumnos_ids)) {
+        nextDraft.alumnos_ids = currentDraft.alumnos_ids.slice();
+      }
+      if (currentDraft.generalObservationDirty === true) {
+        nextDraft.generalObservationDirty = true;
+      }
+      if (currentDraft.activitiesDirty && Array.isArray(currentDraft.activities) && currentDraft.activities.length) {
+        nextDraft.activities = cloneJsonSafe(currentDraft.activities, currentDraft.activities) || currentDraft.activities.slice();
+        nextDraft.activitiesDirty = true;
+      }
       return nextDraft;
     }
 
@@ -7384,6 +8594,45 @@
       return getPlanSubmateriasForMateria(materiaId).length > 0;
     }
 
+    function normalizePlanCatalogLabel(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+    }
+
+    function isPlanTallerMateria(materiaId) {
+      const targetId = String(materiaId || '').trim();
+      if (!targetId) return false;
+      const materia = getMateriaById(targetId);
+      const label = normalizePlanCatalogLabel(materia ? (materia.nombre || materia.materia_id) : targetId);
+      return label === 'taller' || label === 'talleres';
+    }
+
+    function getDefaultPlanSubmateriaIdForMateria(materiaId) {
+      const submaterias = getPlanSubmateriasForMateria(materiaId);
+      return String((submaterias[0] && submaterias[0].submateria_id) || '').trim();
+    }
+
+    function getPlanEditorUsesTallerSelector(materiaId) {
+      return state.planEditor.mode !== 'edit' &&
+        isPlanTallerMateria(materiaId) &&
+        getPlanEditorTallerOptions().length > 0;
+    }
+
+    function getPlanEditorSelectedSubmateriaId(materiaId) {
+      const targetMateriaId = String(materiaId || ($('planMateria') && $('planMateria').value) || '').trim();
+      if (getPlanEditorUsesTallerSelector(targetMateriaId)) {
+        const fallbackId = getDefaultPlanSubmateriaIdForMateria(targetMateriaId);
+        if (!state.planEditor.selectedSubmateriaId && fallbackId) {
+          state.planEditor.selectedSubmateriaId = fallbackId;
+        }
+        return String(state.planEditor.selectedSubmateriaId || fallbackId || '').trim();
+      }
+      return String(($('planSubmateria') && $('planSubmateria').value) || state.planEditor.selectedSubmateriaId || '').trim();
+    }
+
     function getPlanMateriaDisplayLabel(plan, materiaRow) {
       const materia = materiaRow || getMateriaById(plan.materia_id);
       const materiaLabel = materia
@@ -7393,7 +8642,7 @@
       const submateriaLabel = submateria
         ? (submateria.nombre || submateria.submateria_id)
         : (plan && plan.submateria_nombre ? String(plan.submateria_nombre).trim() : '');
-      return submateriaLabel ? (materiaLabel + ' · ' + submateriaLabel) : materiaLabel;
+      return submateriaLabel ? (materiaLabel + ' \u00b7 ' + submateriaLabel) : materiaLabel;
     }
 
     function syncPlanSubmateriaSelect(preferredValue) {
@@ -7401,8 +8650,27 @@
       const select = $('planSubmateria');
       const materiaId = $('planMateria') ? $('planMateria').value : '';
       if (!field || !select) return;
+      const label = field.querySelector('label');
+      const useTallerSelector = getPlanEditorUsesTallerSelector(materiaId);
+      if (useTallerSelector) {
+        const talleres = getPlanEditorTallerOptions();
+        field.hidden = false;
+        if (label) label.textContent = 'Taller';
+        fillSelect(select, talleres, (item) => item.taller_id, (item) => item.nombre || item.taller_id, 'Selecciona taller');
+        const nextTallerId = String(state.planEditor.selectedTallerId || '').trim();
+        if (nextTallerId && talleres.some((item) => String(item.taller_id || '').trim() === nextTallerId)) {
+          select.value = nextTallerId;
+        } else {
+          select.value = '';
+          state.planEditor.selectedTallerId = '';
+        }
+        state.planEditor.selectedSubmateriaId = getDefaultPlanSubmateriaIdForMateria(materiaId);
+        select.disabled = !!(state.ui && state.ui.planeacionesCatalogosLoading);
+        return;
+      }
       const submaterias = getPlanSubmateriasForMateria(materiaId);
       field.hidden = !submaterias.length;
+      if (label) label.textContent = 'Submateria';
       fillSelect(select, submaterias, (item) => item.submateria_id, (item) => item.nombre || item.submateria_id, 'Selecciona submateria');
       const nextValue = preferredValue !== undefined ? String(preferredValue || '').trim() : String(state.planEditor.selectedSubmateriaId || '').trim();
       if (nextValue && submaterias.some((item) => item.submateria_id === nextValue)) {
@@ -7812,6 +9080,15 @@
       if (updatedPlan && typeof updatedPlan === 'object') {
         Object.keys(updatedPlan).forEach((key) => {
           if (key === 'actividades') return;
+          if (
+            key === 'alumnos' &&
+            Array.isArray(updatedPlan.alumnos) &&
+            updatedPlan.alumnos.length === 0 &&
+            Array.isArray(nextPlan.alumnos) &&
+            nextPlan.alumnos.length > 0
+          ) {
+            return;
+          }
           if (updatedPlan[key] === undefined) return;
           nextPlan[key] = updatedPlan[key];
         });
@@ -7827,7 +9104,16 @@
         nextPlan.actividades = updatedPlan.actividades.map((activity, index) => {
           const activityKey = String((activity && activity.actividad_id) || (activity && activity.orden) || index).trim();
           const optimisticActivity = optimisticById.get(activityKey) || optimisticActivities[index] || null;
+          const sourceActivity = Array.isArray(plan && plan.actividades) ? plan.actividades[index] : null;
           const mergedActivity = Object.assign({}, optimisticActivity || {}, activity || {});
+          if (optimisticActivity) {
+            const previousText = String((sourceActivity && sourceActivity.texto) || '').trim();
+            const optimisticText = String((optimisticActivity && optimisticActivity.texto) || '').trim();
+            const responseText = String((activity && activity.texto) || '').trim();
+            if (optimisticText && optimisticText !== previousText && responseText === previousText) {
+              mergedActivity.texto = optimisticActivity.texto;
+            }
+          }
           if ((!String((activity && activity.realizada) || '').trim()) && optimisticActivity) {
             mergedActivity.realizada = optimisticActivity.realizada;
           }
@@ -7972,7 +9258,7 @@
           boot_detail_loaded: true,
           obs_loaded: false,
           _local_save_state: 'creating',
-          _local_save_message: 'Creando planeación...'
+          _local_save_message: 'Sincronizando planeación...'
         };
       });
     }
@@ -8008,12 +9294,68 @@
       }, delay);
     }
 
+    function capturePlanEditorSnapshot() {
+      const materiaId = String(($('planMateria') && $('planMateria').value) || '').trim();
+      return {
+        planEditor: cloneJsonSafe(state.planEditor, state.planEditor) || state.planEditor,
+        fechaPlaneacion: String(($('planFecha') && $('planFecha').value) || '').trim(),
+        materiaId,
+        selectedSubmateriaId: getPlanEditorSelectedSubmateriaId(materiaId),
+        selectedTallerId: getSelectedPlanTallerId(),
+        fraseSemana: String(($('planFrase') && $('planFrase').value) || '').trim(),
+        selectedGroupIds: getSelectedGroupIds(),
+        selectedAlumnoIds: getSelectedPlanAlumnos()
+      };
+    }
+
     function restorePlanEditorFromSnapshot(snapshot) {
       if (!snapshot) return;
-      state.planEditor = cloneJsonSafe(snapshot, snapshot) || snapshot;
+      const editorState = snapshot.planEditor && typeof snapshot.planEditor === 'object'
+        ? snapshot.planEditor
+        : snapshot;
+      const materiaId = String((snapshot.materiaId || snapshot.materia_id || '').trim ? (snapshot.materiaId || snapshot.materia_id || '').trim() : (snapshot.materiaId || snapshot.materia_id || ''));
+      const selectedSubmateriaId = String((snapshot.selectedSubmateriaId || snapshot.selected_submateria_id || '').trim ? (snapshot.selectedSubmateriaId || snapshot.selected_submateria_id || '').trim() : (snapshot.selectedSubmateriaId || snapshot.selected_submateria_id || ''));
+      const selectedTallerId = String((snapshot.selectedTallerId || snapshot.selected_taller_id || '').trim ? (snapshot.selectedTallerId || snapshot.selected_taller_id || '').trim() : (snapshot.selectedTallerId || snapshot.selected_taller_id || ''));
+      const selectedGroupIds = new Set((Array.isArray(snapshot.selectedGroupIds) ? snapshot.selectedGroupIds : []).map((groupId) => String(groupId || '').trim()).filter(Boolean));
+      const selectedAlumnoIds = new Set((Array.isArray(snapshot.selectedAlumnoIds) ? snapshot.selectedAlumnoIds : []).map((alumnoId) => String(alumnoId || '').trim()).filter(Boolean));
+      state.planEditor = cloneJsonSafe(editorState, editorState) || editorState;
+      if (selectedSubmateriaId) state.planEditor.selectedSubmateriaId = selectedSubmateriaId;
+      state.planEditor.selectedTallerId = selectedTallerId || '';
       if (state.ui) state.ui.planBuilderExpanded = true;
       renderPlanEditor();
+      if ($('planFecha')) $('planFecha').value = String(snapshot.fechaPlaneacion || snapshot.fecha_planeacion || '').trim();
+      if ($('planMateria')) $('planMateria').value = materiaId;
+      syncPlanSubmateriaSelect(selectedSubmateriaId);
+      if ($('planFrase')) $('planFrase').value = String(snapshot.fraseSemana || snapshot.frase_semana || '').trim();
+      if ($('planSubmateria')) {
+        if (getPlanEditorUsesTallerSelector(materiaId)) {
+          $('planSubmateria').value = selectedTallerId || '';
+          handlePlanTallerChanged();
+        } else {
+          $('planSubmateria').value = selectedSubmateriaId || '';
+        }
+      }
+      Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = selectedGroupIds.has(String(input.value || '').trim());
+      });
+      renderPlanAlumnosChecklist(selectedAlumnoIds);
       renderPlanBuilderVisibility();
+    }
+
+    function rollbackFailedPlaneacionOutboxCreate(item) {
+      if (!item || typeof item !== 'object') return;
+      if (Array.isArray(item.tempPlanIds) && item.tempPlanIds.length) {
+        removePlaneacionRows(item.tempPlanIds);
+      }
+      state.openPlanId = '';
+      state.openPlanDraft = null;
+      restorePlanEditorFromSnapshot(item.planEditorSnapshot || null);
+      persistCurrentBootSnapshot('planeacion_outbox_create_failed');
+      renderPlaneacionesSurface({
+        includeStats: true,
+        includePlaneaciones: true,
+        includeAlertas: false
+      });
     }
 
     function restorePendingPlanObservationInputs(planId, generalText, finalPayloads) {
@@ -8037,12 +9379,31 @@
       });
     }
 
+    function restoreOpenPlanDraftAfterSaveRefresh(planId, draft, generalText, finalPayloads) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || String(state.openPlanId || '').trim() !== normalizedPlanId) return false;
+      const currentPlan = getPlanById(normalizedPlanId);
+      const sourceDraft = draft
+        ? (cloneJsonSafe(draft, draft) || draft)
+        : (currentPlan && currentPlan.detail_loaded ? buildOpenPlanDraft(currentPlan) : null);
+      if (!sourceDraft) return false;
+      sourceDraft.planId = normalizedPlanId;
+      state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(
+        currentPlan || {},
+        buildOpenPlanDraftWithPendingObservations(sourceDraft, generalText, finalPayloads)
+      );
+      renderPlaneacionesList();
+      restorePendingPlanObservationInputs(normalizedPlanId, generalText, finalPayloads);
+      return true;
+    }
+
     function updateOpenPlanGeneralObservationDraft(planId, value) {
       if (!state.openPlanDraft) return;
       const normalizedPlanId = String(planId || state.openPlanDraft.planId || '').trim();
       if (!normalizedPlanId) return;
       if (String(state.openPlanDraft.planId || '').trim() !== normalizedPlanId) return;
       state.openPlanDraft.generalObservationText = String(value || '');
+      state.openPlanDraft.generalObservationDirty = true;
       const currentPlan = getPlanById(normalizedPlanId);
       if (currentPlan && currentPlan.planeacion_id) {
         upsertPlaneacionRow({
@@ -8127,7 +9488,7 @@
             detail_loaded: true
           });
         }
-        throw new Error('Planeación no encontrada.');
+        throw new Error('Planeaci\u00f3n no encontrada.');
       }
       return Object.assign({}, rows[0], {
         detail_loaded: true
@@ -8165,7 +9526,7 @@
           const updated = upsertPlaneacionRow(detail);
           if (state.openPlanId === planId && hasUsableOpenPlanDetail(updated)) {
             state.openPlanDraft = updated
-              ? preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(updated), updated)
+              ? preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(updated), updated)
               : null;
           }
           markPlaneacionDetailFresh(planId);
@@ -8240,16 +9601,19 @@
       const week = getWeekByDateOrDraft(resolvedDate);
       const hint = week ? getSemanaHintText(week) : '';
       host.textContent = week
-        ? [formatSemanaLabel(week), hint].filter(Boolean).join(' · ')
+        ? (week.draft
+          ? 'Semana no configurada: ' + formatSemanaLabel(week)
+          : [formatSemanaLabel(week), hint].filter(Boolean).join(' \u00b7 '))
         : 'Selecciona una fecha.';
       host.className = 'inline-note';
-      if (week) host.classList.add(String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open');
+      if (week) host.classList.add(week.draft ? 'is-closed' : (String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open'));
     }
 
     function handlePlanFechaChanged(event) {
       const input = event && event.currentTarget ? event.currentTarget : $('planFecha');
       if (!input) return;
       if ($('planFecha') && $('planFecha') !== input) $('planFecha').value = input.value || '';
+      clearPlanEditorValidation('planFecha');
       renderPlanWeekResolved();
     }
 
@@ -8293,6 +9657,53 @@
       return getCatalogIndex().alumnosByGroupId.get(String(groupId || '').trim()) || [];
     }
 
+    function getPlanEditorTallerOptions() {
+      const currentUserId = getCurrentUserId();
+      return (state.catalogos.talleres || [])
+        .filter((row) => {
+          const status = String(row.estatus || '').trim() || (row.activo === false ? 'inactivo' : 'activo');
+          if (status !== 'activo' || row.activo === false) return false;
+          if (canUseAdminShell()) return true;
+          const facilitatorId = String(row.facilitador_id || '').trim();
+          return !facilitatorId || !currentUserId || facilitatorId === currentUserId;
+        })
+        .sort((a, b) => String(a.nombre || a.taller_id).localeCompare(String(b.nombre || b.taller_id), 'es'));
+    }
+
+    function getSelectedPlanTallerId() {
+      return String(state.planEditor && state.planEditor.selectedTallerId || '').trim();
+    }
+
+    function getPlanTallerAlumnoIdSet(tallerId) {
+      const targetId = String(tallerId || '').trim();
+      if (!targetId) return new Set();
+      return new Set((state.catalogos.alumno_talleres || [])
+        .filter((row) => String(row.taller_id || '').trim() === targetId && row.activa !== false)
+        .map((row) => String(row.alumno_id || '').trim())
+        .filter(Boolean));
+    }
+
+    function getPlanEditorAlumnosByGroupId(groupId) {
+      const alumnos = getAlumnosByGroupId(groupId);
+      const tallerId = getSelectedPlanTallerId();
+      if (!tallerId) return alumnos;
+      const allowedAlumnoIds = getPlanTallerAlumnoIdSet(tallerId);
+      if (!allowedAlumnoIds.size) return [];
+      return alumnos.filter((alumno) => allowedAlumnoIds.has(String(alumno.alumno_id || '').trim()));
+    }
+
+    function getPlanTallerAvailableGroupIds(tallerId) {
+      const allowedAlumnoIds = getPlanTallerAlumnoIdSet(tallerId);
+      if (!allowedAlumnoIds.size) return [];
+      const groupIds = new Set();
+      allowedAlumnoIds.forEach((alumnoId) => {
+        const alumno = getCatalogIndex().alumnosById.get(alumnoId);
+        const groupId = String(alumno && alumno.grupo_id || '').trim();
+        if (groupId) groupIds.add(groupId);
+      });
+      return Array.from(groupIds);
+    }
+
     function getAlumnoDisplaySnapshot(alumnoRow) {
       const alumnoId = String(alumnoRow && alumnoRow.alumno_id || '').trim();
       const catalogAlumno = getCatalogIndex().alumnosById.get(alumnoId);
@@ -8305,7 +9716,7 @@
 
     function applyGroupSelectionToAlumnoSet(selectedSet, groupId, checked) {
       const nextSelected = selectedSet instanceof Set ? selectedSet : new Set(selectedSet || []);
-      getAlumnosByGroupId(groupId).forEach((alumno) => {
+      getPlanEditorAlumnosByGroupId(groupId).forEach((alumno) => {
         if (checked) nextSelected.add(alumno.alumno_id);
         else nextSelected.delete(alumno.alumno_id);
       });
@@ -8325,19 +9736,54 @@
         ? ((canUseAdminShell() ? selectedGroups : []).length ? selectedGroups : [state.planEditor.lockedGrupoId])
         : selectedGroups;
       if (!groupIds.length) {
-        host.innerHTML = '<div class="empty">Selecciona al menos un grupo para cargar alumnos.</div>';
+        host.innerHTML = '<div class="empty">' + (getSelectedPlanTallerId() ? 'Selecciona un taller con alumnos disponibles o marca un grupo.' : 'Selecciona al menos un grupo para cargar alumnos.') + '</div>';
+        return;
+      }
+      const selectedTallerId = getSelectedPlanTallerId();
+      if (selectedTallerId) {
+        const seenAlumnoIds = new Set();
+        const alumnos = [];
+        groupIds.forEach((groupId) => {
+          getPlanEditorAlumnosByGroupId(groupId).forEach((alumno) => {
+            const alumnoId = String(alumno.alumno_id || '').trim();
+            if (!alumnoId || seenAlumnoIds.has(alumnoId)) return;
+            seenAlumnoIds.add(alumnoId);
+            alumnos.push(alumno);
+          });
+        });
+        const selectedCount = alumnos.filter((alumno) => selected.has(String(alumno.alumno_id || '').trim())).length;
+        host.innerHTML = '<div class="group-block is-taller-alumnos">' +
+          '<div class="group-block-head">' +
+            '<div><strong>Alumnos del taller</strong><span class="mini">' + escapeHtml(String(selectedCount)) + ' de ' + escapeHtml(String(alumnos.length)) + ' seleccionado(s)</span></div>' +
+          '</div>' +
+          '<div class="checklist plan-alumnos-flat">' +
+            (alumnos.length ? alumnos.map((alumno) => {
+              const alumnoId = String(alumno.alumno_id || '').trim();
+              const label = alumno.nombre_mostrado || alumno.nombre_completo || alumnoId;
+              const group = getCatalogIndex().gruposById.get(String(alumno.grupo_id || '').trim());
+              const groupLabel = group ? getGrupoDisplayName(group) : String(alumno.grupo_id || '').trim();
+              return (
+                '<label class="check-item">' +
+                  '<input type="checkbox" data-group-id="' + escapeHtml(alumno.grupo_id || '') + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) ? ' checked' : '') + '>' +
+                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? '<span class="mini">' + escapeHtml(groupLabel) + '</span>' : '') + '</span>' +
+                '</label>'
+              );
+            }).join('') : '<div class="empty">No hay alumnos activos en este taller para tus grupos.</div>') +
+          '</div>' +
+        '</div>';
         return;
       }
       host.innerHTML = groupIds.map((groupId) => {
         const group = getCatalogIndex().gruposById.get(String(groupId || '').trim());
-        const alumnos = getAlumnosByGroupId(groupId);
+        const alumnos = getPlanEditorAlumnosByGroupId(groupId);
+        const selectedCount = alumnos.filter((alumno) => selected.has(String(alumno.alumno_id || '').trim())).length;
         return (
             '<div class="group-block">' +
               '<div class="group-block-head">' +
-                '<div><strong>' + escapeHtml(group ? getGrupoDisplayName(group) : groupId) + '</strong></div>' +
+                '<div><strong>' + escapeHtml(group ? getGrupoDisplayName(group) : groupId) + '</strong><span class="mini">' + escapeHtml(String(selectedCount)) + ' de ' + escapeHtml(String(alumnos.length)) + ' seleccionado(s)</span></div>' +
               '</div>' +
             '<div class="checklist">' +
-              alumnos.map((alumno) => {
+              (alumnos.length ? alumnos.map((alumno) => {
                 const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
                 return (
                   '<label class="check-item">' +
@@ -8345,7 +9791,7 @@
                     '<span><strong>' + escapeHtml(label) + '</strong></span>' +
                   '</label>'
                 );
-              }).join('') +
+              }).join('') : '<div class="empty">' + (getSelectedPlanTallerId() ? 'No hay alumnos de este taller en este grupo.' : 'No hay alumnos activos en este grupo.') + '</div>') +
             '</div>' +
           '</div>'
         );
@@ -8355,8 +9801,30 @@
     function handlePlanGroupChecklistChange(event) {
       const input = event && event.target;
       if (!input || input.type !== 'checkbox') return;
+      clearPlanEditorValidation('planGruposChecklist');
+      clearPlanEditorValidation('planAlumnosChecklist');
       const selected = applyGroupSelectionToAlumnoSet(new Set(getSelectedPlanAlumnos()), input.value, !!input.checked);
       renderPlanAlumnosChecklist(selected);
+    }
+
+    function handlePlanTallerChanged(event) {
+      if (state.planEditor.mode === 'edit') return;
+      const select = event && event.currentTarget ? event.currentTarget : $('planSubmateria');
+      const tallerId = select ? String(select.value || '').trim() : '';
+      state.planEditor.selectedTallerId = tallerId;
+      clearPlanEditorValidation('planGruposChecklist');
+      clearPlanEditorValidation('planAlumnosChecklist');
+      clearPlanEditorValidation('planSubmateria');
+      state.planEditor.selectedSubmateriaId = getDefaultPlanSubmateriaIdForMateria($('planMateria') ? $('planMateria').value : '');
+      if (tallerId) {
+        const selectedGroupIds = new Set(getPlanTallerAvailableGroupIds(tallerId));
+        Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+          input.checked = selectedGroupIds.has(String(input.value || '').trim());
+        });
+        renderPlanAlumnosChecklist(new Set(Array.from(getPlanTallerAlumnoIdSet(tallerId))));
+        return;
+      }
+      renderPlanAlumnosChecklist(new Set(getSelectedPlanAlumnos()));
     }
 
     function renderPlanActivitiesEditor() {
@@ -8401,7 +9869,7 @@
       const primarySaveBtn = $('savePlanBtn');
       const draftSaveBtn = $('savePlanDraftBtn');
       const activeSaveBtn = $('savePlanActiveBtn');
-      $('planEditorTitle').textContent = isEdit ? 'Editar planeación' : 'Plan';
+      $('planEditorTitle').textContent = isEdit ? 'Editar planeaci\u00f3n' : 'Plan';
       if (primarySaveBtn) {
         primarySaveBtn.hidden = !isEdit;
         primarySaveBtn.textContent = 'Guardar cambios';
@@ -8429,6 +9897,7 @@
       renderPlanAlumnosChecklist();
       renderPlanActivitiesEditor();
       renderPlanBuilderVisibility();
+      renderPlanEditorValidation();
     }
 
     function renderBaseSelects(options = {}) {
@@ -8444,7 +9913,7 @@
       if (shouldRenderPlaneaciones) {
         fillSelect($('planMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
         syncPlanSubmateriaSelect();
-        fillSelect($('filterSemana'), getSortedSemanas(), (s) => s.semana_id, (s) => s.nombre_visible || s.semana_id, 'Todas las semanas');
+        renderPlaneacionesFilterSelects();
         fillSelect($('filterGrupo'), state.catalogos.grupos, (g) => g.grupo_id, (g) => getGrupoDisplayName(g), 'Todos los grupos');
         if (canUseAdminShell()) {
           fillSelect($('filterFacilitador'), state.catalogos.facilitadores.filter((item) => isTruthyValue(item.activo)), (f) => f.facilitador_id, (f) => f.nombre_mostrado || f.nombre_completo || f.facilitador_id, 'Todos los facilitadores');
@@ -8453,31 +9922,57 @@
       }
 
       if (shouldRenderSeguimiento) {
-        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
-        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
         fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
-        fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeación');
+        fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeaci\u00f3n');
       }
 
       if (shouldRenderReportes) {
         const reportUi = getReportSelectionState();
-        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' · ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
         if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
+      }
+    }
+
+    function renderPlaneacionesFilterSelects() {
+      const semanaFilter = $('filterSemana');
+      const estadoFilter = $('filterEstado');
+      if (semanaFilter) {
+        fillSelect(
+          semanaFilter,
+          getPlaneacionesFilterSemanas(),
+          (semana) => String(semana && semana.semana_id || '').trim(),
+          (semana) => semana.nombre_visible || semana.semana_id,
+          'Todas las semanas'
+        );
+      }
+      if (estadoFilter) {
+        fillSelect(
+          estadoFilter,
+          getPlanStatusFilterOptions(),
+          (status) => status.value,
+          (status) => status.label,
+          'Todos los estados'
+        );
       }
     }
 
     function updateEditorActivityField(index, field, value) {
       if (!state.planEditor.activities[index]) return;
       state.planEditor.activities[index][field] = value;
+      clearPlanEditorValidation('planActivitiesList');
     }
 
     function addEditorActivity() {
+      clearPlanEditorValidation('planActivitiesList');
       state.planEditor.activities.push(createEmptyActivityDraft());
       renderPlanActivitiesEditor();
     }
 
     function removeEditorActivity(index) {
       if (state.planEditor.activities.length <= 1) return;
+      clearPlanEditorValidation('planActivitiesList');
       state.planEditor.activities.splice(index, 1);
       renderPlanActivitiesEditor();
     }
@@ -8485,6 +9980,7 @@
     function moveEditorActivity(index, direction) {
       const target = index + direction;
       if (target < 0 || target >= state.planEditor.activities.length) return;
+      clearPlanEditorValidation('planActivitiesList');
       const copy = [...state.planEditor.activities];
       const temp = copy[index];
       copy[index] = copy[target];
@@ -8500,6 +9996,7 @@
     }
 
     function toggleAllVisibleAlumnos(checked) {
+      clearPlanEditorValidation('planAlumnosChecklist');
       Array.from($('planAlumnosChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
         input.checked = checked;
       });
@@ -8507,6 +10004,8 @@
 
     function toggleAllGroups(checked) {
       if (state.planEditor.mode === 'edit') return;
+      clearPlanEditorValidation('planGruposChecklist');
+      clearPlanEditorValidation('planAlumnosChecklist');
       Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
         input.checked = checked;
       });
@@ -8533,7 +10032,7 @@
           nombre: alumno ? (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) : (pa.nombre_snapshot || pa.alumno_id)
         };
       });
-      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' · ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
     }
 
     function renderEvaluationDependencies() {
@@ -8553,7 +10052,7 @@
         .map((alumno) => {
           const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
             .filter(Boolean)
-            .join(' · ');
+            .join(' \u00b7 ');
           return { id: alumno.alumno_id, label };
         })
         .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
@@ -8576,7 +10075,7 @@
       const match = state.catalogos.alumnos.find((alumno) => {
         const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
           .filter(Boolean)
-          .join(' · ')
+          .join(' \u00b7 ')
           .toLowerCase();
         return label === query;
       });
@@ -8656,7 +10155,7 @@
       }
       const currentPlan = getPlanById(planId);
       if (isPlaneacionPendingCreation(currentPlan)) {
-        setBanner('La planeación se está creando. Espera un momento para abrirla.', 'info', { button });
+        setBanner('La planeaci\u00f3n se est\u00e1 creando. Espera un momento para abrirla.', 'info', { button });
         return;
       }
       if (state.ui) state.ui.openPlanLoadingId = planId;
@@ -8679,7 +10178,7 @@
             if (state.openPlanId !== planId) return;
             const refreshedPlan = getPlanById(planId) || plan;
             if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
-              state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
+              state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
             }
             persistCurrentBootSnapshot('planeacion_abierta_multigrupo');
             renderPlaneacionesList();
@@ -8687,7 +10186,7 @@
         }
         if (state.ui) state.ui.openPlanLoadingId = '';
         if (plan && hasUsableOpenPlanDetail(plan)) {
-          state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(plan), plan);
+          state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(plan), plan);
         }
         persistCurrentBootSnapshot('planeacion_abierta');
         renderPlaneacionesList();
@@ -8707,7 +10206,7 @@
               if (state.openPlanId !== planId) return;
               const refreshedPlan = getPlanById(planId) || plan;
               if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
-                state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
+                state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
               }
               renderPlaneacionesList();
             })
@@ -8722,7 +10221,7 @@
               if (state.openPlanId !== planId) return;
               if (state.ui) state.ui.openPlanLoadingId = '';
               if (retryPlan && hasUsableOpenPlanDetail(retryPlan)) {
-                state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(retryPlan), retryPlan);
+                state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(retryPlan), retryPlan);
               }
               renderPlaneacionesList();
             })
@@ -8852,7 +10351,7 @@
         '<div class="plan-open-editor plan-open-editor-group">' +
           '<div>' +
             '<div class="card-head inline-head">' +
-              '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selección solo afecta al grupo actual.</p>') + '</div>' +
+              '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selecci&oacute;n solo afecta al grupo actual.</p>') + '</div>' +
             '</div>' +
             '<div class="stack">' + allStudentBlocks + '</div>' +
           '</div>' +
@@ -8919,7 +10418,7 @@
         '<div class="plan-multigroup-shared">' +
           '<div class="plan-multigroup-header">' +
             '<div>' +
-              '<div class="plan-multigroup-title">Planeación multigrupo</div>' +
+              '<div class="plan-multigroup-title">Planeaci&oacute;n multigrupo</div>' +
               '<div class="plan-multigroup-groups">' + getPlaneacionEntryGroupLabels(entry).map((label) => '<span class="plan-multigroup-chip">' + escapeHtml(label) + '</span>').join('') + '</div>' +
             '</div>' +
             '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
@@ -9126,7 +10625,7 @@
         ? (
             '<div class="plan-list-more">' +
               '<button class="btn-ghost" type="button" onclick="loadMorePlaneaciones(this)"' + ((state.ui && state.ui.planeacionesLoadingMore) ? ' disabled' : '') + '>' +
-                ((state.ui && state.ui.planeacionesLoadingMore) ? 'Cargando...' : 'Cargar más') +
+                ((state.ui && state.ui.planeacionesLoadingMore) ? 'Cargando...' : 'Cargar m\u00e1s') +
               '</button>' +
             '</div>'
           )
@@ -9139,7 +10638,7 @@
         const materia = getMateriaById(plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
         const groupLabel = entry.isMulti
-          ? getPlaneacionEntryGroupLabels(entry).join(' · ')
+          ? getPlaneacionEntryGroupLabels(entry).join(' \u00b7 ')
           : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
         const materiaLabel = getPlanMateriaDisplayLabel(plan, materia);
         const weekLabel = getWeekLabelForPlan(plan, semana);
@@ -9167,7 +10666,7 @@
         const hasMaterialAlert = entry.isMulti ? planEntryHasOpenMaterialAlert(entry) : planHasOpenMaterialAlert(plan.planeacion_id);
         const latestResolvedMaterialAlert = entry.isMulti ? getLatestResolvedMaterialAlertForEntry(entry) : (hasAdminPower ? getLatestResolvedMaterialAlertForPlan(plan.planeacion_id) : null);
         const materialHistoryHtml = latestResolvedMaterialAlert
-          ? '<div class="plan-alert-history">Historico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</div>'
+          ? '<div class="plan-alert-history">Hist&oacute;rico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</div>'
           : '';
         const alumnosCount = entry.isMulti ? getPlaneacionEntryAlumnoCount(entry) : getPlanAlumnoCount(plan);
         const actividadesCount = entry.isMulti ? getPlaneacionEntryActividadCount(entry) : getPlanActividadCount(plan);
@@ -9186,7 +10685,7 @@
           ? (
               '<div class="plan-compact-summary-meta">' +
                 (hasMaterialAlert ? '<span class="plan-alert-chip">Material pendiente</span>' : '') +
-                (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">Histórico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
+                (!hasMaterialAlert && latestResolvedMaterialAlert ? '<span class="mini">Hist&oacute;rico: material resuelto ' + escapeHtml(formatFechaHumana(latestResolvedMaterialAlert.fecha_resolucion || latestResolvedMaterialAlert.fecha_creacion || '')) + '</span>' : '') +
                 (entry.isMulti ? '<span class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</span>' : '') +
               '</div>'
             )
@@ -9212,7 +10711,7 @@
                 '<div><label>Comentario</label><input id="activity-comment-' + escapeHtml(item.actividad_id) + '" type="text" value="' + escapeHtml(item.comentario_cierre || '') + '"' + (editableSeguimiento ? '' : ' disabled') + '></div>' +
               '</div>' +
               ((hasAdminPower || editableSeguimiento)
-                ? '<div class="mini">Los cambios de seguimiento se guardan con el botón Guardar cambios.</div>'
+                ? '<div class="mini">Los cambios de seguimiento se guardan con el bot&oacute;n Guardar cambios.</div>'
                 : '') +
             '</div>'
           );
@@ -9259,6 +10758,9 @@
           : '';
         const localState = getPlanLocalSaveState(plan);
         const isOpenSaveBusy = localState === 'saving';
+        const saveButtonText = isOpenSaveBusy ? 'Sincronizando...' : 'Guardar cambios';
+        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '');
+        const saveButtonBusyAttrs = isOpenSaveBusy ? ' disabled aria-disabled="true" aria-busy="true"' : '';
         const actionStatusHtml = getPlanActionStatusMarkup(plan);
         const buttons = [];
         if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
@@ -9281,9 +10783,10 @@
         if (!isOpen) {
           const isPendingCreation = isPlaneacionPendingCreation(plan);
           const localPending = isPlaneacionLocalSavePending(plan);
+          const openIntentAttrs = buildOpenPlanPrefetchIntentAttrs(plan.planeacion_id);
           const openButtonHtml = isPendingCreation
-            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Creando...</button>'
-            : '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
+            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Abrir</button>'
+            : '<button class="btn-open-plan" type="button"' + openIntentAttrs + ' onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
           const quickActivateButton = !localPending && plan.estado === 'borrador'
             ? '<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>'
             : '';
@@ -9384,12 +10887,11 @@
               previewSharedHtml +
               '<div class="plan-loading-note is-compact">' +
                 '<strong>Abriendo planeación...</strong>' +
-                '<div class="mini">Estamos trayendo alumnos, actividades y observaciones para que abras con contexto completo.</div>' +
+                '<div class="mini">Estamos preparando alumnos y actividades para que abras con contexto operativo.</div>' +
                 '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
                   '<span class="plan-loading-pill">Alumnos</span>' +
                   '<span class="plan-loading-pill">Actividades</span>' +
-                  '<span class="plan-loading-pill">Observaciones</span>' +
                 '</div>' +
               '</div>' +
               '<div class="actions" style="margin-top:14px;">' +
@@ -9417,12 +10919,11 @@
               localFeedbackHtml +
               '<div class="plan-loading-note">' +
                 '<strong>Abriendo planeación...</strong>' +
-                '<div class="mini">Se están cargando algunos datos para que puedas empezar a revisar de inmediato.</div>' +
+                '<div class="mini">Se están cargando alumnos y actividades para que puedas empezar a revisar de inmediato.</div>' +
                 '<div class="plan-loading-progress" aria-hidden="true"></div>' +
                 '<div class="plan-loading-pill-row">' +
                   '<span class="plan-loading-pill">Alumnos</span>' +
                   '<span class="plan-loading-pill">Actividades</span>' +
-                  '<span class="plan-loading-pill">Observaciones</span>' +
                 '</div>' +
               '</div>' +
             '</article>'
@@ -9500,7 +11001,7 @@
             '</div>' +
             '<div class="actions" style="margin-top:14px;">' +
               ((allowStructureEdit || allowGeneralObs || allowAlumnoObs)
-                ? '<button class="btn-primary" type="button"' + (isOpenSaveBusy ? ' disabled aria-disabled="true"' : '') + ' onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">' + (isOpenSaveBusy ? 'Guardando...' : 'Guardar cambios') + '</button>'
+                ? '<button id="plan-save-' + escapeHtml(plan.planeacion_id) + '" class="' + saveButtonClass + '" type="button"' + saveButtonBusyAttrs + ' onclick="savePlanChanges(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\'' + (entry.isMulti ? ', \'' + escapeJsAttrValue(entry.key) + '\'' : '') + ')">' + saveButtonText + '</button>'
                 : '') +
               actionStatusHtml +
               '<button class="btn-open-plan" type="button" onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Ocultar</button>' +
@@ -9550,7 +11051,7 @@
           '<div class="plan-collapsed-mobile">' +
             '<div class="plan-top">' +
               '<div>' +
-                '<h3>Cargando planeación...</h3>' +
+                '<h3>Cargando planeaci\u00f3n...</h3>' +
                 '<div class="subtle">Preparando fecha, grupo y materia</div>' +
               '</div>' +
               '<span class="plan-loading-badge">Cargando</span>' +
@@ -9568,7 +11069,7 @@
               '<div class="plan-compact-cell plan-compact-cell-date">' +
                 '<span class="plan-compact-label">Fecha</span>' +
                 '<span class="plan-loading-line primary">Cargando fecha...</span>' +
-                '<span class="plan-loading-line secondary">Semana en preparación</span>' +
+                '<span class="plan-loading-line secondary">Semana en preparaci&oacute;n</span>' +
               '</div>' +
               '<div class="plan-compact-cell plan-compact-cell-group">' +
                 '<span class="plan-compact-label">Grupo</span>' +
@@ -9593,7 +11094,7 @@
               '<div class="plan-compact-cell plan-compact-cell-phrase">' +
                 '<span class="plan-compact-label">Frase</span>' +
                 '<span class="plan-loading-phrase-chip">Frase de la semana</span>' +
-                '<span class="plan-loading-line secondary">Preparando el contenido de la planeación...</span>' +
+                '<span class="plan-loading-line secondary">Preparando el contenido de la planeaci\u00f3n...</span>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -9633,8 +11134,8 @@
 
     function getAlertTypeLabel(tipo) {
       return ({
-        planeacion_semana_cerrada_aprobacion: 'Aprobación pendiente',
-        planeacion_rechazada: 'Planeación rechazada',
+        planeacion_semana_cerrada_aprobacion: 'Aprobaci\u00f3n pendiente',
+        planeacion_rechazada: 'Planeaci\u00f3n rechazada',
         material_pendiente: 'Material pendiente',
         material_inicio_semana_pendiente: 'Material pendiente'
       })[String(tipo || '').trim()] || String(tipo || 'Alerta');
@@ -9644,7 +11145,11 @@
       const tipo = String((alerta && alerta.tipo_alerta) || '').trim();
       const descripcion = String((alerta && alerta.descripcion) || '').trim();
       if (tipo === 'material_pendiente' && descripcion.indexOf('Material no confirmado en carpetas') === 0) {
-        const nombre = descripcion.split('â€”').slice(1).join('â€”').trim();
+        const nombre = descripcion
+          .split(new RegExp('\\u2014|' + String.fromCharCode(0x00e2, 0x20ac, 0x201d)))
+          .slice(1)
+          .join(' - ')
+          .trim();
         return nombre
           ? ('Falta confirmar el material en carpetas para ' + nombre)
           : 'Falta confirmar el material en carpetas.';
@@ -9655,14 +11160,14 @@
     function getAlertStatusLabel(status) {
       return ({
         abierta: 'Abierta',
-        en_revision: 'En revisión',
+        en_revision: 'En revisi\u00f3n',
         resuelta: 'Resuelta'
       })[String(status || '').trim()] || String(status || 'Sin estado');
     }
 
     function isOperationalAlert(alerta) {
       const tipo = String(alerta && alerta.tipo_alerta || '').trim().toLowerCase();
-      return !/(obs|observacion|observación|nota|seguimiento)/.test(tipo);
+      return !/(obs|observacion|observaci\u00f3n|nota|seguimiento)/.test(tipo);
     }
 
     function isOpenMaterialAlert(alerta) {
@@ -9735,6 +11240,22 @@
         markAlertasFresh();
         persistCurrentBootSnapshot('alertas_local_material');
       }
+    }
+
+    function hideOpenMaterialAlertsForPlan(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId || !Array.isArray(state.alertas)) return false;
+      const nextAlertas = state.alertas.filter((alerta) => {
+        return !(
+          String((alerta && alerta.planeacion_id) || '').trim() === normalizedPlanId &&
+          isOpenMaterialAlert(alerta)
+        );
+      });
+      if (nextAlertas.length === state.alertas.length) return false;
+      state.alertas = nextAlertas;
+      markAlertasFresh();
+      persistCurrentBootSnapshot('alertas_material_ready_local');
+      return true;
     }
 
     function getVisibleOperationalAlerts() {
@@ -9842,7 +11363,7 @@
         card.hidden = (adminMode && state.activeAdminModule !== 'dashboard') || !visibleAlertas.length;
       }
       if (!visibleAlertas.length) {
-        host.innerHTML = '<div class="empty">Todavía no hay alertas visibles para esta sesión.</div>';
+        host.innerHTML = '<div class="empty">Todav&iacute;a no hay alertas visibles para esta sesi&oacute;n.</div>';
         return;
       }
 
@@ -9855,7 +11376,7 @@
           grupo ? getGrupoDisplayName(grupo) : '',
           materia ? (materia.nombre || materia.materia_id) : '',
           semana ? (semana.nombre_visible || semana.semana_id) : ''
-        ].filter(Boolean).join(' · ') : '';
+        ].filter(Boolean).join(' \u00b7 ') : '';
         const metaParts = [];
         if (contexto) metaParts.push(contexto);
         if (alerta.fecha_creacion) metaParts.push('Creada ' + formatFechaHumana(alerta.fecha_creacion));
@@ -9867,9 +11388,9 @@
                 '<div class="alert-status ' + escapeHtml(String(alerta.estado || '').trim()) + '">' + escapeHtml(getAlertStatusLabel(alerta.estado)) + '</div>' +
               '</div>' +
               '<div class="alert-summary">' + escapeHtml(formatAlertDescription(alerta)) + '</div>' +
-              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>' : '') +
+              (metaParts.length ? '<div class="alert-meta">' + escapeHtml(metaParts.join(' \u00b7 ')) + '</div>' : '') +
             '</div>' +
-        (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button" onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
+        (plan ? '<div class="alert-item-actions"><button class="btn-open-plan alert-open-btn" type="button"' + buildOpenPlanPrefetchIntentAttrs(plan.planeacion_id) + ' onclick="openPlanFromAlert(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button></div>' : '') +
           '</div>'
         );
       }).join('');
@@ -9884,6 +11405,8 @@
     }
 
     function renderAdminReporteCicloModule() {
+      const rebuiltTemplate = ensureAdminReporteCicloModuleTemplate();
+      if (rebuiltTemplate) bindAdminReporteCicloTemplateEvents();
       const ui = getReportSelectionState();
       const alumnos = state.catalogos.alumnos || [];
       const periodos = getAvailablePeriods();
@@ -9893,11 +11416,11 @@
       const selectedPeriodo = getSelectedReportePeriodoRow();
 
       if (adminAlumno) {
-        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' · ' + row.alumno_id, 'Selecciona alumno');
+        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' \u00b7 ' + row.alumno_id, 'Selecciona alumno');
         if (ui.alumno_id) adminAlumno.value = ui.alumno_id;
       }
       if (adminPeriodo) {
-        fillSelect(adminPeriodo, periodos, (row) => row.id, (row) => row.id + ' - ' + row.name, 'Selecciona período');
+        fillSelect(adminPeriodo, periodos, (row) => row.id, (row) => row.id + ' - ' + row.name, 'Selecciona per\u00edodo');
         if (ui.periodo_id) adminPeriodo.value = ui.periodo_id;
       }
       if ($('repAlumno') && ui.alumno_id) $('repAlumno').value = ui.alumno_id;
@@ -9909,9 +11432,9 @@
 
       if ($('adminReportSelectionSummary')) {
         $('adminReportSelectionSummary').innerHTML = [
-          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selección') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matrícula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' · ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Período</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selección') + '</strong></div>'
+          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selecci\u00f3n') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matr\u00edcula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' - ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Per\u00edodo</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selecci\u00f3n') + '</strong></div>'
         ].join('');
       }
       if ($('adminReportPreviewAlumno')) {
@@ -9919,11 +11442,11 @@
       }
       if ($('adminReportPreviewMeta')) {
         $('adminReportPreviewMeta').textContent = selectedAlumno
-          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' · Matrícula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' · Documento académico familiar')
-          : 'Grupo, matrícula y facilitadora se resolverán aquí.';
+          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' - Matr\u00edcula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' - Documento acad\u00e9mico familiar')
+          : 'Grupo, matr\u00edcula y facilitadora se resolver\u00e1n aqu\u00ed.';
       }
       if ($('adminReportPreviewPeriodo')) {
-        $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'Período') : 'Período';
+        $('adminReportPreviewPeriodo').textContent = selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || 'Per\u00edodo') : 'Per\u00edodo';
       }
 
       const adminHost = $('adminReportResult');
@@ -9956,12 +11479,41 @@
       };
       const data = await api('getEntornoPruebasStatus', payload);
       ui.preview = data.preview || null;
+      ui.previewSignature = getMaintenancePreviewSignature();
       ui.lastReset = data.last_reset || null;
       ui.availableCategories = Array.isArray(data.available_categories) ? data.available_categories : [];
       if (!options || !options.keepAudit) {
         ui.audit = ui.audit || null;
       }
       return data;
+    }
+
+    function getMaintenancePreviewSignature(categories, trashReportFiles) {
+      const ui = getMaintenanceUi();
+      const sourceCategories = Array.isArray(categories) ? categories : ui.selectedCategories;
+      const normalizedCategories = sourceCategories
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+        .sort();
+      const trash = typeof trashReportFiles === 'boolean' ? trashReportFiles : !!ui.trashReportFiles;
+      return JSON.stringify({
+        categories: normalizedCategories,
+        trash_report_files: trash
+      });
+    }
+
+    function isMaintenancePreviewCurrent() {
+      const ui = getMaintenanceUi();
+      return !!ui.preview && String(ui.previewSignature || '') === getMaintenancePreviewSignature();
+    }
+
+    function invalidateMaintenancePreviewIfParamsChanged() {
+      const ui = getMaintenanceUi();
+      if (!ui.preview) return false;
+      if (isMaintenancePreviewCurrent()) return false;
+      ui.preview = null;
+      ui.previewSignature = '';
+      return true;
     }
 
     function getMaintenanceCategories() {
@@ -9971,11 +11523,11 @@
         : [
             { key: 'planeaciones', label: 'Planeaciones y actividades', description: 'Limpia planeaciones, relaciones y actividades.', default_selected: true },
             { key: 'seguimiento', label: 'Seguimiento, alertas y notas', description: 'Limpia observaciones, alertas y notas.', default_selected: true },
-            { key: 'evaluaciones', label: 'Evaluaciones académicas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
-            { key: 'reportes', label: 'Cache y artefactos de reportes', description: 'Limpia cache y permite mover PDFs/docs a papelera.', default_selected: true },
+            { key: 'evaluaciones', label: 'Evaluaciones acad\u00e9micas', description: 'Limpia evaluaciones usadas por historial y reporte.', default_selected: true },
+            { key: 'reportes', label: 'Cach\u00e9 y artefactos de reportes', description: 'Limpia cach\u00e9 y permite mover PDFs/docs a papelera.', default_selected: true },
             { key: 'comunicacion', label: 'Notificaciones internas', description: 'Limpia avisos y notificaciones.', default_selected: false },
-            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar catálogos base.', default_selected: false },
-            { key: 'bitacora', label: 'Bitácora operativa', description: 'Limpia historial de acciones.', default_selected: false }
+            { key: 'apoyos', label: 'Refuerzos y talleres', description: 'Limpia apoyos operativos sin tocar cat\u00e1logos base.', default_selected: false },
+            { key: 'bitacora', label: 'Bit\u00e1cora operativa', description: 'Limpia historial de acciones.', default_selected: false }
           ];
       return available;
     }
@@ -9997,7 +11549,7 @@
       const ui = getMaintenanceUi();
       const rows = ui.preview && Array.isArray(ui.preview.per_sheet) ? ui.preview.per_sheet : [];
       if (!rows.length) {
-        return '<div class="admin-alumnos-empty"><div><strong>Sin datos cargados.</strong><div class="subtle">Usa â€œActualizar vista previaâ€ para revisar qué se limpiaría.</div></div></div>';
+        return '<div class="admin-alumnos-empty"><div><strong>Sin datos cargados.</strong><div class="subtle">Usa &ldquo;Actualizar vista previa&rdquo; para revisar qu&eacute; se limpiar&iacute;a.</div></div></div>';
       }
       return '<div class="admin-config-sheet-list">' + rows.map((row) => (
         '<div class="admin-config-sheet-row"><strong>' + escapeHtml(row.sheet) + '</strong><span class="mini">' + escapeHtml(String(row.rows || 0)) + ' fila(s)</span></div>'
@@ -10008,7 +11560,7 @@
       const ui = getMaintenanceUi();
       const audit = ui.audit || null;
       if (!audit) {
-        return '<div class="admin-alumnos-empty"><div><strong>Auditoría pendiente.</strong><div class="subtle">Ejecuta la auditoría para revisar duplicados, referencias huérfanas y estados inválidos.</div></div></div>';
+        return '<div class="admin-alumnos-empty"><div><strong>Auditor&iacute;a pendiente.</strong><div class="subtle">Ejecuta la auditor&iacute;a para revisar duplicados, referencias hu&eacute;rfanas y estados inv&aacute;lidos.</div></div></div>';
       }
       const issues = Array.isArray(audit.issues) ? audit.issues : [];
       const warnings = Array.isArray(audit.warnings) ? audit.warnings : [];
@@ -10021,7 +11573,7 @@
         '</div>',
         items.length
           ? ('<div class="admin-config-audit-list">' + items.map((item) => '<div class="admin-config-audit-item admin-config-note">' + escapeHtml(item) + '</div>').join('') + '</div>')
-          : '<div class="admin-note">La auditoría no detectó hallazgos en esta corrida.</div>'
+          : '<div class="admin-note">La auditor&iacute;a no detect&oacute; hallazgos en esta corrida.</div>'
       ].join('');
     }
 
@@ -10035,21 +11587,21 @@
         '<div class="admin-config-module">',
           '<article class="admin-placeholder">',
             '<div>',
-              '<h3>Configuración y mantenimiento</h3>',
-              '<p>Zona técnica para auditar el entorno online de pruebas y limpiar solo datos transaccionales, sin borrar hojas ni headers.</p>',
+              '<h3>Configuraci&oacute;n y mantenimiento</h3>',
+              '<p>Zona t&eacute;cnica para auditar el entorno online de pruebas y limpiar solo datos transaccionales, sin borrar hojas ni headers.</p>',
             '</div>',
             '<div class="admin-config-pills">',
               '<span class="admin-config-pill">Preserva estructura</span>',
               '<span class="admin-config-pill">Preview antes de reset</span>',
-              '<span class="admin-config-pill">Auditoría final</span>',
+              '<span class="admin-config-pill">Auditor&iacute;a final</span>',
             '</div>',
             lastReset
-              ? ('<div class="admin-note">Ášltimo reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
-              : '<div class="admin-note">Aún no hay un reset técnico registrado en este entorno.</div>',
+              ? ('<div class="admin-note">&Uacute;ltimo reset registrado: ' + escapeHtml(lastReset.at || '-') + ' por ' + escapeHtml(lastReset.by || '-') + (lastReset.role ? ' (' + escapeHtml(lastReset.role) + ')' : '') + '.</div>')
+              : '<div class="admin-note">A&uacute;n no hay un reset t&eacute;cnico registrado en este entorno.</div>',
           '</article>',
           '<div class="admin-config-grid">',
             '<section class="admin-config-card">',
-              '<div class="admin-config-card-head"><div><h3>Reset seguro del entorno</h3><div class="subtle">Selecciona qué capas operativas quieres limpiar.</div></div></div>',
+              '<div class="admin-config-card-head"><div><h3>Reset seguro del entorno</h3><div class="subtle">Selecciona qu&eacute; capas operativas quieres limpiar.</div></div></div>',
               '<div class="admin-config-categories">',
                 categories.map((item) => (
                   '<label class="admin-config-category">' +
@@ -10064,17 +11616,17 @@
               getMaintenanceSummaryMarkup(),
               '<div class="actions compact">',
                 '<button id="maintenancePreviewBtn" class="btn-secondary" type="button">Actualizar vista previa</button>',
-                '<button id="maintenanceAuditBtn" class="btn-ghost" type="button">Ejecutar auditoría</button>',
+                '<button id="maintenanceAuditBtn" class="btn-ghost" type="button">Ejecutar auditor&iacute;a</button>',
                 canReset
                   ? '<button id="maintenanceResetBtn" class="btn-primary" type="button">Resetear entorno de pruebas</button>'
                   : '<button class="btn-primary" type="button" disabled>Reset solo para admin</button>',
               '</div>',
-              '<div class="admin-config-danger"><strong>Protección activa:</strong> este reset solo limpia datos operativos. Catálogos maestros, semanas, períodos, facilitadores, alumnos, materias, submaterias y configuración base se conservan.</div>',
+              '<div class="admin-config-danger"><strong>Protecci&oacute;n activa:</strong> este reset solo limpia datos operativos. Cat&aacute;logos maestros, semanas, per&iacute;odos, facilitadores, alumnos, materias, submaterias y configuraci&oacute;n base se conservan.</div>',
             '</section>',
             '<section class="admin-config-card">',
               '<div class="admin-config-card-head"><div><h4>Vista previa</h4><div class="subtle">Conteo por hoja antes de ejecutar el reset.</div></div></div>',
               renderMaintenanceSheetRows(),
-              '<div class="admin-config-card-head"><div><h4>Auditoría</h4><div class="subtle">Chequeo rápido de consistencia estructural y operativa.</div></div></div>',
+              '<div class="admin-config-card-head"><div><h4>Auditor&iacute;a</h4><div class="subtle">Chequeo r&aacute;pido de consistencia estructural y operativa.</div></div></div>',
               renderMaintenanceAuditBlock(),
             '</section>',
           '</div>',
@@ -10090,11 +11642,16 @@
         input.addEventListener('change', () => {
           const ui = getMaintenanceUi();
           ui.selectedCategories = Array.from(document.querySelectorAll('.admin-config-category-input:checked')).map((node) => node.dataset.maintenanceCategory);
+          invalidateMaintenancePreviewIfParamsChanged();
+          renderAdminConfiguracionModule();
         });
       });
       if ($('maintenanceTrashFilesInput')) {
         $('maintenanceTrashFilesInput').addEventListener('change', (event) => {
-          getMaintenanceUi().trashReportFiles = !!event.currentTarget.checked;
+          const ui = getMaintenanceUi();
+          ui.trashReportFiles = !!event.currentTarget.checked;
+          invalidateMaintenancePreviewIfParamsChanged();
+          renderAdminConfiguracionModule();
         });
       }
       if ($('maintenancePreviewBtn')) {
@@ -10123,31 +11680,31 @@
         renderAdminConfiguracionModule();
         setBanner(
           ((audit && audit.summary && audit.summary.issues) || 0) > 0
-            ? 'Auditoría completada con hallazgos. Revísalos antes del reset.'
-            : 'Auditoría completada sin problemas críticos detectados.',
+            ? 'Auditor\u00eda completada con hallazgos. Rev\u00edsalos antes del reset.'
+            : 'Auditor\u00eda completada sin problemas cr\u00edticos detectados.',
           ((audit && audit.summary && audit.summary.issues) || 0) > 0 ? 'warning' : 'success'
         );
       }, { button, key: 'auditarEntornoPruebas' });
     }
 
     async function resetMaintenanceEnvironment(button) {
-      if (!canResetTestEnvironment()) throw new Error('Solo admin puede resetear el entorno de pruebas.');
-      const ui = getMaintenanceUi();
-      if (!ui.selectedCategories.length) throw new Error('Selecciona al menos una categoría.');
-      if (!ui.preview) {
-        await loadMaintenancePreview({ keepAudit: true });
-      }
-      const preview = ui.preview || { total_rows: 0, per_sheet: [] };
-      const confirmation = [
-        'Se limpiarán ' + String(preview.total_rows || 0) + ' filas en ' + String((preview.per_sheet || []).length || 0) + ' hojas.',
-        'Categorías: ' + ui.selectedCategories.join(', ') + '.',
-        ui.trashReportFiles ? 'Los PDFs/docs asociados en REPORTES_CACHE también se mandarán a papelera si existen.' : 'Los archivos físicos de reportes se conservarán.',
-        'La estructura del spreadsheet se mantiene.',
-        '¿Deseas continuar?'
-      ].join('\n');
-      if (!window.confirm(confirmation)) return;
-
+      const uiForActionKey = getMaintenanceUi();
       await handleAction('resetEntornoPruebas', async () => {
+        if (!canResetTestEnvironment()) throw new Error('Solo admin puede resetear el entorno de pruebas.');
+        const ui = getMaintenanceUi();
+        if (!ui.selectedCategories.length) throw new Error('Selecciona al menos una categor\u00eda.');
+        if (!isMaintenancePreviewCurrent()) {
+          throw new Error('Actualiza la vista previa antes de resetear. La selecci\u00f3n cambi\u00f3.');
+        }
+        const preview = ui.preview || { total_rows: 0, per_sheet: [] };
+        const confirmation = [
+          'Se limpiar\u00e1n ' + String(preview.total_rows || 0) + ' filas en ' + String((preview.per_sheet || []).length || 0) + ' hojas.',
+          'Categor\u00edas: ' + ui.selectedCategories.join(', ') + '.',
+          ui.trashReportFiles ? 'Los PDFs/docs asociados en REPORTES_CACHE tambi\u00e9n se mandar\u00e1n a papelera si existen.' : 'Los archivos f\u00edsicos de reportes se conservar\u00e1n.',
+          'La estructura del spreadsheet se mantiene.',
+          '\u00bfDeseas continuar?'
+        ].join('\n');
+        if (!window.confirm(confirmation)) return;
         const data = await api('resetEntornoPruebas', {
           categories: ui.selectedCategories,
           trash_report_files: !!ui.trashReportFiles,
@@ -10155,11 +11712,12 @@
           request_id: uid('RSTENV')
         });
         ui.preview = data.preview_after || null;
+        ui.previewSignature = getMaintenancePreviewSignature();
         ui.lastReset = data.last_reset || null;
         ui.audit = data.audit_after || null;
         await refreshAll({ silent: true });
         setBanner('Entorno de pruebas reseteado sin tocar la estructura base.', 'success');
-      }, { button, key: buildActionKey('resetEntornoPruebas', [ui.selectedCategories.join(','), ui.trashReportFiles ? 'trash' : 'keep']) });
+      }, { button, key: buildActionKey('resetEntornoPruebas', [uiForActionKey.selectedCategories.join(','), uiForActionKey.trashReportFiles ? 'trash' : 'keep']) });
     }
 
     function activateTab(tabName) {
@@ -10223,6 +11781,7 @@
       if (shouldRenderPlaneaciones) {
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
+        scheduleVisiblePlaneacionDetailPrefetch();
       }
       if (shouldRenderAlerts) renderAlertas();
       syncRoleUi();
@@ -10246,6 +11805,7 @@
         renderBaseSelects({ planeaciones: true });
         renderPlaneacionesList();
         renderPlanBuilderVisibility();
+        scheduleVisiblePlaneacionDetailPrefetch();
       }
       syncRoleUi();
       activateTab(state.activeTab);
@@ -10256,6 +11816,7 @@
       if (state.ui && state.ui.planeacionesCatalogosLoading) {
         throw new Error('Espera a que terminen de cargar materias y grupos.');
       }
+      clearPlanEditorValidation();
       const hasAdminPower = canUseAdminShell();
       const editorMode = state.planEditor.mode;
       const fallbackDate = editorMode === 'edit'
@@ -10263,23 +11824,29 @@
         : '';
       const fechaPlaneacion = $('planFecha').value || fallbackDate;
       const semana = getWeekByDateOrDraft(fechaPlaneacion);
-      if (!semana) throw new Error('Selecciona una fecha valida para construir la semana.');
+      if (!semana) throw createPlanEditorValidationError('Selecciona una fecha valida para construir la semana.', 'planFecha');
+      if (semana.draft) {
+        throw createPlanEditorValidationError('Esta semana no esta configurada. Elige una fecha dentro de una semana disponible o pide a admin agregarla.', 'planFecha');
+      }
       const materiaId = String($('planMateria').value || '').trim();
       const fraseSemana = $('planFrase').value.trim();
-      if (!materiaId) throw new Error('Selecciona una materia.');
-      const selectedSubmateriaId = $('planSubmateria') ? $('planSubmateria').value : '';
+      if (!materiaId) throw createPlanEditorValidationError('Selecciona una materia.', 'planMateria');
+      const selectedSubmateriaId = getPlanEditorSelectedSubmateriaId(materiaId);
       if (materiaRequiresPlanSubmateria(materiaId) && !selectedSubmateriaId) {
-        throw new Error('Selecciona una submateria.');
+        throw createPlanEditorValidationError('Selecciona una submateria.', 'planSubmateria');
+      }
+      if (getPlanEditorUsesTallerSelector(materiaId) && !getSelectedPlanTallerId()) {
+        throw createPlanEditorValidationError('Selecciona un taller.', 'planSubmateria');
       }
       const grupoIds = state.planEditor.mode === 'edit'
         ? (hasAdminPower ? getSelectedGroupIds() : [state.planEditor.lockedGrupoId])
         : getSelectedGroupIds();
-      if (!grupoIds.length) throw new Error('Selecciona al menos un grupo.');
+      if (!grupoIds.length) throw createPlanEditorValidationError('Selecciona al menos un grupo.', 'planGruposChecklist');
       if (editorMode === 'edit' && hasAdminPower && grupoIds.length !== 1) {
-        throw new Error('Administración debe seleccionar exactamente un grupo al editar una planeación.');
+        throw createPlanEditorValidationError('Administracion debe seleccionar exactamente un grupo al editar una planeacion.', 'planGruposChecklist');
       }
       const alumnosIds = getSelectedPlanAlumnos();
-      if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
+      if (!alumnosIds.length) throw createPlanEditorValidationError('Selecciona al menos un alumno.', 'planAlumnosChecklist');
       const includeSeguimientoOnEditor = canUseAdminShell() && editorMode === 'edit';
       const usePlaneacionOutboxFeedback = !hasAdminPower && isPlaneacionOutboxEnabled();
       const actividades = state.planEditor.activities
@@ -10292,17 +11859,17 @@
           last_known_updated_at: activity.last_known_updated_at || ''
         }))
         .filter((activity) => activity.texto);
-      if (!actividades.length) throw new Error('Captura al menos una actividad.');
+      if (!actividades.length) throw createPlanEditorValidationError('Captura al menos una actividad.', 'planActivitiesList');
       if (includeSeguimientoOnEditor) {
         actividades.forEach((activity, index) => {
           if (activity.realizada === 'no' && !activity.comentario_cierre) {
-            throw new Error('La actividad ' + (index + 1) + ' necesita comentario porque no se realizó.');
+            throw createPlanEditorValidationError('La actividad ' + (index + 1) + ' necesita comentario porque no se realizo.', 'planActivitiesList');
           }
         });
       }
 
       const previousPlan = editorMode === 'edit' ? getPlanById(state.planEditor.planId) : null;
-      const planEditorSnapshot = cloneJsonSafe(state.planEditor, state.planEditor);
+      const planEditorSnapshot = capturePlanEditorSnapshot();
       const targetStatus = editorMode === 'edit'
         ? String((previousPlan && previousPlan.estado) || 'borrador').trim()
         : (String(targetStatusOverride || '').trim() === 'activa' ? 'activa' : 'borrador');
@@ -10370,11 +11937,10 @@
           includePlaneaciones: true,
           includeAlertas: false
         });
-        setBanner('Guardando planeación en segundo plano...', 'info');
       } else if (optimisticCreatedPlans.length) {
         upsertPlaneacionesRows(optimisticCreatedPlans);
         resetPlanEditor();
-        state.openPlanId = optimisticCreatedIds[0] || '';
+        state.openPlanId = '';
         state.openPlanDraft = null;
         persistCurrentBootSnapshot('planeacion_editor_creando');
         focusPlaneacionCardSoon(optimisticCreatedIds[0]);
@@ -10383,7 +11949,6 @@
           includePlaneaciones: true,
           includeAlertas: false
         });
-        setBanner('Creando planeación...', 'info');
       }
       if (!hasAdminPower && isPlaneacionOutboxEnabled()) {
         if (editorMode === 'edit' && optimisticUpdatedPlan) {
@@ -10410,13 +11975,13 @@
               request_id: uid('PLAUPD')
             }
           }));
-          setBanner('Guardado local. Sincronizando en segundo plano...', 'success');
           return;
         }
         if (editorMode !== 'edit' && optimisticCreatedPlans.length) {
           enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('editor_create', {
             tempPlanIds: optimisticCreatedIds,
             optimisticPlans: optimisticCreatedPlans,
+            planEditorSnapshot,
             forceAlertas: shouldForceAlertasAfterSave,
             localMessage: 'Guardada localmente. Sincronizando creación...',
             requestAction: 'crearPlaneacion',
@@ -10433,7 +11998,6 @@
               request_id: uid('PLA')
             }
           }));
-          setBanner('Guardada localmente. Sincronizando creación en segundo plano...', 'success');
           return;
         }
       }
@@ -10552,10 +12116,10 @@
     async function saveObservation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
-      if (!$('obsPlan').value) throw new Error('Selecciona una planeación.');
+      if (!$('obsPlan').value) throw new Error('Selecciona una planeaci\u00f3n.');
       if (!$('obsAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('obsPeriodo').value) throw new Error('Selecciona un período.');
-      if (!$('obsNota').value.trim()) throw new Error('Escribe la observación.');
+      if (!$('obsPeriodo').value) throw new Error('Selecciona un per\u00edodo.');
+      if (!$('obsNota').value.trim()) throw new Error('Escribe la observaci\u00f3n.');
       await api('crearObsAlumno', {
         planeacion_id: $('obsPlan').value,
         alumno_id: $('obsAlumno').value,
@@ -10569,14 +12133,14 @@
       });
       $('obsNota').value = '';
       $('obsRevision').checked = false;
-      setBanner('Observación guardada.', 'success');
+      setBanner('Observaci\u00f3n guardada.', 'success');
     }
 
     async function saveEvaluation() {
       ensureLoggedIn();
       ensureBackendPeriodsReady();
       if (!$('evaAlumno').value) throw new Error('Selecciona un alumno.');
-      if (!$('evaPeriodo').value) throw new Error('Selecciona un período.');
+      if (!$('evaPeriodo').value) throw new Error('Selecciona un per\u00edodo.');
       if (!$('evaMateria').value) throw new Error('Selecciona una materia.');
       const data = await api('guardarEvaluacion', {
         alumno_id: $('evaAlumno').value,
@@ -10590,7 +12154,7 @@
         request_id: uid('EVA')
       });
       $('evaComentario').value = '';
-      setBanner('Evaluación guardada (' + data.evaluacion_id + ').', 'success');
+      setBanner('Evaluaci\u00f3n guardada (' + data.evaluacion_id + ').', 'success');
     }
 
     async function saveNote() {
@@ -10599,7 +12163,7 @@
       if (!$('notaAlumno').value) throw new Error('Selecciona un alumno.');
       if (!$('notaTexto').value.trim()) throw new Error('Escribe el texto de la nota.');
       if ($('notaAlcance').value === 'periodo' && !$('notaPeriodo').value) {
-        throw new Error('Selecciona un período para la nota.');
+        throw new Error('Selecciona un per\u00edodo para la nota.');
       }
       await api('crearNotaDirectora', {
         alumno_id: $('notaAlumno').value,
@@ -10611,7 +12175,7 @@
         request_id: uid('NTA')
       });
       $('notaTexto').value = '';
-      setBanner('Nota de dirección guardada.', 'success');
+      setBanner('Nota de direcci\u00f3n guardada.', 'success');
     }
 
     async function generateReportNow() {
@@ -10621,7 +12185,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un período.');
+      if (!periodoId) throw new Error('Selecciona un per\u00edodo.');
       const data = await api('requestReporteAlumno', {
         alumno_id: alumnoId,
         periodo_id: periodoId,
@@ -10633,7 +12197,7 @@
         setBanner('El reporte ya estaba vigente y listo para abrir.', 'success');
         return;
       }
-      setBanner('Solicitud registrada. El worker generará o actualizará el reporte en segundo plano.', 'success');
+      setBanner('Solicitud registrada. El worker generar\u00e1 o actualizar\u00e1 el reporte en segundo plano.', 'success');
     }
 
     async function requestReport() {
@@ -10643,7 +12207,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un período.');
+      if (!periodoId) throw new Error('Selecciona un per\u00edodo.');
       const data = await api('regenerarReporteAlumno', {
         alumno_id: alumnoId,
         periodo_id: periodoId,
@@ -10651,7 +12215,7 @@
       });
       data._selection = { alumno_id: alumnoId, periodo_id: periodoId };
       renderReportResult(data);
-      setBanner('Regeneración forzada registrada. El worker armará una nueva versión del PDF.', 'success');
+      setBanner('Regeneraci\u00f3n forzada registrada. El worker armar\u00e1 una nueva versi\u00f3n del PDF.', 'success');
     }
 
     async function checkReportStatus() {
@@ -10661,7 +12225,7 @@
       const alumnoId = getSelectedReporteAlumnoId();
       const periodoId = getSelectedReportePeriodoId();
       if (!alumnoId) throw new Error('Selecciona un alumno.');
-      if (!periodoId) throw new Error('Selecciona un período.');
+      if (!periodoId) throw new Error('Selecciona un per\u00edodo.');
       const data = await api('getReporteAlumnoStatus', {
         alumno_id: alumnoId,
         periodo_id: periodoId
@@ -10689,9 +12253,10 @@
         } catch (err) {
           if (err && err.code === 'INVALID_SESSION') {
             clearSessionScopedState();
-            setBanner('Tu sesión expiró o ya no es válida. Vuelve a iniciar sesión.', 'error', { anchor: feedbackAnchor });
+            setBanner('Tu sesi\u00f3n expir\u00f3 o ya no es v\u00e1lida. Vuelve a iniciar sesi\u00f3n.', 'error', { anchor: feedbackAnchor });
             return;
           }
+          if (showPlanEditorValidationError(err)) return;
           const handled = typeof options.onError === 'function'
             ? options.onError(err, { anchor: feedbackAnchor, button })
             : false;
@@ -10711,12 +12276,13 @@
 
     async function planAction(button, planId, action) {
       await handleAction(action, async () => {
-        const shouldCloseOpenCard = false;
+        const shouldCloseOpenCard = action === 'activarPlaneacion' &&
+          String(state.openPlanId || '').trim() === String(planId || '').trim();
         const previousPlan = getPlanById(planId);
         if (!previousPlan) throw new Error('Planeación no encontrada.');
         if (action === 'activarPlaneacion') {
           const localState = getPlanLocalSaveState(previousPlan);
-          if (isPlaneacionPendingCreation(previousPlan) || ['creating', 'saving', 'activating'].includes(localState)) {
+          if (isPlaneacionPendingCreation(previousPlan) || ['creating', 'saving', 'activating', 'syncing'].includes(localState)) {
             setBanner('Espera a que termine de guardarse antes de activarla.', 'info');
             return;
           }
@@ -10727,23 +12293,22 @@
           }
         }
         const previousPlanSnapshot = previousPlan ? cloneJsonSafe(previousPlan, previousPlan) : null;
+        const previousOpenPlanId = state.openPlanId;
+        const previousOpenPlanDraft = state.openPlanDraft
+          ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
+          : null;
         if (action === 'activarPlaneacion' && previousPlan) {
-          upsertPlaneacionRow(Object.assign({}, previousPlan, {
+          const optimisticPlan = applyOptimisticPlanPatch(planId, {
             estado: 'activa',
-            _local_save_state: 'activating',
-            _local_save_message: 'La semana ya está visible mientras termina de activarse.'
-          }));
-          if (state.openPlanId === planId) {
-            state.openPlanDraft = null;
-          }
-          persistCurrentBootSnapshot('planeacion_activando_local');
-          renderPlaneacionesList();
-          focusPlaneacionCardSoon(planId);
-          setBanner('Activando semana en segundo plano...', 'info');
-        }
-        if (shouldCloseOpenCard) {
-          state.openPlanId = '';
-          state.openPlanDraft = null;
+            fecha_actualizacion: String((previousPlan && previousPlan.fecha_actualizacion) || '').trim()
+          }, {
+            localState: 'activating',
+            localMessage: '',
+            snapshotKind: 'planeacion_activando_local',
+            forceLocalMaterialAlerts: true,
+            closeOpenCard: shouldCloseOpenCard
+          });
+          if (optimisticPlan) focusPlaneacionCardSoon(planId);
         }
         let response = null;
         try {
@@ -10751,6 +12316,8 @@
         } catch (err) {
           if (action === 'activarPlaneacion' && previousPlanSnapshot) {
             upsertPlaneacionRow(previousPlanSnapshot);
+            state.openPlanId = previousOpenPlanId;
+            state.openPlanDraft = previousOpenPlanDraft;
             persistCurrentBootSnapshot('planeacion_activacion_revertida');
             renderPlaneacionesList();
           }
@@ -10759,29 +12326,28 @@
         const updatedPlan = response && response.planeacion
           ? Object.assign({}, previousPlan || {}, response.planeacion)
           : null;
-        if (action === 'activarPlaneacion' && updatedPlan && state.openPlanId === planId) {
-          const currentOpenPlan = getPlanById(planId) || previousPlan || updatedPlan;
-          const activatedOpenPlan = Object.assign({}, currentOpenPlan, updatedPlan, {
+        let appliedLocally = false;
+        if (action === 'activarPlaneacion' && updatedPlan) {
+          applyOptimisticPlanPatch(planId, Object.assign({}, updatedPlan, {
             estado: 'activa',
-            fecha_actualizacion: String((updatedPlan && updatedPlan.fecha_actualizacion) || (currentOpenPlan && currentOpenPlan.fecha_actualizacion) || '').trim()
+            fecha_actualizacion: String((updatedPlan && updatedPlan.fecha_actualizacion) || '').trim()
+          }), {
+            localState: '',
+            localMessage: '',
+            snapshotKind: 'planeacion_activacion_confirmada',
+            forceLocalMaterialAlerts: true,
+            closeOpenCard: shouldCloseOpenCard
           });
-          if (currentOpenPlan && currentOpenPlan.detail_loaded) {
-            activatedOpenPlan.detail_loaded = true;
-            activatedOpenPlan.boot_detail_loaded = !!currentOpenPlan.boot_detail_loaded;
-            activatedOpenPlan.actividades = Array.isArray(currentOpenPlan.actividades) ? currentOpenPlan.actividades : [];
-            activatedOpenPlan.alumnos = Array.isArray(currentOpenPlan.alumnos) ? currentOpenPlan.alumnos : [];
-            activatedOpenPlan.obs_semana = Array.isArray(currentOpenPlan.obs_semana) ? currentOpenPlan.obs_semana : [];
-            activatedOpenPlan.obs_alumno_final = Array.isArray(currentOpenPlan.obs_alumno_final) ? currentOpenPlan.obs_alumno_final : [];
-            activatedOpenPlan.obs_loaded = !!currentOpenPlan.obs_loaded;
-          }
-          upsertPlaneacionRow(activatedOpenPlan);
-          state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(
-            activatedOpenPlan,
-            buildOpenPlanDraft(activatedOpenPlan)
-          );
+          refreshPlaneacionesAlertsDeferred({
+            force: true,
+            includeStats: false,
+            includePlaneaciones: false
+          }).catch(() => {});
+          appliedLocally = true;
+        } else {
+          appliedLocally = !hasActivePlaneacionesFilters() &&
+            await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
         }
-        const appliedLocally = !hasActivePlaneacionesFilters() &&
-          await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
         if (!appliedLocally) {
           await refreshPlaneacionesSurface();
         }
@@ -10828,7 +12394,7 @@
     async function saveGeneralObservation(button, planId) {
       const input = $('obs-general-' + planId);
       const texto = input ? input.value.trim() : '';
-      if (!texto) throw new Error('Escribe la observación general.');
+      if (!texto) throw new Error('Escribe la observaci\u00f3n general.');
       await handleAction('crearObsSemana', async () => {
         const previousValue = input ? input.value : '';
         if (input) input.value = '';
@@ -10837,7 +12403,7 @@
           await refreshSinglePlaneacionSurface(planId, {
             snapshotKind: 'obs_general'
           });
-          setBanner('Observación general guardada.', 'success');
+          setBanner('Observaci\u00f3n general guardada.', 'success');
         } catch (error) {
           if (input) input.value = previousValue;
           throw error;
@@ -10848,13 +12414,13 @@
     async function saveAlumnoFinalObservation(button, planId, alumnoId) {
       const input = $('obs-final-' + planId + '-' + alumnoId);
       const nota = input ? input.value.trim() : '';
-      if (!nota) throw new Error('Escribe la observación final del alumno.');
+      if (!nota) throw new Error('Escribe la observaci\u00f3n final del alumno.');
       await handleAction('guardarObsAlumnoFinal', async () => {
         await persistAlumnoFinalObservation(planId, alumnoId, nota);
         await refreshSinglePlaneacionSurface(planId, {
           snapshotKind: 'obs_final_alumno'
         });
-        setBanner('Observación final por alumno guardada.', 'success');
+        setBanner('Observaci\u00f3n final por alumno guardada.', 'success');
       }, { button, key: buildActionKey('guardarObsAlumnoFinal', [planId, alumnoId, nota.slice(0, 40)]) });
     }
 
@@ -10866,10 +12432,10 @@
 
     async function saveAllAlumnoFinalObservations(button, planId) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('Planeación no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       const payloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
-      if (!payloads.length) throw new Error('Escribe al menos una observación final.');
+      if (!payloads.length) throw new Error('Escribe al menos una observaci\u00f3n final.');
 
       await handleAction('guardarObsAlumnoFinalLote', async () => {
         await persistAlumnoFinalObservationBatch(planId, payloads);
@@ -10897,7 +12463,7 @@
         key: buildActionKey('editPlanLoad', [planId]),
         busyText: 'Abriendo...'
       });
-      if (!plan) throw new Error('Planeación no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       loadPlanIntoEditor(plan);
       activateTab('planeaciones');
     }
@@ -10905,7 +12471,7 @@
     function buildOpenPlanSaveRequest(plan, draft) {
       const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha válida.');
+      if (!semana) throw new Error('Selecciona una fecha v\u00e1lida.');
       const materiaId = String((draft && draft.materia_id) || (plan && plan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
       const submateriaId = String((draft && draft.submateria_id) || '').trim();
@@ -10966,9 +12532,9 @@
 
     async function persistOpenPlanDraft(button, planId, draft, options = {}) {
       const plan = getPlanById(planId);
-      if (!plan || !draft) throw new Error('Planeación no encontrada.');
+      if (!plan || !draft) throw new Error('Planeaci\u00f3n no encontrada.');
       const request = buildOpenPlanSaveRequest(plan, draft);
-      const successMessage = options.successMessage || 'Planeación actualizada.';
+      const successMessage = options.successMessage || 'Planeaci\u00f3n actualizada.';
       const actionLabel = options.actionLabel || 'guardarPlaneacionCompletaInline';
       const actionKey = options.actionKey || buildActionKey(actionLabel, [planId, request.fallbackDate, request.alumnosIds.join(',')]);
       await handleAction(actionLabel, async () => {
@@ -11009,15 +12575,53 @@
       const plan = getPlanById(planId);
       const draft = getOpenPlanDraft(plan);
       await persistOpenPlanDraft(button, planId, draft, {
-        successMessage: 'Planeación actualizada.',
+        successMessage: 'Planeaci\u00f3n actualizada.',
         actionLabel: 'guardarPlaneacionCompletaInline',
         forceAlertas: planDraftAffectsMaterialAlerts(draft)
       });
     }
 
+    function buildMaterialReadyDraft(draft) {
+      const nextDraft = cloneJsonSafe(draft, draft);
+      nextDraft.activities = (Array.isArray(nextDraft.activities) ? nextDraft.activities : []).map((activity) => {
+        if (normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere') !== 'no_listo') {
+          return activity;
+        }
+        return Object.assign({}, activity, {
+          material_en_carpeta: 'listo'
+        });
+      });
+      nextDraft.activitiesDirty = true;
+      return nextDraft;
+    }
+
+    function buildMaterialReadyPlanPatch(plan, readyDraft) {
+      const draftActivitiesById = new Map(
+        (Array.isArray(readyDraft && readyDraft.activities) ? readyDraft.activities : [])
+          .map((activity) => [String((activity && activity.actividad_id) || '').trim(), activity])
+          .filter((entry) => entry[0])
+      );
+      const sourceActivities = Array.isArray(plan && plan.actividades) && plan.actividades.length
+        ? plan.actividades
+        : (Array.isArray(readyDraft && readyDraft.activities) ? readyDraft.activities : []);
+      return {
+        material_confirmado: 'si',
+        actividades: sourceActivities.map((activity) => {
+          const activityId = String((activity && activity.actividad_id) || '').trim();
+          const draftActivity = activityId ? draftActivitiesById.get(activityId) : null;
+          const nextMaterial = draftActivity
+            ? normalizeMaterialStatus(draftActivity.material_en_carpeta)
+            : (normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere') === 'no_listo' ? 'listo' : normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'));
+          return Object.assign({}, activity, {
+            material_en_carpeta: nextMaterial
+          });
+        })
+      };
+    }
+
     async function saveMultiGroupShared(button, entryKey) {
       const entry = getPlaneacionEntryByKey(entryKey);
-      if (!entry || !entry.isMulti) throw new Error('Planeación multigrupo no encontrada.');
+      if (!entry || !entry.isMulti) throw new Error('Planeaci\u00f3n multigrupo no encontrada.');
       const draft = getMultiGroupSharedDraft(entry);
       await handleAction('guardarPlaneacionMultigrupo', async () => {
         await persistMultiGroupSharedApi(entry, draft);
@@ -11045,13 +12649,18 @@
       const normalizedPlanId = String(planId || '').trim();
       const input = $('obs-general-' + normalizedPlanId);
       const inputValue = input ? String(input.value || '').trim() : '';
-      if (inputValue) return inputValue;
-      if (state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId) {
-        const draftValue = String(state.openPlanDraft.generalObservationText || '').trim();
-        if (draftValue) return draftValue;
-      }
       const currentPlan = getPlanById(normalizedPlanId);
-      return currentPlan ? String(currentPlan._draft_general_observation_text || '').trim() : '';
+      const storedValue = currentPlan ? String(currentPlan._draft_general_observation_text || '').trim() : '';
+      const currentDraft = state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+        ? state.openPlanDraft
+        : null;
+      const draftValue = currentDraft ? String(currentDraft.generalObservationText || '').trim() : '';
+      const draftDirty = !!(currentDraft && currentDraft.generalObservationDirty === true);
+      if (inputValue) {
+        if (draftDirty || inputValue !== storedValue) return inputValue;
+        return '';
+      }
+      return draftDirty ? draftValue : '';
     }
 
     function collectPendingAlumnoFinalObservations(planId, plan, entry) {
@@ -11161,7 +12770,7 @@
 
     function buildPlanSaveTransactionBundle(config = {}) {
       const normalizedPlanId = String(config.planId || '').trim();
-      if (!normalizedPlanId) throw new Error('Planeación no encontrada.');
+      if (!normalizedPlanId) throw new Error('Planeaci\u00f3n no encontrada.');
       if (!state.ui) state.ui = {};
       if (!state.ui.pendingPlanSaveTransactions) state.ui.pendingPlanSaveTransactions = {};
       const fingerprint = buildPlanSaveTransactionFingerprint(config);
@@ -11324,7 +12933,11 @@
 
     function isPlaneacionOutboxRetryableError(error) {
       const code = String((error && error.code) || '').trim().toUpperCase();
+      const message = String((error && error.message) || '').trim().toLowerCase();
       if (!code) return true;
+      if (code === 'SERVER_ERROR' && message.includes('no cuentas con el permiso necesario para acceder al documento solicitado')) {
+        return false;
+      }
       return ![
         'VALIDATION_ERROR',
         'FULL_SAVE_REQUIRED',
@@ -11516,6 +13129,11 @@
       state.openPlanId = item.shouldSavePlan ? item.planId : state.openPlanId;
       if (state.openPlanId !== item.planId) state.openPlanDraft = null;
       await refreshPlaneacionesSurface({ includeAlertas: false });
+      const restoredDraftAfterRefresh = item.shouldSavePlan &&
+        restoreOpenPlanDraftAfterSaveRefresh(item.planId, item.draft, outboxGeneralText, outboxFinalPayloads);
+      if (!restoredDraftAfterRefresh) {
+        restorePendingPlanObservationInputs(item.planId, outboxGeneralText, outboxFinalPayloads);
+      }
       refreshPlaneacionesAlertsDeferred({
         force: !!item.shouldForceAlertasAfterSave,
         includeStats: false,
@@ -11535,7 +13153,15 @@
         lastErrorMessage: formatApiError(error),
         nextAttemptAt: retryable ? new Date(Date.now() + nextDelay).toISOString() : ''
       });
-      if (updatedItem) {
+      if (!retryable && String((item && item.kind) || '').trim() === 'editor_create') {
+        rollbackFailedPlaneacionOutboxCreate(Object.assign({}, updatedItem || item, {
+          retryable,
+          attempts,
+          lastErrorCode: String((error && error.code) || '').trim(),
+          lastErrorMessage: formatApiError(error)
+        }));
+        removePlaneacionOutboxItem(item.id);
+      } else if (updatedItem) {
         applyPlaneacionOutboxVisualState(updatedItem);
         persistCurrentBootSnapshot('planeacion_outbox_error');
       }
@@ -11547,7 +13173,7 @@
       if (retryable && shouldNotifyUser) {
         setBanner(
           String((error && error.code) || '').trim() === 'INVALID_SESSION'
-            ? 'Hay cambios guardados localmente pendientes de sincronizar. Vuelve a iniciar sesión.'
+            ? 'Hay cambios guardados localmente pendientes de sincronizar. Vuelve a iniciar sesi\u00f3n.'
             : 'Hay cambios guardados localmente pendientes de sincronizar. Seguiremos intentando.',
           'info'
         );
@@ -11613,9 +13239,9 @@
 
     async function refreshSinglePlaneacionSurface(planId, options = {}) {
       const normalizedPlanId = String(planId || '').trim();
-      if (!normalizedPlanId) throw new Error('Planeación no encontrada.');
+      if (!normalizedPlanId) throw new Error('Planeaci\u00f3n no encontrada.');
       const updatedPlan = await fetchPlaneacionDetalle(normalizedPlanId);
-      if (!updatedPlan || !updatedPlan.planeacion_id) throw new Error('No se pudo recargar la planeación.');
+      if (!updatedPlan || !updatedPlan.planeacion_id) throw new Error('No se pudo recargar la planeaci\u00f3n.');
       upsertPlaneacionRow(updatedPlan);
       syncInlineSavedPlanDraft(normalizedPlanId, updatedPlan, options);
       persistCurrentBootSnapshot(options.snapshotKind || 'planeacion_inline_save');
@@ -11717,7 +13343,7 @@
 
     async function persistOpenPlanDraftApi(planId, draft, providedPlan, providedRequest) {
       const plan = providedPlan || getPlanById(planId);
-      if (!plan || !draft) throw new Error('Planeación no encontrada.');
+      if (!plan || !draft) throw new Error('Planeaci\u00f3n no encontrada.');
       const request = providedRequest || buildOpenPlanSaveRequest(plan, draft);
       const shouldUseLiteSave = shouldUseLightOpenPlanSave(plan, draft, request);
       const trackingChanged = didOpenPlanActivityProgressChange(plan, request);
@@ -11773,6 +13399,43 @@
       state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(mergedPlan), mergedPlan);
     }
 
+    function applyOptimisticPlanPatch(planId, patch = {}, options = {}) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const currentPlan = getPlanById(normalizedPlanId);
+      if (!currentPlan) return null;
+      const patchValue = typeof patch === 'function' ? (patch(currentPlan) || {}) : (patch || {});
+      const nextPlan = Object.assign({}, currentPlan, patchValue);
+      if (options.localState !== undefined) nextPlan._local_save_state = String(options.localState || '').trim();
+      if (options.localMessage !== undefined) nextPlan._local_save_message = String(options.localMessage || '').trim();
+      const appliedPlan = upsertPlaneacionRow(nextPlan) || nextPlan;
+      if (options.forceLocalMaterialAlerts) injectLocalMaterialAlerts(appliedPlan);
+      if (options.closeOpenCard) {
+        state.openPlanId = '';
+        state.openPlanDraft = null;
+      } else if (state.openPlanId === normalizedPlanId && options.preserveOpenDraft !== false) {
+        const currentDraft = state.openPlanDraft &&
+          String(state.openPlanDraft.planId || '').trim() === normalizedPlanId
+          ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
+          : null;
+        if (currentDraft) {
+          state.openPlanDraft = syncOpenPlanDraftConcurrencyHints(
+            appliedPlan,
+            preserveOpenPlanDraftLocalNotes(normalizedPlanId, currentDraft, appliedPlan)
+          );
+        } else if (appliedPlan.detail_loaded) {
+          state.openPlanDraft = preserveOpenPlanDraftLocalNotes(
+            normalizedPlanId,
+            buildOpenPlanDraft(appliedPlan),
+            appliedPlan
+          );
+        }
+      }
+      persistCurrentBootSnapshot(options.snapshotKind || 'planeacion_optimistic_patch');
+      if (options.render !== false) renderPlaneacionesList();
+      return appliedPlan;
+    }
+
     async function applySavedPlaneacionTransition(planId, updatedPlan, options = {}) {
       if (!updatedPlan || !updatedPlan.planeacion_id) return false;
       upsertPlaneacionRow(updatedPlan);
@@ -11790,12 +13453,12 @@
     }
 
     function buildMultiGroupSharedSavePayload(entry, draft) {
-      if (!entry || !entry.isMulti) throw new Error('Planeación multigrupo no encontrada.');
+      if (!entry || !entry.isMulti) throw new Error('Planeaci\u00f3n multigrupo no encontrada.');
       if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
       const selectedPlan = getOpenPlaneacionEntry(entry) || entry.representative || null;
       const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha válida para el multigrupo.');
+      if (!semana) throw new Error('Selecciona una fecha v\u00e1lida para el multigrupo.');
       const materiaId = String((draft && draft.materia_id) || (selectedPlan && selectedPlan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
       const submateriaId = String(((draft && draft.submateria_id) || '')).trim();
@@ -11836,20 +13499,14 @@
 
     async function savePlanChanges(button, planId, entryKey) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('Planeación no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = entryKey ? getPlaneacionEntryByKey(entryKey) : null;
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
       const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
-      const fallbackGeneralText =
-        String(
-          (state.openPlanDraft && String(state.openPlanDraft.planId || '').trim() === String(planId || '').trim()
-            ? state.openPlanDraft.generalObservationText
-            : '') ||
-          plan._draft_general_observation_text ||
-          ''
-        ).trim();
-      const generalText = getPendingGeneralObservationText(planId) || fallbackGeneralText;
+      const saveScrollAnchor = captureScrollAnchor(button, 'plan-save-' + planId);
+      const restoreSaveScrollAnchor = () => restoreScrollAnchor(saveScrollAnchor);
+      const generalText = getPendingGeneralObservationText(planId);
       const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
       if (!finalPayloads.length) {
         finalPayloads.push(...collectStoredAlumnoFinalObservations(planId, plan, entry));
@@ -11861,15 +13518,23 @@
           )
         : null;
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
-      const shouldSavePlan = !!planDraft;
+      const shouldSavePlanDraft = !!planDraft;
       const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
-      const planSaveRequest = shouldSavePlan ? buildOpenPlanSaveRequest(plan, planDraft) : null;
-      const shouldPersistOpenPlanActivities = shouldSavePlan
+      const planSaveRequest = shouldSavePlanDraft ? buildOpenPlanSaveRequest(plan, planDraft) : null;
+      const openPlanStructureChanged = shouldSavePlanDraft
+        ? buildOpenPlanStructuralSignatureFromDraft(planDraft) !== buildOpenPlanStructuralSignatureFromPlan(plan)
+        : false;
+      const shouldPersistOpenPlanActivities = shouldSavePlanDraft
         ? (planDraft.activitiesDirty === true || didOpenPlanActivityProgressChange(plan, planSaveRequest))
         : false;
-      const shouldRefreshMaterialAlertas = shouldSavePlan
+      const shouldRefreshMaterialAlertas = shouldSavePlanDraft
         ? didOpenPlanMaterialStateChange(plan, planSaveRequest)
         : false;
+      const shouldSavePlan = shouldSavePlanDraft && (
+        openPlanStructureChanged ||
+        shouldPersistOpenPlanActivities ||
+        shouldRefreshMaterialAlertas
+      );
       const shouldForceAlertasAfterSave =
         (shouldSavePlan && shouldRefreshMaterialAlertas && planDraftAffectsMaterialAlerts(planDraft)) ||
         (shouldSaveShared && planDraftAffectsMaterialAlerts(sharedDraft));
@@ -11932,6 +13597,7 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
+          restoreSaveScrollAnchor();
         }
         if (shouldUsePlaneacionOutbox) {
           enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('open_save', {
@@ -11975,8 +13641,8 @@
             includePlaneaciones: true,
             includeAlertas: false
           });
+          restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
-          flashButtonLabel(button, 'Guardado');
           return;
         }
 
@@ -11984,13 +13650,13 @@
         let savedPlanResponse = null;
         try {
           const compositeResponse = await persistPlanChangesCompositeApi(combinedSaveRequest);
-          if (generalText) savedParts.push('observación general');
+          if (generalText) savedParts.push('observaci\u00f3n general');
           if (finalPayloads.length) savedParts.push('observaciones finales');
           if (shouldSavePlan) {
             savedPlanResponse = compositeResponse && compositeResponse.plan_save
               ? compositeResponse.plan_save
               : (compositeResponse && compositeResponse.planeacion ? { planeacion: compositeResponse.planeacion } : null);
-            savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeación');
+            savedParts.push(entry && entry.isMulti ? 'grupo activo' : 'planeaci\u00f3n');
           }
           if (shouldSaveShared) {
             const freshEntry = getPlaneacionEntryByKey(entryKey) || entry;
@@ -12009,6 +13675,7 @@
               includePlaneaciones: true,
               includeAlertas: false
             });
+            restoreSaveScrollAnchor();
             restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           }
           throw err;
@@ -12042,6 +13709,7 @@
           }));
           persistCurrentBootSnapshot('guardar_cambios_local');
           renderPlaneacionesList();
+          restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           scheduleClearLocalPlaneacionFeedback(planId);
           if (shouldSavePlan) {
@@ -12059,6 +13727,7 @@
           }));
           persistCurrentBootSnapshot('guardar_cambios_obs_local');
           renderPlaneacionesList();
+          restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
           scheduleClearLocalPlaneacionFeedback(planId);
           queuePlaneacionPostSaveSync(planId, {
@@ -12069,9 +13738,16 @@
           });
         } else {
           state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
-          state.openPlanDraft = null;
+          if (!shouldSavePlan) state.openPlanDraft = null;
           await refreshPlaneacionesSurface({ includeAlertas: false });
-          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          restoreSaveScrollAnchor();
+          const restoredDraftAfterRefresh = shouldSavePlan &&
+            restoreOpenPlanDraftAfterSaveRefresh(planId, outboxDraft, generalText, finalPayloads);
+          if (!restoredDraftAfterRefresh) {
+            restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          } else {
+            restoreSaveScrollAnchor();
+          }
           if (shouldSavePlan || shouldSaveShared) {
             refreshPlaneacionesAlertsDeferred({
               force: shouldForceAlertasAfterSave,
@@ -12084,25 +13760,24 @@
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
         });
-        flashButtonLabel(button, 'Guardado');
       }, {
         button,
         key: buildActionKey('guardarCambiosPlaneacion', [planId, entryKey || '', generalText.slice(0, 40), finalPayloads.map((row) => row.alumnoId).join(','), shouldSavePlan ? 'plan' : '', shouldSaveShared ? 'multi' : '']),
-        busyText: 'Guardando cambios...'
+        busyText: 'Sincronizando...'
       });
     }
 
     async function markPlanMaterialReady(button, planId) {
       if (!window.confirm('Esto marcará como listo el material pendiente de esta planeación.')) return;
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('Planeación no encontrada.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       if (entry && entry.isMulti) {
         const draft = getMultiGroupSharedDraft(entry);
-        if (!draft) throw new Error('Planeación multigrupo no encontrada.');
+        if (!draft) throw new Error('Planeaci\u00f3n multigrupo no encontrada.');
         const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
         if (!pendingActivities.length) {
-          setBanner('Ya no hay material pendiente en esta planeación multigrupo.', 'info', { button });
+          setBanner('Ya no hay material pendiente en esta planeaci\u00f3n multigrupo.', 'info', { button });
           return;
         }
         pendingActivities.forEach((activity) => {
@@ -12121,22 +13796,80 @@
         });
         return;
       }
-      const draft = getOpenPlanDraft(plan);
-      if (!draft) throw new Error('Planeación no encontrada.');
+      const draft = syncOpenPlanDraftFromVisibleControls(getOpenPlanDraft(plan));
+      if (!draft) throw new Error('Planeaci\u00f3n no encontrada.');
       const pendingActivities = (draft.activities || []).filter((activity) => normalizeMaterialStatus(activity.material_en_carpeta) === 'no_listo');
       if (!pendingActivities.length) {
-        setBanner('Ya no hay material pendiente en esta planeación.', 'info', { button });
+        setBanner('Ya no hay material pendiente en esta planeaci\u00f3n.', 'info', { button });
         return;
       }
-      pendingActivities.forEach((activity) => {
-        activity.material_en_carpeta = 'listo';
-      });
-      await persistOpenPlanDraft(button, planId, draft, {
-        successMessage: 'Material marcado como listo.',
-        actionLabel: 'marcarMaterialListo',
-        actionKey: buildActionKey('marcarMaterialListo', [planId, String(pendingActivities.length)]),
-        busyText: 'Marcando...',
-        forceAlertas: true
+      const previousPlanSnapshot = cloneJsonSafe(plan, plan);
+      const previousDraftSnapshot = state.openPlanDraft &&
+        String(state.openPlanDraft.planId || '').trim() === String(planId || '').trim()
+        ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
+        : null;
+      const previousAlertasSnapshot = cloneJsonSafe(state.alertas, state.alertas) || [];
+      const readyDraft = buildMaterialReadyDraft(draft);
+      const readyPatch = buildMaterialReadyPlanPatch(plan, readyDraft);
+      const request = buildOpenPlanSaveRequest(plan, readyDraft);
+      await handleAction('marcarMaterialListo', async () => {
+        state.openPlanDraft = readyDraft;
+        applyOptimisticPlanPatch(planId, readyPatch, {
+          localState: 'syncing',
+          localMessage: 'Sincronizando material...',
+          snapshotKind: 'material_ready_local',
+          render: false
+        });
+        hideOpenMaterialAlertsForPlan(planId);
+        renderPlaneacionesSurface({
+          includeStats: false,
+          includePlaneaciones: true,
+          includeAlertas: true
+        });
+        let response = null;
+        try {
+          response = await persistOpenPlanDraftApi(planId, readyDraft, plan, request);
+        } catch (err) {
+          if (previousPlanSnapshot) upsertPlaneacionRow(previousPlanSnapshot);
+          if (state.openPlanId === planId) {
+            state.openPlanDraft = previousDraftSnapshot;
+          }
+          state.alertas = previousAlertasSnapshot;
+          markAlertasFresh();
+          persistCurrentBootSnapshot('material_ready_revertida');
+          renderPlaneacionesSurface({
+            includeStats: false,
+            includePlaneaciones: true,
+            includeAlertas: true
+          });
+          throw err;
+        }
+        const updatedPlan = response && response.planeacion
+          ? Object.assign({}, getPlanById(planId) || plan, response.planeacion)
+          : null;
+        applyOptimisticPlanPatch(planId, Object.assign({}, readyPatch, updatedPlan || {}, {
+          material_confirmado: 'si'
+        }), {
+          localState: '',
+          localMessage: '',
+          snapshotKind: 'material_ready_confirmed',
+          render: false
+        });
+        renderPlaneacionesSurface({
+          includeStats: false,
+          includePlaneaciones: true,
+          includeAlertas: true
+        });
+        refreshPlaneacionesAlertsDeferred({
+          force: true,
+          includeStats: false,
+          includePlaneaciones: false
+        }).catch(() => {});
+        setBanner('Material marcado como listo.', 'success');
+      }, {
+        button,
+        key: buildActionKey('marcarMaterialListo', [planId, String(pendingActivities.length)]),
+        busyText: 'Sincronizando...'
       });
     }
 
@@ -12144,7 +13877,7 @@
       await handleAction('aprobarPlaneacionPendiente', async () => {
         await api('aprobarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('APP') });
         await refreshPlaneacionesSurface();
-        setBanner('Planeación aprobada.', 'success');
+        setBanner('Planeaci\u00f3n aprobada.', 'success');
       }, { button, key: buildActionKey('aprobarPlaneacionPendiente', [planId]) });
     }
 
@@ -12158,7 +13891,7 @@
           request_id: uid('REJ')
         });
         await refreshPlaneacionesSurface();
-        setBanner('Planeación rechazada.', 'success');
+        setBanner('Planeaci\u00f3n rechazada.', 'success');
       }, { button, key: buildActionKey('rechazarPlaneacionPendiente', [planId, comentario.trim().slice(0, 30)]) });
     }
 
@@ -12166,7 +13899,7 @@
       await handleAction('reenviarPlaneacionPendiente', async () => {
         await api('reenviarPlaneacionPendiente', { planeacion_id: planId, request_id: uid('REAPP') });
         await refreshPlaneacionesSurface();
-        setBanner('Planeación reenviada a aprobación.', 'success');
+        setBanner('Planeaci\u00f3n reenviada a aprobaci\u00f3n.', 'success');
       }, { button, key: buildActionKey('reenviarPlaneacionPendiente', [planId]) });
     }
 
@@ -12177,7 +13910,10 @@
       modal.dataset.planId = planId;
       modal.hidden = false;
       input.value = '';
-      clearClosePlanModalError();
+      const syncBlock = syncClosePlanModalState(planId);
+      if (syncBlock && syncBlock.kind === 'syncing') {
+        scheduleClosePlanSyncWatch(planId);
+      }
       window.requestAnimationFrame(() => input.focus());
     }
 
@@ -12185,10 +13921,12 @@
       const modal = $('closePlanModal');
       const input = $('closePlanObsInput');
       if (!modal) return;
+      clearClosePlanSyncWatchTimer();
       modal.hidden = true;
       modal.dataset.planId = '';
       if (input) input.value = '';
       clearClosePlanModalError();
+      setClosePlanConfirmBlocked(null);
     }
 
     function setClosePlanModalError(message) {
@@ -12204,6 +13942,80 @@
       if (!errorBox) return;
       errorBox.textContent = '';
       errorBox.hidden = true;
+    }
+
+    function clearClosePlanSyncWatchTimer() {
+      if (!state.ui || !state.ui.closePlanSyncWatchTimer) return;
+      window.clearTimeout(state.ui.closePlanSyncWatchTimer);
+      state.ui.closePlanSyncWatchTimer = null;
+    }
+
+    function getClosePlanSyncBlock(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const plan = getPlanById(normalizedPlanId);
+      const localState = getPlanLocalSaveState(plan);
+      if (hasPendingPlaneacionOutboxForPlan(normalizedPlanId) || ['creating', 'saving', 'activating', 'syncing'].includes(localState)) {
+        return {
+          kind: 'syncing',
+          message: 'Sincronizando cambios antes de cerrar la semana.',
+          buttonText: 'Sincronizando cambios...'
+        };
+      }
+      if (localState === 'sync_error') {
+        return {
+          kind: 'error',
+          message: 'Hay cambios pendientes de sincronizar. Revisa Guardar cambios antes de cerrar.',
+          buttonText: 'Pendiente de sincronizar'
+        };
+      }
+      return null;
+    }
+
+    function setClosePlanConfirmBlocked(block) {
+      const button = $('closePlanConfirmBtn');
+      if (!button) return;
+      if (block) {
+        if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
+        if (!button.dataset.originalWidth) button.dataset.originalWidth = String(button.offsetWidth || 0);
+        if (button.offsetWidth) button.style.width = button.offsetWidth + 'px';
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+        if (block.kind === 'syncing') button.setAttribute('aria-busy', 'true');
+        else button.removeAttribute('aria-busy');
+        button.textContent = block.buttonText;
+        return;
+      }
+      setButtonBusy(button, false);
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('aria-busy');
+    }
+
+    function syncClosePlanModalState(planId) {
+      const block = getClosePlanSyncBlock(planId);
+      setClosePlanConfirmBlocked(block);
+      if (block) {
+        setClosePlanModalError(block.message);
+      } else {
+        clearClosePlanModalError();
+      }
+      return block;
+    }
+
+    function scheduleClosePlanSyncWatch(planId) {
+      clearClosePlanSyncWatchTimer();
+      if (!state.ui) return;
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return;
+      state.ui.closePlanSyncWatchTimer = window.setTimeout(() => {
+        if (state.ui) state.ui.closePlanSyncWatchTimer = null;
+        const modal = $('closePlanModal');
+        if (!modal || modal.hidden || String(modal.dataset.planId || '').trim() !== normalizedPlanId) return;
+        const block = syncClosePlanModalState(normalizedPlanId);
+        if (block && block.kind === 'syncing') {
+          scheduleClosePlanSyncWatch(normalizedPlanId);
+        }
+      }, 450);
     }
 
     function focusPlanCloseField(targetId) {
@@ -12271,15 +14083,36 @@
       return { currentPlan, actividades };
     }
 
+    function buildClosePlanOptimisticPatch(plan, closePayload, obs) {
+      const payloadActivities = new Map((closePayload.actividades || [])
+        .map((item) => [String((item && item.actividad_id) || '').trim(), item])
+        .filter((entry) => entry[0]));
+      const actividades = Array.isArray(plan && plan.actividades)
+        ? plan.actividades.map((activity) => {
+            const activityId = String((activity && activity.actividad_id) || '').trim();
+            const payloadActivity = payloadActivities.get(activityId);
+            return payloadActivity
+              ? Object.assign({}, activity, {
+                  realizada: payloadActivity.realizada,
+                  material_en_carpeta: payloadActivity.material_en_carpeta,
+                  comentario_cierre: payloadActivity.comentario_cierre
+                })
+              : activity;
+          })
+        : [];
+      return {
+        estado: 'cerrada',
+        actividades,
+        _local_close_obs: String(obs || '').trim(),
+        fecha_actualizacion: String((plan && plan.fecha_actualizacion) || '').trim()
+      };
+    }
+
     async function confirmClosePlan(button, planId) {
       const plan = getPlanById(planId);
-      if (!plan) throw new Error('Planeación no encontrada.');
-      if (hasPendingPlaneacionOutboxForPlan(planId)) {
-        setBanner('Espera a que terminen de sincronizarse los cambios antes de cerrar la semana.', 'info', { button });
-        return;
-      }
-      if (['creating', 'saving', 'activating'].includes(getPlanLocalSaveState(plan))) {
-        setBanner('Espera a que termine Guardar cambios antes de cerrar la semana.', 'info', { button });
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
+      if (getClosePlanSyncBlock(planId)) {
+        openClosePlanModal(planId);
         return;
       }
       try {
@@ -12298,27 +14131,30 @@
       const planId = modal ? String(modal.dataset.planId || '').trim() : '';
       if (!planId) return;
       let plan = getPlanById(planId);
-      if (!plan) throw new Error('Planeación no encontrada.');
-      if (hasPendingPlaneacionOutboxForPlan(planId)) {
-        setClosePlanModalError('Espera a que terminen de sincronizarse los cambios antes de cerrar la semana.');
+      if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
+      const syncBlock = syncClosePlanModalState(planId);
+      if (syncBlock) {
+        if (syncBlock.kind === 'syncing') scheduleClosePlanSyncWatch(planId);
         return;
       }
       const obs = input ? input.value.trim() : '';
       clearClosePlanModalError();
-      try {
-        const refreshedPlan = await ensurePlaneacionDetailLoaded(planId, { silent: true, force: true });
-        if (refreshedPlan) {
-          plan = refreshedPlan;
-          state.openPlanDraft = preserveOpenPlanDraftLocalNotes(
-            planId,
-            syncOpenPlanDraftConcurrencyHints(refreshedPlan, buildOpenPlanDraft(refreshedPlan)),
-            refreshedPlan
-          );
-        }
-      } catch (_) {
-        if (['saved', 'sync_error'].includes(getPlanLocalSaveState(plan))) {
-          setClosePlanModalError('No se pudo actualizar la planeación antes de cerrar. Intenta guardar una vez más.');
-          return;
+      if (!(plan && plan.detail_loaded)) {
+        try {
+          const refreshedPlan = await ensurePlaneacionDetailLoaded(planId, { silent: true, force: true });
+          if (refreshedPlan) {
+            plan = refreshedPlan;
+            state.openPlanDraft = preserveOpenPlanDraftLocalNotes(
+              planId,
+              syncOpenPlanDraftConcurrencyHints(refreshedPlan, buildOpenPlanDraft(refreshedPlan)),
+              refreshedPlan
+            );
+          }
+        } catch (_) {
+          if (['saved', 'sync_error'].includes(getPlanLocalSaveState(plan))) {
+            setClosePlanModalError('No se pudo actualizar la planeación antes de cerrar. Intenta guardar una vez más.');
+            return;
+          }
         }
       }
       let closePayload = null;
@@ -12328,12 +14164,28 @@
         setClosePlanModalError(formatApiError(err));
         return;
       }
+      const previousPlanSnapshot = cloneJsonSafe(plan, plan);
+      const previousDraftSnapshot = state.openPlanDraft
+        ? cloneJsonSafe(state.openPlanDraft, state.openPlanDraft)
+        : null;
+      const previousOpenPlanId = state.openPlanId;
+      const shouldCloseOpenCard = state.openPlanId === planId;
+      const closePatch = buildClosePlanOptimisticPatch(plan, closePayload, obs);
       await handleAction('confirmarCierre', async () => {
-        const shouldCloseOpenCard = state.openPlanId === planId;
-        if (shouldCloseOpenCard) {
-          state.openPlanId = '';
-          state.openPlanDraft = null;
-        }
+        applyOptimisticPlanPatch(planId, closePatch, {
+          localState: 'syncing',
+          localMessage: 'Sincronizando cierre...',
+          snapshotKind: 'planeacion_cierre_local',
+          closeOpenCard: shouldCloseOpenCard,
+          render: false
+        });
+        closeClosePlanModal();
+        renderPlaneacionesSurface({
+          includeStats: true,
+          includePlaneaciones: true,
+          includeAlertas: false
+        });
+        setBanner('La planeación salió de abiertas. Sincronizando cierre...', 'info');
         const actividadesPayload = (closePayload.actividades || []).map((item) => ({
           actividad_id: item.actividad_id,
           realizada: item.realizada,
@@ -12347,17 +14199,62 @@
           request_id: uid('CIE')
         });
         const updatedPlan = response && response.planeacion ? response.planeacion : null;
-        const appliedLocally = !hasActivePlaneacionesFilters() &&
-          await applySavedPlaneacionTransition(planId, updatedPlan, { closeOpenCard: shouldCloseOpenCard });
-        if (!appliedLocally) {
-          await refreshPlaneacionesSurface();
+        if (updatedPlan) {
+          applyOptimisticPlanPatch(planId, Object.assign({}, updatedPlan, {
+            estado: 'cerrada'
+          }), {
+            localState: '',
+            localMessage: '',
+            snapshotKind: 'planeacion_cierre_confirmada',
+            closeOpenCard: shouldCloseOpenCard,
+            render: false
+          });
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          refreshPlaneacionesAlertsDeferred({
+            force: true,
+            includeStats: false,
+            includePlaneaciones: false
+          }).catch(() => {});
+        } else {
+          applyOptimisticPlanPatch(planId, {
+            estado: 'cerrada'
+          }, {
+            localState: '',
+            localMessage: '',
+            snapshotKind: 'planeacion_cierre_confirmada',
+            closeOpenCard: shouldCloseOpenCard,
+            render: false
+          });
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          refreshPlaneacionesSurface({ includeAlertas: false }).catch(() => {});
         }
-        closeClosePlanModal();
         setBanner('Cierre confirmado.', 'success');
       }, {
         button,
         key: buildActionKey('confirmarCierre', [planId]),
         onError: (err) => {
+          if (previousPlanSnapshot) {
+            upsertPlaneacionRow(previousPlanSnapshot);
+          }
+          state.openPlanId = previousOpenPlanId;
+          state.openPlanDraft = previousDraftSnapshot;
+          persistCurrentBootSnapshot('planeacion_cierre_revertido');
+          renderPlaneacionesSurface({
+            includeStats: true,
+            includePlaneaciones: true,
+            includeAlertas: false
+          });
+          openClosePlanModal(planId);
+          const nextInput = $('closePlanObsInput');
+          if (nextInput) nextInput.value = obs;
           setClosePlanModalError(formatApiError(err));
           return true;
         }
@@ -12477,10 +14374,11 @@
     }
 
     function buildCreatePlanMutexKey() {
+      const materiaId = String($('planMateria') ? $('planMateria').value : '').trim();
       return buildActionKey('crearPlaneacion', [
         $('planFecha').value,
-        $('planMateria').value,
-        $('planSubmateria') ? $('planSubmateria').value : '',
+        materiaId,
+        getPlanEditorUsesTallerSelector(materiaId) ? getSelectedPlanTallerId() : getPlanEditorSelectedSubmateriaId(materiaId),
         getSelectedGroupIds().sort().join(','),
         getSelectedPlanAlumnos().sort().join(',')
       ]);
@@ -12545,7 +14443,7 @@
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
       $('savePlanBtn').addEventListener('click', (event) => handleAction('guardarPlaneacionCompleta', () => savePlanEditor(), {
         button: event.currentTarget,
-        key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, $('planSubmateria') ? $('planSubmateria').value : '', getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
+        key: buildActionKey('guardarPlaneacionCompleta', [state.planEditor.planId || $('planFecha').value, $('planMateria').value, getPlanEditorSelectedSubmateriaId($('planMateria').value), getSelectedGroupIds().sort().join(','), getSelectedPlanAlumnos().sort().join(',')])
       }));
       if ($('savePlanDraftBtn')) $('savePlanDraftBtn').addEventListener('click', (event) => runCreatePlanAction(event.currentTarget, 'borrador'));
       if ($('savePlanActiveBtn')) $('savePlanActiveBtn').addEventListener('click', (event) => runCreatePlanAction(event.currentTarget, 'activa'));
@@ -12572,13 +14470,24 @@
       $('planFecha').addEventListener('input', handlePlanFechaChanged);
       $('planFecha').addEventListener('change', handlePlanFechaChanged);
       $('planMateria').addEventListener('change', () => {
+        clearPlanEditorValidation('planMateria');
+        clearPlanEditorValidation('planSubmateria');
         state.planEditor.selectedSubmateriaId = '';
+        state.planEditor.selectedTallerId = '';
         syncPlanSubmateriaSelect('');
+        renderPlanAlumnosChecklist(new Set(getSelectedPlanAlumnos()));
       });
       if ($('planSubmateria')) $('planSubmateria').addEventListener('change', (event) => {
+        clearPlanEditorValidation('planSubmateria');
+        if (getPlanEditorUsesTallerSelector($('planMateria') ? $('planMateria').value : '')) {
+          handlePlanTallerChanged(event);
+          return;
+        }
+        state.planEditor.selectedTallerId = '';
         state.planEditor.selectedSubmateriaId = event.currentTarget.value || '';
       });
       $('planGruposChecklist').addEventListener('change', handlePlanGroupChecklistChange);
+      $('planAlumnosChecklist').addEventListener('change', () => clearPlanEditorValidation('planAlumnosChecklist'));
       $('obsPlan').addEventListener('change', renderObsAlumnoSelect);
       $('evaMateria').addEventListener('change', renderEvaluationDependencies);
       $('filterAlumnoSearch').addEventListener('change', syncAlumnoFilterFromInput);
@@ -12607,6 +14516,7 @@
         planAction,
         saveActivityProgress,
         togglePlanOpen,
+        prioritizePlaneacionDetailPrefetch,
         editPlan,
         approvePlan,
         rejectPlan,
@@ -12642,6 +14552,7 @@
         usePlanForObservation
       },
       admin: {
+        activateAdminModule,
         editNotification,
         notificationAction,
         toggleNotificationAudienceFacilitador,
@@ -12696,7 +14607,11 @@
         archiveAlumno,
         reactivateAlumno,
         openAlumnoHistorial,
-        closeAlumnoHistorial
+        closeAlumnoHistorial,
+        copyAlumnoId,
+        toggleAlumnoDeleteControl,
+        previewAlumnoDeleteControl,
+        executeAlumnoDeleteControl
       }
     };
 
@@ -12740,4 +14655,3 @@
     }
 
     boot();
-
