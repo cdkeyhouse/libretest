@@ -1068,6 +1068,17 @@
       return [action].concat((parts || []).map(normalizeActionKeyPart)).join(':');
     }
 
+    function shouldLetAdminPanelBusyButtonGrow(button) {
+      return !!(button && button.closest && button.closest([
+        '.admin-alumnos-panel-actions',
+        '.admin-facilitadores-inline-actions',
+        '.admin-facilitadores-assignment-actions',
+        '.admin-materias-inline-actions',
+        '.admin-materias-variant-actions',
+        '.admin-taller-membership-actions'
+      ].join(',')));
+    }
+
     function setButtonBusy(button, busy, busyText = 'Procesando...') {
       if (!button) return;
       if (busy) {
@@ -1081,6 +1092,11 @@
         if (button.classList.contains('btn-open-plan')) {
           if (button.offsetWidth) {
             button.style.minWidth = Math.max(button.offsetWidth, 108) + 'px';
+          }
+          button.style.width = '';
+        } else if (shouldLetAdminPanelBusyButtonGrow(button)) {
+          if (button.offsetWidth) {
+            button.style.minWidth = button.offsetWidth + 'px';
           }
           button.style.width = '';
         } else if (button.offsetWidth) {
