@@ -4614,11 +4614,12 @@
     }
 
     html, body {
+      background-color: var(--bg-deep) !important;
       background:
         radial-gradient(circle at 0% 0%, rgba(31,182,229,0.14), transparent 26%),
         radial-gradient(circle at 100% 0%, rgba(245,192,36,0.10), transparent 22%),
         radial-gradient(circle at 100% 45%, rgba(184,216,50,0.08), transparent 20%),
-        linear-gradient(180deg, var(--bg-main) 0%, var(--bg-deep) 100%) !important;
+        linear-gradient(180deg, var(--bg-main) 0%, var(--bg-deep) 100%) var(--bg-deep) !important;
       color: var(--text-strong) !important;
     }
 
@@ -4936,10 +4937,10 @@
 
     <div id="workspaceSessionBar" class="actions workspace-session-bar" hidden>
       <div id="workspaceSessionCopy" class="workspace-session-copy">
-        <strong>Sin sesion</strong>
+        <strong>Sin sesión</strong>
         <span class="mini">Libre Aprendiz</span>
       </div>
-      <button id="workspaceLogoutBtn" class="btn-ghost" type="button">Cerrar sesion</button>
+      <button id="workspaceLogoutBtn" class="btn-ghost" type="button">Cerrar sesión</button>
     </div>
 
     <section class="top-grid">

@@ -607,7 +607,20 @@
 
     function mergeCatalogosPayload(partial, requestedBlocks) {
       if (!partial || typeof partial !== 'object') return;
-      state.catalogos = Object.assign(createEmptyCatalogos(), state.catalogos || {}, partial);
+      const merged = Object.assign(createEmptyCatalogos(), state.catalogos || {});
+      Object.keys(partial).forEach((key) => {
+        const incoming = partial[key];
+        const existing = merged[key];
+        // Avoid clobbering a populated array with an empty incoming array.
+        // The boot/refresh path can legitimately echo back empty catalog blocks
+        // (e.g. include_catalogos:false) and that should not erase fresh data
+        // we already merged from snapshot or a previous load.
+        if (Array.isArray(incoming) && incoming.length === 0 && Array.isArray(existing) && existing.length > 0) {
+          return;
+        }
+        merged[key] = incoming;
+      });
+      state.catalogos = merged;
       const loaded = requestedBlocks && requestedBlocks.length
         ? requestedBlocks
         : Object.keys(partial);
@@ -2041,6 +2054,7 @@
       primeLoginSnapshotCatalogos(facilitadorId);
       const data = await api('login', { facilitador_id: facilitadorId, pin });
       saveSession({ token: data.token, usuario: data.usuario });
+      setBanner('Cada semana abre una nueva oportunidad para acompañar, observar y hacer crecer el aprendizaje.', 'info');
       if (canUseAdminShell()) {
         ensureAdminShellMarkupLoaded();
         bindWindowActionGroup('admin');
