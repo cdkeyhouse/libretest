@@ -9122,12 +9122,68 @@
       }, delay);
     }
 
+    function capturePlanEditorSnapshot() {
+      const materiaId = String(($('planMateria') && $('planMateria').value) || '').trim();
+      return {
+        planEditor: cloneJsonSafe(state.planEditor, state.planEditor) || state.planEditor,
+        fechaPlaneacion: String(($('planFecha') && $('planFecha').value) || '').trim(),
+        materiaId,
+        selectedSubmateriaId: getPlanEditorSelectedSubmateriaId(materiaId),
+        selectedTallerId: getSelectedPlanTallerId(),
+        fraseSemana: String(($('planFrase') && $('planFrase').value) || '').trim(),
+        selectedGroupIds: getSelectedGroupIds(),
+        selectedAlumnoIds: getSelectedPlanAlumnos()
+      };
+    }
+
     function restorePlanEditorFromSnapshot(snapshot) {
       if (!snapshot) return;
-      state.planEditor = cloneJsonSafe(snapshot, snapshot) || snapshot;
+      const editorState = snapshot.planEditor && typeof snapshot.planEditor === 'object'
+        ? snapshot.planEditor
+        : snapshot;
+      const materiaId = String((snapshot.materiaId || snapshot.materia_id || '').trim ? (snapshot.materiaId || snapshot.materia_id || '').trim() : (snapshot.materiaId || snapshot.materia_id || ''));
+      const selectedSubmateriaId = String((snapshot.selectedSubmateriaId || snapshot.selected_submateria_id || '').trim ? (snapshot.selectedSubmateriaId || snapshot.selected_submateria_id || '').trim() : (snapshot.selectedSubmateriaId || snapshot.selected_submateria_id || ''));
+      const selectedTallerId = String((snapshot.selectedTallerId || snapshot.selected_taller_id || '').trim ? (snapshot.selectedTallerId || snapshot.selected_taller_id || '').trim() : (snapshot.selectedTallerId || snapshot.selected_taller_id || ''));
+      const selectedGroupIds = new Set((Array.isArray(snapshot.selectedGroupIds) ? snapshot.selectedGroupIds : []).map((groupId) => String(groupId || '').trim()).filter(Boolean));
+      const selectedAlumnoIds = new Set((Array.isArray(snapshot.selectedAlumnoIds) ? snapshot.selectedAlumnoIds : []).map((alumnoId) => String(alumnoId || '').trim()).filter(Boolean));
+      state.planEditor = cloneJsonSafe(editorState, editorState) || editorState;
+      if (selectedSubmateriaId) state.planEditor.selectedSubmateriaId = selectedSubmateriaId;
+      state.planEditor.selectedTallerId = selectedTallerId || '';
       if (state.ui) state.ui.planBuilderExpanded = true;
       renderPlanEditor();
+      if ($('planFecha')) $('planFecha').value = String(snapshot.fechaPlaneacion || snapshot.fecha_planeacion || '').trim();
+      if ($('planMateria')) $('planMateria').value = materiaId;
+      syncPlanSubmateriaSelect(selectedSubmateriaId);
+      if ($('planFrase')) $('planFrase').value = String(snapshot.fraseSemana || snapshot.frase_semana || '').trim();
+      if ($('planSubmateria')) {
+        if (getPlanEditorUsesTallerSelector(materiaId)) {
+          $('planSubmateria').value = selectedTallerId || '';
+          handlePlanTallerChanged();
+        } else {
+          $('planSubmateria').value = selectedSubmateriaId || '';
+        }
+      }
+      Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = selectedGroupIds.has(String(input.value || '').trim());
+      });
+      renderPlanAlumnosChecklist(selectedAlumnoIds);
       renderPlanBuilderVisibility();
+    }
+
+    function rollbackFailedPlaneacionOutboxCreate(item) {
+      if (!item || typeof item !== 'object') return;
+      if (Array.isArray(item.tempPlanIds) && item.tempPlanIds.length) {
+        removePlaneacionRows(item.tempPlanIds);
+      }
+      state.openPlanId = '';
+      state.openPlanDraft = null;
+      restorePlanEditorFromSnapshot(item.planEditorSnapshot || null);
+      persistCurrentBootSnapshot('planeacion_outbox_create_failed');
+      renderPlaneacionesSurface({
+        includeStats: true,
+        includePlaneaciones: true,
+        includeAlertas: false
+      });
     }
 
     function restorePendingPlanObservationInputs(planId, generalText, finalPayloads) {
@@ -11635,7 +11691,7 @@
       }
 
       const previousPlan = editorMode === 'edit' ? getPlanById(state.planEditor.planId) : null;
-      const planEditorSnapshot = cloneJsonSafe(state.planEditor, state.planEditor);
+      const planEditorSnapshot = capturePlanEditorSnapshot();
       const targetStatus = editorMode === 'edit'
         ? String((previousPlan && previousPlan.estado) || 'borrador').trim()
         : (String(targetStatusOverride || '').trim() === 'activa' ? 'activa' : 'borrador');
@@ -11747,6 +11803,7 @@
           enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('editor_create', {
             tempPlanIds: optimisticCreatedIds,
             optimisticPlans: optimisticCreatedPlans,
+            planEditorSnapshot,
             forceAlertas: shouldForceAlertasAfterSave,
             localMessage: 'Guardada localmente. Sincronizando creación...',
             requestAction: 'crearPlaneacion',
@@ -12698,7 +12755,11 @@
 
     function isPlaneacionOutboxRetryableError(error) {
       const code = String((error && error.code) || '').trim().toUpperCase();
+      const message = String((error && error.message) || '').trim().toLowerCase();
       if (!code) return true;
+      if (code === 'SERVER_ERROR' && message.includes('no cuentas con el permiso necesario para acceder al documento solicitado')) {
+        return false;
+      }
       return ![
         'VALIDATION_ERROR',
         'FULL_SAVE_REQUIRED',
@@ -12914,7 +12975,15 @@
         lastErrorMessage: formatApiError(error),
         nextAttemptAt: retryable ? new Date(Date.now() + nextDelay).toISOString() : ''
       });
-      if (updatedItem) {
+      if (!retryable && String((item && item.kind) || '').trim() === 'editor_create') {
+        rollbackFailedPlaneacionOutboxCreate(Object.assign({}, updatedItem || item, {
+          retryable,
+          attempts,
+          lastErrorCode: String((error && error.code) || '').trim(),
+          lastErrorMessage: formatApiError(error)
+        }));
+        removePlaneacionOutboxItem(item.id);
+      } else if (updatedItem) {
         applyPlaneacionOutboxVisualState(updatedItem);
         persistCurrentBootSnapshot('planeacion_outbox_error');
       }
