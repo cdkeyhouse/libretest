@@ -3845,6 +3845,75 @@
       return 'Activo';
     }
 
+    function compactAlumnoHistoryText(value, maxLength = 120) {
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
+      if (!text || text.length <= maxLength) return text;
+      return text.slice(0, Math.max(0, maxLength - 3)).trim() + '...';
+    }
+
+    function formatAlumnoHistoryValue(value) {
+      const text = compactAlumnoHistoryText(value, 90);
+      return text ? '"' + text + '"' : 'sin dato';
+    }
+
+    function buildAlumnoFichaHistoryDetail(before, after, statusNote) {
+      if (!before) return 'Se agreg\u00f3 un nuevo alumno al cat\u00e1logo.';
+      const changes = [];
+      const addTextChange = (label, previousValue, nextValue) => {
+        const previousText = String(previousValue || '').trim();
+        const nextText = String(nextValue || '').trim();
+        if (previousText === nextText) return;
+        changes.push(label + ': ' + formatAlumnoHistoryValue(previousText) + ' -> ' + formatAlumnoHistoryValue(nextText) + '.');
+      };
+      addTextChange('Matr\u00edcula', before.matricula, after.matricula);
+      addTextChange('Nombre completo', before.nombre_completo, after.nombre_completo);
+      addTextChange('Alias visible', before.nombre_mostrado, after.nombre_mostrado);
+      const previousGroup = String(before.grupo_id || '').trim();
+      const nextGroup = String(after.grupo_id || '').trim();
+      if (previousGroup !== nextGroup) {
+        changes.push('Grupo: ' + getGrupoNombre(previousGroup) + ' -> ' + getGrupoNombre(nextGroup) + '.');
+      }
+      const previousStatus = getAlumnoStatusVisual(before);
+      const nextStatus = getAlumnoStatusVisual({ estatus: after.estatus });
+      if (previousStatus !== nextStatus) {
+        changes.push('Estatus: ' + getAlumnoStatusLabel(previousStatus) + ' -> ' + getAlumnoStatusLabel(nextStatus) + '. Nota: ' + compactAlumnoHistoryText(statusNote, 160));
+      }
+      const previousNotes = String(getAlumnoAdminNotes(before.alumno_id, before.notas_internas || '') || '').trim();
+      const nextNotes = String(after.notas_internas || '').trim();
+      if (previousNotes !== nextNotes) {
+        if (nextNotes && previousNotes) {
+          changes.push('Observaci\u00f3n administrativa actualizada: ' + formatAlumnoHistoryValue(nextNotes) + '.');
+        } else if (nextNotes) {
+          changes.push('Observaci\u00f3n administrativa agregada: ' + formatAlumnoHistoryValue(nextNotes) + '.');
+        } else {
+          changes.push('Observaci\u00f3n administrativa eliminada.');
+        }
+      }
+      return changes.join(' ') || 'Se guard\u00f3 la ficha sin cambios visibles.';
+    }
+
+    function requestAlumnoStatusHistoryNote(alumno, nextStatus, title) {
+      const fromLabel = getAlumnoStatusLabel(getAlumnoStatusVisual(alumno));
+      const toLabel = getAlumnoStatusLabel(getAlumnoStatusVisual({ estatus: nextStatus }));
+      const promptText = [
+        'Nota obligatoria para historial.',
+        (title || 'Cambio de estatus') + ': ' + fromLabel + ' -> ' + toLabel + '.',
+        'Ejemplo: falta de pago, regreso autorizado, cierre administrativo.'
+      ].join('\n');
+      const value = window.prompt(promptText, '');
+      if (value === null) return null;
+      const note = String(value || '').trim();
+      if (!note) {
+        setBanner('Captura una nota para guardar el cambio de estatus.', 'error');
+        return null;
+      }
+      return note;
+    }
+
+    function buildAlumnoStatusHistoryDetail(baseDetail, statusNote) {
+      return String(baseDetail || 'Se actualiz\u00f3 el estatus del alumno.').trim() + ' Nota: ' + compactAlumnoHistoryText(statusNote, 160);
+    }
+
     function getAlumnoStatusBadgeClass(status) {
       if (status === 'pausa') return 'is-paused';
       if (status === 'inactivo') return 'is-inactive';
@@ -4183,6 +4252,10 @@
         if (!fullName) throw new Error('Captura el nombre del alumno.');
         if (!String(editor.grupo_id || '').trim()) throw new Error('Selecciona el grupo actual.');
         if (editing && previousStatus === 'activo' && nextStatus === 'pausa' && !confirm('El alumno pasar\u00e1 a pausa y seguir\u00e1 visible dentro del cat\u00e1logo administrativo.')) return;
+        const statusNote = editing && previousStatus !== nextStatus
+          ? requestAlumnoStatusHistoryNote(existingAlumno, String(editor.estatus || 'activo').trim(), 'Cambio desde ficha')
+          : '';
+        if (editing && previousStatus !== nextStatus && statusNote === null) return;
         const payload = {
           alumno_id: existingId,
           matricula: String(editor.matricula || '').trim(),
@@ -4192,6 +4265,7 @@
           estatus: String(editor.estatus || 'activo').trim(),
           notas_internas: String(editor.notas_internas || '').trim()
         };
+        if (statusNote) payload.motivo = statusNote;
         const response = await api('guardarAlumno', payload);
         const savedId = (response && response.alumno_id) || existingId || '';
         const savedAlumno = response && response.alumno ? response.alumno : null;
@@ -4203,7 +4277,7 @@
             savedId,
             editing ? 'edicion' : 'alta',
             editing ? 'Ficha actualizada' : 'Alta de alumno',
-            editing ? 'Se actualizaron datos principales de la ficha.' : 'Se agreg\u00f3 un nuevo alumno al cat\u00e1logo.',
+            editing ? buildAlumnoFichaHistoryDetail(existingAlumno, payload, statusNote) : 'Se agreg\u00f3 un nuevo alumno al cat\u00e1logo.',
             new Date().toISOString()
           );
           invalidateAlumnoHistorialCache(savedId);
@@ -4247,6 +4321,8 @@
         successMessage: 'Estatus actualizado.'
       }, options || {});
       if (meta.confirmText && !confirm(meta.confirmText)) return;
+      const statusNote = requestAlumnoStatusHistoryNote(alumno, targetStatus, meta.historyTitle);
+      if (statusNote === null) return;
       await handleAction(meta.actionKey, async () => {
         await api('guardarAlumno', {
           alumno_id: alumno.alumno_id,
@@ -4254,7 +4330,8 @@
           nombre_completo: alumno.nombre_completo,
           nombre_mostrado: alumno.nombre_mostrado || alumno.nombre_completo,
           grupo_id: alumno.grupo_id,
-          estatus: targetStatus
+          estatus: targetStatus,
+          motivo: statusNote
         });
         applyPatchedAlumnoCatalogRow(alumno.alumno_id, {
           estatus: targetStatus,
@@ -4275,7 +4352,7 @@
           });
           bumpAlumnosSourceRevision();
         }
-        pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, meta.historyDetail, new Date().toISOString());
+        pushAlumnoHistory(alumno.alumno_id, meta.historyType, meta.historyTitle, buildAlumnoStatusHistoryDetail(meta.historyDetail, statusNote), new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         renderAdminModuleSurface('alumnos');
@@ -4342,8 +4419,10 @@
       }
       if (!alumno) throw new Error('No se encontr\u00f3 el alumno seleccionado.');
       if (!confirm('El alumno pasar\u00e1 a archivados y saldr\u00e1 de las vistas activas.')) return;
+      const statusNote = requestAlumnoStatusHistoryNote(alumno, 'baja', 'Archivar alumno');
+      if (statusNote === null) return;
       await handleAction('archivarAlumno', async () => {
-        await api('archivarAlumno', { alumno_id: alumno.alumno_id });
+        await api('archivarAlumno', { alumno_id: alumno.alumno_id, motivo: statusNote });
         const archivedAt = new Date().toISOString();
         applyPatchedAlumnoCatalogRow(alumno.alumno_id, {
           estatus: 'baja',
@@ -4358,7 +4437,7 @@
           archivado_at: archivedAt
         });
         bumpAlumnosSourceRevision();
-        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', 'Se retir\u00f3 del listado activo del cat\u00e1logo.', new Date().toISOString());
+        pushAlumnoHistory(alumno.alumno_id, 'archivado', 'Alumno archivado', buildAlumnoStatusHistoryDetail('Se retir\u00f3 del listado activo del cat\u00e1logo.', statusNote), new Date().toISOString());
         invalidateAlumnoHistorialCache(alumno.alumno_id);
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
