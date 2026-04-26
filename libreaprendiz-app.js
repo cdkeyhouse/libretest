@@ -7214,8 +7214,25 @@
       await handleAction('guardarMateria', async () => {
         if (!payload.materia_id) throw new Error('Captura la materia ID.');
         if (!payload.nombre) throw new Error('Captura el nombre de la materia.');
+        const currentMateria = getMateriaBaseRows().find((item) => item.materia_id === payload.materia_id) || {};
         const data = await api('guardarMateria', payload);
-        if (data && data.materia) applySavedMateriaCatalogRow(data.materia);
+        const backendMateria = data && data.materia ? data.materia : {};
+        const savedAt = String(backendMateria.fecha_actualizacion || new Date().toISOString());
+        const archivedAt = payload.estatus === 'archivada'
+          ? String(backendMateria.archivado_at || currentMateria.archivado_at || savedAt)
+          : '';
+        applySavedMateriaCatalogRow(Object.assign({}, currentMateria, backendMateria, {
+          materia_id: payload.materia_id,
+          nombre: payload.nombre,
+          activo: payload.estatus === 'activa',
+          admite_submaterias: payload.admite_submaterias,
+          estatus: payload.estatus,
+          fecha_actualizacion: savedAt,
+          archivado_at: archivedAt,
+          archivado_por: archivedAt
+            ? String(backendMateria.archivado_por || (state.session && state.session.usuario && state.session.usuario.facilitador_id) || '')
+            : ''
+        }));
         closeMateriaEditor();
         state.materiasUi.selectedMateriaId = data.materia_id || payload.materia_id;
         renderAdminModuleSurface('materias');
