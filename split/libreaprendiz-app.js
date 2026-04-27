@@ -2533,10 +2533,10 @@
 
     async function refreshFacilitadorPlaneacionesFastBoot(options = {}) {
       ensureLoggedIn();
+      // === Pre-cálculo de flags ===
       const surfaceCatalogBlocks = getPlaneacionesSurfaceCatalogBlocks();
       const missingSurfaceCatalogBlocks = getMissingCatalogBlocks(surfaceCatalogBlocks);
       const shouldRequestSurfaceCatalogs = missingSurfaceCatalogBlocks.length > 0;
-      const hadLocalNotificaciones = Array.isArray(state.notificaciones) && state.notificaciones.length > 0;
       const requestedOpenPlanId = String(state.openPlanId || '').trim();
       const canReuseSnapshotOpenPlanDetail = requestedOpenPlanId && shouldPreserveSnapshotPlanDetail(requestedOpenPlanId);
       const canReusePlaneacionesSnapshot =
@@ -2552,22 +2552,21 @@
       const shouldRequestPlaneaciones = !canReusePlaneacionesSnapshot;
       const shouldReuseAlertas = shouldReuseFacilitadorFeedSnapshot('alertas');
       const shouldReuseNotificaciones = shouldReuseFacilitadorFeedSnapshot('notificaciones');
-      const bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
-        alert_limit: 20,
-        notification_limit: 20,
-        include_stats: !canReuseStatsSnapshot,
-        include_planeaciones: shouldRequestPlaneaciones,
-        include_alertas: !shouldReuseAlertas,
-        include_notificaciones: !shouldReuseNotificaciones,
-        include_catalogos: shouldRequestSurfaceCatalogs,
-        catalog_blocks: shouldRequestSurfaceCatalogs ? missingSurfaceCatalogBlocks : [],
-        open_plan_id: canReuseSnapshotOpenPlanDetail ? '' : (requestedOpenPlanId || '')
-      }));
-      if (bootData && bootData.catalogos && Object.keys(bootData.catalogos).length) {
-        mergeCatalogosPayload(bootData.catalogos, shouldRequestSurfaceCatalogs ? missingSurfaceCatalogBlocks : surfaceCatalogBlocks);
-      }
-      state.dashboardStats = Object.assign({}, state.dashboardStats || {}, bootData && bootData.stats ? bootData.stats : {});
+
+      // === FASE A: request crítico mínimo (solo planeaciones, sin catalogos/
+      // alertas/notif/stats/openPlan/detail). Meta: lista visible lo antes posible.
+      // Todo lo secundario va en Fase B background. ===
+      let bootData = null;
       if (shouldRequestPlaneaciones) {
+        bootData = await api('getFacilitadorBoot', Object.assign({}, buildPlaneacionesPayload(), {
+          include_planeaciones: true,
+          include_catalogos: false,
+          include_alertas: false,
+          include_notificaciones: false,
+          include_stats: false,
+          open_plan_id: '',
+          include_detail: false
+        }));
         const bootRows = Array.isArray(bootData && bootData.planeaciones && bootData.planeaciones.rows)
           ? bootData.planeaciones.rows
           : [];
@@ -2576,24 +2575,21 @@
           : null;
         state.planeaciones = preserveOpenPlanDetailOnRowsReplace(bootRows, snapshotOpenPlan, requestedOpenPlanId);
       }
-      const bootHasAlertas = !!(bootData && bootData.alertas && Array.isArray(bootData.alertas.rows));
-      state.alertas = bootHasAlertas
-        ? bootData.alertas.rows
-        : (Array.isArray(state.alertas) ? state.alertas : []);
-      if (bootHasAlertas) markAlertasFresh();
-      const bootHasNotificaciones = !!(bootData && bootData.notificaciones && Array.isArray(bootData.notificaciones.rows));
-      state.notificaciones = bootHasNotificaciones
-        ? bootData.notificaciones.rows
-        : (Array.isArray(state.notificaciones) ? state.notificaciones : []);
-      if (bootHasNotificaciones) markNotificacionesFresh();
-      let bootOpenPlan = null;
-      if (bootData && bootData.open_planeacion && bootData.open_planeacion.planeacion_id) {
-        bootOpenPlan = upsertPlaneacionRow(bootData.open_planeacion);
-        if (bootOpenPlan && bootOpenPlan.detail_loaded) markPlaneacionDetailFresh(bootOpenPlan.planeacion_id);
-        if (bootData.open_planeacion.obs_loaded) {
-          markPlaneacionObservacionesFresh(bootData.open_planeacion.planeacion_id);
-        }
+
+      // Stats: si no hay del snapshot, derivar local de state.planeaciones para
+      // que los cards de estadísticas no muestren ceros. Stats exactos pueden
+      // refrescarse en Fase B si se considera necesario (V1 deja local).
+      if (!canReuseStatsSnapshot) {
+        const planList = Array.isArray(state.planeaciones) ? state.planeaciones : [];
+        const closedStatuses = ['cerrada', 'archivada'];
+        const localStats = {
+          planeaciones_visibles: planList.length,
+          planeaciones_abiertas: planList.filter((p) => p && !closedStatuses.includes(String(p.estado || '').trim())).length,
+          planeaciones_cerradas: planList.filter((p) => p && closedStatuses.includes(String(p.estado || '').trim())).length
+        };
+        state.dashboardStats = Object.assign({}, state.dashboardStats || {}, localStats);
       }
+
       if (state.ui) {
         state.ui.planeacionesLoaded = shouldRequestPlaneaciones
           ? true
@@ -2605,36 +2601,68 @@
           state.ui.planeacionesHasMore = !!(bootData && bootData.planeaciones && bootData.planeaciones.has_more);
         }
       }
-      persistCurrentBootSnapshot('facilitador_boot');
+      persistCurrentBootSnapshot('facilitador_boot_listfirst');
+
+      // === Render rápido: lista visible al usuario ===
       renderSession();
       renderStats();
       renderPlaneacionesSurface({
         includeStats: false,
         includePlaneaciones: true,
-        includeAlertas: true
+        includeAlertas: false
       });
       renderInstitutionalNotices();
       syncRoleUi();
+
+      // === FASE B: hidratación en background sin bloquear lista ===
       const deferredPromise = scheduleAfterPaint(async () => {
+        // 1. Catálogos de superficie (necesarios para selects/editor de planeación)
+        if (shouldRequestSurfaceCatalogs) {
+          try {
+            await refreshCatalogos({ blocks: missingSurfaceCatalogBlocks });
+          } catch (_) {}
+        }
         renderBaseSelects({ planeaciones: true });
         renderPlanBuilderVisibility();
+
+        // 2. Alertas (silencioso, sin banner)
+        if (!shouldReuseAlertas) {
+          try {
+            await refreshAlertas();
+            renderPlaneacionesSurface({ includeStats: false, includePlaneaciones: false, includeAlertas: true });
+          } catch (_) {}
+        }
+
+        // 3. Notificaciones (silencioso)
+        if (!shouldReuseNotificaciones) {
+          try {
+            await refreshNotificaciones();
+            persistCurrentBootSnapshot('notificaciones');
+            renderInstitutionalNotices();
+          } catch (_) {}
+        }
+
+        // 4. Si la lista vino del snapshot (no la pedimos al backend), refresh
+        // suave en background para sincronizar cambios remotos sin parpadeo
+        // perceptible.
         if (!shouldRequestPlaneaciones) {
-          await scheduleAfterPaint(async () => {
+          try {
             await refreshPlaneaciones();
             renderPlaneacionesSurface({
               includeStats: true,
               includePlaneaciones: true,
               includeAlertas: false
             });
-          }, 90);
+          } catch (_) {}
         }
+
+        // 5. Detalle del openPlan restaurado (si corresponde)
         if (state.openPlanId && Array.isArray(state.planeaciones) && state.planeaciones.some((plan) => plan && plan.planeacion_id === state.openPlanId)) {
           await scheduleAfterPaint(async () => {
             try {
               const currentOpenPlan = getPlanById(state.openPlanId);
-              const alreadyReadyFromBoot = !!(bootOpenPlan && bootOpenPlan.planeacion_id === state.openPlanId && bootOpenPlan.detail_loaded);
               const canReuseFullSnapshot = !!(currentOpenPlan && currentOpenPlan.detail_loaded && shouldPreserveSnapshotPlanDetail(state.openPlanId));
-              if (!(alreadyReadyFromBoot || canReuseFullSnapshot)) {
+              if (!canReuseFullSnapshot) {
                 await ensurePlaneacionDetailLoaded(state.openPlanId, { silent: true });
               }
               persistCurrentBootSnapshot('facilitador_boot_detail');
@@ -2651,13 +2679,11 @@
             } catch (_) {}
           }, 120);
         }
-        if (!bootHasNotificaciones && !hadLocalNotificaciones && !shouldReuseFacilitadorFeedSnapshot('notificaciones')) {
-          await scheduleAfterPaint(async () => {
-            await refreshNotificaciones();
-            persistCurrentBootSnapshot('notificaciones');
-            renderInstitutionalNotices();
-          }, 180);
-        }
+
+        // 6. Prefetch de detalles para las primeras planeaciones visibles
+        try {
+          scheduleVisiblePlaneacionDetailPrefetch();
+        } catch (_) {}
       }, 80);
 
       if (state.ui) state.ui.fastPlaneacionesBootPromise = deferredPromise;
