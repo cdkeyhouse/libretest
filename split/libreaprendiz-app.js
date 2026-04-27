@@ -9712,7 +9712,11 @@
     }
 
     function getUnconfiguredWeekMessage() {
-      return 'Esta semana no esta configurada. Elige una fecha dentro de una semana disponible o pide a admin agregarla.';
+      return 'Esta semana no está configurada. Elige una fecha dentro de una semana disponible o pide a admin agregarla.';
+    }
+
+    function getNewWeekDraftMessage(week) {
+      return 'Semana nueva: ' + formatSemanaLabel(week) + ' · se creará al guardar';
     }
 
     function getPlanEditorResolvedWeekState() {
@@ -9735,9 +9739,8 @@
       const catalogsLoading = catalogsLoadingOverride !== undefined
         ? !!catalogsLoadingOverride
         : !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
-      const weekUnavailable = isPlanEditorWeekUnavailable();
-      const disabled = catalogsLoading || weekUnavailable;
-      const disabledTitle = weekUnavailable ? 'Elige una fecha dentro de una semana configurada.' : '';
+      const disabled = catalogsLoading;
+      const disabledTitle = '';
       [$('savePlanBtn'), $('savePlanDraftBtn'), $('savePlanActiveBtn')].forEach((button) => {
         if (!button) return;
         button.disabled = disabled;
@@ -9748,9 +9751,7 @@
 
     function syncPlanEditorWeekValidation() {
       const errors = getPlanEditorValidationErrors();
-      if (isPlanEditorWeekUnavailable()) {
-        errors.planFecha = getUnconfiguredWeekMessage();
-      } else if (errors.planFecha === getUnconfiguredWeekMessage()) {
+      if (errors.planFecha === getUnconfiguredWeekMessage()) {
         delete errors.planFecha;
       }
       renderPlanEditorValidation();
@@ -9763,11 +9764,11 @@
       const hint = week ? getSemanaHintText(week) : '';
       host.textContent = week
         ? (week.draft
-          ? 'Semana no configurada: ' + formatSemanaLabel(week)
+          ? getNewWeekDraftMessage(week)
           : [formatSemanaLabel(week), hint].filter(Boolean).join(' \u00b7 '))
         : 'Selecciona una fecha.';
       host.className = 'inline-note';
-      if (week) host.classList.add(week.draft ? 'is-closed' : (String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open'));
+      if (week) host.classList.add(week.draft ? 'is-open' : (String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open'));
     }
 
     function handlePlanFechaChanged(event) {
@@ -12014,9 +12015,6 @@
       const fechaPlaneacion = $('planFecha').value || fallbackDate;
       const semana = getWeekByDateOrDraft(fechaPlaneacion);
       if (!semana) throw createPlanEditorValidationError('Selecciona una fecha valida para construir la semana.', 'planFecha');
-      if (semana.draft) {
-        throw createPlanEditorValidationError('Esta semana no esta configurada. Elige una fecha dentro de una semana disponible o pide a admin agregarla.', 'planFecha');
-      }
       const materiaId = String($('planMateria').value || '').trim();
       const fraseSemana = $('planFrase').value.trim();
       if (!materiaId) throw createPlanEditorValidationError('Selecciona una materia.', 'planMateria');
