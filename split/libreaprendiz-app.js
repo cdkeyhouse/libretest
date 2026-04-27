@@ -10512,10 +10512,25 @@
           );
           const grupo = getGrupoById(groupPlan.grupo_id);
           const grupoLabel = grupo ? getGrupoDisplayName(grupo) : groupPlan.grupo_id;
+          const selectedCount = selectedIds.size || Number(groupPlan.alumnos_count || 0);
+          const totalCount = alumnosGrupo.length || Number(groupPlan.alumnos_count || 0);
+          if (isMulti && !isActiveGroup) {
+            return (
+              '<div class="group-block plan-multigroup-student-row is-collapsed">' +
+                '<div class="plan-multigroup-student-summary">' +
+                  '<div class="plan-multigroup-student-title">' +
+                    '<strong>' + escapeHtml(grupoLabel) + '</strong>' +
+                    '<span class="mini">' + escapeHtml(String(selectedCount)) + '/' + escapeHtml(String(totalCount || selectedCount)) + ' alumnos</span>' +
+                  '</div>' +
+                  '<button class="btn-ghost plan-multigroup-edit-btn" type="button" onclick="switchMultiGroupPlan(\'' + escapeJsAttrValue(groupPlan.planeacion_id) + '\')">Editar</button>' +
+                '</div>' +
+              '</div>'
+            );
+          }
           return (
-            '<div class="group-block">' +
+            '<div class="group-block' + (isMulti ? ' plan-multigroup-student-row is-active' : '') + '">' +
               '<div class="group-block-head">' +
-                '<div><strong>' + escapeHtml(grupoLabel) + '</strong></div>' +
+                '<div><strong>' + escapeHtml(grupoLabel) + '</strong>' + (isMulti ? '<span class="mini">' + escapeHtml(String(selectedCount)) + '/' + escapeHtml(String(totalCount || selectedCount)) + ' alumnos</span>' : '') + '</div>' +
                 (isActiveGroup
                   ? '<div class="actions compact">' +
                       '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(true)">Seleccionar todos</button>' +
@@ -10537,7 +10552,7 @@
       })();
 
       return (
-        '<div class="plan-open-editor plan-open-editor-group">' +
+        '<div class="plan-open-editor plan-open-editor-group' + (isMulti ? ' is-multigroup-compact' : '') + '">' +
           '<div>' +
             '<div class="card-head inline-head">' +
               '<div><label>' + (isMulti ? 'Alumnos' : 'Alumnos del grupo') + '</label>' + (isMulti ? '' : '<p class="subtle">Esta selecci&oacute;n solo afecta al grupo actual.</p>') + '</div>' +
@@ -10560,7 +10575,7 @@
       const draft = getMultiGroupSharedDraft(entry);
       if (!draft) return '';
       return (
-        '<div>' +
+        '<div class="plan-multigroup-activities-compact">' +
           '<div class="card-head inline-head">' +
             '<div><label>Actividades</label></div>' +
           '</div>' +

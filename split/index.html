@@ -4331,6 +4331,115 @@
         align-items: start;
       }
 
+      .plan-open-editor-group.is-multigroup-compact {
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact > div > .stack {
+        gap: 6px;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .card-head.inline-head {
+        margin-bottom: 6px;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .plan-multigroup-student-row {
+        padding: 7px 9px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.02);
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .plan-multigroup-student-row + .plan-multigroup-student-row {
+        margin-top: 6px;
+      }
+
+      .plan-multigroup-student-summary {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .plan-multigroup-student-title {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .plan-multigroup-student-title strong,
+      .plan-open-editor-group.is-multigroup-compact .group-block-head strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .plan-multigroup-student-title .mini,
+      .plan-open-editor-group.is-multigroup-compact .group-block-head .mini {
+        margin-left: 0;
+        white-space: nowrap;
+      }
+
+      .plan-multigroup-edit-btn {
+        min-height: 32px;
+        padding: 6px 10px;
+        font-size: 0.86rem;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .group-block-head {
+        margin-bottom: 6px;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact {
+        margin: 0;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact > .btn-ghost {
+        min-height: 32px;
+        padding: 6px 9px;
+        font-size: 0.84rem;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .plan-open-students {
+        padding: 4px !important;
+        gap: 5px 6px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .plan-open-students .check-item {
+        padding: 6px 8px;
+        border-radius: 10px;
+        min-height: 34px;
+      }
+
+      .plan-open-editor-group.is-multigroup-compact .plan-open-students .check-item strong {
+        font-size: 0.9rem;
+      }
+
+      .plan-multigroup-activities-compact {
+        display: grid;
+        gap: 8px;
+      }
+
+      .plan-multigroup-activities-compact .inline-head {
+        margin-bottom: 0;
+      }
+
+      .plan-multigroup-activities-compact .activity-editor {
+        padding: 8px 10px;
+        border-radius: 13px;
+      }
+
+      .plan-multigroup-activities-compact .activity-editor textarea {
+        min-height: 56px;
+      }
+
+      .plan-multigroup-activities-compact .activity-editor-top {
+        margin-bottom: 6px;
+      }
+
       #planGruposChecklist.checklist-groups {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         max-height: none;
@@ -4549,6 +4658,46 @@
 
         .plan-open-editor .group-block {
           padding: 14px;
+        }
+
+        .plan-open-editor-group.is-multigroup-compact .plan-multigroup-student-row {
+          padding: 8px !important;
+        }
+
+        .plan-open-editor-group.is-multigroup-compact .group-block-head {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact {
+          display: flex;
+          flex-wrap: nowrap;
+        }
+
+        .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact > .btn-ghost {
+          min-height: 30px;
+          padding: 5px 8px;
+          font-size: 0.78rem;
+        }
+
+        .plan-open-editor-group.is-multigroup-compact .plan-open-students {
+          grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+        }
+
+        .plan-open-editor-group.is-multigroup-compact .plan-open-students .check-item {
+          padding: 6px 7px;
+          min-height: 32px;
+        }
+
+        .plan-multigroup-student-summary {
+          gap: 8px;
+        }
+
+        .plan-multigroup-student-title {
+          display: grid;
+          gap: 1px;
         }
 
         .plan-activities-add-wrap {
