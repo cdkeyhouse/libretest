@@ -10502,7 +10502,15 @@
               ? (groupDraft && groupDraft.alumnos_ids || [])
               : ((Array.isArray(groupPlan.alumnos) ? groupPlan.alumnos : []).map((row) => row.alumno_id))
           );
-          const alumnosGrupo = getAlumnosByGroupId(groupPlan.grupo_id);
+          const alumnosGrupoCatalogo = getAlumnosByGroupId(groupPlan.grupo_id);
+          const alumnosGrupo = alumnosGrupoCatalogo.length
+            ? alumnosGrupoCatalogo
+            : ((Array.isArray(groupPlan.alumnos) ? groupPlan.alumnos : []).map((row) => ({
+                alumno_id: row.alumno_id,
+                grupo_id: groupPlan.grupo_id,
+                nombre_mostrado: row.nombre_snapshot || row.alumno_id,
+                nombre_completo: row.nombre_snapshot || row.alumno_id
+              })));
           const selectedIds = new Set(
             (!initialSelectedIds.length &&
               Number(groupPlan.alumnos_count || 0) > 0 &&
