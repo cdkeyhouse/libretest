@@ -8390,6 +8390,24 @@
       return alumnosReady && actividadesReady;
     }
 
+    function isOpenPlanReadyForSave(plan, entry = null) {
+      if (!plan || !plan.planeacion_id) return false;
+      const planId = String(plan.planeacion_id || '').trim();
+      if (!planId) return false;
+      if (state.ui && String(state.ui.openPlanLoadingId || '').trim() === planId) return false;
+      if (!plan.detail_loaded || !hasUsableOpenPlanDetail(plan)) return false;
+      if (entry && entry.isMulti) {
+        const childPlans = Array.isArray(entry.plans) ? entry.plans : [];
+        if (!childPlans.length) return false;
+        return childPlans.every((childPlan) => {
+          const childPlanId = String((childPlan && childPlan.planeacion_id) || '').trim();
+          const currentChildPlan = childPlanId ? (getPlanById(childPlanId) || childPlan) : childPlan;
+          return !!(currentChildPlan && currentChildPlan.detail_loaded && hasUsableOpenPlanDetail(currentChildPlan));
+        });
+      }
+      return true;
+    }
+
     function shouldKeepOpenPlanInlineDetail(planId, planLike = null) {
       const normalizedPlanId = String(planId || '').trim();
       if (!normalizedPlanId) return false;
@@ -10943,10 +10961,12 @@
           ? '<div class="mini">Se están cargando observaciones de esta planeación...</div>'
           : '';
         const localState = getPlanLocalSaveState(plan);
+        const isOpenSaveReady = isOpenPlanReadyForSave(plan, entry);
         const isOpenSaveBusy = localState === 'saving';
-        const saveButtonText = isOpenSaveBusy ? 'Sincronizando...' : 'Guardar cambios';
-        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '');
-        const saveButtonBusyAttrs = isOpenSaveBusy ? ' disabled aria-disabled="true" aria-busy="true"' : '';
+        const isOpenSavePreparing = !isOpenSaveReady && !isOpenSaveBusy;
+        const saveButtonText = isOpenSaveBusy ? 'Sincronizando...' : (isOpenSavePreparing ? 'Preparando...' : 'Guardar cambios');
+        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '') + (isOpenSavePreparing ? ' is-preparing' : '');
+        const saveButtonBusyAttrs = (isOpenSaveBusy || isOpenSavePreparing) ? ' disabled aria-disabled="true" aria-busy="true"' : '';
         const actionStatusHtml = getPlanActionStatusMarkup(plan);
         const buttons = [];
         if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
@@ -13684,6 +13704,11 @@
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = entryKey ? getPlaneacionEntryByKey(entryKey) : null;
+      if (!isOpenPlanReadyForSave(plan, entry)) {
+        setBanner('La planeaci\u00f3n todav\u00eda se est\u00e1 abriendo. Espera un momento antes de guardar.', 'info', { button });
+        renderPlaneacionesList();
+        return;
+      }
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
       const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
