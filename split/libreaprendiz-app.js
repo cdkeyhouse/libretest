@@ -2048,9 +2048,19 @@
 
     function triggerLoginAction(button) {
       const loginButton = button || $('loginBtn');
+      // BUG-12: marcar boot en progreso para que renderPlaneacionesList no
+      // muestre "Todavía no hay planeaciones..." durante la ventana entre el
+      // click de login y la primera carga completa de planeaciones.
+      if (state.ui) state.ui.facilitadorBootInProgress = true;
       return handleAction('login', login, {
         button: loginButton,
-        key: buildActionKey('login', [$('facilitadorId').value])
+        key: buildActionKey('login', [$('facilitadorId').value]),
+        onError: (err) => {
+          if (state.ui) state.ui.facilitadorBootInProgress = false;
+          return false; // dejar que handleAction muestre el banner de error
+        }
+      }).finally(() => {
+        if (state.ui) state.ui.facilitadorBootInProgress = false;
       });
     }
 
@@ -10743,15 +10753,19 @@
       if (listHead) listHead.hidden = !!focusedEntry;
 
       // BUG-12 (Facilitador Boot Empty State Guard V1):
-      // El boot inicial rellena state.planeaciones via getFacilitadorBoot, no
-      // via refreshPlaneaciones. Durante esa ventana planeacionesLoading es
-      // false pero planeacionesLoaded también es false. Antes caíamos al
-      // mensaje "Todavía no hay planeaciones..." por 3-8 s, lo que hacía
-      // pensar al facilitador que no tenía planes. Ahora si hay sesión activa
-      // y la primera carga aún no completó, mostramos skeleton/loading.
+      // Durante el boot post-login el facilitador no tiene aún state.session
+      // ni state.planeaciones (api('login') tarda 5-10s, después getFacilitadorBoot
+      // tarda otros segundos). En esa ventana planeacionesLoading=false,
+      // planeacionesLoaded=false, plans=[] y antes caíamos al copy de "vacío"
+      // que hace pensar al facilitador que no tiene planes. Ahora cualquiera
+      // de estas señales activa el skeleton/loading:
+      // - planeacionesLoading (refreshPlaneaciones pidiendo backend)
+      // - facilitadorBootInProgress (login click → primera carga completa)
+      // - sesión activa pero loaded === false (boot diferido aún en curso)
       const sessionActive = !!(state.session && state.session.token);
+      const bootInProgress = !!(state.ui && state.ui.facilitadorBootInProgress);
       const awaitingInitialLoad = sessionActive && !planeacionesLoaded;
-      if ((planeacionesLoading || awaitingInitialLoad) && !entriesToRender.length) {
+      if ((planeacionesLoading || bootInProgress || awaitingInitialLoad) && !entriesToRender.length) {
         const previewCount = getPlaneacionesLoadingPreviewCount();
         host.innerHTML = previewCount > 0
           ? buildPlaneacionesListSkeleton(previewCount)
