@@ -9070,6 +9070,44 @@
       return plan;
     }
 
+    function isPreservedPlaneacionDetailStale(row, preservedPlan) {
+      if (!row || !preservedPlan) return false;
+      const rowUpdatedAtMs = Date.parse(String(row.fecha_actualizacion || ''));
+      const preservedUpdatedAtMs = Date.parse(String(preservedPlan.fecha_actualizacion || ''));
+      if (Number.isFinite(rowUpdatedAtMs) && Number.isFinite(preservedUpdatedAtMs) && rowUpdatedAtMs > preservedUpdatedAtMs + 1000) {
+        return true;
+      }
+      const rowActivityVersion = String(row.actividades_version_actual || '').trim();
+      const preservedActivityVersion = String(preservedPlan.actividades_version_actual || '').trim();
+      return !!(rowActivityVersion && preservedActivityVersion && rowActivityVersion !== preservedActivityVersion);
+    }
+
+    function mergePreservedPlaneacionDetail(row, preservedPlan) {
+      if (!row || !row.planeacion_id || !preservedPlan || !preservedPlan.detail_loaded) return row;
+      const planId = String(row.planeacion_id || '').trim();
+      if (!(hasUsableOpenPlanDetail(preservedPlan) && shouldKeepOpenPlanInlineDetail(planId, preservedPlan))) return row;
+      if (isPreservedPlaneacionDetailStale(row, preservedPlan)) return row;
+      const nextRow = Object.assign({}, row, {
+        detail_loaded: true,
+        boot_detail_loaded: true,
+        alumnos: Array.isArray(preservedPlan.alumnos) ? preservedPlan.alumnos : [],
+        actividades: Array.isArray(preservedPlan.actividades) ? preservedPlan.actividades : []
+      });
+      if (preservedPlan._draft_general_observation_text !== undefined) {
+        nextRow._draft_general_observation_text = String(preservedPlan._draft_general_observation_text || '');
+      }
+      if (preservedPlan._draft_final_observations_by_key) {
+        nextRow._draft_final_observations_by_key = Object.assign({}, preservedPlan._draft_final_observations_by_key || {});
+      }
+      if (preservedPlan.obs_loaded) {
+        nextRow.obs_loaded = true;
+        nextRow.obs_semana = Array.isArray(preservedPlan.obs_semana) ? preservedPlan.obs_semana : [];
+        nextRow.obs_alumno_final = Array.isArray(preservedPlan.obs_alumno_final) ? preservedPlan.obs_alumno_final : [];
+      }
+      normalizePlanAlumnosGrupoId(nextRow);
+      return nextRow;
+    }
+
     function upsertPlaneacionRow(row) {
       if (!row || !row.planeacion_id) return null;
       const idx = state.planeaciones.findIndex((plan) => plan.planeacion_id === row.planeacion_id);
@@ -9079,7 +9117,7 @@
         return row;
       }
       const existing = state.planeaciones[idx] || {};
-      const nextRow = Object.assign({}, existing, row);
+      let nextRow = Object.assign({}, existing, row);
       const existingUpdatedAtMs = Date.parse(String(existing.fecha_actualizacion || ''));
       const incomingUpdatedAtMs = Date.parse(String(row.fecha_actualizacion || ''));
       const incomingLooksOlder = Number.isFinite(existingUpdatedAtMs) &&
@@ -9101,17 +9139,11 @@
           nextRow._local_save_message = existing._local_save_message || nextRow._local_save_message || '';
         }
       }
-      if (row.detail_loaded === false && existing.detail_loaded && shouldKeepOpenPlanInlineDetail(row.planeacion_id, existing)) {
-        nextRow.detail_loaded = true;
-        nextRow.boot_detail_loaded = !!existing.boot_detail_loaded;
-        nextRow.alumnos = Array.isArray(existing.alumnos) ? existing.alumnos : [];
-        nextRow.actividades = Array.isArray(existing.actividades) ? existing.actividades : [];
+      if (row.detail_loaded !== true && existing.detail_loaded) {
+        nextRow = mergePreservedPlaneacionDetail(nextRow, existing);
       }
-      if (incomingLooksOlder && existing.detail_loaded && shouldKeepOpenPlanInlineDetail(row.planeacion_id, existing)) {
-        nextRow.detail_loaded = true;
-        nextRow.boot_detail_loaded = !!existing.boot_detail_loaded;
-        nextRow.alumnos = Array.isArray(existing.alumnos) ? existing.alumnos : [];
-        nextRow.actividades = Array.isArray(existing.actividades) ? existing.actividades : [];
+      if (incomingLooksOlder && existing.detail_loaded) {
+        nextRow = mergePreservedPlaneacionDetail(nextRow, existing);
       }
       if (row.obs_loaded === false && existing.obs_loaded) {
         nextRow.obs_semana = Array.isArray(existing.obs_semana) ? existing.obs_semana : [];
@@ -9136,27 +9168,17 @@
     function preserveOpenPlanDetailOnRowsReplace(rows, planSnapshot = null, planId = state.openPlanId) {
       const normalizedPlanId = String(planId || '').trim();
       const nextRows = Array.isArray(rows) ? rows.slice() : [];
-      if (!normalizedPlanId || !nextRows.length) return nextRows;
-      const preservedPlan = planSnapshot || getPlanById(normalizedPlanId) || getBootSnapshotOpenPlanById(normalizedPlanId);
-      if (!(preservedPlan && preservedPlan.detail_loaded && shouldKeepOpenPlanInlineDetail(normalizedPlanId, preservedPlan))) {
-        return nextRows;
-      }
-      const rowIndex = nextRows.findIndex((plan) => String((plan && plan.planeacion_id) || '').trim() === normalizedPlanId);
-      if (rowIndex === -1) return nextRows;
-      nextRows[rowIndex] = Object.assign({}, nextRows[rowIndex], {
-        detail_loaded: true,
-        boot_detail_loaded: true,
-        alumnos: Array.isArray(preservedPlan.alumnos) ? preservedPlan.alumnos : [],
-        actividades: Array.isArray(preservedPlan.actividades) ? preservedPlan.actividades : [],
-        _draft_general_observation_text: String(preservedPlan._draft_general_observation_text || ''),
-        _draft_final_observations_by_key: Object.assign({}, preservedPlan._draft_final_observations_by_key || {})
+      if (!nextRows.length) return nextRows;
+      const existingById = new Map((state.planeaciones || []).map((plan) => [String((plan && plan.planeacion_id) || '').trim(), plan]));
+      return nextRows.map((row) => {
+        const rowPlanId = String((row && row.planeacion_id) || '').trim();
+        if (!rowPlanId) return row;
+        const explicitSnapshot = normalizedPlanId && rowPlanId === normalizedPlanId
+          ? (planSnapshot || getBootSnapshotOpenPlanById(rowPlanId))
+          : null;
+        const preservedPlan = explicitSnapshot || existingById.get(rowPlanId) || null;
+        return mergePreservedPlaneacionDetail(row, preservedPlan);
       });
-      if (preservedPlan.obs_loaded) {
-        nextRows[rowIndex].obs_loaded = true;
-        nextRows[rowIndex].obs_semana = Array.isArray(preservedPlan.obs_semana) ? preservedPlan.obs_semana : [];
-        nextRows[rowIndex].obs_alumno_final = Array.isArray(preservedPlan.obs_alumno_final) ? preservedPlan.obs_alumno_final : [];
-      }
-      return nextRows;
     }
 
     function removePlaneacionRows(planIds) {
