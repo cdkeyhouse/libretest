@@ -2051,7 +2051,13 @@
       // BUG-12: marcar boot en progreso para que renderPlaneacionesList no
       // muestre "Todavía no hay planeaciones..." durante la ventana entre el
       // click de login y la primera carga completa de planeaciones.
+      // Re-renderizamos la lista inmediatamente para que el HTML stale del
+      // último render (login screen) sea reemplazado por skeleton/loading
+      // sin esperar a que api('login') retorne.
       if (state.ui) state.ui.facilitadorBootInProgress = true;
+      if (typeof renderPlaneacionesList === 'function') {
+        try { renderPlaneacionesList(); } catch (_) {}
+      }
       return handleAction('login', login, {
         button: loginButton,
         key: buildActionKey('login', [$('facilitadorId').value]),
