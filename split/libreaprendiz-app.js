@@ -9716,7 +9716,7 @@
     }
 
     function getNewWeekDraftMessage(week) {
-      return 'Semana nueva: ' + formatSemanaLabel(week) + ' · se creará al guardar';
+      return formatSemanaLabel(week);
     }
 
     function getPlanEditorResolvedWeekState() {
