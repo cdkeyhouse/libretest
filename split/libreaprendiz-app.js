@@ -9614,13 +9614,55 @@
       return refreshedEntry;
     }
 
-    function renderPlanWeekResolved() {
-      const host = $('planSemanaResolved');
+    function getUnconfiguredWeekMessage() {
+      return 'Esta semana no esta configurada. Elige una fecha dentro de una semana disponible o pide a admin agregarla.';
+    }
+
+    function getPlanEditorResolvedWeekState() {
       const fallbackDate = state.planEditor.mode === 'edit'
         ? toYmdFrontend_((getWeekById(state.planEditor.lockedSemanaId) || {}).fecha_inicio || '')
         : '';
-      const resolvedDate = $('planFecha').value || fallbackDate;
-      const week = getWeekByDateOrDraft(resolvedDate);
+      const resolvedDate = String((($('planFecha') && $('planFecha').value) || fallbackDate) || '').trim();
+      return {
+        resolvedDate,
+        week: getWeekByDateOrDraft(resolvedDate)
+      };
+    }
+
+    function isPlanEditorWeekUnavailable() {
+      const resolved = getPlanEditorResolvedWeekState();
+      return !!(resolved.resolvedDate && resolved.week && resolved.week.draft);
+    }
+
+    function syncPlanEditorActionAvailability(catalogsLoadingOverride) {
+      const catalogsLoading = catalogsLoadingOverride !== undefined
+        ? !!catalogsLoadingOverride
+        : !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
+      const weekUnavailable = isPlanEditorWeekUnavailable();
+      const disabled = catalogsLoading || weekUnavailable;
+      const disabledTitle = weekUnavailable ? 'Elige una fecha dentro de una semana configurada.' : '';
+      [$('savePlanBtn'), $('savePlanDraftBtn'), $('savePlanActiveBtn')].forEach((button) => {
+        if (!button) return;
+        button.disabled = disabled;
+        if (disabledTitle) button.title = disabledTitle;
+        else button.removeAttribute('title');
+      });
+    }
+
+    function syncPlanEditorWeekValidation() {
+      const errors = getPlanEditorValidationErrors();
+      if (isPlanEditorWeekUnavailable()) {
+        errors.planFecha = getUnconfiguredWeekMessage();
+      } else if (errors.planFecha === getUnconfiguredWeekMessage()) {
+        delete errors.planFecha;
+      }
+      renderPlanEditorValidation();
+    }
+
+    function renderPlanWeekResolved() {
+      const host = $('planSemanaResolved');
+      const resolved = getPlanEditorResolvedWeekState();
+      const week = resolved.week;
       const hint = week ? getSemanaHintText(week) : '';
       host.textContent = week
         ? (week.draft
@@ -9637,6 +9679,8 @@
       if ($('planFecha') && $('planFecha') !== input) $('planFecha').value = input.value || '';
       clearPlanEditorValidation('planFecha');
       renderPlanWeekResolved();
+      syncPlanEditorWeekValidation();
+      syncPlanEditorActionAvailability();
     }
 
     function renderPlanGroupChecklist() {
@@ -9914,6 +9958,8 @@
       $('addActivityBtn').disabled = catalogsLoading;
       if (loadingNote) loadingNote.hidden = !catalogsLoading;
       renderPlanWeekResolved();
+      syncPlanEditorWeekValidation();
+      syncPlanEditorActionAvailability(catalogsLoading);
       syncPlanSubmateriaSelect();
       renderPlanGroupChecklist();
       renderPlanAlumnosChecklist();
