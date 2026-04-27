@@ -10,6 +10,10 @@
     const OPEN_PLAN_DETAIL_PREFETCH_LIMIT = 10;
     const OPEN_PLAN_DETAIL_PREFETCH_CONCURRENCY = 2;
     const OPEN_PLAN_DETAIL_PREFETCH_DELAY_MS = 650;
+    // V2: cap conservador para snapshot. No persistir más de N detalles
+    // prefetched (excluyendo openPlan que va aparte) para no inflar
+    // localStorage. 5 cubre la mayoría de los casos del facilitador.
+    const PREFETCHED_DETAIL_SNAPSHOT_LIMIT = 5;
     const LOGIN_PRELOAD_CATALOG_BLOCKS = ['materias', 'semanas', 'grupos'];
 
     function createEmptyAlumnoEditorState() {
@@ -1433,6 +1437,43 @@
       }
     }
 
+    // V2: persistir hasta N detalles prefetched (no openPlan) para que reload
+    // o F5 no pierda el beneficio del prefetch. Solo planes con detalle fresco
+    // y en estados activos. No incluye drafts locales (esos solo del openPlan).
+    function buildBootSnapshotPrefetchedPlans() {
+      const role = getCurrentRole();
+      if (role !== 'facilitador') return { plans: [], savedAtById: {} };
+      const openPlanId = String(state.openPlanId || '').trim();
+      const planeaciones = Array.isArray(state.planeaciones) ? state.planeaciones : [];
+      const result = [];
+      const savedAtById = {};
+      for (const plan of planeaciones) {
+        if (result.length >= PREFETCHED_DETAIL_SNAPSHOT_LIMIT) break;
+        if (!plan || !plan.planeacion_id) continue;
+        const planId = String(plan.planeacion_id).trim();
+        if (!planId || planId === openPlanId) continue;
+        const status = String(plan.estado || '').trim();
+        if (['cerrada', 'archivada', 'cierre_pendiente'].includes(status)) continue;
+        if (isPlaneacionPendingCreation(plan)) continue;
+        if (!plan.detail_loaded) continue;
+        if (!hasUsableOpenPlanDetail(plan)) continue;
+        const savedAt = getOpenPlanDetailSnapshotSavedAt(planId);
+        if (!savedAt || !isTimestampFreshWithin(savedAt, OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS)) continue;
+        let snapshotPlan;
+        try {
+          snapshotPlan = JSON.parse(JSON.stringify(plan));
+        } catch (_) {
+          snapshotPlan = Object.assign({}, plan);
+        }
+        // Drafts locales solo viven en el openPlan; nunca persistir para prefetched.
+        delete snapshotPlan._draft_general_observation_text;
+        delete snapshotPlan._draft_final_observations_by_key;
+        result.push(snapshotPlan);
+        savedAtById[planId] = savedAt;
+      }
+      return { plans: result, savedAtById };
+    }
+
     function getBootSnapshotOpenPlanById(planId, sessionLike = state.session) {
       const normalizedPlanId = String(planId || '').trim();
       if (!normalizedPlanId) return null;
@@ -1609,6 +1650,8 @@
         payload.openPlanId = snapshotOpenPlanAllowed ? snapshotOpenPlanId : '';
         payload.openPlan = snapshotOpenPlanAllowed ? buildBootSnapshotOpenPlan() : null;
         payload.openPlanDraft = snapshotOpenPlanAllowed ? buildBootSnapshotOpenPlanDraft() : null;
+        const prefetchedSummary = buildBootSnapshotPrefetchedPlans();
+        payload.prefetchedOpenPlans = prefetchedSummary.plans;
         payload.planeacionesMeta = {
           loaded: !!(state.ui && state.ui.planeacionesLoaded),
           hasMore: !!(state.ui && state.ui.planeacionesHasMore),
@@ -1621,7 +1664,8 @@
           alertas_saved_at: String((state.ui && state.ui.alertasSavedAt) || ''),
           notificaciones_saved_at: String((state.ui && state.ui.notificacionesSavedAt) || ''),
           open_plan_detail_saved_at: getOpenPlanDetailSnapshotSavedAt(payload.openPlanId),
-          open_plan_obs_saved_at: getOpenPlanObsSnapshotSavedAt(payload.openPlanId)
+          open_plan_obs_saved_at: getOpenPlanObsSnapshotSavedAt(payload.openPlanId),
+          prefetched_plans_saved_at_by_id: prefetchedSummary.savedAtById
         };
       } else if (canUseAdminShell()) {
         payload.alertas = Array.isArray(state.alertas) ? state.alertas.slice(0, 20) : [];
@@ -1680,6 +1724,45 @@
             snapshot.meta && snapshot.meta.open_plan_obs_saved_at ? snapshot.meta.open_plan_obs_saved_at : snapshot.saved_at
           );
         }
+      }
+      // V2: restaurar detalle de planes prefetched persistidos. Solo si el row
+      // sigue existiendo en la lista, no hay versión más nueva en backend, y el
+      // detalle persistido sigue dentro del TTL. No restaura drafts locales.
+      if (
+        canReusePlaneacionesSnapshot &&
+        Array.isArray(snapshot.prefetchedOpenPlans) &&
+        snapshot.prefetchedOpenPlans.length
+      ) {
+        const prefetchedSavedAtMap = (snapshot.meta && typeof snapshot.meta.prefetched_plans_saved_at_by_id === 'object' && snapshot.meta.prefetched_plans_saved_at_by_id)
+          ? snapshot.meta.prefetched_plans_saved_at_by_id
+          : {};
+        snapshot.prefetchedOpenPlans.forEach((prefetchedPlan) => {
+          if (!prefetchedPlan || !prefetchedPlan.planeacion_id) return;
+          const planId = String(prefetchedPlan.planeacion_id).trim();
+          if (!planId) return;
+          if (planId === snapshot.openPlanId) return; // ya restaurado como openPlan
+          if (isPlaneacionPendingCreation(prefetchedPlan)) return;
+          const status = String(prefetchedPlan.estado || '').trim();
+          if (['cerrada', 'archivada', 'cierre_pendiente'].includes(status)) return;
+          const currentRow = (state.planeaciones || []).find((p) => String((p && p.planeacion_id) || '').trim() === planId);
+          if (!currentRow) return;
+          // Si el row de la lista trae fecha más nueva, no preservar detalle stale
+          const currentUpdatedMs = Date.parse(String(currentRow.fecha_actualizacion || ''));
+          const prefetchedUpdatedMs = Date.parse(String(prefetchedPlan.fecha_actualizacion || ''));
+          if (Number.isFinite(currentUpdatedMs) && Number.isFinite(prefetchedUpdatedMs) && currentUpdatedMs > prefetchedUpdatedMs) return;
+          // Si el bloque de actividades cambió de versión, tampoco preservar
+          if (
+            currentRow.actividades_version_actual &&
+            prefetchedPlan.actividades_version_actual &&
+            currentRow.actividades_version_actual !== prefetchedPlan.actividades_version_actual
+          ) return;
+          const savedAt = String(prefetchedSavedAtMap[planId] || '').trim();
+          if (!savedAt || !isTimestampFreshWithin(savedAt, OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS)) return;
+          upsertPlaneacionRow(prefetchedPlan);
+          if (prefetchedPlan.detail_loaded) {
+            markPlaneacionDetailFresh(planId, savedAt);
+          }
+        });
       }
       if (
         canReusePlaneacionesSnapshot &&
