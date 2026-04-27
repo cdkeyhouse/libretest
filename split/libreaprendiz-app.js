@@ -10742,7 +10742,16 @@
       const entriesToRender = focusedEntry ? [focusedEntry] : visibleEntries;
       if (listHead) listHead.hidden = !!focusedEntry;
 
-      if (planeacionesLoading && !planeacionesLoaded && !entriesToRender.length) {
+      // BUG-12 (Facilitador Boot Empty State Guard V1):
+      // El boot inicial rellena state.planeaciones via getFacilitadorBoot, no
+      // via refreshPlaneaciones. Durante esa ventana planeacionesLoading es
+      // false pero planeacionesLoaded también es false. Antes caíamos al
+      // mensaje "Todavía no hay planeaciones..." por 3-8 s, lo que hacía
+      // pensar al facilitador que no tenía planes. Ahora si hay sesión activa
+      // y la primera carga aún no completó, mostramos skeleton/loading.
+      const sessionActive = !!(state.session && state.session.token);
+      const awaitingInitialLoad = sessionActive && !planeacionesLoaded;
+      if ((planeacionesLoading || awaitingInitialLoad) && !entriesToRender.length) {
         const previewCount = getPlaneacionesLoadingPreviewCount();
         host.innerHTML = previewCount > 0
           ? buildPlaneacionesListSkeleton(previewCount)
