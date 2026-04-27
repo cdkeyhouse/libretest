@@ -5041,6 +5041,23 @@
       .activity-inline-grid { grid-template-columns: 1fr !important; }
       input, select, textarea, button { font-size: 16px !important; }
       .admin-nav { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .plan-open-editor-group.is-multigroup-compact .group-block-head {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 4px !important;
+        align-items: start !important;
+      }
+      .plan-open-editor-group.is-multigroup-compact .group-block-head > div:first-child,
+      .plan-open-editor-group.is-multigroup-compact .plan-multigroup-student-title {
+        display: grid !important;
+        gap: 1px !important;
+      }
+      .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact {
+        display: none !important;
+      }
+      .plan-open-editor-group.is-multigroup-compact .plan-open-students {
+        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)) !important;
+      }
     }
 
     @media (max-width: 520px) {
