@@ -12470,6 +12470,12 @@
         return inFlightActions.get(actionKey);
       }
 
+      // BUG-11: capturar el token con el que arranc\u00f3 la acci\u00f3n para detectar
+      // callbacks tard\u00edos de una sesi\u00f3n vieja que llegan despu\u00e9s de un login
+      // fresh. Si el token cambi\u00f3 mientras la acci\u00f3n corr\u00eda, ignorar el error
+      // de INVALID_SESSION sin tocar la sesi\u00f3n nueva ni mostrar banner stale.
+      const actionSessionToken = String((state.session && state.session.token) || '');
+
       const runner = (async () => {
         pushFeedbackAnchor(feedbackAnchor);
         try {
@@ -12478,6 +12484,9 @@
           await fn();
         } catch (err) {
           if (err && err.code === 'INVALID_SESSION') {
+            const currentSessionToken = String((state.session && state.session.token) || '');
+            const hasNewerSession = currentSessionToken && currentSessionToken !== actionSessionToken;
+            if (hasNewerSession) return;
             clearSessionScopedState();
             setBanner('Tu sesi\u00f3n expir\u00f3 o ya no es v\u00e1lida. Vuelve a iniciar sesi\u00f3n.', 'error', { anchor: feedbackAnchor });
             return;
