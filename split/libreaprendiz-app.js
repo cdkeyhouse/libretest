@@ -10318,6 +10318,77 @@
       }, {});
     }
 
+    function hydrateOpenPlanAfterOpen(planId) {
+      ensurePlaneacionDetailLoaded(planId, { silent: true })
+        .then((plan) => {
+          if (state.openPlanId !== planId) return null;
+          const entry = plan ? getPlaneacionEntryByKey(getPlaneacionEntryKey(plan)) : null;
+          if (entry && entry.isMulti) {
+            ensurePlaneacionEntryDetailsLoaded(entry, { silent: true }).then(() => {
+              if (state.openPlanId !== planId) return;
+              const refreshedPlan = getPlanById(planId) || plan;
+              if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
+                state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
+              }
+              persistCurrentBootSnapshot('planeacion_abierta_multigrupo');
+              renderPlaneacionesList();
+            }).catch(() => {});
+          }
+          if (state.ui) state.ui.openPlanLoadingId = '';
+          if (plan && hasUsableOpenPlanDetail(plan)) {
+            state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(plan), plan);
+          }
+          persistCurrentBootSnapshot('planeacion_abierta');
+          renderPlaneacionesList();
+          scheduleAfterPaint(() => {
+            if (state.openPlanId !== planId) return null;
+            return ensurePlaneacionObservacionesLoaded(planId, { silent: true })
+              .then(() => {
+                if (state.openPlanId !== planId) return;
+                renderPlaneacionesList();
+              })
+              .catch(() => null);
+          }, 120);
+          scheduleAfterPaint(() => {
+            if (state.openPlanId !== planId) return null;
+            return ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
+              .then(() => {
+                if (state.openPlanId !== planId) return;
+                const refreshedPlan = getPlanById(planId) || plan;
+                if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
+                  state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
+                }
+                renderPlaneacionesList();
+              })
+              .catch(() => state.catalogos);
+          }, 140);
+          scheduleAfterPaint(() => {
+            if (state.openPlanId !== planId) return null;
+            const currentOpenPlan = getPlanById(planId);
+            if (currentOpenPlan && currentOpenPlan.detail_loaded) return null;
+            return ensurePlaneacionDetailLoaded(planId, { silent: true, force: true })
+              .then((retryPlan) => {
+                if (state.openPlanId !== planId) return;
+                if (state.ui) state.ui.openPlanLoadingId = '';
+                if (retryPlan && hasUsableOpenPlanDetail(retryPlan)) {
+                  state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(retryPlan), retryPlan);
+                }
+                renderPlaneacionesList();
+              })
+              .catch(() => null);
+          }, 2600);
+          return null;
+        })
+        .catch((err) => {
+          if (state.openPlanId !== planId) return;
+          if (state.ui && state.ui.openPlanLoadingId === planId) {
+            state.ui.openPlanLoadingId = '';
+          }
+          renderPlaneacionesList();
+          setBanner((err && err.message) || 'No se pudo abrir la planeación. Intenta de nuevo.', 'error');
+        });
+    }
+
     async function togglePlanOpen(button, planId) {
       if (state.openPlanId === planId) {
         state.openPlanId = '';
@@ -10343,81 +10414,7 @@
       }
       closePlanBuilder();
       renderPlaneacionesList();
-      await handleAction('togglePlanOpen', async () => {
-        const detailPromise = ensurePlaneacionDetailLoaded(planId, { silent: true });
-        const plan = await detailPromise;
-        const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
-        if (entry && entry.isMulti) {
-          ensurePlaneacionEntryDetailsLoaded(entry, { silent: true }).then(() => {
-            if (state.openPlanId !== planId) return;
-            const refreshedPlan = getPlanById(planId) || plan;
-            if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
-              state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
-            }
-            persistCurrentBootSnapshot('planeacion_abierta_multigrupo');
-            renderPlaneacionesList();
-          }).catch(() => {});
-        }
-        if (state.ui) state.ui.openPlanLoadingId = '';
-        if (plan && hasUsableOpenPlanDetail(plan)) {
-          state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(plan), plan);
-        }
-        persistCurrentBootSnapshot('planeacion_abierta');
-        renderPlaneacionesList();
-        scheduleAfterPaint(() => {
-          if (state.openPlanId !== planId) return null;
-          return ensurePlaneacionObservacionesLoaded(planId, { silent: true })
-            .then(() => {
-              if (state.openPlanId !== planId) return;
-              renderPlaneacionesList();
-            })
-            .catch(() => null);
-        }, 120);
-        scheduleAfterPaint(() => {
-          if (state.openPlanId !== planId) return null;
-          return ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
-            .then(() => {
-              if (state.openPlanId !== planId) return;
-              const refreshedPlan = getPlanById(planId) || plan;
-              if (refreshedPlan && hasUsableOpenPlanDetail(refreshedPlan)) {
-                state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan);
-              }
-              renderPlaneacionesList();
-            })
-            .catch(() => state.catalogos);
-        }, 140);
-        scheduleAfterPaint(() => {
-          if (state.openPlanId !== planId) return null;
-          const currentOpenPlan = getPlanById(planId);
-          if (currentOpenPlan && currentOpenPlan.detail_loaded) return null;
-          return ensurePlaneacionDetailLoaded(planId, { silent: true, force: true })
-            .then((retryPlan) => {
-              if (state.openPlanId !== planId) return;
-              if (state.ui) state.ui.openPlanLoadingId = '';
-              if (retryPlan && hasUsableOpenPlanDetail(retryPlan)) {
-                state.openPlanDraft = preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(retryPlan), retryPlan);
-              }
-              renderPlaneacionesList();
-            })
-            .catch(() => null);
-        }, 2600);
-      }, {
-        button,
-        key: buildActionKey('togglePlanOpen', [planId]),
-        busyText: 'Abriendo...',
-        onError: () => {
-          if (state.openPlanId === planId) {
-            state.openPlanId = '';
-            state.openPlanDraft = null;
-          }
-          if (state.ui && state.ui.openPlanLoadingId === planId) {
-            state.ui.openPlanLoadingId = '';
-          }
-          renderPlaneacionesList();
-          return false;
-        }
-      });
-      renderPlaneacionesList();
+      hydrateOpenPlanAfterOpen(planId);
       if (state.openPlanId) {
         window.requestAnimationFrame(() => {
           const card = $('plan-card-' + planId);
