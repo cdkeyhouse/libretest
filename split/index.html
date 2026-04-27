@@ -4392,6 +4392,13 @@
         margin-bottom: 6px;
       }
 
+      .plan-open-editor-group.is-multigroup-compact .group-block-head > div:first-child {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+      }
+
       .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact {
         margin: 0;
       }
@@ -4666,20 +4673,18 @@
 
         .plan-open-editor-group.is-multigroup-compact .group-block-head {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          gap: 8px;
-          align-items: center;
+          grid-template-columns: 1fr;
+          gap: 4px;
+          align-items: start;
+        }
+
+        .plan-open-editor-group.is-multigroup-compact .group-block-head > div:first-child {
+          display: grid;
+          gap: 1px;
         }
 
         .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact {
-          display: flex;
-          flex-wrap: nowrap;
-        }
-
-        .plan-open-editor-group.is-multigroup-compact .group-block-head .actions.compact > .btn-ghost {
-          min-height: 30px;
-          padding: 5px 8px;
-          font-size: 0.78rem;
+          display: none;
         }
 
         .plan-open-editor-group.is-multigroup-compact .plan-open-students {
