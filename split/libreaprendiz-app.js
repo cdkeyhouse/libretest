@@ -7876,6 +7876,18 @@
       return state.catalogos.semanas.find((item) => item.semana_id === semanaId) || null;
     }
 
+    function getWeekStartDateById(semanaId) {
+      const semana = getWeekById(semanaId);
+      const catalogStart = toYmdFrontend_((semana && semana.fecha_inicio) || '');
+      if (catalogStart) return catalogStart;
+      const match = String(semanaId || '').trim().match(/^SEM_(\d{4})(\d{2})(\d{2})$/);
+      return match ? toYmdFrontend_(match[1] + '-' + match[2] + '-' + match[3]) : '';
+    }
+
+    function getWeekStartDateForPlan(plan) {
+      return getWeekStartDateById(plan && plan.semana_id);
+    }
+
     function buildWeekRangeFromDate(dateValue) {
       const target = toYmdFrontend_(dateValue);
       if (!target) return null;
@@ -8239,7 +8251,6 @@
     }
 
     function loadPlanIntoEditor(plan) {
-      const semana = getWeekById(plan.semana_id);
       state.openPlanId = plan.planeacion_id;
       state.openPlanDraft = null;
       if (state.ui) state.ui.planBuilderExpanded = true;
@@ -8262,7 +8273,7 @@
           last_known_updated_at: actividad.fecha_actualizacion || ''
         })) : [createEmptyActivityDraft()]
       };
-      $('planFecha').value = semana && semana.fecha_inicio ? toYmdFrontend_(semana.fecha_inicio) : '';
+      $('planFecha').value = getWeekStartDateForPlan(plan);
       $('planFrase').value = plan.frase_semana || '';
       $('planMateria').value = plan.materia_id || '';
       syncPlanSubmateriaSelect(plan.submateria_id || '');
@@ -8274,7 +8285,6 @@
     }
 
     function buildOpenPlanDraft(plan) {
-      const semana = getWeekById(plan.semana_id);
       const snapshotOpenPlan = getBootSnapshotOpenPlanById(plan.planeacion_id);
       const sourcePlan = (
         plan &&
@@ -8300,7 +8310,7 @@
       ).trim();
       return {
         planId: plan.planeacion_id,
-        fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
+        fecha_planeacion: getWeekStartDateForPlan(plan),
         frase_semana: sourcePlan.frase_semana || '',
         materia_id: sourcePlan.materia_id || '',
         submateria_id: sourcePlan.submateria_id || '',
@@ -8397,8 +8407,7 @@
     }
 
     function getCurrentPlanFechaPlaneacion(plan) {
-      const semana = plan ? getWeekById(plan.semana_id) : null;
-      return toYmdFrontend_((semana && semana.fecha_inicio) || '');
+      return getWeekStartDateForPlan(plan);
     }
 
     function buildOpenPlanStructuralSignatureFromDraft(draft) {
@@ -8917,12 +8926,11 @@
     function buildMultiGroupSharedDraft(entry) {
       const selectedPlan = getOpenPlaneacionEntry(entry) || (entry && entry.representative) || null;
       if (!selectedPlan) return null;
-      const semana = getWeekById(selectedPlan.semana_id);
       return {
         entryKey: entry.key,
         loteId: entry.loteId,
         basePlanId: selectedPlan.planeacion_id,
-        fecha_planeacion: toYmdFrontend_((semana && semana.fecha_inicio) || ''),
+        fecha_planeacion: getWeekStartDateForPlan(selectedPlan),
         materia_id: selectedPlan.materia_id || '',
         submateria_id: selectedPlan.submateria_id || '',
         frase_semana: selectedPlan.frase_semana || '',
@@ -9721,7 +9729,7 @@
 
     function getPlanEditorResolvedWeekState() {
       const fallbackDate = state.planEditor.mode === 'edit'
-        ? toYmdFrontend_((getWeekById(state.planEditor.lockedSemanaId) || {}).fecha_inicio || '')
+        ? getWeekStartDateById(state.planEditor.lockedSemanaId)
         : '';
       const resolvedDate = String((($('planFecha') && $('planFecha').value) || fallbackDate) || '').trim();
       return {
@@ -10584,7 +10592,7 @@
       const selectedPlan = getOpenPlaneacionEntry(entry);
       const selectedMateriaId = String((draft && draft.materia_id) || (selectedPlan || {}).materia_id || '').trim();
       const selectedSubmaterias = getPlanSubmateriasForMateria(selectedMateriaId);
-      const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || ''));
+      const week = getWeekByDateOrDraft(draft.fecha_planeacion || getWeekStartDateForPlan(selectedPlan));
       const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
       return (
         '<div class="plan-multigroup-shared">' +
@@ -10631,7 +10639,7 @@
       }
         const selectedMateriaId = String((draft && draft.materia_id) || plan.materia_id || '').trim();
         const submaterias = getPlanSubmateriasForMateria(selectedMateriaId);
-        const week = getWeekByDateOrDraft(draft.fecha_planeacion || toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || ''));
+        const week = getWeekByDateOrDraft(draft.fecha_planeacion || getWeekStartDateForPlan(plan));
         const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
         const alumnosGrupoCatalogo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
         const alumnosGrupo = alumnosGrupoCatalogo.length
@@ -12010,7 +12018,7 @@
       const hasAdminPower = canUseAdminShell();
       const editorMode = state.planEditor.mode;
       const fallbackDate = editorMode === 'edit'
-        ? toYmdFrontend_((getWeekById(state.planEditor.lockedSemanaId) || {}).fecha_inicio || '')
+        ? getWeekStartDateById(state.planEditor.lockedSemanaId)
         : '';
       const fechaPlaneacion = $('planFecha').value || fallbackDate;
       const semana = getWeekByDateOrDraft(fechaPlaneacion);
@@ -12656,7 +12664,7 @@
     }
 
     function buildOpenPlanSaveRequest(plan, draft) {
-      const fallbackDate = toYmdFrontend_((getWeekById(plan.semana_id) || {}).fecha_inicio || '');
+      const fallbackDate = getWeekStartDateForPlan(plan);
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
       if (!semana) throw new Error('Selecciona una fecha v\u00e1lida.');
       const materiaId = String((draft && draft.materia_id) || (plan && plan.materia_id) || '').trim();
@@ -13643,7 +13651,7 @@
       if (!entry || !entry.isMulti) throw new Error('Planeaci\u00f3n multigrupo no encontrada.');
       if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
       const selectedPlan = getOpenPlaneacionEntry(entry) || entry.representative || null;
-      const fallbackDate = toYmdFrontend_((getWeekById((selectedPlan || {}).semana_id) || {}).fecha_inicio || '');
+      const fallbackDate = getWeekStartDateForPlan(selectedPlan);
       const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
       if (!semana) throw new Error('Selecciona una fecha v\u00e1lida para el multigrupo.');
       const materiaId = String((draft && draft.materia_id) || (selectedPlan && selectedPlan.materia_id) || '').trim();
