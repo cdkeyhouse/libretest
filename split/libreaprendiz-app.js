@@ -253,6 +253,8 @@
         debounceTimers: {},
         adminUiEventsBound: false,
         restoreSnapshotSyncing: false,
+        restoreSnapshotSyncJustFinished: false,
+        restoreSnapshotSyncFinishedTimeout: null,
         planeacionOutboxProcessing: false,
         planeacionOutboxRetryTimer: null,
         closePlanSyncWatchTimer: null,
@@ -987,6 +989,11 @@
         state.ui.planeacionesMateriaFilter = '';
         state.ui.multiGroupActiveChildByLote = {};
         state.ui.restoreSnapshotSyncing = false;
+        if (state.ui.restoreSnapshotSyncFinishedTimeout) {
+          clearTimeout(state.ui.restoreSnapshotSyncFinishedTimeout);
+        }
+        state.ui.restoreSnapshotSyncFinishedTimeout = null;
+        state.ui.restoreSnapshotSyncJustFinished = false;
         state.ui.adminNotificationsPrefetchPromise = null;
         state.ui.adminNotificationsPrefetchDone = false;
         state.ui.planeacionOutboxProcessing = false;
@@ -2305,7 +2312,30 @@
       if (!state.ui) return;
       const nextValue = !!isActive;
       if (state.ui.restoreSnapshotSyncing === nextValue) return;
+      const wasSyncing = state.ui.restoreSnapshotSyncing;
       state.ui.restoreSnapshotSyncing = nextValue;
+      // BUG-M4: al terminar sync (true → false), mostrar pill "Actualizado"
+      // por 2s y luego ocultar. Evita que "Restaurado · Sync" quede colgado
+      // permanentemente en el header tras un restore exitoso.
+      if (wasSyncing && !nextValue) {
+        state.ui.restoreSnapshotSyncJustFinished = true;
+        if (state.ui.restoreSnapshotSyncFinishedTimeout) {
+          clearTimeout(state.ui.restoreSnapshotSyncFinishedTimeout);
+        }
+        state.ui.restoreSnapshotSyncFinishedTimeout = setTimeout(() => {
+          if (!state.ui) return;
+          state.ui.restoreSnapshotSyncJustFinished = false;
+          state.ui.restoreSnapshotSyncFinishedTimeout = null;
+          renderSession();
+        }, 2000);
+      } else if (nextValue) {
+        // Si vuelve a entrar a sync, cancelar el timeout de "Actualizado".
+        if (state.ui.restoreSnapshotSyncFinishedTimeout) {
+          clearTimeout(state.ui.restoreSnapshotSyncFinishedTimeout);
+          state.ui.restoreSnapshotSyncFinishedTimeout = null;
+        }
+        state.ui.restoreSnapshotSyncJustFinished = false;
+      }
       renderSession();
     }
 
@@ -3266,9 +3296,12 @@
         '<span class="mini">' + escapeHtml(user.facilitador_id) + ' · ' +
         escapeHtml(user.rol) + '</span>';
       if (workspaceSessionCopy) {
-        const restoreChip = state.ui && state.ui.restoreSnapshotSyncing
-          ? '<span class="workspace-session-sync-chip" title="Datos restaurados mientras sincroniza en segundo plano">Restaurado · Sync</span>'
-          : '';
+        let restoreChip = '';
+        if (state.ui && state.ui.restoreSnapshotSyncing) {
+          restoreChip = '<span class="workspace-session-sync-chip" title="Datos restaurados mientras sincroniza en segundo plano">Restaurado · Sync</span>';
+        } else if (state.ui && state.ui.restoreSnapshotSyncJustFinished) {
+          restoreChip = '<span class="workspace-session-sync-chip is-done" title="Datos actualizados">Actualizado</span>';
+        }
         workspaceSessionCopy.innerHTML =
           '<strong>' + escapeHtml(user.nombre) + '</strong><div class="workspace-session-meta"><span class="mini">' +
           escapeHtml(user.facilitador_id) + ' | ' + escapeHtml(user.rol) + '</span>' + restoreChip + '</div>';
