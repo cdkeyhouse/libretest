@@ -10863,19 +10863,10 @@
           : '';
         const alumnosCount = entry.isMulti ? getPlaneacionEntryAlumnoCount(entry) : getPlanAlumnoCount(plan);
         const actividadesCount = entry.isMulti ? getPlaneacionEntryActividadCount(entry) : getPlanActividadCount(plan);
-        const activeChildAlumnoCount = entry.isMulti ? getPlanAlumnoCount(plan) : alumnosCount;
-        const loteAlumnoCount = entry.isMulti ? alumnosCount : alumnosCount;
-        const alumnosResumenText = entry.isMulti
-          ? (escapeHtml(String(activeChildAlumnoCount)) + ' en este grupo · ' + escapeHtml(String(loteAlumnoCount)) + ' en el lote')
-          : (escapeHtml(String(alumnosCount)) + ' alumno(s)');
+        const alumnosResumenText = escapeHtml(String(alumnosCount)) + ' alumno(s)';
         const phraseText = String(plan.frase_semana || '-');
-        const phraseNeedsTooltip = phraseText.length > 42;
-        const phraseCompactClass = phraseNeedsTooltip
-          ? 'plan-compact-secondary plan-compact-truncate plan-compact-tooltip'
-          : 'plan-compact-secondary plan-compact-truncate';
-        const phraseCompactAttrs = phraseNeedsTooltip
-          ? ' tabindex="0" data-tooltip="' + escapeHtml(phraseText) + '"'
-          : '';
+        const phraseCompactClass = 'plan-compact-secondary plan-compact-truncate';
+        const phraseCompactAttrs = '';
         const localFeedbackHtml = getPlanLocalFeedbackMarkup(plan);
         const badgeMeta = getPlanStatusBadgeMeta(plan);
         const badgeHtml = '<span class="badge ' + escapeHtml(badgeMeta.className) + '">' + escapeHtml(badgeMeta.label) + '</span>';
@@ -11001,7 +10992,7 @@
                 '</div>' +
                 '<div class="meta-grid">' +
                   '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                  '<div><strong>Resumen:</strong> ' + alumnosResumenText + ' · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
+                  '<div><strong>Resumen:</strong> ' + alumnosResumenText + ' · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</div>' +
                 '</div>' +
                 localFeedbackHtml +
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
@@ -11029,7 +11020,7 @@
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-cell-summary">' +
                     '<span class="plan-compact-label">Resumen</span>' +
-                    '<span class="plan-compact-secondary plan-compact-truncate">' + alumnosResumenText + ' · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate">' + alumnosResumenText + ' · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
                     summaryMetaHtml +
                     localFeedbackHtml +
                   '</div>' +
