@@ -2053,6 +2053,32 @@
       );
     }
 
+    // Facilitador Backend Warmup V1: ping silencioso al backend para evitar
+    // que el primer click del usuario caiga en cold start GAS (~30s). Throttle
+    // por localStorage a 10 min m\u00e1ximo. Fire-and-forget, sin banners ni
+    // efectos en state. Si falla, queda igual al comportamiento sin warmup.
+    function scheduleBackendWarmup() {
+      try {
+        const STORAGE_KEY = 'la_v8_backend_warmup_at';
+        const THROTTLE_MS = 10 * 60 * 1000;
+        const nowMs = Date.now();
+        const lastRaw = localStorage.getItem(STORAGE_KEY);
+        const lastMs = Number(lastRaw || 0);
+        if (Number.isFinite(lastMs) && lastMs > 0 && (nowMs - lastMs) < THROTTLE_MS) {
+          return;
+        }
+        const backendUrl = requireBackendUrl();
+        const url = backendUrl + (backendUrl.includes('?') ? '&' : '?') + 'action=ping';
+        // Marcar timestamp antes del fetch para que reentradas durante el
+        // mismo warmup no disparen otro request en paralelo.
+        localStorage.setItem(STORAGE_KEY, String(nowMs));
+        fetch(url).catch(() => {});
+      } catch (_) {
+        // localStorage bloqueado o requireBackendUrl falla: nunca arruinar
+        // el boot por culpa del warmup. Silencioso.
+      }
+    }
+
     function triggerLoginAction(button) {
       const loginButton = button || $('loginBtn');
       // BUG-12: marcar boot en progreso para que renderPlaneacionesList no
@@ -14975,6 +15001,10 @@
         bindAdminUiEventsOnce();
       }
       bindEvents();
+      // Warmup V1: ping silencioso al backend durante el boot, antes de que
+      // el facilitador haga su primer click. Fire-and-forget, no bloquea ni
+      // afecta render.
+      scheduleBackendWarmup();
       clearLoginInputs();
       refreshStaticConfigUi();
       if (state.session && state.session.token) {
