@@ -1999,7 +1999,14 @@
     async function api(action, payload = {}, options = {}) {
       const backendUrl = requireBackendUrl();
       const body = { action, payload };
-      if (state.session && state.session.token) body.token = state.session.token;
+      const overrideToken = options && options.tokenOverride
+        ? String(options.tokenOverride || '').trim()
+        : '';
+      if (overrideToken) {
+        body.token = overrideToken;
+      } else if (state.session && state.session.token) {
+        body.token = state.session.token;
+      }
 
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -2084,17 +2091,13 @@
         setBanner('No hab\u00eda una sesi\u00f3n activa.', 'info');
         return;
       }
-      let remoteLogoutFailed = false;
-      try {
-        await api('logout', {});
-      } catch (_) {
-        remoteLogoutFailed = true;
-      }
+      const previousToken = state.session.token;
       saveSession(null);
       clearLoadedData();
       clearLoginInputs();
       renderAll();
-      setBanner(remoteLogoutFailed ? 'Sesi\u00f3n local cerrada.' : 'Sesi\u00f3n cerrada.', remoteLogoutFailed ? 'info' : 'success');
+      setBanner('Sesi\u00f3n cerrada.', 'success');
+      api('logout', {}, { tokenOverride: previousToken }).catch(() => {});
     }
 
     async function refreshCatalogos(options = {}) {
@@ -2127,10 +2130,64 @@
       return payload;
     }
 
+    function getActivePlaneacionFilters() {
+      return {
+        semana_id: String(($('filterSemana') && $('filterSemana').value) || '').trim(),
+        estado: String(($('filterEstado') && $('filterEstado').value) || '').trim(),
+        grupo_id: String(($('filterGrupo') && $('filterGrupo').value) || '').trim(),
+        facilitador_id: String(($('filterFacilitador') && $('filterFacilitador').value) || '').trim(),
+        alumno_id: String(($('filterAlumnoId') && $('filterAlumnoId').value) || '').trim()
+      };
+    }
+
+    function applyLocalPlaneacionFilters(baseList, filters) {
+      return (Array.isArray(baseList) ? baseList : []).filter((plan) => {
+        if (!plan) return false;
+        if (filters.semana_id && String(plan.semana_id || '').trim() !== filters.semana_id) return false;
+        if (filters.estado && String(plan.estado || '').trim() !== filters.estado) return false;
+        if (filters.grupo_id && String(plan.grupo_id || '').trim() !== filters.grupo_id) return false;
+        if (filters.facilitador_id && String(plan.facilitador_id || '').trim() !== filters.facilitador_id) return false;
+        return true;
+      });
+    }
+
+    function canSkipBackendForPlaneacionFilter(filters, append) {
+      if (append) return false;
+      if (!state.ui) return false;
+      if (!state.ui.planeacionesLoaded) return false;
+      const role = String(getCurrentRole() || '').trim().toLowerCase();
+      if (role !== 'facilitador') return false; // admin tiene queries más complejas
+      if (filters.alumno_id) return false; // alumno requiere backend
+      const baseList = Array.isArray(state.ui.planeacionesUnfilteredBase)
+        ? state.ui.planeacionesUnfilteredBase
+        : null;
+      if (!baseList || !baseList.length) return false;
+      // Si la base list fue cargada con has_more, no podemos confiar en cobertura
+      return state.ui.planeacionesUnfilteredHasMore === false;
+    }
+
     async function refreshPlaneaciones(options = {}) {
       ensureLoggedIn();
       const append = !!options.append;
       const nextOffset = append && state.ui ? Number(state.ui.planeacionesOffset || 0) : 0;
+      const activeFilters = getActivePlaneacionFilters();
+
+      // A2: Filtro híbrido — si tenemos base list completa sin filtros, filtrar local
+      // y saltarse el round-trip al backend.
+      if (canSkipBackendForPlaneacionFilter(activeFilters, append)) {
+        const filtered = applyLocalPlaneacionFilters(state.ui.planeacionesUnfilteredBase, activeFilters);
+        state.planeaciones = preserveOpenPlanDetailOnRowsReplace(filtered);
+        if (state.ui) {
+          state.ui.planeacionesLoaded = true;
+          state.ui.planeacionesOffset = filtered.length;
+          state.ui.planeacionesHasMore = false;
+          state.ui.planeacionesLoading = false;
+          state.ui.planeacionesLoadingMore = false;
+        }
+        if (isPlaneacionesSurfaceVisible()) renderPlaneacionesList();
+        return;
+      }
+
       if (state.ui) {
         state.ui.planeacionesLoading = !append;
         state.ui.planeacionesLoadingMore = append;
@@ -2153,6 +2210,13 @@
           state.ui.planeacionesLoaded = true;
           state.ui.planeacionesOffset = append ? (nextOffset + nextRows.length) : nextRows.length;
           state.ui.planeacionesHasMore = !!data.has_more;
+          // A2: si esta carga vino sin filtros, guardarla como base list para usos posteriores
+          const noFiltersActive = !activeFilters.semana_id && !activeFilters.estado &&
+            !activeFilters.grupo_id && !activeFilters.facilitador_id && !activeFilters.alumno_id;
+          if (!append && noFiltersActive) {
+            state.ui.planeacionesUnfilteredBase = nextRows.slice();
+            state.ui.planeacionesUnfilteredHasMore = !!data.has_more;
+          }
         }
         if (!append) persistCurrentBootSnapshot('planeaciones');
         if (!append && state.openPlanId && (canUseAdminShell() ? state.activeAdminModule === 'planeaciones' : state.activeTab === 'planeaciones')) {
@@ -8916,10 +8980,26 @@
       renderPlaneacionesList();
     }
 
+    function normalizePlanAlumnosGrupoId(plan) {
+      if (!plan || !Array.isArray(plan.alumnos) || !plan.alumnos.length) return plan;
+      const planGrupoId = String(plan.grupo_id || '').trim();
+      const nextAlumnos = plan.alumnos.map((alumno) => {
+        if (!alumno || typeof alumno !== 'object') return alumno;
+        const currentGrupoId = String(alumno.grupo_id || '').trim();
+        if (currentGrupoId) return alumno;
+        const inferredGrupoId = String(alumno.grupo_snapshot || '').trim() || planGrupoId;
+        if (!inferredGrupoId) return alumno;
+        return Object.assign({}, alumno, { grupo_id: inferredGrupoId });
+      });
+      plan.alumnos = nextAlumnos;
+      return plan;
+    }
+
     function upsertPlaneacionRow(row) {
       if (!row || !row.planeacion_id) return null;
       const idx = state.planeaciones.findIndex((plan) => plan.planeacion_id === row.planeacion_id);
       if (idx === -1) {
+        normalizePlanAlumnosGrupoId(row);
         state.planeaciones.unshift(row);
         return row;
       }
@@ -8968,6 +9048,7 @@
         nextRow.obs_alumno_final = Array.isArray(existing.obs_alumno_final) ? existing.obs_alumno_final : [];
         nextRow.obs_loaded = true;
       }
+      normalizePlanAlumnosGrupoId(nextRow);
       state.planeaciones.splice(idx, 1, nextRow);
       return state.planeaciones[idx];
     }
@@ -10744,6 +10825,11 @@
           : '';
         const alumnosCount = entry.isMulti ? getPlaneacionEntryAlumnoCount(entry) : getPlanAlumnoCount(plan);
         const actividadesCount = entry.isMulti ? getPlaneacionEntryActividadCount(entry) : getPlanActividadCount(plan);
+        const activeChildAlumnoCount = entry.isMulti ? getPlanAlumnoCount(plan) : alumnosCount;
+        const loteAlumnoCount = entry.isMulti ? alumnosCount : alumnosCount;
+        const alumnosResumenText = entry.isMulti
+          ? (escapeHtml(String(activeChildAlumnoCount)) + ' en este grupo · ' + escapeHtml(String(loteAlumnoCount)) + ' en el lote')
+          : (escapeHtml(String(alumnosCount)) + ' alumno(s)');
         const phraseText = String(plan.frase_semana || '-');
         const phraseNeedsTooltip = phraseText.length > 42;
         const phraseCompactClass = phraseNeedsTooltip
@@ -10877,7 +10963,7 @@
                 '</div>' +
                 '<div class="meta-grid">' +
                   '<div><strong>Frase:</strong> ' + escapeHtml(plan.frase_semana || '-') + '</div>' +
-                  '<div><strong>Resumen:</strong> ' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
+                  '<div><strong>Resumen:</strong> ' + alumnosResumenText + ' · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</div>' +
                 '</div>' +
                 localFeedbackHtml +
                 (hasMaterialAlert ? '<div class="plan-alert-chip">Material pendiente</div>' : '') +
@@ -10905,7 +10991,7 @@
                   '</div>' +
                   '<div class="plan-compact-cell plan-compact-cell-summary">' +
                     '<span class="plan-compact-label">Resumen</span>' +
-                    '<span class="plan-compact-secondary plan-compact-truncate">' + escapeHtml(String(alumnosCount)) + ' alumno(s) · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)</span>' +
+                    '<span class="plan-compact-secondary plan-compact-truncate">' + alumnosResumenText + ' · ' + escapeHtml(String(actividadesCount)) + ' actividad(es)' + (entry.isMulti ? ' · ' + escapeHtml(String((entry.plans || []).length)) + ' grupo(s)' : '') + '</span>' +
                     summaryMetaHtml +
                     localFeedbackHtml +
                   '</div>' +
