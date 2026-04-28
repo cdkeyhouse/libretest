@@ -3330,6 +3330,33 @@
     .group-block + .group-block {
       margin-top: 12px;
     }
+    #planAlumnosChecklist.is-multigroup-alumnos,
+    #planAlumnosChecklist.is-taller-alumnos-list {
+      max-height: none !important;
+      overflow: visible !important;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+    }
+    #planAlumnosChecklist.is-multigroup-alumnos .is-multigroup-alumnos-flat {
+      padding: 10px 12px;
+      border-radius: 16px;
+    }
+    #planAlumnosChecklist.is-multigroup-alumnos .group-block-head > div {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #planAlumnosChecklist.is-multigroup-alumnos .plan-alumnos-flat,
+    #planAlumnosChecklist.is-taller-alumnos-list .plan-alumnos-flat {
+      max-height: none !important;
+      overflow: visible !important;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 7px 10px;
+      padding: 6px;
+    }
     .group-block-head {
       display: flex;
       justify-content: space-between;
@@ -4689,6 +4716,24 @@
 
         .plan-open-editor-group.is-multigroup-compact .plan-open-students {
           grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+        }
+
+        #planAlumnosChecklist.is-multigroup-alumnos .is-multigroup-alumnos-flat {
+          padding: 8px;
+        }
+
+        #planAlumnosChecklist.is-multigroup-alumnos .group-block-head {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 2px;
+          margin-bottom: 4px;
+        }
+
+        #planAlumnosChecklist.is-multigroup-alumnos .plan-alumnos-flat,
+        #planAlumnosChecklist.is-taller-alumnos-list .plan-alumnos-flat {
+          grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+          gap: 6px;
+          padding: 4px;
         }
 
         .plan-open-editor-group.is-multigroup-compact .plan-open-students .check-item {

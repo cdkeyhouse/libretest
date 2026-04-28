@@ -10106,6 +10106,9 @@
     function renderPlanAlumnosChecklist(selectedOverride) {
       const host = $('planAlumnosChecklist');
       const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
+      if (host) {
+        host.classList.remove('is-multigroup-alumnos', 'is-taller-alumnos-list');
+      }
       if (catalogsLoading) {
         host.innerHTML = '<div class="empty">Cargando grupos y alumnos...</div>';
         return;
@@ -10121,6 +10124,7 @@
       }
       const selectedTallerId = getSelectedPlanTallerId();
       if (selectedTallerId) {
+        host.classList.add('is-taller-alumnos-list');
         const seenAlumnoIds = new Set();
         const alumnos = [];
         groupIds.forEach((groupId) => {
@@ -10149,6 +10153,41 @@
                 '</label>'
               );
             }).join('') : '<div class="empty">No hay alumnos activos en este taller para tus grupos.</div>') +
+          '</div>' +
+        '</div>';
+        return;
+      }
+      if (groupIds.length > 1) {
+        host.classList.add('is-multigroup-alumnos');
+        const alumnos = [];
+        const seenAlumnoIds = new Set();
+        groupIds.forEach((groupId) => {
+          getPlanEditorAlumnosByGroupId(groupId).forEach((alumno) => {
+            const alumnoId = String(alumno.alumno_id || '').trim();
+            if (!alumnoId || seenAlumnoIds.has(alumnoId)) return;
+            seenAlumnoIds.add(alumnoId);
+            alumnos.push(Object.assign({}, alumno, { _builder_group_id: groupId }));
+          });
+        });
+        const selectedCount = alumnos.filter((alumno) => selected.has(String(alumno.alumno_id || '').trim())).length;
+        host.innerHTML = '<div class="group-block is-multigroup-alumnos-flat">' +
+          '<div class="group-block-head">' +
+            '<div><strong>Alumnos</strong> <span class="mini">' + escapeHtml(String(selectedCount)) + ' de ' + escapeHtml(String(alumnos.length)) + ' seleccionado(s)</span></div>' +
+          '</div>' +
+          '<div class="checklist plan-alumnos-flat">' +
+            (alumnos.length ? alumnos.map((alumno) => {
+              const alumnoId = String(alumno.alumno_id || '').trim();
+              const label = alumno.nombre_mostrado || alumno.nombre_completo || alumnoId;
+              const groupId = String(alumno._builder_group_id || alumno.grupo_id || '').trim();
+              const group = getCatalogIndex().gruposById.get(groupId);
+              const groupLabel = group ? getGrupoDisplayName(group) : groupId;
+              return (
+                '<label class="check-item">' +
+                  '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) ? ' checked' : '') + '>' +
+                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? ' <span class="mini">&middot; ' + escapeHtml(groupLabel) + '</span>' : '') + '</span>' +
+                '</label>'
+              );
+            }).join('') : '<div class="empty">No hay alumnos activos en los grupos seleccionados.</div>') +
           '</div>' +
         '</div>';
         return;
