@@ -3357,6 +3357,29 @@
       gap: 7px 10px;
       padding: 6px;
     }
+    #planGruposChecklist.is-taller-groups {
+      max-height: none !important;
+      overflow: visible !important;
+      display: flex !important;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+    }
+    #planGruposChecklist.is-taller-groups .check-item {
+      flex: 0 1 auto;
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      opacity: 0.9;
+    }
+    #planGruposChecklist.is-taller-groups .check-item input {
+      display: none;
+    }
+    #planGruposChecklist.is-taller-groups .check-item strong {
+      font-size: 0.92rem;
+    }
     .group-block-head {
       display: flex;
       justify-content: space-between;

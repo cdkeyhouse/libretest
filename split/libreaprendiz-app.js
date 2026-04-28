@@ -8482,6 +8482,7 @@
         frase_semana: sourcePlan.frase_semana || '',
         materia_id: sourcePlan.materia_id || '',
         submateria_id: sourcePlan.submateria_id || '',
+        taller_id: sourcePlan.taller_id || '',
         alumnos_ids: (sourcePlan.alumnos || []).map((row) => row.alumno_id),
         original_alumnos_ids: (sourcePlan.alumnos || []).map((row) => row.alumno_id),
         activities: (sourcePlan.actividades || []).length ? (sourcePlan.actividades || []).map((actividad) => ({
@@ -8535,7 +8536,7 @@
         ? state.openPlanDraft
         : null;
       if (!nextDraft || !currentDraft) return nextDraft;
-      ['fecha_planeacion', 'frase_semana', 'materia_id', 'submateria_id'].forEach((field) => {
+      ['fecha_planeacion', 'frase_semana', 'materia_id', 'submateria_id', 'taller_id'].forEach((field) => {
         if (currentDraft[field] !== undefined) nextDraft[field] = currentDraft[field];
       });
       if (Array.isArray(currentDraft.alumnos_ids)) {
@@ -8603,6 +8604,7 @@
         frase_semana: String(draft.frase_semana || '').trim(),
         materia_id: String(draft.materia_id || '').trim(),
         submateria_id: String(draft.submateria_id || '').trim(),
+        taller_id: String(draft.taller_id || '').trim(),
         alumnos_ids: normalizeIdList(draft.alumnos_ids),
         activities: (Array.isArray(draft.activities) ? draft.activities : [])
           .map((activity, index) => ({
@@ -8621,6 +8623,7 @@
         frase_semana: String(plan.frase_semana || '').trim(),
         materia_id: String(plan.materia_id || '').trim(),
         submateria_id: String(plan.submateria_id || '').trim(),
+        taller_id: String(plan.taller_id || '').trim(),
         alumnos_ids: normalizeIdList((plan.alumnos || []).map((row) => row && row.alumno_id)),
         activities: (Array.isArray(plan.actividades) ? plan.actividades : [])
           .map((activity, index) => ({
@@ -8927,10 +8930,14 @@
       const materiaLabel = materia
         ? (materia.nombre || materia.materia_id)
         : (plan.materia_nombre || plan.materia_id || '-');
-      const submateria = getSubmateriaById(plan && plan.submateria_id);
+      const tallerId = String((plan && plan.taller_id) || '').trim();
+      const taller = tallerId ? getTallerById(tallerId) : null;
+      const submateria = tallerId ? null : getSubmateriaById(plan && plan.submateria_id);
       const submateriaLabel = submateria
         ? (submateria.nombre || submateria.submateria_id)
-        : (plan && plan.submateria_nombre ? String(plan.submateria_nombre).trim() : '');
+        : (taller
+          ? (taller.nombre || taller.taller_id)
+          : (plan && plan.submateria_nombre ? String(plan.submateria_nombre).trim() : ''));
       return submateriaLabel ? (materiaLabel + ' \u00b7 ' + submateriaLabel) : materiaLabel;
     }
 
@@ -9495,6 +9502,7 @@
         nextPlan.semana_id = request.semana && !request.semana.draft ? request.semana.semana_id : fallbackWeekId;
         nextPlan.materia_id = request.materiaId;
         nextPlan.submateria_id = request.submateriaId;
+        nextPlan.taller_id = request.tallerId || '';
         nextPlan.frase_semana = String(draft.frase_semana || '').trim();
         nextPlan.alumnos = buildPlanAlumnoSnapshotsByIds(request.alumnosIds, plan.grupo_id, plan.alumnos);
         nextPlan.alumnos_count = nextPlan.alumnos.length;
@@ -9551,6 +9559,7 @@
       const nowIso = new Date().toISOString();
       const materiaId = String(options.materiaId || '').trim();
       const submateriaId = String(options.submateriaId || '').trim();
+      const tallerId = String(options.tallerId || '').trim();
       const semanaId = String((options.semana && options.semana.semana_id) || '').trim() || ('SEM_' + String(options.fechaPlaneacion || '').replace(/-/g, ''));
       const loteId = groupIds.length > 1 ? uid('TMPLTE') : '';
       const materiaRow = (state.catalogos.materias || []).find((item) => String(item.materia_id || '').trim() === materiaId) || null;
@@ -9570,8 +9579,9 @@
           grupo_id: groupId,
           materia_id: materiaId,
           submateria_id: submateriaId,
+          taller_id: tallerId,
           materia_nombre: materiaRow ? (materiaRow.nombre || materiaId) : materiaId,
-          submateria_nombre: submateriaRow ? (submateriaRow.nombre || submateriaId) : '',
+          submateria_nombre: tallerId ? ((getTallerById(tallerId) || {}).nombre || tallerId) : (submateriaRow ? (submateriaRow.nombre || submateriaId) : ''),
           frase_semana: String(options.fraseSemana || '').trim(),
           estado: String(options.targetStatus || 'borrador').trim() || 'borrador',
           fecha_creacion: nowIso,
@@ -10001,9 +10011,29 @@
       const host = $('planGruposChecklist');
       const catalogsLoading = !!(state.ui && state.ui.planeacionesCatalogosLoading) && currentViewNeedsCatalogos();
       if (catalogsLoading) {
+        host.classList.remove('is-taller-groups');
         host.innerHTML = '<div class="empty">Cargando grupos...</div>';
         return;
       }
+      const selectedTallerId = getSelectedPlanTallerId();
+      if (selectedTallerId && state.planEditor.mode !== 'edit') {
+        const groupIds = getPlanTallerAvailableGroupIds(selectedTallerId);
+        host.classList.add('is-taller-groups');
+        host.innerHTML = groupIds.length
+          ? groupIds.map((groupId) => {
+              const group = getCatalogIndex().gruposById.get(String(groupId || '').trim());
+              const label = group ? getGrupoDisplayName(group) : groupId;
+              return (
+                '<label class="check-item is-auto-selected">' +
+                  '<input type="checkbox" value="' + escapeHtml(groupId) + '" checked>' +
+                  '<span><strong>' + escapeHtml(label) + '</strong></span>' +
+                '</label>'
+              );
+            }).join('')
+          : '<div class="empty">Este taller todav&iacute;a no tiene alumnos activos.</div>';
+        return;
+      }
+      host.classList.remove('is-taller-groups');
       const editLocked = state.planEditor.mode === 'edit' && !canUseAdminShell();
       const currentSelectedGroups = getSelectedGroupIds();
       const checkedSet = new Set(
@@ -10045,7 +10075,7 @@
           if (status !== 'activo' || row.activo === false) return false;
           if (canUseAdminShell()) return true;
           const facilitatorId = String(row.facilitador_id || '').trim();
-          return !facilitatorId || !currentUserId || facilitatorId === currentUserId;
+          return !!facilitatorId && !!currentUserId && facilitatorId === currentUserId;
         })
         .sort((a, b) => String(a.nombre || a.taller_id).localeCompare(String(b.nombre || b.taller_id), 'es'));
     }
@@ -10236,13 +10266,11 @@
       clearPlanEditorValidation('planSubmateria');
       state.planEditor.selectedSubmateriaId = getDefaultPlanSubmateriaIdForMateria($('planMateria') ? $('planMateria').value : '');
       if (tallerId) {
-        const selectedGroupIds = new Set(getPlanTallerAvailableGroupIds(tallerId));
-        Array.from($('planGruposChecklist').querySelectorAll('input[type="checkbox"]')).forEach((input) => {
-          input.checked = selectedGroupIds.has(String(input.value || '').trim());
-        });
+        renderPlanGroupChecklist();
         renderPlanAlumnosChecklist(new Set(Array.from(getPlanTallerAlumnoIdSet(tallerId))));
         return;
       }
+      renderPlanGroupChecklist();
       renderPlanAlumnosChecklist(new Set(getSelectedPlanAlumnos()));
     }
 
@@ -12324,6 +12352,9 @@
       }
 
       const previousPlan = editorMode === 'edit' ? getPlanById(state.planEditor.planId) : null;
+      const selectedTallerIdForSave = getPlanEditorUsesTallerSelector(materiaId)
+        ? getSelectedPlanTallerId()
+        : String((previousPlan && previousPlan.taller_id) || '').trim();
       const planEditorSnapshot = capturePlanEditorSnapshot();
       const targetStatus = editorMode === 'edit'
         ? String((previousPlan && previousPlan.estado) || 'borrador').trim()
@@ -12335,6 +12366,7 @@
             groupIds: grupoIds,
             materiaId,
             submateriaId: selectedSubmateriaId,
+            tallerId: selectedTallerIdForSave,
             fraseSemana,
             alumnosIds,
             activities: actividades,
@@ -12349,6 +12381,7 @@
               frase_semana: fraseSemana,
               materia_id: materiaId,
               submateria_id: selectedSubmateriaId,
+              taller_id: selectedTallerIdForSave,
               alumnos_ids: alumnosIds,
               activities: actividades.map((activity) => ({
                 actividad_id: activity.actividad_id || '',
@@ -12366,6 +12399,7 @@
               fallbackDate,
               materiaId,
               submateriaId: selectedSubmateriaId,
+              tallerId: selectedTallerIdForSave,
               alumnosIds,
               actividades
             },
@@ -12422,6 +12456,7 @@
               grupo_id: grupoIds[0],
               materia_id: materiaId,
               submateria_id: selectedSubmateriaId,
+              taller_id: selectedTallerIdForSave,
               frase_semana: fraseSemana,
               alumnos_ids: alumnosIds,
               actividades,
@@ -12447,6 +12482,7 @@
               estado_inicial: targetStatus,
               materia_id: materiaId,
               submateria_id: selectedSubmateriaId,
+              taller_id: selectedTallerIdForSave,
               frase_semana: fraseSemana,
               alumnos_ids: alumnosIds,
               actividades,
@@ -12466,6 +12502,7 @@
             grupo_id: grupoIds[0],
             materia_id: materiaId,
             submateria_id: selectedSubmateriaId,
+            taller_id: selectedTallerIdForSave,
             frase_semana: fraseSemana,
             alumnos_ids: alumnosIds,
             actividades,
@@ -12481,6 +12518,7 @@
             estado_inicial: targetStatus,
             materia_id: materiaId,
             submateria_id: selectedSubmateriaId,
+            taller_id: selectedTallerIdForSave,
             frase_semana: fraseSemana,
             alumnos_ids: alumnosIds,
             actividades,
@@ -12939,6 +12977,7 @@
       const materiaId = String((draft && draft.materia_id) || (plan && plan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
       const submateriaId = String((draft && draft.submateria_id) || '').trim();
+      const tallerId = String((draft && draft.taller_id) || (plan && plan.taller_id) || '').trim();
       if (materiaRequiresPlanSubmateria(materiaId) && !submateriaId) {
         throw new Error('Selecciona una submateria.');
       }
@@ -12960,6 +12999,7 @@
         semana,
         materiaId,
         submateriaId,
+        tallerId,
         alumnosIds,
         actividades
       };
@@ -12977,9 +13017,12 @@
       const currentMateriaId = String(plan.materia_id || '').trim();
       const targetSubmateriaId = String(request.submateriaId || '').trim();
       const currentSubmateriaId = String(plan.submateria_id || '').trim();
+      const targetTallerId = String(request.tallerId || '').trim();
+      const currentTallerId = String(plan.taller_id || '').trim();
       if (!targetSemanaId || targetSemanaId !== currentSemanaId) return false;
       if (targetMateriaId !== currentMateriaId) return false;
       if (targetSubmateriaId !== currentSubmateriaId) return false;
+      if (targetTallerId !== currentTallerId) return false;
       const currentAlumnoIds = normalizeIdList(
         Array.isArray(plan.alumnos) && plan.alumnos.length
           ? plan.alumnos.map((row) => row && row.alumno_id)
@@ -13820,6 +13863,7 @@
         grupo_id: plan.grupo_id,
         materia_id: request.materiaId,
         submateria_id: request.submateriaId,
+        taller_id: request.tallerId,
         frase_semana: String(draft.frase_semana || '').trim(),
         alumnos_ids: request.alumnosIds,
         actividades: request.actividades,
@@ -13851,7 +13895,7 @@
     function shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan) {
       if (!previousPlan || !updatedPlan) return true;
       if (hasActivePlaneacionesFilters()) return true;
-      return ['semana_id', 'grupo_id', 'materia_id', 'submateria_id', 'estado', 'facilitador_id'].some((field) => {
+      return ['semana_id', 'grupo_id', 'materia_id', 'submateria_id', 'taller_id', 'estado', 'facilitador_id'].some((field) => {
         return String(previousPlan[field] || '') !== String(updatedPlan[field] || '');
       });
     }
@@ -13945,6 +13989,7 @@
         semana_id: semana.draft ? '' : semana.semana_id,
         materia_id: materiaId,
         submateria_id: submateriaId,
+        taller_id: String((draft && draft.taller_id) || (selectedPlan && selectedPlan.taller_id) || '').trim(),
         frase_semana: String(draft.frase_semana || '').trim(),
         actividades: activities,
         planes: (entry.plans || []).map((plan) => ({
@@ -14029,6 +14074,7 @@
           grupo_id: plan.grupo_id,
           materia_id: planSaveRequest.materiaId,
           submateria_id: planSaveRequest.submateriaId,
+          taller_id: planSaveRequest.tallerId,
           frase_semana: String(planDraft.frase_semana || '').trim(),
           alumnos_ids: planSaveRequest.alumnosIds,
           actividades: planSaveRequest.actividades,
