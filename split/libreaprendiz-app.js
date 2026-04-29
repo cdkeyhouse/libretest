@@ -328,6 +328,71 @@
       latestByFacilitadorId: new Map()
     };
 
+    const SAVE_TRACE_LIMIT = 20;
+
+    function getTraceNow() {
+      return (typeof performance !== 'undefined' && performance && typeof performance.now === 'function')
+        ? performance.now()
+        : Date.now();
+    }
+
+    function getSaveTraceStore() {
+      if (typeof window === 'undefined') return null;
+      if (!Array.isArray(window.__laSaveTrace)) window.__laSaveTrace = [];
+      return window.__laSaveTrace;
+    }
+
+    function beginSaveTrace(label, meta = {}) {
+      const store = getSaveTraceStore();
+      const start = getTraceNow();
+      const trace = {
+        id: uid('SVTR'),
+        label: String(label || 'save').trim() || 'save',
+        started_at: new Date().toISOString(),
+        start_ms: start,
+        end_ms: null,
+        duration_ms: null,
+        status: 'running',
+        meta: Object.assign({}, meta || {}),
+        events: []
+      };
+      if (store) {
+        store.push(trace);
+        while (store.length > SAVE_TRACE_LIMIT) store.shift();
+      }
+      markSaveTrace(trace, 'start');
+      return trace;
+    }
+
+    function markSaveTrace(trace, name, data = {}) {
+      if (!trace) return null;
+      const now = getTraceNow();
+      const event = {
+        name: String(name || '').trim() || 'mark',
+        at_ms: now,
+        elapsed_ms: Math.round(now - trace.start_ms),
+        data: Object.assign({}, data || {})
+      };
+      trace.events.push(event);
+      return event;
+    }
+
+    function endSaveTrace(trace, status, data = {}) {
+      if (!trace) return null;
+      const now = getTraceNow();
+      trace.end_ms = now;
+      trace.duration_ms = Math.round(now - trace.start_ms);
+      trace.status = String(status || 'done').trim() || 'done';
+      if (data && Object.keys(data).length) trace.result = Object.assign({}, data);
+      markSaveTrace(trace, 'end', Object.assign({ status: trace.status }, data || {}));
+      try {
+        if (typeof console !== 'undefined' && console && typeof console.debug === 'function') {
+          console.debug('[LA_SAVE_TRACE]', JSON.parse(JSON.stringify(trace)));
+        }
+      } catch (_) {}
+      return trace;
+    }
+
     const $ = (id) => document.getElementById(id);
 
     function ensureAdminShellMarkupLoaded() {
@@ -13791,26 +13856,40 @@
       }).catch(() => {});
     }
 
-    async function processPlaneacionOutboxOpenSave(item) {
+    async function processPlaneacionOutboxOpenSave(item, trace = null) {
       const combinedRequest = item.combinedRequest && typeof item.combinedRequest === 'object'
         ? item.combinedRequest
         : null;
       let savedPlanResponse = null;
       if (combinedRequest) {
+        markSaveTrace(trace, 'outbox_api_composite_start', {
+          transactionId: combinedRequest.transaction_id || ''
+        });
         const compositeResponse = await persistPlanChangesCompositeApi(combinedRequest);
+        markSaveTrace(trace, 'outbox_api_composite_done');
         savedPlanResponse = compositeResponse && compositeResponse.plan_save
           ? compositeResponse.plan_save
           : (compositeResponse && compositeResponse.planeacion ? { planeacion: compositeResponse.planeacion } : null);
       } else {
         const requests = item.requests && typeof item.requests === 'object' ? item.requests : {};
         if (requests.generalObservation) {
+          markSaveTrace(trace, 'outbox_api_general_observation_start');
           await api('crearObsSemana', requests.generalObservation);
+          markSaveTrace(trace, 'outbox_api_general_observation_done');
         }
         if (requests.finalObservationBatch) {
+          markSaveTrace(trace, 'outbox_api_final_observations_start', {
+            count: Array.isArray(requests.finalObservationBatch.items) ? requests.finalObservationBatch.items.length : 0
+          });
           await api('guardarObsAlumnoFinalLote', requests.finalObservationBatch);
+          markSaveTrace(trace, 'outbox_api_final_observations_done');
         }
         if (requests.planSave) {
+          markSaveTrace(trace, 'outbox_api_plan_save_start', {
+            action: item.planSaveAction || 'guardarPlaneacionCompleta'
+          });
           savedPlanResponse = await performOpenPlanSaveRequest(item.planSaveAction || 'guardarPlaneacionCompleta', requests.planSave);
+          markSaveTrace(trace, 'outbox_api_plan_save_done');
         }
       }
       const previousPlan = item.previousPlanSnapshot || getPlanById(item.planId);
@@ -13846,6 +13925,7 @@
       clearPendingPlanSaveTransaction(item.planId);
       const canPatchSimplePlanLocally = !!(item.shouldSavePlan && !item.shouldSaveShared && updatedPlan);
       if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(previousPlan, updatedPlan)) {
+        markSaveTrace(trace, 'outbox_local_patch_start');
         applySavedPlaneacionDetail(item.planId, inlineSavedPreview || Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
@@ -13864,9 +13944,11 @@
         refreshPlaneacionesAlertsDeferred({
           force: !!item.shouldForceAlertasAfterSave
         }).catch(() => {});
+        markSaveTrace(trace, 'outbox_local_patch_done');
         return;
       }
       if (!item.shouldSavePlan && !item.shouldSaveShared) {
+        markSaveTrace(trace, 'outbox_observations_patch_start');
         applySavedPlaneacionDetail(item.planId, Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
@@ -13881,8 +13963,10 @@
           refreshAlertas: false,
           snapshotKind: 'planeacion_outbox_open_obs'
         });
+        markSaveTrace(trace, 'outbox_observations_patch_done');
         return;
       }
+      markSaveTrace(trace, 'outbox_refresh_surface_start');
       state.openPlanId = item.shouldSavePlan ? item.planId : state.openPlanId;
       if (state.openPlanId !== item.planId) state.openPlanDraft = null;
       await refreshPlaneacionesSurface({ includeAlertas: false });
@@ -13896,6 +13980,7 @@
         includeStats: false,
         includePlaneaciones: false
       }).catch(() => {});
+      markSaveTrace(trace, 'outbox_refresh_surface_done');
     }
 
     function handlePlaneacionOutboxFailure(item, error) {
@@ -13952,24 +14037,48 @@
       if (!isPlaneacionOutboxEnabled() || !state.ui || state.ui.planeacionOutboxProcessing) return;
       const item = getNextPlaneacionOutboxItem();
       if (!item) return;
+      const outboxTrace = beginSaveTrace('planeacionOutboxSync', {
+        itemId: String(item.id || '').trim(),
+        kind: String(item.kind || '').trim(),
+        planId: String(item.planId || '').trim(),
+        status: String(item.status || '').trim(),
+        attempts: Number(item.attempts || 0)
+      });
       state.ui.planeacionOutboxProcessing = true;
       const syncingItem = markPlaneacionOutboxItem(item.id, {
         status: 'syncing',
         nextAttemptAt: ''
       }) || item;
+      markSaveTrace(outboxTrace, 'outbox_item_syncing');
       applyPlaneacionOutboxVisualState(syncingItem);
       try {
         if (syncingItem.kind === 'editor_create') {
+          markSaveTrace(outboxTrace, 'outbox_editor_create_start');
           await processPlaneacionOutboxEditorCreate(syncingItem);
+          markSaveTrace(outboxTrace, 'outbox_editor_create_done');
         } else if (syncingItem.kind === 'editor_edit') {
+          markSaveTrace(outboxTrace, 'outbox_editor_edit_start');
           await processPlaneacionOutboxEditorEdit(syncingItem);
+          markSaveTrace(outboxTrace, 'outbox_editor_edit_done');
         } else if (syncingItem.kind === 'open_save') {
-          await processPlaneacionOutboxOpenSave(syncingItem);
+          markSaveTrace(outboxTrace, 'outbox_open_save_start');
+          await processPlaneacionOutboxOpenSave(syncingItem, outboxTrace);
+          markSaveTrace(outboxTrace, 'outbox_open_save_done');
         }
         removePlaneacionOutboxItem(syncingItem.id);
+        markSaveTrace(outboxTrace, 'outbox_item_removed');
         schedulePlaneacionOutboxProcessing(80);
+        endSaveTrace(outboxTrace, 'success');
       } catch (error) {
+        markSaveTrace(outboxTrace, 'outbox_error', {
+          code: error && error.code || '',
+          message: error && error.message || String(error || '')
+        });
         handlePlaneacionOutboxFailure(syncingItem, error);
+        endSaveTrace(outboxTrace, 'error', {
+          code: error && error.code || '',
+          message: error && error.message || String(error || '')
+        });
       } finally {
         state.ui.planeacionOutboxProcessing = false;
       }
@@ -14260,11 +14369,22 @@
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
       const entry = entryKey ? getPlaneacionEntryByKey(entryKey) : null;
+      const saveTrace = beginSaveTrace('guardarCambiosPlaneacion', {
+        planId: String(planId || '').trim(),
+        entryKey: String(entryKey || '').trim(),
+        isMultiEntry: !!(entry && entry.isMulti),
+        estado: String(plan.estado || '').trim(),
+        detailLoaded: !!plan.detail_loaded,
+        openPlanId: String(state.openPlanId || '').trim()
+      });
       if (!isOpenPlanReadyForSave(plan, entry)) {
+        markSaveTrace(saveTrace, 'not_ready');
+        endSaveTrace(saveTrace, 'skipped_not_ready');
         setBanner('La planeaci\u00f3n todav\u00eda se est\u00e1 abriendo. Espera un momento antes de guardar.', 'info', { button });
         renderPlaneacionesList();
         return;
       }
+      markSaveTrace(saveTrace, 'ready_for_save');
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
       const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
@@ -14302,6 +14422,17 @@
       const shouldForceAlertasAfterSave =
         (shouldSavePlan && shouldRefreshMaterialAlertas && planDraftAffectsMaterialAlerts(planDraft)) ||
         (shouldSaveShared && planDraftAffectsMaterialAlerts(sharedDraft));
+      markSaveTrace(saveTrace, 'drafts_collected', {
+        hasPlanEditor,
+        hasSharedEditor,
+        generalObservation: !!generalText,
+        finalObservationCount: finalPayloads.length,
+        shouldSavePlan,
+        shouldSaveShared,
+        openPlanStructureChanged,
+        shouldPersistOpenPlanActivities,
+        shouldRefreshMaterialAlertas
+      });
       const previousPlanSnapshot = cloneJsonSafe(plan, plan);
       const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
       const shouldUsePlaneacionOutbox = !canUseAdminShell() && canOptimisticallyRender && !shouldSaveShared && isPlaneacionOutboxEnabled();
@@ -14310,6 +14441,7 @@
         ? buildOpenPlanDraftWithPendingObservations(planDraft, generalText, finalPayloads)
         : null;
       applyPendingPlanObservationDraft(planId, generalText, finalPayloads);
+      markSaveTrace(saveTrace, 'pending_observations_applied');
       const combinedSaveRequest = buildPlanSaveTransactionBundle({
         planId,
         generalText,
@@ -14347,12 +14479,24 @@
               : 'Guardando en segundo plano...'
           })
         : null;
+      markSaveTrace(saveTrace, 'request_built', {
+        shouldUsePlaneacionOutbox,
+        shouldUseLiteSave,
+        hasOptimisticPlan: !!optimisticPlan,
+        transactionId: combinedSaveRequest && combinedSaveRequest.transaction_id || '',
+        planSaveAction: shouldSavePlan ? (shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta') : ''
+      });
       if (!generalText && !finalPayloads.length && !shouldSavePlan && !shouldSaveShared) {
+        endSaveTrace(saveTrace, 'skipped_no_changes');
         throw new Error('No hay cambios para guardar.');
       }
 
-      await handleAction('guardarCambiosPlaneacion', async () => {
+      markSaveTrace(saveTrace, 'handleAction_start');
+      try {
+        await handleAction('guardarCambiosPlaneacion', async () => {
+        markSaveTrace(saveTrace, 'handleAction_callback_start');
         if (optimisticPlan) {
+          markSaveTrace(saveTrace, 'optimistic_render_start');
           upsertPlaneacionRow(optimisticPlan);
           state.openPlanId = planId;
           state.openPlanDraft = buildOpenPlanDraft(optimisticPlan);
@@ -14363,8 +14507,10 @@
             includeAlertas: false
           });
           restoreSaveScrollAnchor();
+          markSaveTrace(saveTrace, 'optimistic_render_done');
         }
         if (shouldUsePlaneacionOutbox) {
+          markSaveTrace(saveTrace, 'outbox_enqueue_start');
           enqueuePlaneacionOutboxItem(buildPlaneacionOutboxItem('open_save', {
             mergeKey: 'plan:' + String(planId || '').trim(),
             planId: String(planId || '').trim(),
@@ -14408,13 +14554,16 @@
           });
           restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          markSaveTrace(saveTrace, 'outbox_enqueue_done');
           return;
         }
 
         const savedParts = [];
         let savedPlanResponse = null;
         try {
+          markSaveTrace(saveTrace, 'api_composite_start');
           const compositeResponse = await persistPlanChangesCompositeApi(combinedSaveRequest);
+          markSaveTrace(saveTrace, 'api_composite_done');
           if (generalText) savedParts.push('observaci\u00f3n general');
           if (finalPayloads.length) savedParts.push('observaciones finales');
           if (shouldSavePlan) {
@@ -14431,7 +14580,12 @@
             savedParts.push('base multigrupo');
           }
         } catch (err) {
+          markSaveTrace(saveTrace, 'api_or_shared_error', {
+            code: err && err.code || '',
+            message: err && err.message || String(err || '')
+          });
           if (optimisticPlan && previousPlanSnapshot) {
+            markSaveTrace(saveTrace, 'rollback_render_start');
             upsertPlaneacionRow(previousPlanSnapshot);
             state.openPlanId = planId;
             state.openPlanDraft = buildOpenPlanDraft(previousPlanSnapshot);
@@ -14442,10 +14596,12 @@
             });
             restoreSaveScrollAnchor();
             restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+            markSaveTrace(saveTrace, 'rollback_render_done');
           }
           throw err;
         }
 
+        markSaveTrace(saveTrace, 'post_api_apply_start');
         if (generalText) {
           const generalInput = $('obs-general-' + planId);
           if (generalInput) generalInput.value = '';
@@ -14468,6 +14624,7 @@
           !shouldSaveShared &&
           !(entry && entry.isMulti);
         if (canPatchSimplePlanLocally && !shouldRefetchPlaneacionesAfterPlanSave(plan, updatedPlan)) {
+          markSaveTrace(saveTrace, 'local_patch_start');
           applySavedPlaneacionDetail(planId, inlineSavedPreview || Object.assign({}, planWithSavedObservations, {
             _local_save_state: 'saved',
             _local_save_message: 'Cambios guardados.'
@@ -14485,7 +14642,9 @@
               forceAlertas: shouldForceAlertasAfterSave
             });
           }
+          markSaveTrace(saveTrace, 'local_patch_done');
         } else if (!shouldSavePlan && !shouldSaveShared) {
+          markSaveTrace(saveTrace, 'observations_local_patch_start');
           applySavedPlaneacionDetail(planId, Object.assign({}, planWithSavedObservations, {
             _local_save_state: 'saved',
             _local_save_message: 'Cambios guardados.'
@@ -14501,7 +14660,9 @@
             refreshAlertas: false,
             snapshotKind: 'guardar_cambios_obs'
           });
+          markSaveTrace(saveTrace, 'observations_local_patch_done');
         } else {
+          markSaveTrace(saveTrace, 'refresh_surface_start');
           state.openPlanId = shouldSavePlan ? planId : state.openPlanId;
           if (!shouldSavePlan) state.openPlanDraft = null;
           await refreshPlaneacionesSurface({ includeAlertas: false });
@@ -14520,16 +14681,28 @@
               includePlaneaciones: false
             }).catch(() => {});
           }
+          markSaveTrace(saveTrace, 'refresh_surface_done');
         }
         finalPayloads.forEach((row) => {
           const input = $('obs-final-' + (row.planId || planId) + '-' + row.alumnoId);
           if (input) autoGrowObsFinal(input);
         });
-      }, {
-        button,
-        key: buildActionKey('guardarCambiosPlaneacion', [planId, entryKey || '', generalText.slice(0, 40), finalPayloads.map((row) => row.alumnoId).join(','), shouldSavePlan ? 'plan' : '', shouldSaveShared ? 'multi' : '']),
-        busyText: 'Sincronizando...'
-      });
+        markSaveTrace(saveTrace, 'handleAction_callback_done', {
+          savedParts: savedParts.join(', ')
+        });
+        }, {
+          button,
+          key: buildActionKey('guardarCambiosPlaneacion', [planId, entryKey || '', generalText.slice(0, 40), finalPayloads.map((row) => row.alumnoId).join(','), shouldSavePlan ? 'plan' : '', shouldSaveShared ? 'multi' : '']),
+          busyText: 'Sincronizando...'
+        });
+        endSaveTrace(saveTrace, 'success');
+      } catch (err) {
+        endSaveTrace(saveTrace, 'error', {
+          code: err && err.code || '',
+          message: err && err.message || String(err || '')
+        });
+        throw err;
+      }
     }
 
     async function markPlanMaterialReady(button, planId) {
