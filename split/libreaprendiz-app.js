@@ -2525,6 +2525,32 @@
       return promise;
     }
 
+    // Precarga silenciosa de catalogos del editor (alumnos, submaterias, talleres,
+    // alumno_talleres) despues del primer paint del facilitador. Objetivo: que
+    // "Crear nueva planeacion" abra con campos ya listos sin mostrar el pill
+    // "Preparando opciones...". No bloquea boot/login ni genera banners.
+    function scheduleFacilitadorEditorCatalogosWarmup(reason) {
+      if (!state.session || String(state.session.rol || '').trim() !== 'facilitador') return;
+      if (canUseAdminShell()) return;
+      if (!currentViewNeedsCatalogos()) return;
+      if (state.ui && state.ui.planeacionesCatalogosPromise) return;
+      if (state.ui && state.ui.editorCatalogosWarmupScheduled) return;
+      if (state.ui) state.ui.editorCatalogosWarmupScheduled = true;
+      scheduleAfterPaint(function () {
+        window.setTimeout(function () {
+          if (!state.session || String(state.session.rol || '').trim() !== 'facilitador') return;
+          if (canUseAdminShell()) return;
+          if (!currentViewNeedsCatalogos()) return;
+          ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
+            .catch(function () {})
+            .finally(function () {
+              if (state.ui) state.ui.editorCatalogosWarmupScheduled = false;
+            });
+        }, 600);
+        return null;
+      });
+    }
+
     async function ensureTallerMembershipCatalogosAvailable(options = {}) {
       const blocks = getMissingCatalogBlocks(['alumnos', 'grupos']);
       if (!blocks.length) return state.catalogos;
@@ -2708,6 +2734,7 @@
         if (state.ui) state.ui.fastPlaneacionesBootPromise = null;
       });
       setPlaneacionesRestoreLock(false);
+      scheduleFacilitadorEditorCatalogosWarmup('boot');
     }
 
     async function refreshAdminDashboardFastBoot(options = {}) {
