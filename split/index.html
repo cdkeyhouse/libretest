@@ -2167,7 +2167,6 @@
       font-weight: 700;
     }
     .admin-alumnos-panel-actions {
-      justify-content: flex-end;
       margin-top: 12px;
       margin-bottom: 0;
     }
@@ -5098,6 +5097,46 @@
       h1 { font-size: clamp(2.2rem, 9vw, 3.1rem); }
     }
 
+    .admin-alumnos-panel-actions,
+    .admin-facilitadores-inline-actions,
+    .admin-facilitadores-assignment-actions,
+    .admin-materias-inline-actions,
+    .admin-taller-membership-actions {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+      gap: 8px;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    .admin-alumnos-panel-actions > button,
+    .admin-facilitadores-inline-actions > button,
+    .admin-facilitadores-assignment-actions > button,
+    .admin-materias-inline-actions > button,
+    .admin-materias-variant-actions > button,
+    .admin-taller-membership-actions > button {
+      min-width: 0 !important;
+      width: 100%;
+      min-height: 32px;
+      padding: 6px 8px;
+      font-size: 0.74rem;
+      line-height: 1.15;
+      letter-spacing: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .admin-alumnos-panel-actions > button.is-busy,
+    .admin-facilitadores-inline-actions > button.is-busy,
+    .admin-facilitadores-assignment-actions > button.is-busy,
+    .admin-materias-inline-actions > button.is-busy,
+    .admin-materias-variant-actions > button.is-busy,
+    .admin-taller-membership-actions > button.is-busy {
+      font-size: 0.68rem;
+      line-height: 1.08;
+    }
+
     @media (max-width: 720px) {
       body { padding: 12px; }
       .hero-card, .card, .admin-toolbar, .admin-panel { padding: 16px !important; border-radius: 20px !important; }
@@ -5108,6 +5147,22 @@
       .plan-top { flex-direction: column; }
       .activity-inline-grid { grid-template-columns: 1fr !important; }
       input, select, textarea, button { font-size: 16px !important; }
+      .admin-alumnos-panel-actions > button,
+      .admin-facilitadores-inline-actions > button,
+      .admin-facilitadores-assignment-actions > button,
+      .admin-materias-inline-actions > button,
+      .admin-materias-variant-actions > button,
+      .admin-taller-membership-actions > button {
+        font-size: 0.78rem !important;
+      }
+      .admin-alumnos-panel-actions > button.is-busy,
+      .admin-facilitadores-inline-actions > button.is-busy,
+      .admin-facilitadores-assignment-actions > button.is-busy,
+      .admin-materias-inline-actions > button.is-busy,
+      .admin-materias-variant-actions > button.is-busy,
+      .admin-taller-membership-actions > button.is-busy {
+        font-size: 0.72rem !important;
+      }
       .admin-nav { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
       .plan-open-editor-group.is-multigroup-compact .group-block-head {
         display: grid !important;
@@ -5929,7 +5984,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260426-backend-split-baseline-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260428-admin-panels-v1"></script>
 </body>
 </html>
 

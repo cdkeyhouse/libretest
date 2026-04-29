@@ -1113,6 +1113,7 @@
         if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
         if (!button.dataset.originalWidth) button.dataset.originalWidth = String(button.offsetWidth || 0);
         button.disabled = true;
+        button.classList.add('is-busy');
         if (button.classList.contains('btn-open-plan')) {
           if (button.offsetWidth) {
             button.style.minWidth = Math.max(button.offsetWidth, 108) + 'px';
@@ -1134,6 +1135,7 @@
         button.textContent = button.dataset.originalText;
         delete button.dataset.originalText;
       }
+      button.classList.remove('is-busy');
       button.style.width = '';
       button.style.minWidth = '';
       if (button.dataset.originalWidth) {
@@ -4467,6 +4469,62 @@
       state.alumnosUi.historialAlumnoId = '';
     }
 
+    function isAlumnoEditorDirty() {
+      if (!state.alumnosUi || !state.alumnosUi.editorOpen) return false;
+      const editor = state.alumnosUi.editor || createEmptyAlumnoEditorState();
+      if (state.alumnosUi.editorMode !== 'edit') {
+        return !![
+          editor.matricula,
+          editor.nombres,
+          editor.alias,
+          editor.apellidos,
+          editor.grupo_id,
+          editor.notas_internas
+        ].some((value) => String(value || '').trim()) || String(editor.estatus || 'activo').trim() !== 'activo';
+      }
+      const alumno = getAlumnoById(state.alumnosUi.selectedAlumnoId);
+      if (!alumno) return false;
+      const split = splitAlumnoNombreCompleto(alumno.nombre_completo || '');
+      const fullName = composeAlumnoNombreCompleto(editor.nombres, editor.apellidos);
+      const nextAlias = composeAlumnoNombreMostrado(editor.nombres, editor.alias, fullName);
+      return String(editor.matricula || '').trim() !== String(alumno.matricula || '').trim() ||
+        fullName !== String(alumno.nombre_completo || '').trim() ||
+        nextAlias !== String(alumno.nombre_mostrado || alumno.nombre_completo || '').trim() ||
+        String(editor.grupo_id || '').trim() !== String(alumno.grupo_id || '').trim() ||
+        String(editor.estatus || 'activo').trim() !== String(alumno.estatus || 'activo').trim() ||
+        String(editor.notas_internas || '').trim() !== String(getAlumnoAdminNotes(alumno.alumno_id, alumno.notas_internas || '') || '').trim() ||
+        String(editor.nombres || '').trim() !== String(split.nombres || alumno.nombre_mostrado || '').trim() ||
+        String(editor.apellidos || '').trim() !== String(split.apellidos || '').trim();
+    }
+
+    function isAlumnoCambioGrupoDirty() {
+      if (!state.alumnosUi || !state.alumnosUi.cambioGrupoOpen) return false;
+      const cambio = state.alumnosUi.cambioGrupo || createEmptyAlumnoCambioState();
+      return !!String(cambio.nuevo_grupo_id || '').trim() || !!String(cambio.motivo || '').trim();
+    }
+
+    function shouldIgnoreAlumnoPanelOutsideClick(target) {
+      if (!target || !target.closest) return false;
+      if (target.closest('#adminAlumnoEditor, #adminAlumnoCambioGrupo, #adminAlumnoHistorial')) return true;
+      if (target.closest('#adminAlumnoNewBtn')) return true;
+      const opener = target.closest('button');
+      const inlineAction = opener ? String(opener.getAttribute('onclick') || '') : '';
+      return /openAlumnoEditor|openCambioGrupo|openAlumnoHistorial/.test(inlineAction);
+    }
+
+    function handleAlumnoPanelOutsideClick(event) {
+      if (!canUseAdminShell() || state.activeAdminModule !== 'alumnos' || !state.alumnosUi) return;
+      const hasOpenPanel = state.alumnosUi.editorOpen || state.alumnosUi.cambioGrupoOpen || state.alumnosUi.historialOpen;
+      if (!hasOpenPanel || shouldIgnoreAlumnoPanelOutsideClick(event.target)) return;
+      const canCloseEditor = !state.alumnosUi.editorOpen || !isAlumnoEditorDirty();
+      const canCloseCambio = !state.alumnosUi.cambioGrupoOpen || !isAlumnoCambioGrupoDirty();
+      if (!canCloseEditor || !canCloseCambio) return;
+      closeAlumnoEditor();
+      closeCambioGrupo();
+      closeAlumnoHistorial();
+      renderAdminAlumnosModule();
+    }
+
     function invalidateAlumnoHistorialCache(alumnoId) {
       const id = String(alumnoId || '').trim();
       if (!id || !state.alumnosUi) return;
@@ -5402,6 +5460,7 @@
         closeAlumnoHistorial();
         renderAdminAlumnosModule();
       });
+      document.addEventListener('click', handleAlumnoPanelOutsideClick);
       if ($('adminAlumnoDeleteIds')) $('adminAlumnoDeleteIds').addEventListener('input', (event) => {
         const control = getAlumnoDeleteControlState();
         control.idsText = event.currentTarget.value;
@@ -5970,7 +6029,7 @@
     function renderFacilitadorAsignacionEditor() {
       const asign = state.facilitadoresUi.asignacion || createEmptyFacilitadorAsignacionState();
       return [
-        '<section class="admin-alumnos-panel">',
+        '<section id="adminFacilitadorAsignacionEditorPanel" class="admin-alumnos-panel">',
           '<div class="admin-alumnos-panel-head"><div><h4>' + escapeHtml(asign.asignacion_id ? 'Editar asignaci\u00f3n' : 'Nueva asignaci\u00f3n') + '</h4><div class="subtle">Define grupo, materia y vigencia para medir el cumplimiento semanal.</div></div></div>',
           '<div class="admin-alumnos-mini-grid">',
             '<label class="field">',
@@ -6297,7 +6356,7 @@
       if ($('adminFacilitadorAsignacionMateria')) $('adminFacilitadorAsignacionMateria').value = state.facilitadoresUi.asignacion.materia_id || '';
       if ($('adminFacilitadorAsignacionInicio')) $('adminFacilitadorAsignacionInicio').value = state.facilitadoresUi.asignacion.fecha_inicio || '';
       if ($('adminFacilitadorAsignacionFin')) $('adminFacilitadorAsignacionFin').value = state.facilitadoresUi.asignacion.fecha_fin || '';
-      focusAdminFacilitadorPanel('adminFacilitadorDetailPanel', 'adminFacilitadorAsignacionGrupo');
+      focusAdminFacilitadorPanel('adminFacilitadorAsignacionEditorPanel', 'adminFacilitadorAsignacionGrupo');
     }
 
     function closeFacilitadorAsignacionPanel() {
@@ -7113,10 +7172,14 @@
     }
 
     function applySavedMateriaCatalogRow(row) {
-      if (!row || !row.materia_id) return null;
-      upsertCatalogEntityRow('materias_admin', 'materia_id', row);
-      upsertCatalogEntityRow('materias', 'materia_id', row);
-      return getAdminMateriasCatalog().find((item) => item.materia_id === row.materia_id) || null;
+      const materiaId = String(row && row.materia_id || '').trim();
+      if (!materiaId) return null;
+      const existingAdmin = (state.catalogos.materias_admin || []).find((item) => String(item && item.materia_id || '').trim() === materiaId) || {};
+      const existingPublic = (state.catalogos.materias || []).find((item) => String(item && item.materia_id || '').trim() === materiaId) || {};
+      const savedRow = Object.assign({}, existingPublic, existingAdmin, row, { materia_id: materiaId });
+      upsertCatalogEntityRow('materias_admin', 'materia_id', savedRow);
+      upsertCatalogEntityRow('materias', 'materia_id', savedRow);
+      return getAdminMateriasCatalog().find((item) => item.materia_id === materiaId) || null;
     }
 
     function applyPatchedMateriaCatalogRow(materiaId, patch = {}) {
@@ -7593,9 +7656,10 @@
         const archivedAt = payload.estatus === 'archivada'
           ? String(backendMateria.archivado_at || currentMateria.archivado_at || savedAt)
           : '';
-        applySavedMateriaCatalogRow(Object.assign({}, currentMateria, backendMateria, {
+        const savedMateria = applySavedMateriaCatalogRow(Object.assign({}, currentMateria, backendMateria, {
           materia_id: payload.materia_id,
           nombre: payload.nombre,
+          tipo: payload.admite_submaterias ? 'con_submaterias' : 'simple',
           activo: payload.estatus === 'activa',
           admite_submaterias: payload.admite_submaterias,
           estatus: payload.estatus,
@@ -7606,7 +7670,7 @@
             : ''
         }));
         closeMateriaEditor();
-        state.materiasUi.selectedMateriaId = data.materia_id || payload.materia_id;
+        state.materiasUi.selectedMateriaId = (savedMateria && savedMateria.materia_id) || data.materia_id || payload.materia_id;
         renderAdminModuleSurface('materias');
         setBanner(mode === 'new' ? 'Materia creada.' : 'Materia actualizada.', 'success');
       }, {
