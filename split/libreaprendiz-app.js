@@ -5642,14 +5642,45 @@
     function getFacilitadorRecentWeeks() {
       const rows = Array.isArray(state.catalogos.semanas) ? state.catalogos.semanas : [];
       const today = getTodayYmdLocal();
-      return rows
+      const seenRanges = new Set();
+      const sorted = rows
         .slice()
+        .filter((row) => toYmdFrontend_(row.fecha_inicio || '') || toYmdFrontend_(row.fecha_fin || ''))
         .filter((row) => {
           const start = toYmdFrontend_(row.fecha_inicio || '');
-          return !today || !start || start <= today;
+          const end = toYmdFrontend_(row.fecha_fin || '');
+          const key = start + '|' + end;
+          if (seenRanges.has(key)) return false;
+          seenRanges.add(key);
+          return true;
         })
-        .sort((a, b) => String(a.fecha_inicio || '').localeCompare(String(b.fecha_inicio || '')))
-        .slice(-6);
+        .sort((a, b) => {
+          const startDiff = String(toYmdFrontend_(a.fecha_inicio || '')).localeCompare(String(toYmdFrontend_(b.fecha_inicio || '')));
+          if (startDiff) return startDiff;
+          return String(toYmdFrontend_(a.fecha_fin || '')).localeCompare(String(toYmdFrontend_(b.fecha_fin || '')));
+        });
+      if (!sorted.length) return [];
+      const currentIndex = sorted.findIndex((row) => {
+        const start = toYmdFrontend_(row.fecha_inicio || '');
+        const end = toYmdFrontend_(row.fecha_fin || '') || start;
+        return today && start && start <= today && (!end || today <= end);
+      });
+      let anchorIndex = currentIndex;
+      if (anchorIndex === -1) {
+        for (let index = sorted.length - 1; index >= 0; index -= 1) {
+          const start = toYmdFrontend_(sorted[index].fecha_inicio || '');
+          if (start && today && start <= today) {
+            anchorIndex = index;
+            break;
+          }
+        }
+      }
+      if (anchorIndex === -1) {
+        anchorIndex = 0;
+      }
+      const startIndex = Math.max(0, anchorIndex - 3);
+      const endIndex = Math.min(sorted.length, anchorIndex + 2);
+      return sorted.slice(startIndex, endIndex);
     }
 
     function isAssignmentActiveForSemana(asignacion, semana) {
