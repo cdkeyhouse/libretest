@@ -1245,6 +1245,15 @@
       };
     }
 
+    function captureViewportScrollAnchor() {
+      return {
+        targetId: '',
+        top: 0,
+        scrollX: Number(window.scrollX || window.pageXOffset || 0),
+        scrollY: Number(window.scrollY || window.pageYOffset || 0)
+      };
+    }
+
     function restoreScrollAnchor(anchor) {
       if (!anchor) return;
       window.requestAnimationFrame(() => {
@@ -14389,8 +14398,12 @@
       const planCard = $('plan-card-' + planId);
       const hasPlanEditor = !!(planCard && planCard.querySelector('.plan-open-editor'));
       const hasSharedEditor = !!(planCard && planCard.querySelector('.plan-multigroup-shared'));
-      const saveScrollAnchor = captureScrollAnchor(button, 'plan-save-' + planId);
-      const restoreSaveScrollAnchor = () => restoreScrollAnchor(saveScrollAnchor);
+      const saveButtonScrollAnchor = captureScrollAnchor(button, 'plan-save-' + planId);
+      const saveViewportScrollAnchor = captureViewportScrollAnchor();
+      let useViewportScrollAnchorAfterSave = false;
+      const restoreSaveScrollAnchor = () => restoreScrollAnchor(
+        useViewportScrollAnchorAfterSave ? saveViewportScrollAnchor : saveButtonScrollAnchor
+      );
       const generalText = getPendingGeneralObservationText(planId);
       const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
       if (!finalPayloads.length) {
@@ -14420,6 +14433,7 @@
         shouldPersistOpenPlanActivities ||
         shouldRefreshMaterialAlertas
       );
+      useViewportScrollAnchorAfterSave = !shouldSavePlan && !shouldSaveShared;
       const shouldForceAlertasAfterSave =
         (shouldSavePlan && shouldRefreshMaterialAlertas && planDraftAffectsMaterialAlerts(planDraft)) ||
         (shouldSaveShared && planDraftAffectsMaterialAlerts(sharedDraft));
