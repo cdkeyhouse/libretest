@@ -2530,7 +2530,7 @@
     // "Crear nueva planeacion" abra con campos ya listos sin mostrar el pill
     // "Preparando opciones...". No bloquea boot/login ni genera banners.
     function scheduleFacilitadorEditorCatalogosWarmup(reason) {
-      if (!state.session || String(state.session.rol || '').trim() !== 'facilitador') return;
+      if (getCurrentRole() !== 'facilitador') return;
       if (canUseAdminShell()) return;
       if (!currentViewNeedsCatalogos()) return;
       if (state.ui && state.ui.planeacionesCatalogosPromise) return;
@@ -2538,7 +2538,7 @@
       if (state.ui) state.ui.editorCatalogosWarmupScheduled = true;
       scheduleAfterPaint(function () {
         window.setTimeout(function () {
-          if (!state.session || String(state.session.rol || '').trim() !== 'facilitador') return;
+          if (getCurrentRole() !== 'facilitador') return;
           if (canUseAdminShell()) return;
           if (!currentViewNeedsCatalogos()) return;
           ensurePlaneacionesCatalogosAvailable({ render: false, scope: 'editor' })
