@@ -10884,17 +10884,7 @@
         setBanner('La planeaci\u00f3n se est\u00e1 creando. Espera un momento para abrirla.', 'info', { button });
         return;
       }
-      if (state.ui) state.ui.openPlanLoadingId = planId;
-      state.openPlanId = planId;
-      state.openPlanDraft = null;
-      const previewPlan = buildPlaneacionOpenPreviewRow(currentPlan);
-      if (previewPlan) upsertPlaneacionRow(previewPlan);
-      if (currentPlan) {
-        const loteId = getPlanLoteId(currentPlan);
-        if (loteId) setMultiGroupActivePlan(loteId, planId);
-      }
-      closePlanBuilder();
-      renderPlaneacionesList();
+      openPlanLocalInstant(planId);
       hydrateOpenPlanAfterOpen(planId);
       if (state.openPlanId) {
         window.requestAnimationFrame(() => {
@@ -11958,19 +11948,35 @@
       });
     }
 
+    function openPlanLocalInstant(planId, options = {}) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const currentPlan = getPlanById(normalizedPlanId);
+      const hasInstantDetail = !!(currentPlan && currentPlan.detail_loaded && hasUsableOpenPlanDetail(currentPlan));
+      if (state.ui) state.ui.openPlanLoadingId = hasInstantDetail ? '' : normalizedPlanId;
+      state.openPlanId = normalizedPlanId;
+      state.openPlanDraft = hasInstantDetail
+        ? preserveOpenPlanDraftLocalEdits(normalizedPlanId, buildOpenPlanDraft(currentPlan), currentPlan)
+        : null;
+      const previewPlan = buildPlaneacionOpenPreviewRow(currentPlan);
+      if (previewPlan) upsertPlaneacionRow(previewPlan);
+      const refreshedPlan = getPlanById(normalizedPlanId) || currentPlan;
+      if (refreshedPlan) {
+        const loteId = getPlanLoteId(refreshedPlan);
+        if (loteId) setMultiGroupActivePlan(loteId, normalizedPlanId);
+      }
+      closePlanBuilder();
+      if (options.render !== false) renderPlaneacionesList();
+      return refreshedPlan;
+    }
+
     async function openPlanFromAlert(button, planId) {
       if (canUseAdminShell()) {
         activateAdminModule('planeaciones');
       } else {
         activateTab('planeaciones');
       }
-      if (state.ui) state.ui.openPlanLoadingId = planId;
-      state.openPlanId = planId;
-      state.openPlanDraft = null;
-      const previewPlan = buildPlaneacionOpenPreviewRow(getPlanById(planId));
-      if (previewPlan) upsertPlaneacionRow(previewPlan);
-      closePlanBuilder();
-      renderPlaneacionesList();
+      openPlanLocalInstant(planId);
       await handleAction('openPlanFromAlert', async () => {
         const detailPromise = ensurePlaneacionDetailLoaded(planId, { silent: true });
         const plan = await detailPromise;
@@ -11979,13 +11985,13 @@
           ensurePlaneacionEntryDetailsLoaded(entry, { silent: true }).then(() => {
             if (state.openPlanId !== planId) return;
             const refreshedPlan = getPlanById(planId) || plan;
-            state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+            state.openPlanDraft = refreshedPlan ? preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan) : null;
             persistCurrentBootSnapshot('planeacion_abierta_alerta_multigrupo');
             renderPlaneacionesList();
           }).catch(() => {});
         }
         if (state.ui) state.ui.openPlanLoadingId = '';
-        state.openPlanDraft = plan ? buildOpenPlanDraft(plan) : null;
+        state.openPlanDraft = plan ? preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(plan), plan) : null;
         persistCurrentBootSnapshot('planeacion_abierta_alerta');
         renderPlaneacionesList();
         scheduleAfterPaint(() => {
@@ -12003,7 +12009,7 @@
             .then(() => {
               if (state.openPlanId !== planId) return;
               const refreshedPlan = getPlanById(planId) || plan;
-              state.openPlanDraft = refreshedPlan ? buildOpenPlanDraft(refreshedPlan) : null;
+              state.openPlanDraft = refreshedPlan ? preserveOpenPlanDraftLocalEdits(planId, buildOpenPlanDraft(refreshedPlan), refreshedPlan) : null;
               renderPlaneacionesList();
             })
             .catch(() => state.catalogos);
