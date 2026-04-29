@@ -8512,7 +8512,7 @@
       if (!message && !['saving', 'activating'].includes(localState)) return '';
       const compactLabel = ({
         creating: 'Sincronizando',
-        saving: 'Sincronizando',
+        saving: 'Guardando',
         activating: 'Sincronizando',
         syncing: 'Sincronizando',
         sync_error: 'Pendiente'
@@ -11542,10 +11542,11 @@
         const localState = getPlanLocalSaveState(plan);
         const isOpenSaveReady = isOpenPlanReadyForSave(plan, entry);
         const isOpenSaveBusy = localState === 'saving';
+        const isOpenSaveSaved = localState === 'saved';
         const isOpenSavePreparing = !isOpenSaveReady && !isOpenSaveBusy;
-        const saveButtonText = isOpenSaveBusy ? 'Sincronizando...' : (isOpenSavePreparing ? 'Preparando...' : 'Guardar cambios');
-        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '') + (isOpenSavePreparing ? ' is-preparing' : '');
-        const saveButtonBusyAttrs = (isOpenSaveBusy || isOpenSavePreparing) ? ' disabled aria-disabled="true" aria-busy="true"' : '';
+        const saveButtonText = isOpenSaveBusy ? 'Guardando...' : (isOpenSaveSaved ? 'Guardado' : (isOpenSavePreparing ? 'Preparando...' : 'Guardar cambios'));
+        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '') + (isOpenSavePreparing ? ' is-preparing' : '') + (isOpenSaveSaved ? ' is-saved' : '');
+        const saveButtonBusyAttrs = (isOpenSaveBusy || isOpenSavePreparing || isOpenSaveSaved) ? ' disabled aria-disabled="true"' + (isOpenSaveBusy || isOpenSavePreparing ? ' aria-busy="true"' : '') : '';
         const actionStatusHtml = getPlanActionStatusMarkup(plan);
         const buttons = [];
         if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
@@ -14693,7 +14694,7 @@
         }, {
           button,
           key: buildActionKey('guardarCambiosPlaneacion', [planId, entryKey || '', generalText.slice(0, 40), finalPayloads.map((row) => row.alumnoId).join(','), shouldSavePlan ? 'plan' : '', shouldSaveShared ? 'multi' : '']),
-          busyText: 'Sincronizando...'
+          busyText: 'Guardando...'
         });
         endSaveTrace(saveTrace, 'success');
       } catch (err) {
