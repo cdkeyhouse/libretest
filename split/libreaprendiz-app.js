@@ -14885,8 +14885,10 @@
       const previousAlertasSnapshot = cloneJsonSafe(state.alertas, state.alertas) || [];
       const readyDraft = buildMaterialReadyDraft(draft);
       const readyPatch = buildMaterialReadyPlanPatch(plan, readyDraft);
-      const request = buildOpenPlanSaveRequest(plan, readyDraft);
       await handleAction('marcarMaterialListo', async () => {
+        // buildOpenPlanSaveRequest puede lanzar createInlineFieldValidationError;
+        // debe ejecutarse dentro de handleAction para que su catch lo intercepte.
+        const request = buildOpenPlanSaveRequest(plan, readyDraft);
         state.openPlanDraft = readyDraft;
         applyOptimisticPlanPatch(planId, readyPatch, {
           localState: 'syncing',
