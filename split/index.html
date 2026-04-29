@@ -2688,8 +2688,17 @@
     .admin-materias-variant-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
       justify-content: flex-end;
+    }
+    .admin-materias-variant-actions > button {
+      width: auto !important;
+      min-width: 30px !important;
+      min-height: 28px;
+      flex: 0 0 auto;
+      padding: 4px 7px;
+      font-size: 0.7rem;
+      white-space: nowrap;
     }
     .admin-materias-structure {
       display: inline-flex;
@@ -3582,13 +3591,22 @@
         grid-template-columns: 1fr;
       }
       .admin-materias-variant-item {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(96px, 1fr) auto;
+        gap: 8px;
+        padding: 8px 10px;
       }
       .admin-facilitadores-assignment-actions,
       .admin-facilitadores-inline-actions,
       .admin-materias-inline-actions,
       .admin-materias-variant-actions {
-        justify-content: flex-start;
+        justify-content: flex-end;
+      }
+      .admin-materias-variant-actions > button {
+        font-size: 0.68rem !important;
+        padding: 3px 5px;
+      }
+      .admin-materias-variant-actions > button.is-busy {
+        font-size: 0.64rem !important;
       }
       .admin-alumnos-actions > button {
         width: 100%;
@@ -5113,7 +5131,6 @@
     .admin-facilitadores-inline-actions > button,
     .admin-facilitadores-assignment-actions > button,
     .admin-materias-inline-actions > button,
-    .admin-materias-variant-actions > button,
     .admin-taller-membership-actions > button {
       min-width: 0 !important;
       width: 100%;
@@ -5131,7 +5148,6 @@
     .admin-facilitadores-inline-actions > button.is-busy,
     .admin-facilitadores-assignment-actions > button.is-busy,
     .admin-materias-inline-actions > button.is-busy,
-    .admin-materias-variant-actions > button.is-busy,
     .admin-taller-membership-actions > button.is-busy {
       font-size: 0.68rem;
       line-height: 1.08;
@@ -5151,7 +5167,6 @@
       .admin-facilitadores-inline-actions > button,
       .admin-facilitadores-assignment-actions > button,
       .admin-materias-inline-actions > button,
-      .admin-materias-variant-actions > button,
       .admin-taller-membership-actions > button {
         font-size: 0.78rem !important;
       }
@@ -5159,7 +5174,6 @@
       .admin-facilitadores-inline-actions > button.is-busy,
       .admin-facilitadores-assignment-actions > button.is-busy,
       .admin-materias-inline-actions > button.is-busy,
-      .admin-materias-variant-actions > button.is-busy,
       .admin-taller-membership-actions > button.is-busy {
         font-size: 0.72rem !important;
       }
@@ -5190,6 +5204,21 @@
       .admin-nav { grid-template-columns: 1fr; }
       .actions > * { width: 100%; }
       .page::before { margin-bottom: 12px; }
+    }
+
+    @media (max-width: 520px) {
+      .admin-materias-variant-item {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+      .admin-materias-variant-actions {
+        gap: 3px;
+        justify-content: flex-start;
+      }
+      .admin-materias-variant-actions > button {
+        min-width: 26px !important;
+        min-height: 26px;
+      }
     }
   </style>
 </head>
