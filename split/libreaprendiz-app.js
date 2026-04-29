@@ -5795,6 +5795,13 @@
       return sorted.slice(startIndex, endIndex);
     }
 
+    function isCurrentSemana(semana) {
+      const today = getTodayYmdLocal();
+      const start = toYmdFrontend_(semana && semana.fecha_inicio || '');
+      const end = toYmdFrontend_(semana && semana.fecha_fin || '') || start;
+      return !!(today && start && start <= today && (!end || today <= end));
+    }
+
     function isAssignmentActiveForSemana(asignacion, semana) {
       if (!asignacion || !semana) return false;
       if (String(asignacion.archivado_at || '').trim()) return false;
@@ -6317,11 +6324,30 @@
       if (state.facilitadoresUi && String(state.facilitadoresUi.pulsePlaneacionesError || '').trim()) {
         return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No se pudo calcular el pulso.</strong><div class="subtle">' + escapeHtml(state.facilitadoresUi.pulsePlaneacionesError) + '</div></div></div>';
       }
+      const legend = [
+        ['is-ok', 'Lista'],
+        ['is-missing', 'Falta'],
+        ['is-alert', 'Alerta'],
+        ['is-pending', 'Cierre'],
+        ['is-closed', 'Cerrada']
+      ].map((item) => (
+        '<span class="admin-facilitadores-matrix-legend-item">' +
+          '<span class="facilitador-matrix-state ' + item[0] + '">' + escapeHtml(item[1]) + '</span>' +
+        '</span>'
+      )).join('');
       return [
+        '<div class="admin-facilitadores-matrix-summary">',
+          '<span>3 semanas anteriores · actual · 1 futura</span>',
+          '<span class="admin-facilitadores-matrix-legend">' + legend + '</span>',
+        '</div>',
         '<div class="admin-facilitadores-matrix-table">',
           '<div class="admin-facilitadores-matrix-header">',
             '<div class="admin-facilitadores-matrix-label">Asignaci&oacute;n</div>',
-            semanas.map((semana) => '<div class="admin-facilitadores-matrix-cell">' + escapeHtml(formatSemanaLabel(semana)) + '</div>').join(''),
+            semanas.map((semana) => {
+              const currentClass = isCurrentSemana(semana) ? ' is-current-week' : '';
+              const title = isCurrentSemana(semana) ? 'Semana actual' : '';
+              return '<div class="admin-facilitadores-matrix-cell' + currentClass + '"' + (title ? ' title="' + escapeHtml(title) + '"' : '') + '>' + escapeHtml(formatSemanaLabel(semana)) + '</div>';
+            }).join(''),
           '</div>',
           asignaciones.map((asignacion) => {
             const materia = (state.catalogos.materias || []).find((item) => item.materia_id === asignacion.materia_id);
