@@ -3682,20 +3682,37 @@
     #adminPlaneacionesShell[hidden] { display: none !important; }
 
     .plan-builder-loading-note {
-      display: grid;
-      gap: 6px;
-      padding: 12px 14px;
-      border: 1px dashed rgba(83, 194, 237, 0.35);
-      border-radius: 14px;
-      background: rgba(35, 120, 150, 0.12);
-      color: #dff6ff;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      max-width: 100%;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid rgba(83, 194, 237, 0.24);
+      border-radius: 999px;
+      background: rgba(35, 120, 150, 0.10);
+      color: rgba(223, 246, 255, 0.88);
+      font-size: 0.82rem;
+      line-height: 1.2;
+    }
+    .plan-builder-loading-note::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--la-cyan, #1fb6e5);
+      box-shadow: 0 0 0 5px rgba(31, 182, 229, 0.08);
+      flex: 0 0 auto;
     }
     .plan-builder-loading-note strong {
-      color: #f7fbfd;
-      font-size: 14px;
+      color: inherit;
+      font-size: inherit;
+      font-weight: 800;
+      white-space: nowrap;
     }
     .plan-builder-loading-note .mini {
-      color: rgba(223, 246, 255, 0.82);
+      display: none;
     }
 
     .plan-builder-shell,
@@ -5702,7 +5719,7 @@
             </div>
             <div id="planBuilderBody" class="stack" hidden>
               <div id="planBuilderLoadingNote" class="plan-builder-loading-note" hidden>
-                <strong>Cargando materias y grupos...</strong>
+                <strong>Preparando opciones...</strong>
                 <div class="mini">Puedes ver el editor desde ahora, pero estos campos se habilitan en cuanto termine la carga.</div>
               </div>
               <div class="grid-3">
