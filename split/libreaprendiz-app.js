@@ -111,7 +111,11 @@
         pinOpen: false,
         pinValue: '',
         asignacionOpen: false,
-        asignacion: createEmptyFacilitadorAsignacionState()
+        asignacion: createEmptyFacilitadorAsignacionState(),
+        pulsePlaneacionesFacilitadorId: '',
+        pulsePlaneaciones: [],
+        pulsePlaneacionesLoading: false,
+        pulsePlaneacionesError: ''
       };
     }
 
@@ -687,7 +691,7 @@
         case 'reportes':
           return ['alumnos', 'periodos'];
         case 'facilitadores':
-          return ['facilitadores', 'facilitadores_admin', 'facilitador_asignaciones', 'grupos', 'materias'];
+          return ['facilitadores', 'facilitadores_admin', 'facilitador_asignaciones', 'grupos', 'materias', 'semanas'];
         case 'materias':
           return ['materias', 'materias_admin', 'submaterias', 'submaterias_admin'];
         case 'talleres':
@@ -5523,18 +5527,21 @@
 
     function applySavedFacilitadorAsignacionCatalogRow(row) {
       if (!row || !row.asignacion_id) return null;
-      const normalized = Object.assign({}, row, {
-        asignacion_id: String(row.asignacion_id || '').trim(),
-        facilitador_id: String(row.facilitador_id || '').trim(),
-        grupo_id: String(row.grupo_id || '').trim(),
-        materia_id: String(row.materia_id || '').trim(),
-        activa: row.activa === undefined ? true : row.activa,
-        fecha_inicio: toYmdFrontend_(row.fecha_inicio || ''),
-        fecha_fin: toYmdFrontend_(row.fecha_fin || ''),
-        archivado_at: String(row.archivado_at || row.archivada_at || '').trim(),
-        archivada_at: String(row.archivada_at || row.archivado_at || '').trim(),
-        archivado_por: String(row.archivado_por || row.archivada_por || '').trim(),
-        archivada_por: String(row.archivada_por || row.archivado_por || '').trim()
+      const current = (Array.isArray(state.catalogos.facilitador_asignaciones) ? state.catalogos.facilitador_asignaciones : [])
+        .find((item) => String((item && item.asignacion_id) || '').trim() === String(row.asignacion_id || '').trim());
+      const merged = Object.assign({}, current || {}, row);
+      const normalized = Object.assign({}, merged, {
+        asignacion_id: String(merged.asignacion_id || '').trim(),
+        facilitador_id: String(merged.facilitador_id || '').trim(),
+        grupo_id: String(merged.grupo_id || '').trim(),
+        materia_id: String(merged.materia_id || '').trim(),
+        activa: merged.activa === undefined ? true : merged.activa,
+        fecha_inicio: toYmdFrontend_(merged.fecha_inicio || ''),
+        fecha_fin: toYmdFrontend_(merged.fecha_fin || ''),
+        archivado_at: String(merged.archivado_at || merged.archivada_at || '').trim(),
+        archivada_at: String(merged.archivada_at || merged.archivado_at || '').trim(),
+        archivado_por: String(merged.archivado_por || merged.archivada_por || '').trim(),
+        archivada_por: String(merged.archivada_por || merged.archivado_por || '').trim()
       });
       return upsertCatalogEntityRow('facilitador_asignaciones', 'asignacion_id', normalized);
     }
@@ -5567,7 +5574,7 @@
       const includeArchived = !!options.includeArchived;
       return (Array.isArray(state.catalogos.facilitador_asignaciones) ? state.catalogos.facilitador_asignaciones : [])
         .filter((row) => String(row.facilitador_id || '').trim() === String(facilitadorId || '').trim())
-        .filter((row) => includeArchived || !String(row.archivado_at || '').trim())
+        .filter((row) => includeArchived || !String(row.archivado_at || row.archivada_at || '').trim())
         .map((row) => ({
           asignacion_id: String(row.asignacion_id || '').trim(),
           facilitador_id: String(row.facilitador_id || '').trim(),
@@ -5578,8 +5585,10 @@
           fecha_fin: toYmdFrontend_(row.fecha_fin || ''),
           fecha_creacion: row.fecha_creacion || '',
           fecha_actualizacion: row.fecha_actualizacion || '',
-          archivado_at: String(row.archivado_at || '').trim(),
-          archivado_por: String(row.archivado_por || '').trim()
+          archivado_at: String(row.archivado_at || row.archivada_at || '').trim(),
+          archivado_por: String(row.archivado_por || row.archivada_por || '').trim(),
+          archivada_at: String(row.archivada_at || row.archivado_at || '').trim(),
+          archivada_por: String(row.archivada_por || row.archivado_por || '').trim()
         }))
         .sort((a, b) => {
           const materiaA = ((state.catalogos.materias || []).find((item) => item.materia_id === a.materia_id) || {}).nombre || a.materia_id;
@@ -5632,8 +5641,13 @@
 
     function getFacilitadorRecentWeeks() {
       const rows = Array.isArray(state.catalogos.semanas) ? state.catalogos.semanas : [];
+      const today = getTodayYmdLocal();
       return rows
         .slice()
+        .filter((row) => {
+          const start = toYmdFrontend_(row.fecha_inicio || '');
+          return !today || !start || start <= today;
+        })
         .sort((a, b) => String(a.fecha_inicio || '').localeCompare(String(b.fecha_inicio || '')))
         .slice(-6);
     }
@@ -5651,8 +5665,40 @@
       return true;
     }
 
+    function getFacilitadorPulsePlaneaciones(facilitadorId) {
+      const id = String(facilitadorId || '').trim();
+      if (
+        state.facilitadoresUi &&
+        String(state.facilitadoresUi.pulsePlaneacionesFacilitadorId || '').trim() === id &&
+        Array.isArray(state.facilitadoresUi.pulsePlaneaciones)
+      ) {
+        return state.facilitadoresUi.pulsePlaneaciones;
+      }
+      if (String(state.activeAdminModule || '').trim() === 'planeaciones') {
+        return state.planeaciones || [];
+      }
+      return [];
+    }
+
+    function isFacilitadorPulseDataLoading(facilitadorId) {
+      return !!(
+        state.facilitadoresUi &&
+        state.facilitadoresUi.pulsePlaneacionesLoading &&
+        String(state.facilitadoresUi.pulsePlaneacionesFacilitadorId || '').trim() === String(facilitadorId || '').trim()
+      );
+    }
+
+    function isFacilitadorPulseDataLoaded(facilitadorId) {
+      return !!(
+        state.facilitadoresUi &&
+        !state.facilitadoresUi.pulsePlaneacionesLoading &&
+        !String(state.facilitadoresUi.pulsePlaneacionesError || '').trim() &&
+        String(state.facilitadoresUi.pulsePlaneacionesFacilitadorId || '').trim() === String(facilitadorId || '').trim()
+      );
+    }
+
     function getFacilitadorPlanForCell(facilitadorId, asignacion, semanaId) {
-      const matches = (state.planeaciones || []).filter((plan) => {
+      const matches = getFacilitadorPulsePlaneaciones(facilitadorId).filter((plan) => {
         return String(plan.facilitador_id || '').trim() === String(facilitadorId || '').trim() &&
           String(plan.grupo_id || '').trim() === String(asignacion.grupo_id || '').trim() &&
           String(plan.materia_id || '').trim() === String(asignacion.materia_id || '').trim() &&
@@ -5710,13 +5756,22 @@
       const planesIds = new Set((state.planeaciones || [])
         .filter((plan) => String(plan.facilitador_id || '').trim() === String(facilitadorId || '').trim())
         .map((plan) => plan.planeacion_id));
+      getFacilitadorPulsePlaneaciones(facilitadorId)
+        .filter((plan) => String(plan.facilitador_id || '').trim() === String(facilitadorId || '').trim())
+        .forEach((plan) => {
+          if (plan && plan.planeacion_id) planesIds.add(plan.planeacion_id);
+        });
       const alertasAbiertas = (state.alertas || []).filter((alerta) => planesIds.has(alerta.planeacion_id) && String(alerta.estado || '').trim() !== 'resuelta').length;
       return { esperadas, entregadas, faltantes, cierresPendientes, alertasAbiertas };
     }
 
     function getFacilitadorUpdatedLabel(facilitador) {
       if (!facilitador) return 'Sin registro';
-      const latestPlan = getPlaneacionesIndex().latestByFacilitadorId.get(String(facilitador.facilitador_id || '').trim());
+      const facilitadorId = String(facilitador.facilitador_id || '').trim();
+      const latestPlan = getFacilitadorPulsePlaneaciones(facilitadorId)
+        .slice()
+        .sort((a, b) => String(b.fecha_actualizacion || b.fecha_creacion || '').localeCompare(String(a.fecha_actualizacion || a.fecha_creacion || '')))[0] ||
+        getPlaneacionesIndex().latestByFacilitadorId.get(facilitadorId);
       const latestValue = latestPlan
         ? (latestPlan.fecha_actualizacion || latestPlan.fecha_creacion || '')
         : (facilitador.archivado_at || facilitador.fecha_baja || facilitador.fecha_alta || '');
@@ -5724,6 +5779,9 @@
     }
 
     function buildFacilitadorPulseSummary(facilitadorId) {
+      if (!isFacilitadorPulseDataLoaded(facilitadorId)) {
+        return isFacilitadorPulseDataLoading(facilitadorId) ? 'Calculando pulso...' : 'Abre panel para calcular';
+      }
       const pulse = buildFacilitadorPulse(facilitadorId);
       const parts = [];
       if (pulse.faltantes) parts.push(pulse.faltantes + ' faltante(s)');
@@ -5758,6 +5816,46 @@
         closeFacilitadorPin();
         closeFacilitadorAsignacionEditor();
       }
+    }
+
+    function ensureFacilitadorPulsePlaneacionesLoaded(facilitadorId) {
+      const id = String(facilitadorId || '').trim();
+      if (!id || !canUseAdminShell()) return;
+      if (
+        state.facilitadoresUi.pulsePlaneacionesLoading &&
+        String(state.facilitadoresUi.pulsePlaneacionesFacilitadorId || '').trim() === id
+      ) return;
+      if (
+        String(state.facilitadoresUi.pulsePlaneacionesError || '').trim() &&
+        String(state.facilitadoresUi.pulsePlaneacionesFacilitadorId || '').trim() === id
+      ) return;
+      if (isFacilitadorPulseDataLoaded(id)) return;
+      state.facilitadoresUi.pulsePlaneacionesFacilitadorId = id;
+      state.facilitadoresUi.pulsePlaneaciones = [];
+      state.facilitadoresUi.pulsePlaneacionesLoading = true;
+      state.facilitadoresUi.pulsePlaneacionesError = '';
+      api('getPlaneaciones', {
+        facilitador_id: id,
+        include_detail: false,
+        limit: 500,
+        offset: 0
+      })
+        .then((data) => {
+          if (String(state.facilitadoresUi.selectedFacilitadorId || '').trim() !== id) return;
+          state.facilitadoresUi.pulsePlaneacionesFacilitadorId = id;
+          state.facilitadoresUi.pulsePlaneaciones = Array.isArray(data && data.rows) ? data.rows : [];
+          state.facilitadoresUi.pulsePlaneacionesLoading = false;
+          state.facilitadoresUi.pulsePlaneacionesError = '';
+          renderAdminFacilitadoresModule();
+        })
+        .catch((err) => {
+          if (String(state.facilitadoresUi.selectedFacilitadorId || '').trim() !== id) return;
+          state.facilitadoresUi.pulsePlaneacionesFacilitadorId = id;
+          state.facilitadoresUi.pulsePlaneaciones = [];
+          state.facilitadoresUi.pulsePlaneacionesLoading = false;
+          state.facilitadoresUi.pulsePlaneacionesError = formatApiError(err);
+          renderAdminFacilitadoresModule();
+        });
     }
 
     function getAdminFacilitadoresModuleTemplate() {
@@ -5931,8 +6029,12 @@
         host.innerHTML = '<div class="admin-alumnos-empty"><div><strong>Selecciona un facilitador</strong><div class="subtle">Aqu&iacute; aparecer&aacute;n sus asignaciones, pulso semanal y accesos r&aacute;pidos.</div></div></div>';
         return;
       }
+      ensureFacilitadorPulsePlaneacionesLoaded(facilitador.facilitador_id);
       const visualStatus = getFacilitadorVisualStatus(facilitador);
-      const pulse = buildFacilitadorPulse(facilitador.facilitador_id);
+      const pulseReady = isFacilitadorPulseDataLoaded(facilitador.facilitador_id);
+      const pulse = pulseReady
+        ? buildFacilitadorPulse(facilitador.facilitador_id)
+        : { esperadas: '...', entregadas: '...', faltantes: '...', cierresPendientes: '...', alertasAbiertas: '...' };
       const asignaciones = getFacilitadorAsignaciones(facilitador.facilitador_id);
       const canManage = canManageFacilitadoresCatalog();
       const pinOpen = !!state.facilitadoresUi.pinOpen;
@@ -6060,8 +6162,17 @@
     function renderFacilitadorMatrix(facilitadorId) {
       const semanas = getFacilitadorRecentWeeks();
       const asignaciones = getFacilitadorAsignaciones(facilitadorId).filter((row) => row.activa);
-      if (!semanas.length || !asignaciones.length) {
+      if (!asignaciones.length) {
+        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>Sin asignaciones activas.</strong><div class="subtle">Agrega grupo y materia para medir faltantes con confianza.</div></div></div>';
+      }
+      if (!semanas.length) {
         return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No hay matriz disponible todav&iacute;a.</strong><div class="subtle">Necesitas semanas cargadas y al menos una asignaci&oacute;n activa.</div></div></div>';
+      }
+      if (isFacilitadorPulseDataLoading(facilitadorId)) {
+        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>Calculando pulso semanal...</strong><div class="subtle">Estamos cruzando asignaciones activas con planeaciones existentes.</div></div></div>';
+      }
+      if (state.facilitadoresUi && String(state.facilitadoresUi.pulsePlaneacionesError || '').trim()) {
+        return '<div class="admin-alumnos-empty" style="min-height:160px;"><div><strong>No se pudo calcular el pulso.</strong><div class="subtle">' + escapeHtml(state.facilitadoresUi.pulsePlaneacionesError) + '</div></div></div>';
       }
       return [
         '<div class="admin-facilitadores-matrix-table">',
