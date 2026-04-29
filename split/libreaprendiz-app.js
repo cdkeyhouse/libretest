@@ -2304,6 +2304,15 @@
       return state.ui.planeacionesUnfilteredHasMore === false;
     }
 
+    function updatePlaneacionesUnfilteredBaseFromCurrent(hasMore) {
+      if (!state.ui) return;
+      const role = String(getCurrentRole() || '').trim().toLowerCase();
+      if (role !== 'facilitador' || canUseAdminShell()) return;
+      if (hasActivePlaneacionesFilters()) return;
+      state.ui.planeacionesUnfilteredBase = (Array.isArray(state.planeaciones) ? state.planeaciones : []).slice();
+      state.ui.planeacionesUnfilteredHasMore = !!hasMore;
+    }
+
     async function refreshPlaneaciones(options = {}) {
       ensureLoggedIn();
       const append = !!options.append;
@@ -2352,8 +2361,7 @@
           const noFiltersActive = !activeFilters.semana_id && !activeFilters.estado &&
             !activeFilters.grupo_id && !activeFilters.facilitador_id && !activeFilters.alumno_id;
           if (!append && noFiltersActive) {
-            state.ui.planeacionesUnfilteredBase = nextRows.slice();
-            state.ui.planeacionesUnfilteredHasMore = !!data.has_more;
+            updatePlaneacionesUnfilteredBaseFromCurrent(!!data.has_more);
           }
         }
         if (!append) persistCurrentBootSnapshot('planeaciones');
@@ -2605,6 +2613,9 @@
         if (shouldRequestPlaneaciones) {
           state.ui.planeacionesOffset = state.planeaciones.length;
           state.ui.planeacionesHasMore = !!(bootData && bootData.planeaciones && bootData.planeaciones.has_more);
+        }
+        if (!hasActivePlaneacionesFilters()) {
+          updatePlaneacionesUnfilteredBaseFromCurrent(!!state.ui.planeacionesHasMore);
         }
       }
       persistCurrentBootSnapshot('facilitador_boot_listfirst');
