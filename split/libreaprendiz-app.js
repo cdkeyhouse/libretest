@@ -8631,6 +8631,13 @@
       return error;
     }
 
+    function createInlineFieldValidationError(message, fieldId) {
+      const error = new Error(message);
+      error.isInlineFieldValidation = true;
+      error.focusTargetId = fieldId || '';
+      return error;
+    }
+
     function getPlanEditorValidationErrors() {
       if (!state.planEditor) return {};
       if (!state.planEditor.validationErrors || typeof state.planEditor.validationErrors !== 'object') {
@@ -8700,6 +8707,48 @@
         state.planEditor.validationErrors = {};
       }
       renderPlanEditorValidation();
+    }
+
+    function clearInlineFieldValidation(fieldId) {
+      const normalizedFieldId = String(fieldId || '').trim();
+      if (!normalizedFieldId) return;
+      const target = $(normalizedFieldId);
+      const node = $(getPlanEditorFieldErrorId(normalizedFieldId));
+      if (node) {
+        node.textContent = '';
+        node.hidden = true;
+      }
+      if (target) {
+        target.classList.remove('plan-field-invalid');
+        target.removeAttribute('aria-invalid');
+        if (node && target.getAttribute('aria-describedby') === node.id) {
+          target.removeAttribute('aria-describedby');
+        }
+      }
+    }
+
+    function showInlineFieldValidationError(error) {
+      if (!(error && error.isInlineFieldValidation)) return false;
+      const fieldId = String(error.focusTargetId || '').trim();
+      if (!fieldId) return false;
+      const target = $(fieldId);
+      if (!target) return false;
+      const node = ensurePlanEditorFieldErrorNode(fieldId);
+      if (node) {
+        node.textContent = error.message || 'Revisa este campo.';
+        node.hidden = false;
+      }
+      target.classList.add('plan-field-invalid');
+      target.setAttribute('aria-invalid', 'true');
+      if (node) target.setAttribute('aria-describedby', node.id);
+      const scrollTarget = getPlanEditorFieldErrorHost(fieldId) || target;
+      if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
+        scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (target && typeof target.focus === 'function' && !['DIV', 'SECTION'].includes(String(target.tagName || '').toUpperCase())) {
+        window.setTimeout(() => target.focus({ preventScroll: true }), 120);
+      }
+      return true;
     }
 
     function showPlanEditorValidationError(error) {
@@ -9014,6 +9063,15 @@
 
     function updateOpenPlanDraftField(field, value, rerender) {
       if (!state.openPlanDraft) return;
+      const fieldMap = {
+        fecha_planeacion: 'fecha',
+        materia_id: 'materia',
+        submateria_id: 'submateria',
+        taller_id: 'submateria'
+      };
+      if (fieldMap[field]) {
+        clearInlineFieldValidation(getOpenPlanInlineFieldId(state.openPlanDraft, fieldMap[field]));
+      }
       state.openPlanDraft[field] = value;
       if (field === 'materia_id') {
         const nextMateriaId = String(value || '').trim();
@@ -9027,6 +9085,7 @@
 
     function toggleOpenPlanDraftAlumno(alumnoId, checked) {
       if (!state.openPlanDraft) return;
+      clearInlineFieldValidation(getOpenPlanInlineFieldId(state.openPlanDraft, 'alumnos'));
       const current = new Set(state.openPlanDraft.alumnos_ids || []);
       if (checked) current.add(alumnoId); else current.delete(alumnoId);
       state.openPlanDraft.alumnos_ids = Array.from(current);
@@ -9035,6 +9094,7 @@
 
     function updateOpenPlanDraftActivityField(index, field, value) {
       if (!state.openPlanDraft || !state.openPlanDraft.activities[index]) return;
+      clearInlineFieldValidation(getOpenPlanInlineFieldId(state.openPlanDraft, 'activities'));
       state.openPlanDraft.activities[index][field] = value;
       state.openPlanDraft.activitiesDirty = true;
       persistOpenPlanSnapshotSoon('planeacion_draft_actividad');
@@ -9198,6 +9258,7 @@
       const alumnosGrupo = state.catalogos.alumnos
         .filter((alumno) => alumno.grupo_id === plan.grupo_id)
         .map((alumno) => alumno.alumno_id);
+      clearInlineFieldValidation(getOpenPlanInlineFieldId(plan, 'alumnos'));
       state.openPlanDraft.alumnos_ids = checked ? alumnosGrupo : [];
       persistOpenPlanSnapshotSoon('planeacion_draft_alumnos');
       renderPlaneacionesList();
@@ -10600,6 +10661,11 @@
       renderPlanAlumnosChecklist(selected);
     }
 
+    function getOpenPlanInlineFieldId(plan, fieldName) {
+      const planId = String(plan && plan.planeacion_id || plan && plan.planId || state.openPlanId || '').trim();
+      return 'open-plan-' + String(fieldName || '').trim() + '-' + planId;
+    }
+
     function handlePlanTallerChanged(event) {
       if (state.planEditor.mode === 'edit') return;
       const select = event && event.currentTarget ? event.currentTarget : $('planSubmateria');
@@ -11291,6 +11357,13 @@
         const showSeguimientoFields = String(plan.estado || '').trim() === 'activa';
         const localState = getPlanLocalSaveState(plan);
         const isOpenSaveBusy = localState === 'saving';
+        const openFieldIds = {
+          fecha: getOpenPlanInlineFieldId(plan, 'fecha'),
+          materia: getOpenPlanInlineFieldId(plan, 'materia'),
+          submateria: getOpenPlanInlineFieldId(plan, 'submateria'),
+          alumnos: getOpenPlanInlineFieldId(plan, 'alumnos'),
+          activities: getOpenPlanInlineFieldId(plan, 'activities')
+        };
         const activitiesSource = Array.isArray(draft.activities) && draft.activities.some((activity) => String((activity && activity.texto) || '').trim() || String((activity && activity.actividad_id) || '').trim())
           ? draft.activities
           : ((plan.actividades || []).length ? (plan.actividades || []).map((actividad) => ({
@@ -11332,13 +11405,13 @@
       return (
         '<div class="plan-open-editor">' +
           '<div class="grid-3">' +
-            '<div class="plan-date-detected-field"><label>Fecha:</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" oninput="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
-            '<div><label>Materia</label><select onchange="updateOpenPlanDraftField(\'materia_id\', this.value, true)">' +
+            '<div class="plan-date-detected-field"><label>Fecha:</label><input id="' + escapeHtml(openFieldIds.fecha) + '" type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" oninput="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
+            '<div><label>Materia</label><select id="' + escapeHtml(openFieldIds.materia) + '" onchange="updateOpenPlanDraftField(\'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
             '</select></div>' +
             (submaterias.length
-              ? '<div><label>Submateria</label><select onchange="updateOpenPlanDraftField(\'submateria_id\', this.value, true)">' +
+              ? '<div><label>Submateria</label><select id="' + escapeHtml(openFieldIds.submateria) + '" onchange="updateOpenPlanDraftField(\'submateria_id\', this.value, true)">' +
                   '<option value="">Selecciona submateria</option>' +
                   submaterias.map((item) => '<option value="' + escapeHtml(item.submateria_id) + '"' + (String(draft.submateria_id || '') === String(item.submateria_id || '') ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.submateria_id) + '</option>').join('') +
                 '</select></div>'
@@ -11356,7 +11429,7 @@
                 '<button class="btn-ghost" type="button" onclick="toggleAllOpenPlanDraftAlumnos(false)">Limpiar</button>' +
               '</div>' +
             '</div>' +
-            '<div class="group-block plan-open-students">' +
+            '<div id="' + escapeHtml(openFieldIds.alumnos) + '" class="group-block plan-open-students">' +
               (alumnosGrupo.map((alumno) => (
                 '<label class="check-item">' +
                   '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
@@ -11369,7 +11442,7 @@
             '<div class="card-head inline-head">' +
               '<div><label>Actividades</label></div>' +
             '</div>' +
-            '<div class="stack">' + activitiesHtml + '</div>' +
+            '<div id="' + escapeHtml(openFieldIds.activities) + '" class="stack">' + activitiesHtml + '</div>' +
             '<div class="plan-activities-add-wrap">' +
               '<button class="btn-accent plan-activities-add-btn" type="button" onclick="addOpenPlanDraftActivity()">Agregar otra actividad</button>' +
             '</div>' +
@@ -13110,6 +13183,7 @@
             return;
           }
           if (showPlanEditorValidationError(err)) return;
+          if (showInlineFieldValidationError(err)) return;
           const handled = typeof options.onError === 'function'
             ? options.onError(err, { anchor: feedbackAnchor, button })
             : false;
@@ -13323,17 +13397,22 @@
 
     function buildOpenPlanSaveRequest(plan, draft) {
       const fallbackDate = getWeekStartDateForPlan(plan);
-      const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
-      if (!semana) throw new Error('Selecciona una fecha v\u00e1lida.');
-      const materiaId = String((draft && draft.materia_id) || (plan && plan.materia_id) || '').trim();
-      if (!materiaId) throw new Error('Selecciona una materia.');
-      const submateriaId = String((draft && draft.submateria_id) || '').trim();
-      const tallerId = String((draft && draft.taller_id) || (plan && plan.taller_id) || '').trim();
+      const hasDraftDate = draft && Object.prototype.hasOwnProperty.call(draft, 'fecha_planeacion');
+      const fechaPlaneacion = hasDraftDate ? String(draft.fecha_planeacion || '').trim() : fallbackDate;
+      const semana = getWeekByDateOrDraft(fechaPlaneacion);
+      if (!semana) throw createInlineFieldValidationError('Selecciona una fecha v\u00e1lida.', getOpenPlanInlineFieldId(plan, 'fecha'));
+      const hasDraftMateria = draft && Object.prototype.hasOwnProperty.call(draft, 'materia_id');
+      const materiaId = String(hasDraftMateria ? draft.materia_id : (plan && plan.materia_id) || '').trim();
+      if (!materiaId) throw createInlineFieldValidationError('Selecciona una materia.', getOpenPlanInlineFieldId(plan, 'materia'));
+      const hasDraftSubmateria = draft && Object.prototype.hasOwnProperty.call(draft, 'submateria_id');
+      const hasDraftTaller = draft && Object.prototype.hasOwnProperty.call(draft, 'taller_id');
+      const submateriaId = String(hasDraftSubmateria ? draft.submateria_id : '').trim();
+      const tallerId = String(hasDraftTaller ? draft.taller_id : (plan && plan.taller_id) || '').trim();
       if (materiaRequiresPlanSubmateria(materiaId) && !submateriaId) {
-        throw new Error('Selecciona una submateria.');
+        throw createInlineFieldValidationError('Selecciona una submateria.', getOpenPlanInlineFieldId(plan, 'submateria'));
       }
       const alumnosIds = Array.from(new Set(draft.alumnos_ids || []));
-      if (!alumnosIds.length) throw new Error('Selecciona al menos un alumno.');
+      if (!alumnosIds.length) throw createInlineFieldValidationError('Selecciona al menos un alumno.', getOpenPlanInlineFieldId(plan, 'alumnos'));
       const actividades = (draft.activities || [])
         .map((activity) => ({
           actividad_id: activity.actividad_id || '',
@@ -13344,7 +13423,7 @@
           last_known_updated_at: activity.last_known_updated_at || ''
         }))
         .filter((activity) => activity.texto);
-      if (!actividades.length) throw new Error('Captura al menos una actividad.');
+      if (!actividades.length) throw createInlineFieldValidationError('Captura al menos una actividad.', getOpenPlanInlineFieldId(plan, 'activities'));
       return {
         fallbackDate,
         semana,
@@ -14444,16 +14523,32 @@
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
       const shouldSavePlanDraft = !!planDraft;
       const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
-      const planSaveRequest = shouldSavePlanDraft ? buildOpenPlanSaveRequest(plan, planDraft) : null;
-      const openPlanStructureChanged = shouldSavePlanDraft
-        ? buildOpenPlanStructuralSignatureFromDraft(planDraft) !== buildOpenPlanStructuralSignatureFromPlan(plan)
-        : false;
-      const shouldPersistOpenPlanActivities = shouldSavePlanDraft
-        ? (planDraft.activitiesDirty === true || didOpenPlanActivityProgressChange(plan, planSaveRequest))
-        : false;
-      const shouldRefreshMaterialAlertas = shouldSavePlanDraft
-        ? didOpenPlanMaterialStateChange(plan, planSaveRequest)
-        : false;
+      let planSaveRequest = null;
+      let openPlanStructureChanged = false;
+      let shouldPersistOpenPlanActivities = false;
+      let shouldRefreshMaterialAlertas = false;
+      try {
+        planSaveRequest = shouldSavePlanDraft ? buildOpenPlanSaveRequest(plan, planDraft) : null;
+        openPlanStructureChanged = shouldSavePlanDraft
+          ? buildOpenPlanStructuralSignatureFromDraft(planDraft) !== buildOpenPlanStructuralSignatureFromPlan(plan)
+          : false;
+        shouldPersistOpenPlanActivities = shouldSavePlanDraft
+          ? (planDraft.activitiesDirty === true || didOpenPlanActivityProgressChange(plan, planSaveRequest))
+          : false;
+        shouldRefreshMaterialAlertas = shouldSavePlanDraft
+          ? didOpenPlanMaterialStateChange(plan, planSaveRequest)
+          : false;
+      } catch (err) {
+        markSaveTrace(saveTrace, 'request_validation_error', {
+          code: err && err.code || '',
+          message: err && err.message || String(err || '')
+        });
+        if (showInlineFieldValidationError(err) || showPlanEditorValidationError(err)) {
+          endSaveTrace(saveTrace, 'validation_error');
+          return;
+        }
+        throw err;
+      }
       const shouldSavePlan = shouldSavePlanDraft && (
         openPlanStructureChanged ||
         shouldPersistOpenPlanActivities ||
