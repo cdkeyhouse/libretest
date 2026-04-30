@@ -9030,6 +9030,55 @@
       });
     }
 
+    function buildMultiGroupSharedSignatureFromDraft(draft) {
+      if (!draft) return '';
+      return JSON.stringify({
+        fecha_planeacion: String(draft.fecha_planeacion || '').trim(),
+        frase_semana: String(draft.frase_semana || '').trim(),
+        materia_id: String(draft.materia_id || '').trim(),
+        submateria_id: String(draft.submateria_id || '').trim(),
+        taller_id: String(draft.taller_id || '').trim(),
+        activities: (Array.isArray(draft.activities) ? draft.activities : [])
+          .map((activity, index) => ({
+            actividad_id: String((activity && activity.actividad_id) || '').trim(),
+            texto: String((activity && activity.texto) || '').trim(),
+            material_en_carpeta: normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'),
+            realizada: normalizeRealizadaStatus((activity && activity.realizada) || ''),
+            comentario_cierre: String((activity && activity.comentario_cierre) || '').trim(),
+            orden: index + 1
+          }))
+          .filter((activity) => activity.texto || activity.actividad_id)
+      });
+    }
+
+    function buildMultiGroupSharedSignatureFromPlan(plan) {
+      if (!plan) return '';
+      return JSON.stringify({
+        fecha_planeacion: getCurrentPlanFechaPlaneacion(plan),
+        frase_semana: String(plan.frase_semana || '').trim(),
+        materia_id: String(plan.materia_id || '').trim(),
+        submateria_id: String(plan.submateria_id || '').trim(),
+        taller_id: String(plan.taller_id || '').trim(),
+        activities: (Array.isArray(plan.actividades) ? plan.actividades : [])
+          .map((activity, index) => ({
+            actividad_id: String((activity && activity.actividad_id) || '').trim(),
+            texto: String((activity && activity.texto) || '').trim(),
+            material_en_carpeta: normalizeMaterialStatus((activity && activity.material_en_carpeta) || 'no_requiere'),
+            realizada: normalizeRealizadaStatus((activity && activity.realizada) || ''),
+            comentario_cierre: String((activity && activity.comentario_cierre) || '').trim(),
+            orden: index + 1
+          }))
+          .filter((activity) => activity.texto || activity.actividad_id)
+      });
+    }
+
+    function didMultiGroupSharedDraftChange(entry, draft) {
+      if (!entry || !entry.isMulti || !draft) return false;
+      const selectedPlan = getOpenPlaneacionEntry(entry) || entry.representative || null;
+      if (!selectedPlan) return false;
+      return buildMultiGroupSharedSignatureFromDraft(draft) !== buildMultiGroupSharedSignatureFromPlan(selectedPlan);
+    }
+
     function getOpenPlanStructuralDraftState(planId, fallbackPlan) {
       const currentPlan = getPlanById(planId) || fallbackPlan || null;
       const draft = currentPlan ? getOpenPlanDraft(currentPlan) : null;
@@ -9533,6 +9582,7 @@
         fecha_planeacion: getWeekStartDateForPlan(selectedPlan),
         materia_id: selectedPlan.materia_id || '',
         submateria_id: selectedPlan.submateria_id || '',
+        taller_id: selectedPlan.taller_id || '',
         frase_semana: selectedPlan.frase_semana || '',
         activities: (selectedPlan.actividades || []).length ? (selectedPlan.actividades || []).map((actividad) => ({
           key: actividad.actividad_id || uid('ACTSHR'),
@@ -10117,10 +10167,8 @@
       const normalizedPlanId = String(planId || '').trim();
       if (!normalizedPlanId) return;
       window.requestAnimationFrame(() => {
-        if (String(generalText || '').trim()) {
-          const generalInput = $('obs-general-' + normalizedPlanId);
-          if (generalInput) generalInput.value = String(generalText || '').trim();
-        }
+        const generalInput = $('obs-general-' + normalizedPlanId);
+        if (generalInput) generalInput.value = String(generalText || '').trim();
         (Array.isArray(finalPayloads) ? finalPayloads : []).forEach((row) => {
           const alumnoId = String((row && row.alumnoId) || '').trim();
           const targetPlanId = String((row && row.planId) || normalizedPlanId).trim();
@@ -14111,7 +14159,7 @@
         applySavedPlaneacionDetail(item.planId, inlineSavedPreview || Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
-        }));
+        }), { clearGeneralDraft: !!outboxGeneralText });
         persistCurrentBootSnapshot('planeacion_outbox_open_save_local');
         renderPlaneacionesList();
         restorePendingPlanObservationInputs(item.planId, '', outboxFinalPayloads);
@@ -14134,7 +14182,7 @@
         applySavedPlaneacionDetail(item.planId, Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
-        }));
+        }), { clearGeneralDraft: !!outboxGeneralText });
         persistCurrentBootSnapshot('planeacion_outbox_open_obs_local');
         renderPlaneacionesList();
         restorePendingPlanObservationInputs(item.planId, '', outboxFinalPayloads);
@@ -14441,11 +14489,15 @@
       });
     }
 
-    function applySavedPlaneacionDetail(planId, updatedPlan) {
+    function applySavedPlaneacionDetail(planId, updatedPlan, options = {}) {
       if (!updatedPlan || !updatedPlan.planeacion_id) return;
       const mergedPlan = upsertPlaneacionRow(updatedPlan) || updatedPlan;
       state.openPlanId = planId;
       state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(mergedPlan), mergedPlan);
+      if (options.clearGeneralDraft && state.openPlanDraft) {
+        state.openPlanDraft.generalObservationText = '';
+        state.openPlanDraft.generalObservationDirty = false;
+      }
     }
 
     function applyOptimisticPlanPatch(planId, patch = {}, options = {}) {
@@ -14594,7 +14646,7 @@
         : null;
       const sharedDraft = hasSharedEditor && entry && entry.isMulti ? JSON.parse(JSON.stringify(getMultiGroupSharedDraft(entry) || null)) : null;
       const shouldSavePlanDraft = !!planDraft;
-      const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti);
+      const shouldSaveShared = !!(sharedDraft && entry && entry.isMulti && didMultiGroupSharedDraftChange(entry, sharedDraft));
       let planSaveRequest = null;
       let openPlanStructureChanged = false;
       let shouldPersistOpenPlanActivities = false;
@@ -14642,7 +14694,16 @@
         shouldRefreshMaterialAlertas
       });
       const previousPlanSnapshot = cloneJsonSafe(plan, plan);
-      const canOptimisticallyRender = !shouldSaveShared && !(entry && entry.isMulti);
+      const canOptimisticallyRenderMultiObservationOnly = !!(
+        entry && entry.isMulti &&
+        generalText &&
+        !finalPayloads.length &&
+        !shouldSavePlan
+      );
+      const canOptimisticallyRender = !shouldSaveShared && (
+        !(entry && entry.isMulti) ||
+        canOptimisticallyRenderMultiObservationOnly
+      );
       const shouldUsePlaneacionOutbox = !canUseAdminShell() && canOptimisticallyRender && !shouldSaveShared && isPlaneacionOutboxEnabled();
       const shouldUseLiteSave = !!(shouldSavePlan && shouldUseLightOpenPlanSave(plan, planDraft, planSaveRequest));
       const outboxDraft = shouldSavePlan
@@ -14842,7 +14903,7 @@
           applySavedPlaneacionDetail(planId, inlineSavedPreview || Object.assign({}, planWithSavedObservations, {
             _local_save_state: 'saved',
             _local_save_message: 'Cambios guardados.'
-          }));
+          }), { clearGeneralDraft: !!generalText });
           persistCurrentBootSnapshot('guardar_cambios_local');
           renderPlaneacionesList();
           restoreSaveScrollAnchor();
@@ -14863,7 +14924,7 @@
           applySavedPlaneacionDetail(planId, Object.assign({}, planWithSavedObservations, {
             _local_save_state: 'saved',
             _local_save_message: 'Cambios guardados.'
-          }));
+          }), { clearGeneralDraft: !!generalText });
           persistCurrentBootSnapshot('guardar_cambios_obs_local');
           renderPlaneacionesList();
           restoreSaveScrollAnchor();
