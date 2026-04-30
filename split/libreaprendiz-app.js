@@ -14573,6 +14573,11 @@
       const restoreSaveScrollAnchor = () => restoreScrollAnchor(
         useViewportScrollAnchorAfterSave ? saveViewportScrollAnchor : saveButtonScrollAnchor
       );
+      const restoreSaveScrollAnchorAfterLayout = () => {
+        restoreSaveScrollAnchor();
+        window.setTimeout(restoreSaveScrollAnchor, 0);
+        window.setTimeout(restoreSaveScrollAnchor, 120);
+      };
       const generalText = getPendingGeneralObservationText(planId);
       const finalPayloads = collectPendingAlumnoFinalObservations(planId, plan, entry);
       if (!finalPayloads.length) {
@@ -14752,6 +14757,7 @@
           });
           restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          restoreSaveScrollAnchorAfterLayout();
           markSaveTrace(saveTrace, 'outbox_enqueue_done');
           return;
         }
@@ -14794,6 +14800,7 @@
             });
             restoreSaveScrollAnchor();
             restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+            restoreSaveScrollAnchorAfterLayout();
             markSaveTrace(saveTrace, 'rollback_render_done');
           }
           throw err;
@@ -14831,6 +14838,7 @@
           renderPlaneacionesList();
           restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          restoreSaveScrollAnchorAfterLayout();
           scheduleClearLocalPlaneacionFeedback(planId);
           if (shouldSavePlan) {
             queuePlaneacionPostSaveSync(planId, {
@@ -14851,6 +14859,7 @@
           renderPlaneacionesList();
           restoreSaveScrollAnchor();
           restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          restoreSaveScrollAnchorAfterLayout();
           scheduleClearLocalPlaneacionFeedback(planId);
           queuePlaneacionPostSaveSync(planId, {
             refreshDetail: true,
@@ -14869,6 +14878,7 @@
             restoreOpenPlanDraftAfterSaveRefresh(planId, outboxDraft, generalText, finalPayloads);
           if (!restoredDraftAfterRefresh) {
             restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+            restoreSaveScrollAnchorAfterLayout();
           } else {
             restoreSaveScrollAnchor();
           }
