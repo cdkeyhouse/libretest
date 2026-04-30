@@ -9784,7 +9784,7 @@
       return Object.keys(byAlumnoId).map((alumnoId) => byAlumnoId[alumnoId]);
     }
 
-    function mergeSavedObservationPreview(plan, generalText, finalPayloads) {
+    function mergeSavedObservationPreview(plan, generalText, finalPayloads, options = {}) {
       if (!plan || !plan.planeacion_id) return plan;
       const nextPlan = cloneJsonSafe(plan, Object.assign({}, plan)) || Object.assign({}, plan);
       const nowIso = new Date().toISOString();
@@ -9802,8 +9802,8 @@
         nextPlan.obs_semana = current;
         nextPlan.obs_loaded = true;
       }
-      if (String(generalText || '').trim()) {
-        nextPlan._draft_general_observation_text = trimmedGeneral;
+      if (trimmedGeneral) {
+        nextPlan._draft_general_observation_text = options.clearGeneralDraft ? '' : trimmedGeneral;
       }
       if (Array.isArray(finalPayloads) && finalPayloads.length) {
         nextPlan.obs_alumno_final = mergeOptimisticAlumnoFinalRows(nextPlan, finalPayloads);
@@ -9928,18 +9928,19 @@
         nextPlan.fecha_actualizacion = nowIso;
       }
       if (String(options.generalText || '').trim()) {
+        const trimmedGeneral = String(options.generalText || '').trim();
         const current = Array.isArray(nextPlan.obs_semana) ? nextPlan.obs_semana.slice() : [];
         current.push({
           obs_semana_id: uid('TMPOS'),
           planeacion_id: plan.planeacion_id,
           fecha: getTodayYmdLocal(),
           fecha_creacion: nowIso,
-          texto: String(options.generalText || '').trim(),
+          texto: trimmedGeneral,
           autor_id: getCurrentUserId()
         });
         nextPlan.obs_semana = current;
         nextPlan.obs_loaded = true;
-        nextPlan._draft_general_observation_text = String(options.generalText || '').trim();
+        nextPlan._draft_general_observation_text = options.clearGeneralDraft ? '' : trimmedGeneral;
       }
       if (Array.isArray(options.finalPayloads) && options.finalPayloads.length) {
         nextPlan.obs_alumno_final = mergeOptimisticAlumnoFinalRows(nextPlan, options.finalPayloads);
@@ -14091,7 +14092,9 @@
                 nota: String((row && row.nota) || '').trim()
               })).filter((row) => row.alumnoId && row.nota)
             : []);
-      const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || previousPlan, outboxGeneralText, outboxFinalPayloads);
+      const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || previousPlan, outboxGeneralText, outboxFinalPayloads, {
+        clearGeneralDraft: true
+      });
       const inlineSavedPreview = buildInlineSavedPlaneacionPreview(
         previousPlan,
         item.optimisticPlan || null,
@@ -14111,7 +14114,7 @@
         }));
         persistCurrentBootSnapshot('planeacion_outbox_open_save_local');
         renderPlaneacionesList();
-        restorePendingPlanObservationInputs(item.planId, outboxGeneralText, outboxFinalPayloads);
+        restorePendingPlanObservationInputs(item.planId, '', outboxFinalPayloads);
         scheduleClearLocalPlaneacionFeedback(item.planId);
         if (item.shouldSavePlan) {
           queuePlaneacionPostSaveSync(item.planId, {
@@ -14134,7 +14137,7 @@
         }));
         persistCurrentBootSnapshot('planeacion_outbox_open_obs_local');
         renderPlaneacionesList();
-        restorePendingPlanObservationInputs(item.planId, outboxGeneralText, outboxFinalPayloads);
+        restorePendingPlanObservationInputs(item.planId, '', outboxFinalPayloads);
         scheduleClearLocalPlaneacionFeedback(item.planId);
         queuePlaneacionPostSaveSync(item.planId, {
           refreshDetail: true,
@@ -14150,9 +14153,9 @@
       if (state.openPlanId !== item.planId) state.openPlanDraft = null;
       await refreshPlaneacionesSurface({ includeAlertas: false });
       const restoredDraftAfterRefresh = item.shouldSavePlan &&
-        restoreOpenPlanDraftAfterSaveRefresh(item.planId, item.draft, outboxGeneralText, outboxFinalPayloads);
+        restoreOpenPlanDraftAfterSaveRefresh(item.planId, item.draft, '', outboxFinalPayloads);
       if (!restoredDraftAfterRefresh) {
-        restorePendingPlanObservationInputs(item.planId, outboxGeneralText, outboxFinalPayloads);
+        restorePendingPlanObservationInputs(item.planId, '', outboxFinalPayloads);
       }
       refreshPlaneacionesAlertsDeferred({
         force: !!item.shouldForceAlertasAfterSave,
@@ -14645,6 +14648,9 @@
       const outboxDraft = shouldSavePlan
         ? buildOpenPlanDraftWithPendingObservations(planDraft, generalText, finalPayloads)
         : null;
+      const displayOutboxDraft = outboxDraft
+        ? Object.assign({}, outboxDraft, { generalObservationText: '' })
+        : null;
       applyPendingPlanObservationDraft(planId, generalText, finalPayloads);
       markSaveTrace(saveTrace, 'pending_observations_applied');
       const combinedSaveRequest = buildPlanSaveTransactionBundle({
@@ -14679,7 +14685,8 @@
             generalText,
             finalPayloads,
             localState: 'saving_silent',
-            localMessage: ''
+            localMessage: '',
+            clearGeneralDraft: true
           })
         : null;
       markSaveTrace(saveTrace, 'request_built', {
@@ -14719,7 +14726,7 @@
             planId: String(planId || '').trim(),
             previousPlanSnapshot,
             optimisticPlan,
-            draft: outboxDraft,
+            draft: displayOutboxDraft,
             shouldSavePlan,
             shouldSaveShared: false,
             shouldRefreshMaterialAlertas,
@@ -14756,7 +14763,7 @@
             includeAlertas: false
           });
           restoreSaveScrollAnchor();
-          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          restorePendingPlanObservationInputs(planId, '', finalPayloads);
           restoreSaveScrollAnchorAfterLayout();
           markSaveTrace(saveTrace, 'outbox_enqueue_done');
           return;
@@ -14815,7 +14822,9 @@
         const updatedPlan = savedPlanResponse && savedPlanResponse.planeacion
           ? Object.assign({}, plan, savedPlanResponse.planeacion)
           : null;
-        const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || plan, generalText, finalPayloads);
+        const planWithSavedObservations = mergeSavedObservationPreview(updatedPlan || plan, generalText, finalPayloads, {
+          clearGeneralDraft: true
+        });
         const inlineSavedPreview = buildInlineSavedPlaneacionPreview(
           plan,
           optimisticPlan,
@@ -14837,7 +14846,7 @@
           persistCurrentBootSnapshot('guardar_cambios_local');
           renderPlaneacionesList();
           restoreSaveScrollAnchor();
-          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          restorePendingPlanObservationInputs(planId, '', finalPayloads);
           restoreSaveScrollAnchorAfterLayout();
           scheduleClearLocalPlaneacionFeedback(planId);
           if (shouldSavePlan) {
@@ -14858,7 +14867,7 @@
           persistCurrentBootSnapshot('guardar_cambios_obs_local');
           renderPlaneacionesList();
           restoreSaveScrollAnchor();
-          restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+          restorePendingPlanObservationInputs(planId, '', finalPayloads);
           restoreSaveScrollAnchorAfterLayout();
           scheduleClearLocalPlaneacionFeedback(planId);
           queuePlaneacionPostSaveSync(planId, {
@@ -14875,9 +14884,9 @@
           await refreshPlaneacionesSurface({ includeAlertas: false });
           restoreSaveScrollAnchor();
           const restoredDraftAfterRefresh = shouldSavePlan &&
-            restoreOpenPlanDraftAfterSaveRefresh(planId, outboxDraft, generalText, finalPayloads);
+            restoreOpenPlanDraftAfterSaveRefresh(planId, displayOutboxDraft, '', finalPayloads);
           if (!restoredDraftAfterRefresh) {
-            restorePendingPlanObservationInputs(planId, generalText, finalPayloads);
+            restorePendingPlanObservationInputs(planId, '', finalPayloads);
             restoreSaveScrollAnchorAfterLayout();
           } else {
             restoreSaveScrollAnchor();
