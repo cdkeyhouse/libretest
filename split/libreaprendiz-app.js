@@ -2264,6 +2264,7 @@
         }
       }).finally(() => {
         if (state.ui) state.ui.facilitadorBootInProgress = false;
+        if (isPlaneacionesSurfaceVisible()) renderPlaneacionesList();
       });
     }
 
@@ -11495,7 +11496,7 @@
       // - facilitadorBootInProgress (login click → primera carga completa)
       // - sesión activa pero loaded === false (boot diferido aún en curso)
       const sessionActive = !!(state.session && state.session.token);
-      const bootInProgress = !!(state.ui && state.ui.facilitadorBootInProgress);
+      const bootInProgress = !!(state.ui && state.ui.facilitadorBootInProgress && !planeacionesLoaded);
       const awaitingInitialLoad = sessionActive && !planeacionesLoaded;
       if ((planeacionesLoading || bootInProgress || awaitingInitialLoad) && !entriesToRender.length) {
         const previewCount = getPlaneacionesLoadingPreviewCount();
