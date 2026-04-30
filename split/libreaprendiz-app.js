@@ -1572,7 +1572,8 @@
     function buildPlaneacionOpenPreviewRow(plan) {
       if (!plan || !plan.planeacion_id) return null;
       const snapshotOpenPlan = getBootSnapshotOpenPlanById(plan.planeacion_id);
-      const preview = Object.assign({}, plan, snapshotOpenPlan || {});
+      let preview = Object.assign({}, plan);
+      preview = mergePreservedPlaneacionDetail(preview, snapshotOpenPlan);
       preview.alumnos = Array.isArray(preview.alumnos) ? preview.alumnos : [];
       preview.actividades = Array.isArray(preview.actividades) ? preview.actividades : [];
       preview.obs_semana = Array.isArray(preview.obs_semana) ? preview.obs_semana : [];
@@ -1580,11 +1581,11 @@
       preview.alumnos_count = Number(preview.alumnos_count || preview.alumnos.length || 0);
       preview.actividades_count = Number(preview.actividades_count || preview.actividades.length || 0);
       const keepInlineDetail =
-        !!((snapshotOpenPlan && snapshotOpenPlan.detail_loaded) || plan.detail_loaded) &&
+        !!preview.detail_loaded &&
         hasUsableOpenPlanDetail(preview);
       preview.detail_loaded = keepInlineDetail;
       preview.boot_detail_loaded = true;
-      if (keepInlineDetail && snapshotOpenPlan && snapshotOpenPlan.obs_loaded) {
+      if (keepInlineDetail && preview.obs_loaded) {
         preview.obs_loaded = true;
       }
       return preview;
@@ -10245,6 +10246,18 @@
       });
     }
 
+    async function fetchPlaneacionListRow(planId) {
+      const normalizedPlanId = String(planId || '').trim();
+      if (!normalizedPlanId) return null;
+      const data = await api('getPlaneaciones', {
+        planeacion_id: normalizedPlanId,
+        include_detail: false,
+        limit: 1
+      });
+      const rows = Array.isArray(data && data.rows) ? data.rows : [];
+      return rows[0] || null;
+    }
+
     async function fetchPlaneacionObservaciones(planId) {
       const data = await api('getPlaneacionObservaciones', { planeacion_id: planId });
       return {
@@ -13201,11 +13214,36 @@
       return runner;
     }
 
+    function getActivationStateMismatchMessage(plan) {
+      const status = String(plan && plan.estado || '').trim();
+      if (status === 'activa') return 'La planeaci\u00f3n ya est\u00e1 activa; actualic\u00e9 la vista.';
+      if (status === 'cerrada') return 'Esta planeaci\u00f3n ya est\u00e1 cerrada; actualic\u00e9 la vista.';
+      if (status === 'archivada') return 'Esta planeaci\u00f3n ya est\u00e1 archivada; actualic\u00e9 la vista.';
+      if (status === 'cierre_pendiente') return 'Esta planeaci\u00f3n est\u00e1 en cierre pendiente; actualic\u00e9 la vista.';
+      if (status === 'borrador_pendiente_aprobacion') return 'Esta planeaci\u00f3n qued\u00f3 pendiente de aprobaci\u00f3n; actualic\u00e9 la vista.';
+      if (status === 'rechazada') return 'Esta planeaci\u00f3n fue rechazada; actualic\u00e9 la vista.';
+      return 'La planeaci\u00f3n cambi\u00f3 de estado; actualic\u00e9 la vista.';
+    }
+
+    function isActivationTransitionConflictError(err) {
+      const message = String(err && err.message || '').toLowerCase();
+      return message.includes('transici') && message.includes('activa');
+    }
+
+    async function refreshPlaneacionRowAfterActivationMismatch(planId) {
+      const freshPlan = await fetchPlaneacionListRow(planId);
+      if (!freshPlan) return null;
+      const updated = upsertPlaneacionRow(freshPlan) || freshPlan;
+      persistCurrentBootSnapshot('planeacion_activacion_estado_fresco');
+      renderPlaneacionesList();
+      return updated;
+    }
+
     async function planAction(button, planId, action) {
       await handleAction(action, async () => {
         const shouldCloseOpenCard = action === 'activarPlaneacion' &&
           String(state.openPlanId || '').trim() === String(planId || '').trim();
-        const previousPlan = getPlanById(planId);
+        let previousPlan = getPlanById(planId);
         if (!previousPlan) throw new Error('Planeación no encontrada.');
         if (action === 'activarPlaneacion') {
           const localState = getPlanLocalSaveState(previousPlan);
@@ -13218,6 +13256,19 @@
             setBanner('Primero corrige el guardado pendiente antes de activar la semana.', 'info');
             return;
           }
+          try {
+            const freshPlan = await fetchPlaneacionListRow(planId);
+            if (freshPlan) {
+              previousPlan = upsertPlaneacionRow(freshPlan) || freshPlan;
+              const freshStatus = String(previousPlan.estado || '').trim();
+              if (freshStatus && freshStatus !== 'borrador') {
+                persistCurrentBootSnapshot('planeacion_activacion_preflight_estado_fresco');
+                renderPlaneacionesList();
+                setBanner(getActivationStateMismatchMessage(previousPlan), 'info');
+                return;
+              }
+            }
+          } catch (_) {}
         }
         const previousPlanSnapshot = previousPlan ? cloneJsonSafe(previousPlan, previousPlan) : null;
         const previousOpenPlanId = state.openPlanId;
@@ -13247,6 +13298,15 @@
             state.openPlanDraft = previousOpenPlanDraft;
             persistCurrentBootSnapshot('planeacion_activacion_revertida');
             renderPlaneacionesList();
+            if (isActivationTransitionConflictError(err)) {
+              try {
+                const freshPlan = await refreshPlaneacionRowAfterActivationMismatch(planId);
+                if (freshPlan) {
+                  setBanner(getActivationStateMismatchMessage(freshPlan), 'info');
+                  return;
+                }
+              } catch (_) {}
+            }
           }
           throw err;
         }
