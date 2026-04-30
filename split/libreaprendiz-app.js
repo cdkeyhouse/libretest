@@ -8505,7 +8505,7 @@
     }
 
     function isPlaneacionLocalSavePending(plan) {
-      return ['creating', 'saving', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan));
+      return ['creating', 'saving', 'saving_silent', 'activating', 'syncing', 'sync_error'].includes(getPlanLocalSaveState(plan));
     }
 
     function getPlanStatusBadgeMeta(plan) {
@@ -9955,7 +9955,9 @@
         nextPlan.obs_loaded = true;
       }
       nextPlan._local_save_state = String(options.localState || 'saving').trim();
-      nextPlan._local_save_message = String(options.localMessage || 'Guardando cambios...').trim();
+      nextPlan._local_save_message = options.localMessage !== undefined
+        ? String(options.localMessage || '').trim()
+        : 'Guardando cambios...';
       return nextPlan;
     }
 
@@ -11663,11 +11665,12 @@
         const localState = getPlanLocalSaveState(plan);
         const isOpenSaveReady = isOpenPlanReadyForSave(plan, entry);
         const isOpenSaveBusy = localState === 'saving';
+        const isOpenSaveSilentlySaving = localState === 'saving_silent';
         const isOpenSaveSaved = localState === 'saved';
         const isOpenSavePreparing = !isOpenSaveReady && !isOpenSaveBusy;
-        const saveButtonText = isOpenSaveBusy ? 'Guardando...' : (isOpenSaveSaved ? 'Guardado' : (isOpenSavePreparing ? 'Preparando...' : 'Guardar cambios'));
-        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '') + (isOpenSavePreparing ? ' is-preparing' : '') + (isOpenSaveSaved ? ' is-saved' : '');
-        const saveButtonBusyAttrs = (isOpenSaveBusy || isOpenSavePreparing || isOpenSaveSaved) ? ' disabled aria-disabled="true"' + (isOpenSaveBusy || isOpenSavePreparing ? ' aria-busy="true"' : '') : '';
+        const saveButtonText = isOpenSaveBusy ? 'Guardando...' : ((isOpenSaveSaved || isOpenSaveSilentlySaving) ? 'Guardado' : (isOpenSavePreparing ? 'Preparando...' : 'Guardar cambios'));
+        const saveButtonClass = 'btn-primary plan-save-btn' + (isOpenSaveBusy ? ' is-syncing' : '') + (isOpenSavePreparing ? ' is-preparing' : '') + ((isOpenSaveSaved || isOpenSaveSilentlySaving) ? ' is-saved' : '');
+        const saveButtonBusyAttrs = (isOpenSaveBusy || isOpenSavePreparing || isOpenSaveSaved || isOpenSaveSilentlySaving) ? ' disabled aria-disabled="true"' + (isOpenSaveBusy || isOpenSavePreparing || isOpenSaveSilentlySaving ? ' aria-busy="true"' : '') : '';
         const actionStatusHtml = getPlanActionStatusMarkup(plan);
         const buttons = [];
         if (plan.estado === 'borrador' && !isPlaneacionLocalSavePending(plan)) {
@@ -14669,10 +14672,8 @@
             draft: shouldSavePlan ? planDraft : null,
             generalText,
             finalPayloads,
-            localState: 'saving',
-            localMessage: shouldUsePlaneacionOutbox
-              ? 'Guardado local. Sincronizando...'
-              : 'Guardando en segundo plano...'
+            localState: 'saving_silent',
+            localMessage: ''
           })
         : null;
       markSaveTrace(saveTrace, 'request_built', {
@@ -14718,8 +14719,8 @@
             shouldRefreshMaterialAlertas,
             shouldForceAlertasAfterSave,
             combinedRequest: combinedSaveRequest,
-            localState: 'saving',
-            localMessage: 'Guardado local. Sincronizando...',
+            localState: 'saving_silent',
+            localMessage: '',
             planSaveAction: shouldUseLiteSave ? 'guardarPlaneacionLigera' : 'guardarPlaneacionCompleta',
             requests: {
               generalObservation: generalText ? {
