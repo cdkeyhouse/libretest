@@ -14696,8 +14696,7 @@
       const previousPlanSnapshot = cloneJsonSafe(plan, plan);
       const canOptimisticallyRenderMultiObservationOnly = !!(
         entry && entry.isMulti &&
-        generalText &&
-        !finalPayloads.length &&
+        (generalText || finalPayloads.length) &&
         !shouldSavePlan
       );
       const canOptimisticallyRender = !shouldSaveShared && (
