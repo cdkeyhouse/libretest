@@ -76,3 +76,10 @@ Variables utiles:
 - `STRICT_NEW_SESSION_UI=1`: ademas de verificar persistencia por API, abre el detalle en una segunda sesion y valida la UI. Es mas lento, hace mas logins y puede fallar por rate-limit/latencia visual, por eso no es default.
 
 La verificacion de persistencia reintenta hasta 90s porque el outbox puede seguir sincronizando en segundo plano. Usa `skip_cache` para no confundir cache viejo de observaciones con fallo de guardado.
+
+El runner reporta reintentos de outbox solo en consola/JSON tecnico:
+
+- `outboxRetryCount`
+- `outboxRetryReasons`
+
+Esto no debe convertirse en mensaje visible para el facilitador. La UI debe mantenerse simple: guardado instantaneo, y solo mostrar problema si queda pendiente/fallido.

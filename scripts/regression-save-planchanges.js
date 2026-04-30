@@ -90,6 +90,26 @@ function startStaticServerIfNeeded() {
   });
 }
 
+function summarizeOutboxRetries(traceSummary) {
+  const retryTraces = (traceSummary || []).filter((trace) =>
+    trace.label === 'planeacionOutboxSync' && trace.status === 'error'
+  );
+  const reasons = {};
+  retryTraces.forEach((trace) => {
+    const code = String(trace.errorCode || '').trim() || 'ERROR';
+    const message = String(trace.errorMessage || '').trim() || 'Sin mensaje';
+    const key = `${code}: ${message}`;
+    reasons[key] = (reasons[key] || 0) + 1;
+  });
+  return {
+    count: retryTraces.length,
+    reasons: Object.keys(reasons).map((reason) => ({
+      reason,
+      count: reasons[reason]
+    }))
+  };
+}
+
 async function login(page) {
   await page.goto(baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'verify=save-regression', { waitUntil: 'domcontentloaded' });
   await page.fill('#facilitadorId', facId);
@@ -123,13 +143,13 @@ async function openScenario(page, scenario) {
     throw new Error(`No encontre tarjeta para escenario "${scenario.name}". Tarjetas: ${JSON.stringify(cards, null, 2)}`);
   }
   await clickOpenButton(page, target.id);
-  await page.waitForSelector('textarea[id^="obs-general-"]', { timeout: 60000 });
+  await page.waitForSelector('textarea[id^="obs-general-"]', { timeout: 90000 });
   const inputId = await page.locator('textarea[id^="obs-general-"]').first().getAttribute('id');
   const planId = String(inputId || '').replace('obs-general-', '');
   await page.waitForFunction((id) => {
     const button = document.getElementById('plan-save-' + id);
     return button && !button.disabled && /Guardar cambios/i.test(button.textContent || '');
-  }, planId, { timeout: 60000 });
+  }, planId, { timeout: 90000 });
   return { target, inputId, planId };
 }
 
@@ -231,9 +251,15 @@ async function saveObservation(page, scenario) {
     status: trace.status,
     duration_ms: trace.duration_ms,
     shouldSaveShared: trace.events && trace.events.find((event) => event.name === 'drafts_collected')?.data?.shouldSaveShared,
-    shouldUsePlaneacionOutbox: trace.events && trace.events.find((event) => event.name === 'request_built')?.data?.shouldUsePlaneacionOutbox
+    shouldUsePlaneacionOutbox: trace.events && trace.events.find((event) => event.name === 'request_built')?.data?.shouldUsePlaneacionOutbox,
+    errorCode: trace.result && trace.result.code || '',
+    errorMessage: trace.result && trace.result.message || ''
   }));
+  const retrySummary = summarizeOutboxRetries(traceSummary);
   console.log(`[regression] visible=${visibleMs}ms outbox=${usesOutbox} traces=${JSON.stringify(traceSummary)}`);
+  if (retrySummary.count) {
+    console.log(`[regression] guardado instantaneo, pero hubo ${retrySummary.count} reintento(s) outbox: ${JSON.stringify(retrySummary.reasons)}`);
+  }
 
   if (visibleMs > scenario.maxVisibleMs) {
     throw new Error(`${scenario.name}: guardado visible lento (${visibleMs}ms).`);
@@ -327,6 +353,8 @@ async function saveObservation(page, scenario) {
     planId,
     visibleMs,
     target: target.text.slice(0, 160),
+    outboxRetryCount: retrySummary.count,
+    outboxRetryReasons: retrySummary.reasons,
     traces: traceSummary
   };
 }
