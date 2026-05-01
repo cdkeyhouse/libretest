@@ -8008,10 +8008,10 @@
         estatus: $('adminSubmateriaStatusInput') ? $('adminSubmateriaStatusInput').value : editor.estatus,
         request_id: uid('SUB')
       };
-      if (!payload.materia_id) throw new Error('Selecciona una materia base.');
-      if (!payload.submateria_id) throw new Error('Captura la submateria ID.');
-      if (!payload.nombre) throw new Error('Captura el nombre de la submateria.');
       await handleAction('guardarSubmateria', async () => {
+        if (!payload.materia_id) throw new Error('Selecciona una materia base.');
+        if (!payload.submateria_id) throw new Error('Captura la submateria ID.');
+        if (!payload.nombre) throw new Error('Captura el nombre de la submateria.');
         await api('guardarSubmateria', payload);
         applySavedSubmateriaCatalogRow(Object.assign({}, state.materiasUi.subEditorMode === 'edit'
           ? (getAdminSubmateriasCatalog().find((item) => item.submateria_id === payload.submateria_id) || {})
@@ -8039,6 +8039,15 @@
       state.materiasUi.selectedMateriaId = String(materiaId || '').trim();
       renderAdminMateriasModule();
       focusAdminFacilitadorPanel('adminMateriaDetailPanel');
+    }
+
+    function keepMateriaSelectedAfterStatusChange(materiaId) {
+      const normalizedId = String(materiaId || '').trim();
+      if (!normalizedId) return;
+      state.materiasUi.selectedMateriaId = normalizedId;
+      if (!getVisibleMaterias().some((item) => item.materia_id === normalizedId)) {
+        state.materiasUi.filter = 'todas';
+      }
     }
 
     async function archiveMateria(button, materiaId) {
@@ -8091,6 +8100,7 @@
           archivado_por: '',
           fecha_actualizacion: new Date().toISOString()
         });
+        keepMateriaSelectedAfterStatusChange(row.materia_id);
         renderAdminModuleSurface('materias');
         setBanner(nextStatus === 'activa' ? 'Materia activada.' : 'Materia desactivada.', 'success');
       }, {
