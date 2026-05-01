@@ -13325,6 +13325,10 @@
       });
       data._selection = { alumno_id: alumnoId, periodo_id: periodoId };
       renderReportResult(data);
+      if (data.status === 'listo' && data.url) {
+        setBanner('Reporte regenerado y listo para abrir.', 'success');
+        return;
+      }
       setBanner('Regeneraci\u00f3n forzada registrada. El worker armar\u00e1 una nueva versi\u00f3n del PDF.', 'success');
     }
 
