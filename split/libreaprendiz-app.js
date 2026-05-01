@@ -12154,6 +12154,20 @@
       return status === 'borrador' || status === 'activa' || status === 'rechazada';
     }
 
+    function getMaterialAlertPlanDedupeKey(plan) {
+      const planId = String((plan && plan.planeacion_id) || '').trim();
+      if (!planId) return '';
+      const loteId = getPlanLoteId(plan);
+      return loteId ? ('material:lote:' + loteId) : ('material:plan:' + planId);
+    }
+
+    function getMaterialAlertDedupeKey(alerta) {
+      if (!isOpenMaterialAlert(alerta)) return '';
+      const planId = String((alerta && alerta.planeacion_id) || '').trim();
+      if (!planId) return '';
+      return getMaterialAlertPlanDedupeKey(getPlanById(planId) || { planeacion_id: planId });
+    }
+
     function planHasOpenMaterialAlert(planId) {
       const plan = getPlanById(planId);
       if (!shouldShowMaterialAlertForPlan(plan)) return false;
@@ -12175,6 +12189,9 @@
     function injectLocalMaterialAlerts(plansLike) {
       const plans = Array.isArray(plansLike) ? plansLike : [plansLike];
       if (!Array.isArray(state.alertas)) state.alertas = [];
+      const visibleMaterialKeys = new Set(state.alertas
+        .map((alerta) => getMaterialAlertDedupeKey(alerta))
+        .filter(Boolean));
       let changed = false;
       plans.forEach((planLike) => {
         const plan = planLike && planLike.planeacion_id ? planLike : getPlanById(planLike && planLike.planeacion_id);
@@ -12189,6 +12206,8 @@
           isOpenMaterialAlert(alerta)
         );
         if (hasOpenAlert) return;
+        const materialKey = getMaterialAlertPlanDedupeKey(plan);
+        if (materialKey && visibleMaterialKeys.has(materialKey)) return;
         state.alertas.unshift({
           alerta_id: 'LOCAL-ALT-' + planId,
           planeacion_id: planId,
@@ -12198,6 +12217,7 @@
           fecha_creacion: new Date().toISOString(),
           __local_only: true
         });
+        if (materialKey) visibleMaterialKeys.add(materialKey);
         changed = true;
       });
       if (changed) {
@@ -12223,9 +12243,15 @@
     }
 
     function getVisibleOperationalAlerts() {
+      const materialKeys = new Set();
       return state.alertas.filter((alerta) => {
         const plan = getPlanById(alerta && alerta.planeacion_id);
         if (isOpenMaterialAlert(alerta) && !shouldShowMaterialAlertForPlan(plan)) return false;
+        if (isOpenMaterialAlert(alerta)) {
+          const materialKey = getMaterialAlertDedupeKey(alerta);
+          if (materialKey && materialKeys.has(materialKey)) return false;
+          if (materialKey) materialKeys.add(materialKey);
+        }
         return isOperationalAlert(alerta) && String((alerta && alerta.estado) || '').trim() !== 'resuelta';
       });
     }
