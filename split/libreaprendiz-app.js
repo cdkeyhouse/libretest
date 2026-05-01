@@ -6343,7 +6343,6 @@
       )).join('');
       return [
         '<div class="admin-facilitadores-matrix-summary">',
-          '<span>3 semanas anteriores · actual · 1 futura</span>',
           '<span class="admin-facilitadores-matrix-legend">' + legend + '</span>',
         '</div>',
         '<div class="admin-facilitadores-matrix-table">',
