@@ -7292,6 +7292,15 @@
       focusAdminFacilitadorPanel('adminTallerDetailPanel');
     }
 
+    function keepTallerSelectedAfterStatusChange(tallerId) {
+      const normalizedId = String(tallerId || '').trim();
+      if (!normalizedId) return;
+      state.talleresUi.selectedTallerId = normalizedId;
+      if (!getVisibleTalleres().some((item) => item.taller_id === normalizedId)) {
+        state.talleresUi.filter = 'todos';
+      }
+    }
+
     function cancelTallerMembershipEditor() {
       closeTallerMembershipEditor();
       renderAdminTalleresModule();
@@ -7355,6 +7364,7 @@
           request_id: uid('TALTOG')
         });
         if (data && data.taller) applySavedTallerCatalogRow(data.taller);
+        keepTallerSelectedAfterStatusChange(row.taller_id);
         renderAdminModuleSurface('talleres');
         setBanner(nextStatus === 'activo' ? 'Taller activado.' : 'Taller desactivado.', 'success');
       }, {
