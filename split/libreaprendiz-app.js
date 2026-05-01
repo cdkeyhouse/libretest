@@ -14004,6 +14004,15 @@
       ].includes(code);
     }
 
+    function getPlaneacionOutboxRetryDelay(error, attempts) {
+      const normalizedAttempts = Math.max(1, Number(attempts || 0));
+      const code = String((error && error.code) || '').trim().toUpperCase();
+      if (code === 'RATE_LIMIT') {
+        return Math.min(60000, 10000 * Math.pow(2, normalizedAttempts - 1));
+      }
+      return Math.min(30000, 1200 * normalizedAttempts);
+    }
+
     function schedulePlaneacionOutboxProcessing(delay = 120) {
       if (!isPlaneacionOutboxEnabled() || !Array.isArray(state.planeacionOutbox) || !state.planeacionOutbox.length) return;
       clearPlaneacionOutboxRetryTimer();
@@ -14221,7 +14230,7 @@
     function handlePlaneacionOutboxFailure(item, error) {
       const retryable = isPlaneacionOutboxRetryableError(error);
       const attempts = Number(item && item.attempts || 0) + 1;
-      const nextDelay = retryable ? Math.min(30000, 1200 * attempts) : 0;
+      const nextDelay = retryable ? getPlaneacionOutboxRetryDelay(error, attempts) : 0;
       const updatedItem = markPlaneacionOutboxItem(item.id, {
         status: 'error',
         retryable,
