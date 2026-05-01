@@ -1961,9 +1961,13 @@
 
     function getPlaneacionOutboxLocalMessage(item) {
       if (!item || typeof item !== 'object') return '';
+      const explicitMessage = String(item.localMessage || '').trim();
+      const localState = getPlaneacionOutboxLocalState(item);
+      if (explicitMessage) return explicitMessage;
+      if (localState === 'saving_silent') return '';
       if (String(item.status || '').trim() === 'error') {
         if (!shouldExposePlaneacionOutboxIssue(item)) {
-          return String(item.localMessage || 'Guardado local. Sincronizando...').trim();
+          return '';
         }
         if (item.retryable === false) return 'No se pudo sincronizar. Revisa y vuelve a guardar.';
         if (String(item.lastErrorCode || '').trim() === 'INVALID_SESSION') {
@@ -1971,7 +1975,7 @@
         }
         return 'Guardado local pendiente. Reintentaremos en segundo plano.';
       }
-      return String(item.localMessage || 'Guardado local. Sincronizando...').trim();
+      return '';
     }
 
     function applyPlaneacionOutboxVisualState(item) {
@@ -8546,16 +8550,17 @@
       const message = String((plan && plan._local_save_message) || '').trim();
       const localState = getPlanLocalSaveState(plan);
       if (localState === 'saved') return '';
-      if (!message && !['saving', 'activating'].includes(localState)) return '';
+      if (!message && !['saving', 'saving_silent', 'activating'].includes(localState)) return '';
       const compactLabel = ({
         creating: 'Sincronizando',
         saving: 'Guardando',
+        saving_silent: 'Actualizando',
         activating: 'Sincronizando',
         syncing: 'Sincronizando',
         sync_error: 'Pendiente'
       })[localState] || 'Actualizando';
       const toneClass = localState === 'sync_error' ? 'is-warning' : 'is-pending';
-      const messageMarkup = ['creating', 'saving', 'syncing', 'activating'].includes(localState)
+      const messageMarkup = ['creating', 'saving', 'saving_silent', 'syncing', 'activating'].includes(localState)
         ? ''
         : '<span class="plan-inline-feedback-text">' + escapeHtml(message) + '</span>';
       return (
@@ -14159,7 +14164,7 @@
         applySavedPlaneacionDetail(item.planId, inlineSavedPreview || Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
-        }), { clearGeneralDraft: !!outboxGeneralText });
+        }), { clearGeneralDraft: !!outboxGeneralText, preserveUserOpenState: true });
         persistCurrentBootSnapshot('planeacion_outbox_open_save_local');
         renderPlaneacionesList();
         restorePendingPlanObservationInputs(item.planId, '', outboxFinalPayloads);
@@ -14182,7 +14187,7 @@
         applySavedPlaneacionDetail(item.planId, Object.assign({}, planWithSavedObservations, {
           _local_save_state: 'saved',
           _local_save_message: 'Cambios sincronizados.'
-        }), { clearGeneralDraft: !!outboxGeneralText });
+        }), { clearGeneralDraft: !!outboxGeneralText, preserveUserOpenState: true });
         persistCurrentBootSnapshot('planeacion_outbox_open_obs_local');
         renderPlaneacionesList();
         restorePendingPlanObservationInputs(item.planId, '', outboxFinalPayloads);
@@ -14491,9 +14496,14 @@
 
     function applySavedPlaneacionDetail(planId, updatedPlan, options = {}) {
       if (!updatedPlan || !updatedPlan.planeacion_id) return;
+      const normalizedPlanId = String(planId || '').trim();
+      const wasStillOpen = String(state.openPlanId || '').trim() === normalizedPlanId;
       const mergedPlan = upsertPlaneacionRow(updatedPlan) || updatedPlan;
-      state.openPlanId = planId;
-      state.openPlanDraft = preserveOpenPlanDraftLocalNotes(planId, buildOpenPlanDraft(mergedPlan), mergedPlan);
+      if (options.preserveUserOpenState && !wasStillOpen) {
+        return;
+      }
+      state.openPlanId = normalizedPlanId;
+      state.openPlanDraft = preserveOpenPlanDraftLocalNotes(normalizedPlanId, buildOpenPlanDraft(mergedPlan), mergedPlan);
       if (options.clearGeneralDraft && state.openPlanDraft) {
         state.openPlanDraft.generalObservationText = '';
         state.openPlanDraft.generalObservationDirty = false;
