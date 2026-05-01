@@ -2605,6 +2605,48 @@
       return promise;
     }
 
+    function getAdminPlaneacionesFilterCatalogBlocks() {
+      return ['grupos', 'facilitadores', 'alumnos'];
+    }
+
+    function getAdminPlaneacionesFilterMissingBlocks() {
+      const required = getAdminPlaneacionesFilterCatalogBlocks();
+      const missing = new Set(getMissingCatalogBlocks(required));
+      required.forEach((block) => {
+        if (!Array.isArray(state.catalogos && state.catalogos[block]) || !state.catalogos[block].length) {
+          missing.add(block);
+        }
+      });
+      return Array.from(missing);
+    }
+
+    function ensureAdminPlaneacionesFilterCatalogosAvailable(options = {}) {
+      if (!canUseAdminShell()) return Promise.resolve(state.catalogos);
+      if (String(state.activeAdminModule || '').trim() !== 'planeaciones') return Promise.resolve(state.catalogos);
+      const blocks = getAdminPlaneacionesFilterMissingBlocks();
+      if (!blocks.length) return Promise.resolve(state.catalogos);
+      if (state.ui && state.ui.adminPlaneacionesFilterCatalogosPromise) {
+        return state.ui.adminPlaneacionesFilterCatalogosPromise;
+      }
+      const promise = refreshCatalogos({ blocks })
+        .then(() => {
+          if (options.render !== false && String(state.activeAdminModule || '').trim() === 'planeaciones') {
+            renderBaseSelects({ planeaciones: true });
+            renderPlaneacionesSurface({
+              includeStats: false,
+              includePlaneaciones: false,
+              includeAlertas: false
+            });
+          }
+          return state.catalogos;
+        })
+        .finally(() => {
+          if (state.ui) state.ui.adminPlaneacionesFilterCatalogosPromise = null;
+        });
+      if (state.ui) state.ui.adminPlaneacionesFilterCatalogosPromise = promise;
+      return promise;
+    }
+
     // Precarga silenciosa de catalogos del editor (alumnos, submaterias, talleres,
     // alumno_talleres) despues del primer paint del facilitador. Objetivo: que
     // "Crear nueva planeacion" abra con campos ya listos sin mostrar el pill
@@ -3690,6 +3732,9 @@
         refreshPlaneaciones()
           .then(() => renderPlaneacionesSurface({ includeStats: true, includePlaneaciones: true, includeAlertas: false }))
           .catch(() => {});
+      }
+      if (nextModule === 'planeaciones') {
+        ensureAdminPlaneacionesFilterCatalogosAvailable({ render: true }).catch(() => {});
       }
       if (!bootstrappingNotificationsModule && adminModuleNeedsCatalogos(nextModule) && !hasCatalogBlocksLoaded(getAdminModuleCatalogBlocks(nextModule))) {
         setAdminModuleLoading(nextModule, true);
@@ -8624,6 +8669,16 @@
       return localState === 'creating' || /^tmppla/i.test(planId);
     }
 
+    function isPlaneacionBlockedForActions(plan) {
+      if (!plan) return false;
+      const localState = getPlanLocalSaveState(plan);
+      return isPlaneacionPendingCreation(plan) || ['creating', 'saving', 'saving_silent', 'activating', 'syncing'].includes(localState);
+    }
+
+    function notifyPlaneacionStillSyncing(button) {
+      setBanner('Espera a que termine de guardarse la planeaci\u00f3n.', 'info', { button });
+    }
+
     function focusPlaneacionCardSoon(planId) {
       const normalizedPlanId = String(planId || '').trim();
       if (!normalizedPlanId) return;
@@ -10606,6 +10661,10 @@
       return alumnos.filter((alumno) => allowedAlumnoIds.has(String(alumno.alumno_id || '').trim()));
     }
 
+    function isPlanEditorAlumnoSelectable(alumno) {
+      return getAlumnoStatusVisual(alumno) === 'activo';
+    }
+
     function getPlanTallerAvailableGroupIds(tallerId) {
       const allowedAlumnoIds = getPlanTallerAlumnoIdSet(tallerId);
       if (!allowedAlumnoIds.size) return [];
@@ -10631,6 +10690,10 @@
     function applyGroupSelectionToAlumnoSet(selectedSet, groupId, checked) {
       const nextSelected = selectedSet instanceof Set ? selectedSet : new Set(selectedSet || []);
       getPlanEditorAlumnosByGroupId(groupId).forEach((alumno) => {
+        if (!isPlanEditorAlumnoSelectable(alumno)) {
+          nextSelected.delete(alumno.alumno_id);
+          return;
+        }
         if (checked) nextSelected.add(alumno.alumno_id);
         else nextSelected.delete(alumno.alumno_id);
       });
@@ -10680,10 +10743,11 @@
               const label = alumno.nombre_mostrado || alumno.nombre_completo || alumnoId;
               const group = getCatalogIndex().gruposById.get(String(alumno.grupo_id || '').trim());
               const groupLabel = group ? getGrupoDisplayName(group) : String(alumno.grupo_id || '').trim();
+              const selectable = isPlanEditorAlumnoSelectable(alumno);
               return (
                 '<label class="check-item">' +
-                  '<input type="checkbox" data-group-id="' + escapeHtml(alumno.grupo_id || '') + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) ? ' checked' : '') + '>' +
-                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? '<span class="mini">' + escapeHtml(groupLabel) + '</span>' : '') + '</span>' +
+                  '<input type="checkbox" data-group-id="' + escapeHtml(alumno.grupo_id || '') + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) && selectable ? ' checked' : '') + (selectable ? '' : ' disabled') + '>' +
+                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? '<span class="mini">' + escapeHtml(groupLabel) + '</span>' : '') + (selectable ? '' : '<span class="mini">No activo</span>') + '</span>' +
                 '</label>'
               );
             }).join('') : '<div class="empty">No hay alumnos activos en este taller para tus grupos.</div>') +
@@ -10715,10 +10779,11 @@
               const groupId = String(alumno._builder_group_id || alumno.grupo_id || '').trim();
               const group = getCatalogIndex().gruposById.get(groupId);
               const groupLabel = group ? getGrupoDisplayName(group) : groupId;
+              const selectable = isPlanEditorAlumnoSelectable(alumno);
               return (
                 '<label class="check-item">' +
-                  '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) ? ' checked' : '') + '>' +
-                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? ' <span class="mini">&middot; ' + escapeHtml(groupLabel) + '</span>' : '') + '</span>' +
+                  '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) && selectable ? ' checked' : '') + (selectable ? '' : ' disabled') + '>' +
+                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? ' <span class="mini">&middot; ' + escapeHtml(groupLabel) + '</span>' : '') + (selectable ? '' : '<span class="mini">No activo</span>') + '</span>' +
                 '</label>'
               );
             }).join('') : '<div class="empty">No hay alumnos activos en los grupos seleccionados.</div>') +
@@ -10738,10 +10803,12 @@
             '<div class="checklist">' +
               (alumnos.length ? alumnos.map((alumno) => {
                 const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
+                const alumnoId = String(alumno.alumno_id || '').trim();
+                const selectable = isPlanEditorAlumnoSelectable(alumno);
                 return (
                   '<label class="check-item">' +
-                    '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + '>' +
-                    '<span><strong>' + escapeHtml(label) + '</strong></span>' +
+                    '<input type="checkbox" data-group-id="' + escapeHtml(groupId) + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) && selectable ? ' checked' : '') + (selectable ? '' : ' disabled') + '>' +
+                    '<span><strong>' + escapeHtml(label) + '</strong>' + (selectable ? '' : '<span class="mini">No activo</span>') + '</span>' +
                   '</label>'
                 );
               }).join('') : '<div class="empty">' + (getSelectedPlanTallerId() ? 'No hay alumnos de este taller en este grupo.' : 'No hay alumnos activos en este grupo.') + '</div>') +
@@ -11183,8 +11250,8 @@
         return;
       }
       const currentPlan = getPlanById(planId);
-      if (isPlaneacionPendingCreation(currentPlan)) {
-        setBanner('La planeaci\u00f3n se est\u00e1 creando. Espera un momento para abrirla.', 'info', { button });
+      if (isPlaneacionBlockedForActions(currentPlan)) {
+        notifyPlaneacionStillSyncing(button);
         return;
       }
       openPlanLocalInstant(planId);
@@ -11779,7 +11846,7 @@
           const localPending = isPlaneacionLocalSavePending(plan);
           const openIntentAttrs = buildOpenPlanPrefetchIntentAttrs(plan.planeacion_id);
           const openButtonHtml = isPendingCreation
-            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Abrir</button>'
+            ? '<button class="btn-open-plan" type="button" disabled aria-disabled="true">Guardando</button>'
             : '<button class="btn-open-plan" type="button"' + openIntentAttrs + ' onclick="togglePlanOpen(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\')">Abrir</button>';
           const quickActivateButton = !localPending && plan.estado === 'borrador'
             ? '<button class="btn-primary" type="button" onclick="planAction(this, \'' + escapeJsAttrValue(plan.planeacion_id) + '\', \'activarPlaneacion\')">Activar</button>'
@@ -13358,12 +13425,12 @@
           String(state.openPlanId || '').trim() === String(planId || '').trim();
         let previousPlan = getPlanById(planId);
         if (!previousPlan) throw new Error('Planeación no encontrada.');
+        if (isPlaneacionBlockedForActions(previousPlan)) {
+          notifyPlaneacionStillSyncing(button);
+          return;
+        }
         if (action === 'activarPlaneacion') {
           const localState = getPlanLocalSaveState(previousPlan);
-          if (isPlaneacionPendingCreation(previousPlan) || ['creating', 'saving', 'activating', 'syncing'].includes(localState)) {
-            setBanner('Espera a que termine de guardarse antes de activarla.', 'info');
-            return;
-          }
           if (localState === 'sync_error') {
             schedulePlaneacionOutboxProcessing(60);
             setBanner('Primero corrige el guardado pendiente antes de activar la semana.', 'info');
@@ -15060,6 +15127,10 @@
       if (!window.confirm('Esto marcará como listo el material pendiente de esta planeación.')) return;
       const plan = getPlanById(planId);
       if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
+      if (isPlaneacionBlockedForActions(plan)) {
+        notifyPlaneacionStillSyncing(button);
+        return;
+      }
       const entry = getPlaneacionEntryByKey(getPlaneacionEntryKey(plan));
       if (entry && entry.isMulti) {
         const draft = getMultiGroupSharedDraft(entry);
@@ -15438,6 +15509,10 @@
     async function confirmClosePlan(button, planId) {
       let plan = getPlanById(planId);
       if (!plan) throw new Error('Planeaci\u00f3n no encontrada.');
+      if (isPlaneacionBlockedForActions(plan)) {
+        notifyPlaneacionStillSyncing(button);
+        return;
+      }
       if (getClosePlanSyncBlock(planId)) {
         openClosePlanModal(planId);
         return;
