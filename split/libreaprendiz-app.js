@@ -6720,7 +6720,7 @@
         });
         closeFacilitadorAsignacionEditor();
         renderAdminModuleSurface('facilitadores');
-        setBanner('Asignaci\u00f3n retirada del pulso semanal.', 'success');
+        setBanner('Asignaci\u00f3n retirada del pulso semanal.', 'success', { anchor: null });
       }, {
         button,
         key: buildActionKey('archivarFacilitadorAsignacion', [asignacionId]),
