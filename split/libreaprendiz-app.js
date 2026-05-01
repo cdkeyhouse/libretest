@@ -6661,7 +6661,6 @@
 
     async function saveFacilitadorAsignacion(button) {
       const facilitadorId = String(state.facilitadoresUi.selectedFacilitadorId || '').trim();
-      if (!facilitadorId) throw new Error('Selecciona un facilitador.');
       const payload = {
         asignacion_id: state.facilitadoresUi.asignacion.asignacion_id || '',
         facilitador_id: facilitadorId,
@@ -6672,9 +6671,10 @@
         activa: true,
         request_id: uid('FAS')
       };
-      if (!payload.grupo_id) throw new Error('Selecciona un grupo.');
-      if (!payload.materia_id) throw new Error('Selecciona una materia.');
       await handleAction('guardarFacilitadorAsignacion', async () => {
+        if (!facilitadorId) throw new Error('Selecciona un facilitador.');
+        if (!payload.grupo_id) throw new Error('Selecciona un grupo.');
+        if (!payload.materia_id) throw new Error('Selecciona una materia.');
         const data = await api('guardarFacilitadorAsignacion', payload);
         applySavedFacilitadorAsignacionCatalogRow({
           asignacion_id: data && data.asignacion_id ? data.asignacion_id : (payload.asignacion_id || uid('FASLOCAL')),
