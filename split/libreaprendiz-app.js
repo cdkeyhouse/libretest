@@ -4915,7 +4915,7 @@
         if (state.alumnosUi.selectedAlumnoId === alumno.alumno_id) closeAlumnoEditor();
         closeCambioGrupo();
         renderAdminModuleSurface('alumnos');
-        setBanner('Alumno archivado.', 'success');
+        setBanner('Alumno archivado.', 'success', { anchor: null });
       }, { button, key: buildActionKey('archivarAlumno', [alumno.alumno_id]), busyText: button ? button.textContent : 'Archivar' });
     }
 
@@ -5033,13 +5033,22 @@
         previewHost.innerHTML = '<div class="admin-alumnos-empty" style="min-height:120px;"><div><strong>Sin vista previa.</strong><div class="subtle">Escribe uno o varios alumno_id para revisar el impacto antes de borrar.</div></div></div>';
         return;
       }
-      const alumnos = Array.isArray(data.alumnos) ? data.alumnos : [];
-      const missing = Array.isArray(data.missing_alumno_ids) ? data.missing_alumno_ids : [];
-      const affectedPlans = Array.isArray(data.planeaciones_afectadas) ? data.planeaciones_afectadas : [];
-      const emptyPlans = Array.isArray(data.planeaciones_que_quedan_sin_alumnos) ? data.planeaciones_que_quedan_sin_alumnos : [];
+      const isDeleteResult = !!(result && Array.isArray(result.deleted_alumno_ids));
+      const sourceData = isDeleteResult && result.before_preview ? result.before_preview : data;
+      const alumnos = Array.isArray(sourceData.alumnos) ? sourceData.alumnos : [];
+      const missing = !isDeleteResult && Array.isArray(sourceData.missing_alumno_ids) ? sourceData.missing_alumno_ids : [];
+      const affectedPlans = Array.isArray(sourceData.planeaciones_afectadas) ? sourceData.planeaciones_afectadas : [];
+      const emptyPlans = Array.isArray(sourceData.planeaciones_que_quedan_sin_alumnos) ? sourceData.planeaciones_que_quedan_sin_alumnos : [];
       const deletedRows = result && result.deleted_rows ? result.deleted_rows : null;
-      const rowsBySheet = deletedRows || data.rows_by_sheet || {};
-      const reportFiles = data.report_files || (data.before_preview && data.before_preview.report_files) || {};
+      const rowsBySheet = deletedRows || sourceData.rows_by_sheet || {};
+      const reportFiles = sourceData.report_files || {};
+      const totalRows = Number(sourceData.total_rows || Object.values(rowsBySheet).reduce((sum, count) => sum + Number(count || 0), 0));
+      const deletedAlumnoIds = Array.isArray(result && result.deleted_alumno_ids) ? result.deleted_alumno_ids : [];
+      const alumnoCountLabel = isDeleteResult ? 'Alumnos eliminados' : 'Alumnos encontrados';
+      const alumnoCountValue = isDeleteResult ? (deletedAlumnoIds.length || alumnos.length || 0) : alumnos.length;
+      const resultSummary = isDeleteResult
+        ? '<div class="admin-alumnos-result"><strong>Borrado completado</strong><div>' + escapeHtml(String(alumnoCountValue)) + ' alumno(s) eliminado(s) · ' + escapeHtml(String(totalRows)) + ' fila(s) eliminada(s).</div></div>'
+        : '';
       const planeacionRows = affectedPlans.length
         ? affectedPlans.slice(0, 8).map((plan) => {
             const materia = plan.materia_nombre || plan.materia_id || 'Sin materia';
@@ -5047,9 +5056,10 @@
           }).join('')
         : '<div class="admin-alumnos-empty" style="min-height:88px;"><div><strong>Sin planeaciones afectadas.</strong></div></div>';
       previewHost.innerHTML = [
+        resultSummary,
         '<div class="admin-alumnos-mini-grid">',
-          '<div class="admin-alumnos-readonly"><span>Alumnos encontrados</span><strong>' + escapeHtml(String(alumnos.length || 0)) + '</strong></div>',
-          '<div class="admin-alumnos-readonly"><span>Filas afectadas</span><strong>' + escapeHtml(String(data.total_rows || Object.values(rowsBySheet).reduce((sum, count) => sum + Number(count || 0), 0))) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>' + alumnoCountLabel + '</span><strong>' + escapeHtml(String(alumnoCountValue || 0)) + '</strong></div>',
+          '<div class="admin-alumnos-readonly"><span>Filas afectadas</span><strong>' + escapeHtml(String(totalRows || 0)) + '</strong></div>',
           '<div class="admin-alumnos-readonly"><span>Planeaciones afectadas</span><strong>' + escapeHtml(String(affectedPlans.length || 0)) + '</strong></div>',
           '<div class="admin-alumnos-readonly"><span>Quedan sin alumnos</span><strong>' + escapeHtml(String(emptyPlans.length || 0)) + '</strong></div>',
         '</div>',
@@ -5107,7 +5117,7 @@
         control.confirmationText = '';
         removeDeletedAlumnosFromClient(result.deleted_alumno_ids || ids);
         renderAdminModuleSurface('alumnos');
-        setBanner('Borrado controlado completado.', 'success');
+        setBanner('Borrado controlado completado.', 'success', { anchor: null });
       }, { button, key: buildActionKey('borrarAlumnosControlado', ids), busyText: 'Borrando' });
     }
 
