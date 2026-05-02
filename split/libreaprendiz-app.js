@@ -11453,7 +11453,8 @@
       const selectedPlan = getOpenPlaneacionEntry(entry);
       const selectedMateriaId = String((draft && draft.materia_id) || (selectedPlan || {}).materia_id || '').trim();
       const selectedSubmaterias = getPlanSubmateriasForMateria(selectedMateriaId);
-      const week = getWeekByDateOrDraft(draft.fecha_planeacion || getWeekStartDateForPlan(selectedPlan));
+      const displayFechaPlaneacion = draft.fecha_planeacion || getWeekStartDateForPlan(selectedPlan);
+      const week = getWeekByDateOrDraft(displayFechaPlaneacion);
       const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
       return (
         '<div class="plan-multigroup-shared">' +
@@ -11465,7 +11466,7 @@
             '<div class="mini">' + escapeHtml(String((entry.plans || []).length)) + ' grupos vinculados</div>' +
           '</div>' +
           '<div class="grid-3">' +
-            '<div class="plan-date-detected-field"><label>Fecha:</label><input type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" oninput="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha:</label><input type="date" value="' + escapeHtml(displayFechaPlaneacion || '') + '" oninput="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)" onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
             '<div><label>Materia</label><select onchange="updateMultiGroupSharedField(\'' + escapeJsAttrValue(entry.key) + '\', \'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
@@ -11500,7 +11501,8 @@
       }
         const selectedMateriaId = String((draft && draft.materia_id) || plan.materia_id || '').trim();
         const submaterias = getPlanSubmateriasForMateria(selectedMateriaId);
-        const week = getWeekByDateOrDraft(draft.fecha_planeacion || getWeekStartDateForPlan(plan));
+        const displayFechaPlaneacion = draft.fecha_planeacion || getWeekStartDateForPlan(plan);
+        const week = getWeekByDateOrDraft(displayFechaPlaneacion);
         const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
         const alumnosGrupoCatalogo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
         const alumnosGrupo = alumnosGrupoCatalogo.length
@@ -11571,7 +11573,7 @@
       return (
         '<div class="plan-open-editor">' +
           '<div class="grid-3">' +
-            '<div class="plan-date-detected-field"><label>Fecha:</label><input id="' + escapeHtml(openFieldIds.fecha) + '" type="date" value="' + escapeHtml(draft.fecha_planeacion || '') + '" oninput="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
+            '<div class="plan-date-detected-field"><label>Fecha:</label><input id="' + escapeHtml(openFieldIds.fecha) + '" type="date" value="' + escapeHtml(displayFechaPlaneacion || '') + '" oninput="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)" onchange="updateOpenPlanDraftField(\'fecha_planeacion\', this.value, true)"><div class="plan-date-inline-meta"><div class="plan-date-resolved-head">Semana:</div><div class="inline-note ' + (week && String(week.cerrada_global || '').toLowerCase() === 'si' ? 'is-closed' : 'is-open') + '">' + escapeHtml(weekText) + '</div></div></div>' +
             '<div><label>Materia</label><select id="' + escapeHtml(openFieldIds.materia) + '" onchange="updateOpenPlanDraftField(\'materia_id\', this.value, true)">' +
               '<option value="">Selecciona materia</option>' +
               (state.catalogos.materias || []).map((item) => '<option value="' + escapeHtml(item.materia_id) + '"' + (String(item.materia_id || '') === selectedMateriaId ? ' selected' : '') + '>' + escapeHtml(item.nombre || item.materia_id) + '</option>').join('') +
