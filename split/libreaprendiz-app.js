@@ -2071,6 +2071,7 @@
     function activatePlaneacionOutboxForSession(sessionLike = state.session) {
       clearInvalidSessionFlagsInOutbox(sessionLike);
       hydratePlaneacionOutboxForSession(sessionLike);
+      repairHydratedPlaneacionOutboxSemanaPayloads();
       reapplyPlaneacionOutboxState();
       clearStalePlaneacionLocalState();
       schedulePlaneacionOutboxProcessing(140);
@@ -8499,6 +8500,28 @@
       };
     }
 
+    function getWeekByIdOrInferred(semanaId) {
+      const normalizedSemanaId = String(semanaId || '').trim();
+      if (!normalizedSemanaId) return null;
+      return getWeekById(normalizedSemanaId) || buildWeekRangeFromSemanaId(normalizedSemanaId);
+    }
+
+    function semanaContainsDate(semana, dateValue) {
+      const target = toYmdFrontend_(dateValue);
+      const start = toYmdFrontend_((semana && semana.fecha_inicio) || '');
+      const end = toYmdFrontend_((semana && semana.fecha_fin) || '') || start;
+      return !!(target && start && end && start <= target && target <= end);
+    }
+
+    function resolveWeekForPlanDate(plan, dateValue) {
+      const target = toYmdFrontend_(dateValue);
+      const currentWeek = getWeekByIdOrInferred(plan && plan.semana_id);
+      if (currentWeek && (!target || semanaContainsDate(currentWeek, target))) {
+        return currentWeek;
+      }
+      return getWeekByDateOrDraft(target);
+    }
+
     function getWeekStartDateById(semanaId) {
       const semana = getWeekById(semanaId);
       const catalogStart = toYmdFrontend_((semana && semana.fecha_inicio) || '');
@@ -10539,9 +10562,14 @@
         ? getWeekStartDateById(state.planEditor.lockedSemanaId)
         : '';
       const resolvedDate = String((($('planFecha') && $('planFecha').value) || fallbackDate) || '').trim();
+      const lockedPlanWeek = state.planEditor.mode === 'edit'
+        ? getWeekByIdOrInferred(state.planEditor.lockedSemanaId)
+        : null;
       return {
         resolvedDate,
-        week: getWeekByDateOrDraft(resolvedDate)
+        week: lockedPlanWeek && semanaContainsDate(lockedPlanWeek, resolvedDate)
+          ? lockedPlanWeek
+          : getWeekByDateOrDraft(resolvedDate)
       };
     }
 
@@ -11484,7 +11512,7 @@
       const selectedMateriaId = String((draft && draft.materia_id) || (selectedPlan || {}).materia_id || '').trim();
       const selectedSubmaterias = getPlanSubmateriasForMateria(selectedMateriaId);
       const displayFechaPlaneacion = draft.fecha_planeacion || getWeekStartDateForPlan(selectedPlan);
-      const week = getWeekByDateOrDraft(displayFechaPlaneacion);
+      const week = resolveWeekForPlanDate(selectedPlan, displayFechaPlaneacion);
       const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
       return (
         '<div class="plan-multigroup-shared">' +
@@ -11532,7 +11560,7 @@
         const selectedMateriaId = String((draft && draft.materia_id) || plan.materia_id || '').trim();
         const submaterias = getPlanSubmateriasForMateria(selectedMateriaId);
         const displayFechaPlaneacion = draft.fecha_planeacion || getWeekStartDateForPlan(plan);
-        const week = getWeekByDateOrDraft(displayFechaPlaneacion);
+        const week = resolveWeekForPlanDate(plan, displayFechaPlaneacion);
         const weekText = week ? formatSemanaLabel(week) : 'Selecciona una fecha.';
         const alumnosGrupoCatalogo = state.catalogos.alumnos.filter((alumno) => alumno.grupo_id === plan.grupo_id);
         const alumnosGrupo = alumnosGrupoCatalogo.length
@@ -13676,7 +13704,7 @@
       const fallbackDate = getWeekStartDateForPlan(plan);
       const hasDraftDate = draft && Object.prototype.hasOwnProperty.call(draft, 'fecha_planeacion');
       const fechaPlaneacion = hasDraftDate ? String(draft.fecha_planeacion || '').trim() : fallbackDate;
-      const semana = getWeekByDateOrDraft(fechaPlaneacion);
+      const semana = resolveWeekForPlanDate(plan, fechaPlaneacion);
       if (!semana) throw createInlineFieldValidationError('Selecciona una fecha v\u00e1lida.', getOpenPlanInlineFieldId(plan, 'fecha'));
       const hasDraftMateria = draft && Object.prototype.hasOwnProperty.call(draft, 'materia_id');
       const materiaId = String(hasDraftMateria ? draft.materia_id : (plan && plan.materia_id) || '').trim();
@@ -14193,6 +14221,88 @@
       }
     }
 
+    function repairPlanSavePayloadSemanaFromPreviousPlan(payload, previousPlan) {
+      if (!payload || typeof payload !== 'object' || !previousPlan) return payload;
+      const currentSemana = getWeekByIdOrInferred(previousPlan.semana_id);
+      if (!currentSemana || !currentSemana.semana_id) return payload;
+      const fechaPlaneacion = toYmdFrontend_(payload.fecha_planeacion || getWeekStartDateForPlan(previousPlan));
+      if (!semanaContainsDate(currentSemana, fechaPlaneacion)) return payload;
+      const currentSemanaId = String(currentSemana.semana_id || '').trim();
+      if (!currentSemanaId || String(payload.semana_id || '').trim() === currentSemanaId) return payload;
+      return Object.assign({}, payload, {
+        semana_id: currentSemanaId
+      });
+    }
+
+    function repairPlaneacionOutboxOpenSaveSemana(item) {
+      if (!item || typeof item !== 'object') return item;
+      const previousPlan = item.previousPlanSnapshot || getPlanById(item.planId);
+      if (!previousPlan) return item;
+      let changed = false;
+      let nextCombinedRequest = item.combinedRequest;
+      if (nextCombinedRequest && typeof nextCombinedRequest === 'object' && nextCombinedRequest.plan_save) {
+        const repairedPlanSave = repairPlanSavePayloadSemanaFromPreviousPlan(nextCombinedRequest.plan_save, previousPlan);
+        if (repairedPlanSave !== nextCombinedRequest.plan_save) {
+          nextCombinedRequest = Object.assign({}, nextCombinedRequest, {
+            plan_save: repairedPlanSave
+          });
+          changed = true;
+        }
+      }
+      let nextRequests = item.requests;
+      if (nextRequests && typeof nextRequests === 'object' && nextRequests.planSave) {
+        const repairedPlanSave = repairPlanSavePayloadSemanaFromPreviousPlan(nextRequests.planSave, previousPlan);
+        if (repairedPlanSave !== nextRequests.planSave) {
+          nextRequests = Object.assign({}, nextRequests, {
+            planSave: repairedPlanSave
+          });
+          changed = true;
+        }
+      }
+      if (!changed) return item;
+      return markPlaneacionOutboxItem(item.id, {
+        combinedRequest: nextCombinedRequest,
+        requests: nextRequests
+      }) || Object.assign({}, item, {
+        combinedRequest: nextCombinedRequest,
+        requests: nextRequests
+      });
+    }
+
+    function getOutboxSemanaPayloadSignature(item) {
+      const combinedPlanSave = item && item.combinedRequest && item.combinedRequest.plan_save
+        ? item.combinedRequest.plan_save
+        : {};
+      const requestPlanSave = item && item.requests && item.requests.planSave
+        ? item.requests.planSave
+        : {};
+      return JSON.stringify({
+        combinedSemanaId: String(combinedPlanSave.semana_id || '').trim(),
+        requestSemanaId: String(requestPlanSave.semana_id || '').trim()
+      });
+    }
+
+    function repairHydratedPlaneacionOutboxSemanaPayloads() {
+      if (!Array.isArray(state.planeacionOutbox) || !state.planeacionOutbox.length) return;
+      state.planeacionOutbox.slice().forEach((item) => {
+        if (!item || String(item.kind || '').trim() !== 'open_save') return;
+        const before = getOutboxSemanaPayloadSignature(item);
+        const repaired = repairPlaneacionOutboxOpenSaveSemana(item);
+        const after = getOutboxSemanaPayloadSignature(repaired);
+        if (before === after) return;
+        if (String((repaired && repaired.status) || '').trim() === 'error' || repaired.retryable === false) {
+          markPlaneacionOutboxItem(repaired.id, {
+            status: 'pending',
+            retryable: true,
+            attempts: 0,
+            lastErrorCode: '',
+            lastErrorMessage: '',
+            nextAttemptAt: ''
+          });
+        }
+      });
+    }
+
     async function processPlaneacionOutboxEditorCreate(item) {
       const responseData = await api(item.requestAction || 'crearPlaneacion', item.requestPayload || {});
       const createdPlans = Array.isArray(responseData && responseData.planeaciones)
@@ -14258,6 +14368,7 @@
     }
 
     async function processPlaneacionOutboxOpenSave(item, trace = null) {
+      item = repairPlaneacionOutboxOpenSaveSemana(item);
       const combinedRequest = item.combinedRequest && typeof item.combinedRequest === 'object'
         ? item.combinedRequest
         : null;
@@ -14736,7 +14847,7 @@
       if (!draft) throw new Error('No se pudo preparar la base multigrupo.');
       const selectedPlan = getOpenPlaneacionEntry(entry) || entry.representative || null;
       const fallbackDate = getWeekStartDateForPlan(selectedPlan);
-      const semana = getWeekByDateOrDraft(draft.fecha_planeacion || fallbackDate);
+      const semana = resolveWeekForPlanDate(selectedPlan, draft.fecha_planeacion || fallbackDate);
       if (!semana) throw new Error('Selecciona una fecha v\u00e1lida para el multigrupo.');
       const materiaId = String((draft && draft.materia_id) || (selectedPlan && selectedPlan.materia_id) || '').trim();
       if (!materiaId) throw new Error('Selecciona una materia.');
