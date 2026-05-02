@@ -8461,7 +8461,7 @@
       const knownIds = new Set(known.map((semana) => String(semana && semana.semana_id || '').trim()));
       const unknown = Array.from(weekIds)
         .filter((semanaId) => !knownIds.has(semanaId))
-        .map((semanaId) => ({
+        .map((semanaId) => buildWeekRangeFromSemanaId(semanaId) || ({
           semana_id: semanaId,
           fecha_inicio: '',
           fecha_fin: '',
@@ -8474,12 +8474,37 @@
       return state.catalogos.semanas.find((item) => item.semana_id === semanaId) || null;
     }
 
+    function parseSemanaIdRange(semanaId) {
+      const value = String(semanaId || '').trim();
+      const match = value.match(/^SEM_(\d{4})(\d{2})(\d{2})(?:_(\d{4})(\d{2})(\d{2}))?$/);
+      if (!match) return null;
+      const start = toYmdFrontend_(match[1] + '-' + match[2] + '-' + match[3]);
+      const end = match[4]
+        ? toYmdFrontend_(match[4] + '-' + match[5] + '-' + match[6])
+        : start;
+      if (!start || !end) return null;
+      return { start, end };
+    }
+
+    function buildWeekRangeFromSemanaId(semanaId) {
+      const parsed = parseSemanaIdRange(semanaId);
+      if (!parsed) return null;
+      return {
+        semana_id: String(semanaId || '').trim(),
+        fecha_inicio: parsed.start,
+        fecha_fin: parsed.end,
+        nombre_visible: formatFechaCorta(parsed.start) + ' - ' + formatFechaCorta(parsed.end),
+        cerrada_global: 'no',
+        inferred: true
+      };
+    }
+
     function getWeekStartDateById(semanaId) {
       const semana = getWeekById(semanaId);
       const catalogStart = toYmdFrontend_((semana && semana.fecha_inicio) || '');
       if (catalogStart) return catalogStart;
-      const match = String(semanaId || '').trim().match(/^SEM_(\d{4})(\d{2})(\d{2})$/);
-      return match ? toYmdFrontend_(match[1] + '-' + match[2] + '-' + match[3]) : '';
+      const parsed = parseSemanaIdRange(semanaId);
+      return parsed ? parsed.start : '';
     }
 
     function getWeekStartDateForPlan(plan) {
@@ -8548,10 +8573,8 @@
     function getWeekLabelForPlan(plan, semana) {
       if (semana) return formatSemanaLabel(semana);
       const weekId = String(plan && plan.semana_id || '').trim();
-      const match = weekId.match(/^SEM_(\d{4})(\d{2})(\d{2})$/);
-      if (!match) return weekId || '-';
-      const inferred = buildWeekRangeFromDate(match[1] + '-' + match[2] + '-' + match[3]);
-      return inferred ? formatSemanaLabel(inferred) : weekId;
+      const inferred = buildWeekRangeFromSemanaId(weekId);
+      return inferred ? formatSemanaLabel(inferred) : (weekId || '-');
     }
 
     function getPlanStatusLabel(status) {
@@ -9414,10 +9437,11 @@
       const materia = getMateriaById(plan.materia_id);
       const grupo = getGrupoById(plan.grupo_id);
       const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
+      const displaySemana = semana || buildWeekRangeFromSemanaId(plan.semana_id);
       return [
         grupo ? getGrupoDisplayName(grupo) : plan.grupo_id,
         getPlanMateriaDisplayLabel(plan, materia),
-        semana ? (semana.nombre_visible || semana.semana_id) : plan.semana_id
+        displaySemana ? formatSemanaLabel(displaySemana) : plan.semana_id
       ].join(' · ');
     }
 
@@ -11706,17 +11730,18 @@
         const grupo = getGrupoById(plan.grupo_id);
         const materia = getMateriaById(plan.materia_id);
         const semana = state.catalogos.semanas.find((item) => item.semana_id === plan.semana_id);
+        const displaySemana = semana || buildWeekRangeFromSemanaId(plan.semana_id);
         const groupLabel = entry.isMulti
           ? getPlaneacionEntryGroupLabels(entry).join(' \u00b7 ')
           : (grupo ? getGrupoDisplayName(grupo) : plan.grupo_id);
         const materiaLabel = getPlanMateriaDisplayLabel(plan, materia);
-        const weekLabel = getWeekLabelForPlan(plan, semana);
-        const weekPrimaryLabel = semana && semana.fecha_inicio
-          ? formatFechaHumana(semana.fecha_inicio)
+        const weekLabel = getWeekLabelForPlan(plan, displaySemana);
+        const weekPrimaryLabel = displaySemana && displaySemana.fecha_inicio
+          ? formatFechaHumana(displaySemana.fecha_inicio)
           : weekLabel;
         const weekSecondaryLabel = weekLabel && weekLabel !== weekPrimaryLabel
           ? weekLabel
-          : ((semana && semana.nombre_visible && semana.nombre_visible !== weekPrimaryLabel) ? semana.nombre_visible : '');
+          : ((displaySemana && displaySemana.nombre_visible && displaySemana.nombre_visible !== weekPrimaryLabel) ? displaySemana.nombre_visible : '');
         const weekClosed = semana && String(semana.cerrada_global || '').toLowerCase() === 'si';
         const hasAdminPower = role === 'admin' || role === 'directora';
         const alumnosRows = entry.isMulti ? getPlaneacionEntryAlumnoRows(entry) : (plan.alumnos || []);
