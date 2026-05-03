@@ -982,7 +982,7 @@
       const periodo = data && data._selection && data._selection.periodo_id
         ? (state.catalogos.periodos || []).find((row) => String(row.periodo_id || '').trim() === data._selection.periodo_id)
         : getSelectedReportePeriodoRow();
-      const alumnoLabel = alumno ? (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) : '';
+      const alumnoLabel = alumno ? getAlumnoNameLabel(alumno) : '';
       const periodoLabel = periodo ? (periodo.nombre_visible || periodo.periodo_id) : '';
 
       if (!data) {
@@ -993,7 +993,7 @@
 
       const status = String(data.status || data.estado || '').trim().toLowerCase();
       const rows = [
-        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' - ' + (alumno.alumno_id || '')) + '</strong></div>' : '',
+        alumnoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Alumno</span><strong>' + escapeHtml(alumnoLabel + ' - ' + getAlumnoCompactId(alumno)) + '</strong></div>' : '',
         periodoLabel ? '<div class="admin-reporte-ciclo-result-row"><span>Per&iacute;odo</span><strong>' + escapeHtml(periodoLabel) + '</strong></div>' : '',
         data.url ? '<div class="admin-reporte-ciclo-result-row"><span>PDF</span><strong><a class="link-out" href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener noreferrer">Abrir reporte</a></strong></div>' : '',
         data.version_datos ? '<div class="admin-reporte-ciclo-result-row"><span>Versi&oacute;n de datos</span><div class="code">' + escapeHtml(data.version_datos) + '</div></div>' : '',
@@ -4587,7 +4587,7 @@
           if (filter === 'archivados' && visualStatus !== 'archivado') return false;
           if (groupFilter && String(row.grupo_id || '').trim() !== groupFilter) return false;
           if (!query) return true;
-          const haystack = [row.matricula, row.alumno_id, row.nombre_completo, row.nombre_mostrado].join(' ').toLowerCase();
+          const haystack = [row.matricula, row.alumno_id, getAlumnoCompactId(row), row.nombre_completo, row.nombre_mostrado].join(' ').toLowerCase();
           return haystack.includes(query);
         })
         .sort((a, b) => {
@@ -5245,8 +5245,8 @@
         $('adminAlumnoIdentity').hidden = !selectedAlumno;
         $('adminAlumnoIdentity').innerHTML = selectedAlumno
           ? [
-              '<div class="admin-alumnos-readonly"><span>Alumno ID</span><strong>' + escapeHtml(selectedAlumno.alumno_id || '-') + '</strong></div>',
-              '<div class="admin-alumnos-readonly"><span>Matr&iacute;cula</span><strong>' + escapeHtml(selectedAlumno.matricula || '-') + '</strong></div>'
+              '<div class="admin-alumnos-readonly"><span>Alumno ID</span><strong title="' + escapeHtml(selectedAlumno.alumno_id || '') + '">' + escapeHtml(getAlumnoCompactId(selectedAlumno) || '-') + '</strong></div>',
+              '<div class="admin-alumnos-readonly"><span>Matr&iacute;cula</span><strong>' + escapeHtml(formatAlumnoCompactId(selectedAlumno.matricula) || '-') + '</strong></div>'
             ].join('')
           : '';
       }
@@ -5262,8 +5262,8 @@
       panel.hidden = !state.alumnosUi.cambioGrupoOpen;
       if (panel.hidden) return;
       const alumno = getAlumnoById(state.alumnosUi.cambioGrupo.alumno_id);
-      if ($('adminAlumnoCambioMatricula')) $('adminAlumnoCambioMatricula').textContent = alumno ? (alumno.matricula || alumno.alumno_id) : '-';
-      if ($('adminAlumnoCambioNombre')) $('adminAlumnoCambioNombre').textContent = alumno ? (alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) : '-';
+      if ($('adminAlumnoCambioMatricula')) $('adminAlumnoCambioMatricula').textContent = alumno ? getAlumnoSecondaryLabel(alumno) : '-';
+      if ($('adminAlumnoCambioNombre')) $('adminAlumnoCambioNombre').textContent = alumno ? getAlumnoNameLabel(alumno) : '-';
       if ($('adminAlumnoCambioGrupoActual')) $('adminAlumnoCambioGrupoActual').textContent = alumno ? getGrupoNombre(alumno.grupo_id) : '-';
       fillSelect($('adminAlumnoCambioGrupoNuevo'), state.catalogos.grupos || [], (row) => row.grupo_id, (row) => getGrupoDisplayName(row), 'Selecciona grupo');
       if ($('adminAlumnoCambioGrupoNuevo')) $('adminAlumnoCambioGrupoNuevo').value = state.alumnosUi.cambioGrupo.nuevo_grupo_id || '';
@@ -5282,7 +5282,7 @@
       const remoteFailed = !!(state.alumnosUi.remoteHistoryFailedByAlumno && state.alumnosUi.remoteHistoryFailedByAlumno[alumnoId]);
       if ($('adminAlumnoHistorialLabel')) {
         $('adminAlumnoHistorialLabel').textContent = alumno
-          ? ((alumno.nombre_completo || alumno.nombre_mostrado || alumno.alumno_id) + ' · ID: ' + alumno.alumno_id + ' · ' + (alumno.matricula || 'sin matrícula'))
+          ? (getAlumnoNameLabel(alumno) + ' · ID: ' + getAlumnoCompactId(alumno) + ' · ' + (formatAlumnoCompactId(alumno.matricula) || 'sin matrícula'))
           : 'Seguimiento del alumno.';
       }
       const historyFoot = $('adminAlumnoHistorial') ? $('adminAlumnoHistorial').querySelector('.admin-alumnos-history-foot') : null;
@@ -5348,8 +5348,8 @@
             '<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>'
           ];
           return '<article class="admin-alumnos-row">' +
-            '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.matricula || row.alumno_id) + '</div></div>' +
-            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.nombre_completo || row.nombre_mostrado || row.alumno_id) + '</button><div class="mini">ID: ' + escapeHtml(row.alumno_id || '-') + '</div></div>' +
+            '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getAlumnoSecondaryLabel(row)) + '</div></div>' +
+            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(getAlumnoNameLabel(row)) + '</button><div class="mini" title="' + escapeHtml(row.alumno_id || '') + '">ID: ' + escapeHtml(getAlumnoCompactId(row) || '-') + '</div></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getGrupoNombre(row.grupo_id)) + '</div></div>' +
             '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
@@ -7255,7 +7255,7 @@
               (activeMembers.length
                 ? '<div class="admin-taller-member-cloud">' + activeMembers.map((row) => {
                     const alumno = row.alumno || {};
-                    return '<span class="admin-taller-member-chip"><span>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || row.alumno_id) + '</span><span class="mini">' + escapeHtml(getGrupoNombre(alumno.grupo_id)) + '</span></span>';
+                    return '<span class="admin-taller-member-chip"><span>' + escapeHtml(getAlumnoNameLabel(Object.assign({}, alumno, { alumno_id: row.alumno_id || alumno.alumno_id }))) + '</span><span class="mini">' + escapeHtml(getGrupoNombre(alumno.grupo_id)) + '</span></span>';
                   }).join('') + '</div>'
                 : '<div class="admin-alumnos-empty" style="min-height:132px;"><div><strong>Sin alumnos inscritos.</strong><div class="subtle">Usa el acceso r&aacute;pido para armar la mezcla del taller con alumnos de distintos grupos.</div></div></div>'),
             '</div>',
@@ -8365,6 +8365,63 @@
       if (current && items.some((item) => getValue(item) === current)) {
         select.value = current;
       }
+    }
+
+    function formatAlumnoCompactId(value) {
+      const raw = String(value || '').trim();
+      const match = raw.match(/^ALU-MIG-0*(\d+)$/i);
+      if (!match) return raw;
+      return 'ALU-' + String(match[1] || '').padStart(3, '0');
+    }
+
+    function getAlumnoCompactId(alumnoOrId) {
+      const raw = alumnoOrId && typeof alumnoOrId === 'object'
+        ? alumnoOrId.alumno_id
+        : alumnoOrId;
+      return formatAlumnoCompactId(raw);
+    }
+
+    function getAlumnoNameLabel(alumno) {
+      const compactId = getAlumnoCompactId(alumno);
+      return String(alumno && (alumno.nombre_mostrado || alumno.nombre_completo || alumno.nombre_snapshot) || compactId || '').trim();
+    }
+
+    function getAlumnoSecondaryLabel(alumno) {
+      const matricula = formatAlumnoCompactId(alumno && alumno.matricula);
+      return matricula || getAlumnoCompactId(alumno) || '-';
+    }
+
+    function joinUniqueAlumnoLabelParts(parts) {
+      const seen = new Set();
+      return (parts || [])
+        .map((part) => String(part || '').trim())
+        .filter((part) => {
+          if (!part) return false;
+          const key = part.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .join(' \u00b7 ');
+    }
+
+    function getAlumnoSelectLabel(alumno) {
+      return joinUniqueAlumnoLabelParts([
+        getAlumnoNameLabel(alumno),
+        formatAlumnoCompactId(alumno && alumno.matricula),
+        getAlumnoCompactId(alumno)
+      ]);
+    }
+
+    function getAlumnoSearchLabels(alumno) {
+      return [
+        getAlumnoSelectLabel(alumno),
+        joinUniqueAlumnoLabelParts([
+          getAlumnoNameLabel(alumno),
+          alumno && alumno.matricula,
+          alumno && alumno.alumno_id
+        ])
+      ].filter(Boolean);
     }
 
     function renderPeriodSelects() {
@@ -10740,8 +10797,8 @@
       const catalogAlumno = getCatalogIndex().alumnosById.get(alumnoId);
       return {
         nombre: catalogAlumno
-          ? (catalogAlumno.nombre_mostrado || catalogAlumno.nombre_completo || catalogAlumno.alumno_id)
-          : (alumnoRow && (alumnoRow.nombre_snapshot || alumnoRow.alumno_id) || alumnoId)
+          ? getAlumnoNameLabel(catalogAlumno)
+          : (alumnoRow && alumnoRow.nombre_snapshot || formatAlumnoCompactId(alumnoId))
       };
     }
 
@@ -10798,7 +10855,7 @@
           '<div class="checklist plan-alumnos-flat">' +
             (alumnos.length ? alumnos.map((alumno) => {
               const alumnoId = String(alumno.alumno_id || '').trim();
-              const label = alumno.nombre_mostrado || alumno.nombre_completo || alumnoId;
+              const label = getAlumnoNameLabel(alumno);
               const group = getCatalogIndex().gruposById.get(String(alumno.grupo_id || '').trim());
               const groupLabel = group ? getGrupoDisplayName(group) : String(alumno.grupo_id || '').trim();
               const selectable = isPlanEditorAlumnoSelectable(alumno);
@@ -10833,7 +10890,7 @@
           '<div class="checklist plan-alumnos-flat">' +
             (alumnos.length ? alumnos.map((alumno) => {
               const alumnoId = String(alumno.alumno_id || '').trim();
-              const label = alumno.nombre_mostrado || alumno.nombre_completo || alumnoId;
+              const label = getAlumnoNameLabel(alumno);
               const groupId = String(alumno._builder_group_id || alumno.grupo_id || '').trim();
               const group = getCatalogIndex().gruposById.get(groupId);
               const groupLabel = group ? getGrupoDisplayName(group) : groupId;
@@ -10860,7 +10917,7 @@
               '</div>' +
             '<div class="checklist">' +
               (alumnos.length ? alumnos.map((alumno) => {
-                const label = alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id;
+                const label = getAlumnoNameLabel(alumno);
                 const alumnoId = String(alumno.alumno_id || '').trim();
                 const selectable = isPlanEditorAlumnoSelectable(alumno);
                 return (
@@ -11005,15 +11062,15 @@
       }
 
       if (shouldRenderSeguimiento) {
-        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
-        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('evaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => getAlumnoSelectLabel(a), 'Selecciona alumno');
+        fillSelect($('notaAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => getAlumnoSelectLabel(a), 'Selecciona alumno');
         fillSelect($('evaMateria'), state.catalogos.materias, (m) => m.materia_id, (m) => m.nombre || m.materia_id, 'Selecciona materia');
         fillSelect($('obsPlan'), state.planeaciones, (p) => p.planeacion_id, (p) => formatPlanShort(p), 'Selecciona planeaci\u00f3n');
       }
 
       if (shouldRenderReportes) {
         const reportUi = getReportSelectionState();
-        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => (a.nombre_mostrado || a.nombre_completo) + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
+        fillSelect($('repAlumno'), state.catalogos.alumnos, (a) => a.alumno_id, (a) => getAlumnoSelectLabel(a), 'Selecciona alumno');
         if ($('repAlumno') && reportUi.alumno_id) $('repAlumno').value = reportUi.alumno_id;
       }
     }
@@ -11112,10 +11169,11 @@
         const alumno = state.catalogos.alumnos.find((row) => row.alumno_id === pa.alumno_id);
         return {
           alumno_id: pa.alumno_id,
-          nombre: alumno ? (alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) : (pa.nombre_snapshot || pa.alumno_id)
+          nombre: alumno ? getAlumnoNameLabel(alumno) : (pa.nombre_snapshot || formatAlumnoCompactId(pa.alumno_id)),
+          label: alumno ? getAlumnoSelectLabel(alumno) : joinUniqueAlumnoLabelParts([pa.nombre_snapshot, formatAlumnoCompactId(pa.alumno_id)])
         };
       });
-      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.nombre + ' \u00b7 ' + a.alumno_id, 'Selecciona alumno');
+      fillSelect(host, alumnos, (a) => a.alumno_id, (a) => a.label, 'Selecciona alumno');
     }
 
     function renderEvaluationDependencies() {
@@ -11133,9 +11191,7 @@
       if (!search || !dataList || !hidden || !chip) return;
       const rows = [...state.catalogos.alumnos]
         .map((alumno) => {
-          const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
-            .filter(Boolean)
-            .join(' \u00b7 ');
+          const label = getAlumnoSelectLabel(alumno);
           return { id: alumno.alumno_id, label };
         })
         .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
@@ -11156,11 +11212,9 @@
         return;
       }
       const match = state.catalogos.alumnos.find((alumno) => {
-        const label = [alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id, alumno.matricula || '', alumno.alumno_id]
-          .filter(Boolean)
-          .join(' \u00b7 ')
-          .toLowerCase();
-        return label === query;
+        return getAlumnoSearchLabels(alumno)
+          .map((label) => label.toLowerCase())
+          .includes(query);
       });
       hidden.value = match ? match.alumno_id : '';
       renderAlumnoFilterUi();
@@ -11431,7 +11485,7 @@
                 (alumnosGrupo.map((alumno) => (
                   '<label class="check-item">' +
                     '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selectedIds.has(alumno.alumno_id) ? ' checked' : '') + (isActiveGroup ? '' : ' disabled') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
-                    '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong></span>' +
+                    '<span><strong>' + escapeHtml(getAlumnoNameLabel(alumno)) + '</strong></span>' +
                   '</label>'
                 )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
               '</div>' +
@@ -11659,7 +11713,7 @@
               (alumnosGrupo.map((alumno) => (
                 '<label class="check-item">' +
                   '<input type="checkbox" value="' + escapeHtml(alumno.alumno_id) + '"' + (selected.has(alumno.alumno_id) ? ' checked' : '') + ' onchange="toggleOpenPlanDraftAlumno(\'' + escapeJsAttrValue(alumno.alumno_id) + '\', this.checked)">' +
-                  '<span><strong>' + escapeHtml(alumno.nombre_mostrado || alumno.nombre_completo || alumno.alumno_id) + '</strong></span>' +
+                  '<span><strong>' + escapeHtml(getAlumnoNameLabel(alumno)) + '</strong></span>' +
                 '</label>'
               )).join('') || '<div class="empty">No hay alumnos activos en este grupo.</div>') +
             '</div>' +
@@ -11862,7 +11916,7 @@
                         ? String(state.openPlanDraft.finalObservationsByKey[normalizedAlumnoId] || planDraftFinalMap[normalizedAlumnoId] || '')
                         : String(planDraftFinalMap[alumnoKey] || planDraftFinalMap[normalizedAlumnoId] || '')
                     );
-              const alumnoNombre = alumnoRow.nombre_snapshot || alumnoRow.alumno_id;
+              const alumnoNombre = alumnoRow.nombre_snapshot || formatAlumnoCompactId(alumnoRow.alumno_id);
               return (
                 '<div class="obs-alumno-card">' +
                   '<div><strong>' + escapeHtml(alumnoNombre) + '</strong>' + (entry.isMulti ? '<div class="mini">' + escapeHtml(alumnoRow.grupo_label || '') + '</div>' : '') + '</div>' +
@@ -12580,7 +12634,7 @@
       const selectedPeriodo = getSelectedReportePeriodoRow();
 
       if (adminAlumno) {
-        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => (row.nombre_mostrado || row.nombre_completo || row.alumno_id) + ' \u00b7 ' + row.alumno_id, 'Selecciona alumno');
+        fillSelect(adminAlumno, alumnos, (row) => row.alumno_id, (row) => getAlumnoSelectLabel(row), 'Selecciona alumno');
         if (ui.alumno_id) adminAlumno.value = ui.alumno_id;
       }
       if (adminPeriodo) {
@@ -12596,17 +12650,17 @@
 
       if ($('adminReportSelectionSummary')) {
         $('adminReportSelectionSummary').innerHTML = [
-          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Sin selecci\u00f3n') + '</strong></div>',
-          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matr\u00edcula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' - ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-')) : 'Pendiente') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Alumno seleccionado</span><strong>' + escapeHtml(selectedAlumno ? getAlumnoNameLabel(selectedAlumno) : 'Sin selecci\u00f3n') + '</strong></div>',
+          '<div class="admin-reporte-ciclo-summary-card"><span>Grupo / matr\u00edcula</span><strong>' + escapeHtml(selectedAlumno ? ((selectedAlumno.grupo_id || '-') + ' - ' + getAlumnoSecondaryLabel(selectedAlumno)) : 'Pendiente') + '</strong></div>',
           '<div class="admin-reporte-ciclo-summary-card"><span>Per\u00edodo</span><strong>' + escapeHtml(selectedPeriodo ? (selectedPeriodo.nombre_visible || selectedPeriodo.periodo_id || '') : 'Sin selecci\u00f3n') + '</strong></div>'
         ].join('');
       }
       if ($('adminReportPreviewAlumno')) {
-        $('adminReportPreviewAlumno').textContent = selectedAlumno ? (selectedAlumno.nombre_mostrado || selectedAlumno.nombre_completo || selectedAlumno.alumno_id) : 'Selecciona un alumno';
+        $('adminReportPreviewAlumno').textContent = selectedAlumno ? getAlumnoNameLabel(selectedAlumno) : 'Selecciona un alumno';
       }
       if ($('adminReportPreviewMeta')) {
         $('adminReportPreviewMeta').textContent = selectedAlumno
-          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' - Matr\u00edcula ' + (selectedAlumno.matricula || selectedAlumno.alumno_id || '-') + ' - Documento acad\u00e9mico familiar')
+          ? ('Grupo ' + (selectedAlumno.grupo_id || '-') + ' - Matr\u00edcula ' + getAlumnoSecondaryLabel(selectedAlumno) + ' - Documento acad\u00e9mico familiar')
           : 'Grupo, matr\u00edcula y facilitadora se resolver\u00e1n aqu\u00ed.';
       }
       if ($('adminReportPreviewPeriodo')) {
