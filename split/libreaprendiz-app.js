@@ -8570,6 +8570,21 @@
       return !!(target && start && end && start <= target && target <= end);
     }
 
+    function getSemanaRangeLengthDays(semana) {
+      const start = toYmdFrontend_((semana && semana.fecha_inicio) || '');
+      const end = toYmdFrontend_((semana && semana.fecha_fin) || '') || start;
+      if (!start || !end || end < start) return null;
+      const startMs = Date.parse(start + 'T12:00:00');
+      const endMs = Date.parse(end + 'T12:00:00');
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
+      return Math.round((endMs - startMs) / 86400000) + 1;
+    }
+
+    function isOversizedSemanaRange(semana) {
+      const lengthDays = getSemanaRangeLengthDays(semana);
+      return Number.isFinite(lengthDays) && lengthDays > 7;
+    }
+
     function resolveWeekForPlanDate(plan, dateValue) {
       const target = toYmdFrontend_(dateValue);
       const currentWeek = getWeekByIdOrInferred(plan && plan.semana_id);
@@ -8612,18 +8627,24 @@
       };
     }
 
-    function getWeekByDate(dateValue) {
+    function getWeekByDate(dateValue, options) {
       const target = toYmdFrontend_(dateValue);
       if (!target) return null;
+      const ignoreOversized = !!(options && options.ignoreOversized);
       return getSortedSemanas().find((semana) => {
+        if (ignoreOversized && isOversizedSemanaRange(semana)) return false;
         const start = toYmdFrontend_(semana.fecha_inicio);
         const end = toYmdFrontend_(semana.fecha_fin);
         return start && end && start <= target && target <= end;
       }) || null;
     }
 
-    function getWeekByDateOrDraft(dateValue) {
-      return getWeekByDate(dateValue) || buildWeekRangeFromDate(dateValue);
+    function getWeekByDateOrDraft(dateValue, options) {
+      return getWeekByDate(dateValue, options) || buildWeekRangeFromDate(dateValue);
+    }
+
+    function getPlanEditorWeekByDateOrDraft(dateValue) {
+      return getWeekByDateOrDraft(dateValue, { ignoreOversized: true });
     }
 
     function formatFechaCorta(value) {
@@ -10626,7 +10647,7 @@
         resolvedDate,
         week: lockedPlanWeek && semanaContainsDate(lockedPlanWeek, resolvedDate)
           ? lockedPlanWeek
-          : getWeekByDateOrDraft(resolvedDate)
+          : getPlanEditorWeekByDateOrDraft(resolvedDate)
       };
     }
 
@@ -13041,7 +13062,10 @@
         ? getWeekStartDateById(state.planEditor.lockedSemanaId)
         : '';
       const fechaPlaneacion = $('planFecha').value || fallbackDate;
-      const semana = getWeekByDateOrDraft(fechaPlaneacion);
+      const previousPlan = editorMode === 'edit' ? getPlanById(state.planEditor.planId) : null;
+      const semana = editorMode === 'edit'
+        ? resolveWeekForPlanDate(previousPlan, fechaPlaneacion)
+        : getPlanEditorWeekByDateOrDraft(fechaPlaneacion);
       if (!semana) throw createPlanEditorValidationError('Selecciona una fecha valida para construir la semana.', 'planFecha');
       const materiaId = String($('planMateria').value || '').trim();
       const fraseSemana = $('planFrase').value.trim();
@@ -13083,7 +13107,6 @@
         });
       }
 
-      const previousPlan = editorMode === 'edit' ? getPlanById(state.planEditor.planId) : null;
       const selectedTallerIdForSave = getPlanEditorUsesTallerSelector(materiaId)
         ? getSelectedPlanTallerId()
         : String((previousPlan && previousPlan.taller_id) || '').trim();
