@@ -8690,6 +8690,25 @@
       })[String(status || '').trim()] || String(status || 'Sin estado');
     }
 
+    function getAdminPlanStatusSortWeight(status) {
+      const value = String(status || '').trim();
+      if (value === 'activa') return 0;
+      if (['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'cierre_pendiente'].includes(value)) return 1;
+      if (value === 'cerrada') return 2;
+      if (value === 'archivada') return 3;
+      return 1;
+    }
+
+    function sortAdminPlaneacionesByStatus(rows) {
+      return (Array.isArray(rows) ? rows : [])
+        .map((plan, index) => ({ plan, index }))
+        .sort((a, b) => {
+          const weightDiff = getAdminPlanStatusSortWeight(a.plan && a.plan.estado) - getAdminPlanStatusSortWeight(b.plan && b.plan.estado);
+          return weightDiff || a.index - b.index;
+        })
+        .map((entry) => entry.plan);
+    }
+
     function getPlanStatusFilterOptions() {
       const statusOrder = ['borrador', 'borrador_pendiente_aprobacion', 'rechazada', 'activa', 'cierre_pendiente', 'cerrada', 'archivada'];
       if (getCurrentRole() !== 'facilitador') {
@@ -11266,6 +11285,9 @@
       }
       if (materiaFilter) {
         rows = rows.filter((plan) => String(plan.materia_id || '').trim() === materiaFilter);
+      }
+      if (role !== 'facilitador') {
+        rows = sortAdminPlaneacionesByStatus(rows);
       }
       return rows;
     }
