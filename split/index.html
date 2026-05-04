@@ -2184,6 +2184,32 @@
       text-align: center;
       line-height: 1.15;
     }
+    .admin-alumnos-medical-panel {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .admin-alumnos-medical-panel[hidden] {
+      display: none !important;
+    }
+    .admin-alumnos-section-head.compact {
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .admin-alumnos-section-head.compact h4 {
+      font-size: 1rem;
+    }
+    .admin-alumnos-section-head.compact .admin-alumnos-panel-actions {
+      margin-top: 0;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+    }
+    .admin-alumnos-section-head.compact .admin-alumnos-panel-actions > button {
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+    }
     .admin-alumnos-readonly {
       min-height: 46px;
       border-radius: 16px;
@@ -3815,6 +3841,15 @@
       .admin-alumnos-editor-grid,
       .admin-alumnos-mini-grid {
         grid-template-columns: 1fr;
+      }
+      .admin-alumnos-section-head.compact {
+        align-items: stretch;
+      }
+      .admin-alumnos-section-head.compact .admin-alumnos-panel-actions {
+        justify-content: stretch;
+      }
+      .admin-alumnos-section-head.compact .admin-alumnos-panel-actions > button {
+        flex: 1 1 0;
       }
       .admin-taller-membership-head,
       .admin-taller-membership-tools,
@@ -6349,7 +6384,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260503-suplencia-unified-badge-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260504-alumno-ficha-medica-v1"></script>
 </body>
 </html>
 
