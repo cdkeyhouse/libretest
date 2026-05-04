@@ -5509,15 +5509,19 @@
     function toggleAlumnoFichaMedica(open) {
       const alumnoId = String(state.alumnosUi.selectedAlumnoId || '').trim();
       const next = open === undefined ? !state.alumnosUi.fichaMedicaOpen : !!open;
+      const scrollFichaPanelIntoView = () => {
+        const panel = $('adminAlumnoFichaMedicaPanel');
+        if (panel && !panel.hidden && panel.scrollIntoView) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }
+      };
       state.alumnosUi.fichaMedicaOpen = next;
       renderAdminAlumnosModule();
       if (next) {
         window.requestAnimationFrame(() => {
-          const panel = $('adminAlumnoFichaMedicaPanel');
-          if (panel && !panel.hidden && panel.scrollIntoView) {
-            panel.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-          }
+          window.requestAnimationFrame(scrollFichaPanelIntoView);
         });
+        window.setTimeout(scrollFichaPanelIntoView, 180);
       }
       if (next && alumnoId) loadAlumnoFichaMedica(alumnoId).catch(() => {});
     }
