@@ -5511,6 +5511,14 @@
       const next = open === undefined ? !state.alumnosUi.fichaMedicaOpen : !!open;
       state.alumnosUi.fichaMedicaOpen = next;
       renderAdminAlumnosModule();
+      if (next) {
+        window.requestAnimationFrame(() => {
+          const panel = $('adminAlumnoFichaMedicaPanel');
+          if (panel && !panel.hidden && panel.scrollIntoView) {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+          }
+        });
+      }
       if (next && alumnoId) loadAlumnoFichaMedica(alumnoId).catch(() => {});
     }
 
