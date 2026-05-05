@@ -9719,6 +9719,7 @@
     }
 
     function fillSelect(select, items, getValue, getLabel, placeholder = 'Selecciona') {
+      if (!select) return;
       const current = select.value;
       const options = ['<option value="">' + escapeHtml(placeholder) + '</option>'];
       items.forEach((item) => {
