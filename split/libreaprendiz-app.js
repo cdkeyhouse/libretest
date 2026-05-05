@@ -5195,6 +5195,10 @@
       closeCambioGrupo();
       closeAlumnoHistorial();
       renderAdminAlumnosModule();
+      focusAdminFacilitadorPanel(
+        'adminAlumnoEditor',
+        mode === 'edit' ? 'adminAlumnoNombres' : 'adminAlumnoMatricula'
+      );
     }
 
     async function saveAlumnoEditor(button) {
@@ -5294,6 +5298,7 @@
       closeAlumnoEditor();
       closeAlumnoHistorial();
       renderAdminAlumnosModule();
+      focusAdminFacilitadorPanel('adminAlumnoCambioGrupo', 'adminAlumnoCambioGrupoNuevo');
     }
 
     async function updateAlumnoStatus(alumnoId, nextStatus, button, options) {
@@ -5673,6 +5678,7 @@
       closeAlumnoEditor();
       closeCambioGrupo();
       renderAdminAlumnosModule();
+      focusAdminFacilitadorPanel('adminAlumnoHistorial');
       loadAlumnoHistorialRemoto(alumno.alumno_id);
     }
 
@@ -7805,8 +7811,14 @@
       window.requestAnimationFrame(() => {
         const panel = $(panelId);
         if (!panel || panel.hidden || typeof panel.scrollIntoView !== 'function') return;
+        const side = panel.closest ? panel.closest('.admin-alumnos-side') : null;
+        if (side) side.scrollTop = 0;
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         window.setTimeout(() => {
+          const rect = panel.getBoundingClientRect();
+          if (rect.top < 0 || rect.top > 72) {
+            panel.scrollIntoView({ behavior: 'auto', block: 'start' });
+          }
           const firstField = fieldId ? $(fieldId) : null;
           if (firstField && typeof firstField.focus === 'function') {
             firstField.focus({ preventScroll: true });

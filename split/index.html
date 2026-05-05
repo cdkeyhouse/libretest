@@ -1958,6 +1958,13 @@
       gap: 14px;
       position: sticky;
       top: 16px;
+      align-self: start;
+      max-height: calc(100dvh - 32px);
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-right: 4px;
+      scrollbar-gutter: stable;
     }
     .admin-alumnos-panel {
       padding: 14px;
@@ -3938,6 +3945,10 @@
       }
       .admin-alumnos-side {
         position: static;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+        scrollbar-gutter: auto;
       }
       .admin-alumnos-list-header {
         display: none;
@@ -6465,7 +6476,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260505-admin-alumno-inline-feedback-v3"></script>
+<script defer src="./libreaprendiz-app.js?v=20260505-admin-side-panel-scroll-v1"></script>
 </body>
 </html>
 
