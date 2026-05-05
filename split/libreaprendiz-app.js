@@ -5204,6 +5204,7 @@
             bumpAlumnosSourceRevision();
             closeAlumnoEditor();
             renderAdminModuleSurface('alumnos');
+            setBanner('Ficha guardada. Confirmando...', 'info', { anchor: null });
           }
         }
         let response = null;
