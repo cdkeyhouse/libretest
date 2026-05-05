@@ -102,6 +102,7 @@
         fichaMedicaLoadedByAlumno: {},
         fichaMedicaLoadingByAlumno: {},
         fichaMedicaFailedByAlumno: {},
+        inlineFeedbackByAlumno: {},
         deleteControl: createEmptyAlumnoDeleteState(),
         mockRows: []
       };
@@ -4770,6 +4771,41 @@
       return applySavedAlumnoCatalogRow(Object.assign({}, current, patch));
     }
 
+    function getAlumnoInlineFeedback(alumnoId) {
+      const id = String(alumnoId || '').trim();
+      if (!id || !state.alumnosUi || !state.alumnosUi.inlineFeedbackByAlumno) return null;
+      return state.alumnosUi.inlineFeedbackByAlumno[id] || null;
+    }
+
+    function setAlumnoInlineFeedback(alumnoId, text, kind = 'info', options = {}) {
+      const id = String(alumnoId || '').trim();
+      if (!id || !state.alumnosUi) return;
+      if (!state.alumnosUi.inlineFeedbackByAlumno) state.alumnosUi.inlineFeedbackByAlumno = {};
+      const token = String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+      state.alumnosUi.inlineFeedbackByAlumno[id] = {
+        text: String(text || '').trim(),
+        kind: String(kind || 'info').trim() || 'info',
+        token
+      };
+      if (options.render !== false) renderAdminModuleSurface('alumnos');
+      const autoClearMs = Number(options.autoClearMs || 0);
+      if (autoClearMs > 0) {
+        window.setTimeout(() => {
+          if (!state.alumnosUi || !state.alumnosUi.inlineFeedbackByAlumno) return;
+          const current = state.alumnosUi.inlineFeedbackByAlumno[id];
+          if (!current || current.token !== token) return;
+          delete state.alumnosUi.inlineFeedbackByAlumno[id];
+          if (state.activeAdminModule === 'alumnos') renderAdminModuleSurface('alumnos');
+        }, autoClearMs);
+      }
+    }
+
+    function clearAlumnoInlineFeedback(alumnoId) {
+      const id = String(alumnoId || '').trim();
+      if (!id || !state.alumnosUi || !state.alumnosUi.inlineFeedbackByAlumno) return;
+      delete state.alumnosUi.inlineFeedbackByAlumno[id];
+    }
+
     function buildOptimisticAlumnoCatalogRow(existingAlumno, payload) {
       if (!existingAlumno || !payload) return null;
       const alumnoId = String(existingAlumno.alumno_id || payload.alumno_id || '').trim();
@@ -5202,9 +5238,9 @@
             state.alumnosUi.notesByAlumno[existingId] = String(payload.notas_internas || '').trim();
             applySavedAlumnoCatalogRow(optimisticAlumno);
             bumpAlumnosSourceRevision();
+            setAlumnoInlineFeedback(existingId, 'Guardando cambios...', 'info', { render: false });
             closeAlumnoEditor();
             renderAdminModuleSurface('alumnos');
-            setBanner('Ficha guardada. Confirmando...', 'info', { anchor: null });
           }
         }
         let response = null;
@@ -5212,6 +5248,7 @@
           response = await api('guardarAlumno', payload);
         } catch (error) {
           if (rollbackState) {
+            clearAlumnoInlineFeedback(existingId);
             restoreAlumnoEditorRollbackState(rollbackState);
             renderAdminModuleSurface('alumnos');
           }
@@ -5233,8 +5270,11 @@
           invalidateAlumnoHistorialCache(savedId);
         }
         if (!canUseOptimisticAlumnoSave) closeAlumnoEditor();
+        if (canUseOptimisticAlumnoSave && savedId) {
+          setAlumnoInlineFeedback(savedId, 'Ficha actualizada.', 'success', { render: false, autoClearMs: 2600 });
+        }
         renderAdminModuleSurface('alumnos');
-        setBanner(editing ? 'Ficha actualizada.' : 'Alumno creado.', 'success');
+        if (!canUseOptimisticAlumnoSave) setBanner(editing ? 'Ficha actualizada.' : 'Alumno creado.', 'success');
       }, {
         button,
         key: buildActionKey('guardarAlumno', [existingId || editor.matricula, editor.grupo_id]),
@@ -5951,12 +5991,16 @@
         '</div>' +
         rows.map((row) => {
           const visualStatus = getAlumnoStatusVisual(row);
+          const inlineFeedback = getAlumnoInlineFeedback(row.alumno_id);
+          const inlineFeedbackHtml = inlineFeedback && inlineFeedback.text
+            ? '<div class="admin-alumnos-inline-feedback is-' + escapeHtml(inlineFeedback.kind || 'info') + '">' + escapeHtml(inlineFeedback.text) + '</div>'
+            : '';
           const actions = [
             '<button class="btn-ghost" type="button" onclick="openAlumnoEditor(\'edit\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">Editar</button>'
           ];
           return '<article class="admin-alumnos-row">' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getAlumnoSecondaryLabel(row)) + '</div></div>' +
-            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(getAlumnoNameLabel(row)) + '</button><div class="mini" title="' + escapeHtml(row.alumno_id || '') + '">ID: ' + escapeHtml(getAlumnoCompactId(row) || '-') + '</div></div>' +
+            '<div class="admin-alumnos-title"><button class="admin-alumnos-title-btn" type="button" onclick="openAlumnoHistorial(\'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(getAlumnoNameLabel(row)) + '</button><div class="mini" title="' + escapeHtml(row.alumno_id || '') + '">ID: ' + escapeHtml(getAlumnoCompactId(row) || '-') + '</div>' + inlineFeedbackHtml + '</div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(getAlumnoGrupoDisplayLabel(row)) + '</div></div>' +
             '<div class="admin-alumnos-cell"><span class="admin-alumnos-badge ' + getAlumnoStatusBadgeClass(visualStatus) + '">' + escapeHtml(getAlumnoStatusLabel(visualStatus)) + '</span></div>' +
             '<div class="admin-alumnos-cell"><div class="mini">' + escapeHtml(row.fecha_alta ? formatFechaHumana(row.fecha_alta) : 'Sin fecha') + '</div></div>' +
