@@ -98,6 +98,7 @@
         historyByAlumno: {},
         notesByAlumno: {},
         fichaMedicaByAlumno: {},
+        fichaMedicaSavedByAlumno: {},
         fichaMedicaLoadedByAlumno: {},
         fichaMedicaLoadingByAlumno: {},
         fichaMedicaFailedByAlumno: {},
@@ -4769,6 +4770,51 @@
       return applySavedAlumnoCatalogRow(Object.assign({}, current, patch));
     }
 
+    function buildOptimisticAlumnoCatalogRow(existingAlumno, payload) {
+      if (!existingAlumno || !payload) return null;
+      const alumnoId = String(existingAlumno.alumno_id || payload.alumno_id || '').trim();
+      if (!alumnoId) return null;
+      return Object.assign({}, existingAlumno, {
+        alumno_id: alumnoId,
+        matricula: String(payload.matricula || existingAlumno.matricula || '').trim(),
+        nombre_completo: String(payload.nombre_completo || existingAlumno.nombre_completo || '').trim(),
+        nombre_mostrado: String(payload.nombre_mostrado || payload.nombre_completo || existingAlumno.nombre_mostrado || '').trim(),
+        grupo_id: String(payload.grupo_id || existingAlumno.grupo_id || '').trim(),
+        nivel_id: String(payload.nivel_id || '').trim(),
+        estatus: String(payload.estatus || existingAlumno.estatus || 'activo').trim(),
+        notas_internas: String(payload.notas_internas || '').trim(),
+        fecha_actualizacion: new Date().toISOString()
+      });
+    }
+
+    function captureAlumnoEditorRollbackState(alumnoId) {
+      const id = String(alumnoId || '').trim();
+      return {
+        alumnoId: id,
+        selectedAlumnoId: String(state.alumnosUi && state.alumnosUi.selectedAlumnoId || '').trim(),
+        editorMode: String(state.alumnosUi && state.alumnosUi.editorMode || 'new').trim() || 'new',
+        editor: Object.assign({}, state.alumnosUi && state.alumnosUi.editor || createEmptyAlumnoEditorState()),
+        fichaMedicaOpen: !!(state.alumnosUi && state.alumnosUi.fichaMedicaOpen),
+        alumnos: snapshotCatalogCollections(['alumnos']),
+        note: id ? state.alumnosUi.notesByAlumno[id] : undefined
+      };
+    }
+
+    function restoreAlumnoEditorRollbackState(snapshot) {
+      if (!snapshot || !state.alumnosUi) return;
+      restoreCatalogCollections(snapshot.alumnos);
+      if (snapshot.alumnoId) {
+        if (snapshot.note === undefined) delete state.alumnosUi.notesByAlumno[snapshot.alumnoId];
+        else state.alumnosUi.notesByAlumno[snapshot.alumnoId] = snapshot.note;
+      }
+      state.alumnosUi.editorOpen = true;
+      state.alumnosUi.editorMode = snapshot.editorMode || 'edit';
+      state.alumnosUi.selectedAlumnoId = snapshot.selectedAlumnoId || snapshot.alumnoId || '';
+      state.alumnosUi.editor = Object.assign(createEmptyAlumnoEditorState(), snapshot.editor || {});
+      state.alumnosUi.fichaMedicaOpen = !!snapshot.fichaMedicaOpen;
+      bumpAlumnosSourceRevision();
+    }
+
     function pushAlumnoHistory(alumnoId, tipo, titulo, detalle, fecha) {
       const id = String(alumnoId || '').trim();
       if (!id) return;
@@ -5042,6 +5088,7 @@
       try {
         const response = await api('getAlumnoFichaMedica', { alumno_id: id });
         state.alumnosUi.fichaMedicaByAlumno[id] = normalizeAlumnoFichaMedica(response && response.ficha, id);
+        state.alumnosUi.fichaMedicaSavedByAlumno[id] = normalizeAlumnoFichaMedica(response && response.ficha, id);
         state.alumnosUi.fichaMedicaLoadedByAlumno[id] = true;
         return state.alumnosUi.fichaMedicaByAlumno[id];
       } catch (error) {
@@ -5143,7 +5190,32 @@
           notas_internas: String(editor.notas_internas || '').trim()
         };
         if (statusNote) payload.motivo = statusNote;
-        const response = await api('guardarAlumno', payload);
+        const canUseOptimisticAlumnoSave = editing &&
+          existingAlumno &&
+          previousStatus === nextStatus &&
+          String(existingAlumno.grupo_id || '').trim() === String(payload.grupo_id || '').trim();
+        let rollbackState = null;
+        if (canUseOptimisticAlumnoSave) {
+          rollbackState = captureAlumnoEditorRollbackState(existingId);
+          const optimisticAlumno = buildOptimisticAlumnoCatalogRow(existingAlumno, payload);
+          if (optimisticAlumno) {
+            state.alumnosUi.notesByAlumno[existingId] = String(payload.notas_internas || '').trim();
+            applySavedAlumnoCatalogRow(optimisticAlumno);
+            bumpAlumnosSourceRevision();
+            closeAlumnoEditor();
+            renderAdminModuleSurface('alumnos');
+          }
+        }
+        let response = null;
+        try {
+          response = await api('guardarAlumno', payload);
+        } catch (error) {
+          if (rollbackState) {
+            restoreAlumnoEditorRollbackState(rollbackState);
+            renderAdminModuleSurface('alumnos');
+          }
+          throw error;
+        }
         const savedId = (response && response.alumno_id) || existingId || '';
         const savedAlumno = response && response.alumno ? response.alumno : null;
         if (savedId) {
@@ -5159,7 +5231,7 @@
           );
           invalidateAlumnoHistorialCache(savedId);
         }
-        closeAlumnoEditor();
+        if (!canUseOptimisticAlumnoSave) closeAlumnoEditor();
         renderAdminModuleSurface('alumnos');
         setBanner(editing ? 'Ficha actualizada.' : 'Alumno creado.', 'success');
       }, {
@@ -5426,6 +5498,7 @@
       if (ids.has(String(state.alumnosUi.cambioGrupo && state.alumnosUi.cambioGrupo.alumno_id || '').trim())) closeCambioGrupo();
       ids.forEach((id) => {
         delete state.alumnosUi.fichaMedicaByAlumno[id];
+        delete state.alumnosUi.fichaMedicaSavedByAlumno[id];
         delete state.alumnosUi.fichaMedicaLoadedByAlumno[id];
         delete state.alumnosUi.fichaMedicaLoadingByAlumno[id];
         delete state.alumnosUi.fichaMedicaFailedByAlumno[id];
@@ -5662,8 +5735,30 @@
         ALUMNO_FICHA_MEDICA_FIELDS.forEach((field) => {
           payload[field] = String(ficha[field] || '').trim();
         });
-        const response = await api('guardarAlumnoFichaMedica', payload);
+        const previousFicha = normalizeAlumnoFichaMedica(
+          state.alumnosUi.fichaMedicaSavedByAlumno[alumnoId] ||
+            state.alumnosUi.fichaMedicaByAlumno[alumnoId] ||
+            {},
+          alumnoId
+        );
+        state.alumnosUi.fichaMedicaByAlumno[alumnoId] = normalizeAlumnoFichaMedica(Object.assign({}, payload, {
+          fecha_actualizacion: new Date().toISOString()
+        }), alumnoId);
+        state.alumnosUi.fichaMedicaLoadedByAlumno[alumnoId] = true;
+        state.alumnosUi.fichaMedicaFailedByAlumno[alumnoId] = false;
+        renderAdminAlumnosModule();
+        let response = null;
+        try {
+          response = await api('guardarAlumnoFichaMedica', payload);
+        } catch (error) {
+          state.alumnosUi.fichaMedicaByAlumno[alumnoId] = previousFicha;
+          state.alumnosUi.fichaMedicaLoadedByAlumno[alumnoId] = true;
+          state.alumnosUi.fichaMedicaFailedByAlumno[alumnoId] = true;
+          renderAdminAlumnosModule();
+          throw error;
+        }
         state.alumnosUi.fichaMedicaByAlumno[alumnoId] = normalizeAlumnoFichaMedica(response && response.ficha, alumnoId);
+        state.alumnosUi.fichaMedicaSavedByAlumno[alumnoId] = normalizeAlumnoFichaMedica(response && response.ficha, alumnoId);
         state.alumnosUi.fichaMedicaLoadedByAlumno[alumnoId] = true;
         state.alumnosUi.fichaMedicaFailedByAlumno[alumnoId] = false;
         renderAdminAlumnosModule();
