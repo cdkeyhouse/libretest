@@ -15698,17 +15698,35 @@
         return;
       }
       await handleAction('cerrarEval360Ciclo', async () => {
-        const result = await api('cerrarEval360Ciclo', { ciclo_id: cleanId });
         const ciclo = (ui.ciclos || []).find((row) => String(row.ciclo_id || '').trim() === cleanId);
+        const previousStatus = ciclo ? String(ciclo.estatus || '').trim() : '';
+        const previousClosedAt = ciclo ? String(ciclo.closed_at || '').trim() : '';
+        const previousUpdatedAt = ciclo ? String(ciclo.updated_at || '').trim() : '';
         if (ciclo) {
-          ciclo.estatus = String(result.estatus || 'cerrado').trim() || 'cerrado';
-          ciclo.closed_at = result.closed_at || ciclo.closed_at || '';
-          ciclo.updated_at = result.closed_at || ciclo.updated_at || '';
+          ciclo.estatus = 'cerrado';
+          ciclo.closed_at = new Date().toISOString();
+          ciclo.updated_at = ciclo.closed_at;
         }
         uiEval360ClearCreatedLinks_();
         renderAdminEval360Module();
-        await loadEval360AdminModule({ preserveCreated: true, loadResultados: false });
-        setBanner('Ciclo Eval360 cerrado.', 'success');
+        try {
+          const result = await api('cerrarEval360Ciclo', { ciclo_id: cleanId });
+          if (ciclo) {
+            ciclo.estatus = String(result.estatus || 'cerrado').trim() || 'cerrado';
+            ciclo.closed_at = result.closed_at || ciclo.closed_at || '';
+            ciclo.updated_at = result.closed_at || ciclo.updated_at || '';
+          }
+          await loadEval360AdminModule({ preserveCreated: true, loadResultados: false });
+          setBanner('Ciclo Eval360 cerrado.', 'success');
+        } catch (err) {
+          if (ciclo) {
+            ciclo.estatus = previousStatus;
+            ciclo.closed_at = previousClosedAt;
+            ciclo.updated_at = previousUpdatedAt;
+            renderAdminEval360Module();
+          }
+          throw err;
+        }
       }, { button, key: 'eval360-close-cycle-' + cleanId, busyText: 'Cerrando' });
     }
 
