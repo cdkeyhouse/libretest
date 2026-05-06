@@ -16717,6 +16717,7 @@
       const pulso = ui.pulso || {};
       const areas = Array.isArray(pulso.promedios_por_area) ? pulso.promedios_por_area : [];
       const habilidades = Array.isArray(pulso.promedios_por_habilidad) ? pulso.promedios_por_habilidad : [];
+      const alumnos = Array.isArray(pulso.alumnos_prioritarios) ? pulso.alumnos_prioritarios : [];
       const firstNeed = habilidades[0] || areas[0] || {};
       panel.innerHTML = [
         '<div class="eval360-head">',
@@ -16742,6 +16743,7 @@
             }
           }) + '</section>',
         '</div>',
+        '<section class="eval360-panel" id="eval360FacAlumnosPrioritariosPanel"><div class="admin-alumnos-section-head"><h4>Alumnos que requieren apoyo</h4></div>' + renderEval360AlumnosPrioritarios(alumnos) + '</section>',
         '<div class="actions compact">',
           firstNeed.item_id || firstNeed.area_id
             ? '<button class="btn-secondary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas (prioridad 1)</button>'
@@ -16749,6 +16751,45 @@
         '</div>',
         renderEval360Sugerencias(ui.sugerencias, ui.selectedNeed),
       ].join('');
+    }
+
+    function renderEval360AlumnosPrioritarios(rows) {
+      const list = Array.isArray(rows) ? rows : [];
+      if (!list.length) {
+        return '<div class="eval360-empty">Todavia no hay alumnos prioritarios para esta seleccion.</div>';
+      }
+      return list.map(function(row) {
+        const pillClass = row.prioridad === 'alta' ? 'pill pill-red'
+          : row.prioridad === 'media' ? 'pill pill-yellow'
+          : 'pill pill-grey';
+        const pillLabel = row.prioridad === 'alta' ? 'Alta'
+          : row.prioridad === 'media' ? 'Media'
+          : 'Observacion';
+        const promStr = (row.promedio != null && !isNaN(Number(row.promedio)))
+          ? formatEval360Score(Number(row.promedio)) + '/4' : '-';
+        const habilidadHtml = (row.item_id && row.item_label)
+          ? '<span class="mini"> · ' + escapeHtml(row.item_label) + '</span>' : '';
+        const ideasBtn = (row.area_id || row.item_id)
+          ? ('<div class="eval360-row-actions">'
+            + '<button class="btn-ghost eval360-ideas-btn" type="button"'
+            + ' onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(row.area_id || '') + '\', \'' + escapeJsAttrValue(row.item_id || '') + '\', this)"'
+            + ' title="Ver ideas para este alumno">Ideas</button>'
+            + '</div>')
+          : '';
+        return '<div class="eval360-row">'
+          + '<div class="eval360-row-head">'
+            + '<span>' + escapeHtml(row.alumno_id || '') + '</span>'
+            + '<span class="' + pillClass + '">' + escapeHtml(pillLabel) + '</span>'
+          + '</div>'
+          + '<div class="eval360-row-meta">'
+            + '<span class="mini">' + escapeHtml(row.area_nombre || row.area_id || '') + '</span>'
+            + habilidadHtml
+            + '<span class="mini">' + escapeHtml(promStr) + '</span>'
+            + '<span class="mini">' + escapeHtml(row.motivo || '') + '</span>'
+          + '</div>'
+          + ideasBtn
+          + '</div>';
+      }).join('');
     }
 
     function renderEval360Sugerencias(rows, selectedNeed) {
