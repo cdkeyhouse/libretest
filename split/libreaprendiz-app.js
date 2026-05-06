@@ -15692,6 +15692,7 @@
     }
 
     async function closeEval360AdminCycle(cicloId, button) {
+      const ui = getEval360Ui().admin;
       const cleanId = String(cicloId || '').trim();
       if (!cleanId) throw new Error('Selecciona un ciclo para cerrar.');
       if (typeof window !== 'undefined' && window.confirm && !window.confirm('Cerrar este ciclo Eval360? Podras consultar resultados, pero ya no sera un ciclo activo.')) {
