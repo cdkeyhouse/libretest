@@ -16296,50 +16296,159 @@
       ].join('')).join('');
     }
 
+    function formatEval360EstadoDatos(estado) {
+      if (estado === 'completo') return 'Completo';
+      if (estado === 'parcial') return 'Parcial';
+      if (estado === 'insuficiente') return 'Datos insuficientes';
+      return estado ? String(estado) : 'Sin datos';
+    }
+
+    function getEval360EstadoDatosPillClass(estado) {
+      if (estado === 'completo') return 'pill-green';
+      if (estado === 'parcial') return 'pill-yellow';
+      return 'pill-grey';
+    }
+
     function renderEval360FamilyReport(report) {
       if (!report) return '<div class="eval360-empty eval360-family-report-empty">Selecciona un alumno y ciclo, luego presiona "Ver reporte familiar".</div>';
-      const areas = Array.isArray(report.areas) ? report.areas : [];
-      const habilidades = Array.isArray(report.habilidades) ? report.habilidades : [];
-      const sugerencias = Array.isArray(report.sugerencias_familia) ? report.sugerencias_familia : [];
-      const crecimiento = report.crecimiento || {};
-      const etiquetaClass = { crecio: 'pill-green', requiere_apoyo: 'pill-red', estable: 'pill-yellow', datos_insuficientes: 'pill-grey', sin_inicio: 'pill-grey', sin_final: 'pill-grey' };
-      const formatReportScore = (value) => {
+
+      const formatScore = (value) => {
         if (value === null || value === undefined || value === '') return '-';
         const numeric = Number(value);
         return Number.isFinite(numeric) ? numeric.toFixed(1) : '-';
       };
-      const areasHtml = areas.length
-        ? areas.map((a) => '<div class="eval360-row"><div class="eval360-row-head"><strong>' + escapeHtml(a.area_nombre || a.area_id || '-') + '</strong><span class="pill ' + escapeHtml(etiquetaClass[a.etiqueta] || '') + '">' + escapeHtml(a.etiqueta || '-') + '</span></div><div class="eval360-row-meta mini"><span>Inicio: ' + escapeHtml(formatReportScore(a.inicio)) + '</span><span>Final: ' + escapeHtml(formatReportScore(a.final)) + '</span></div></div>').join('')
-        : '<div class="eval360-empty">Sin datos de areas para este alumno.</div>';
-      const habHtml = habilidades.length
-        ? habilidades.map((h) => '<div class="eval360-row"><div class="eval360-row-head"><strong>' + escapeHtml(h.item_label || h.item_id || '-') + '</strong><span class="pill ' + escapeHtml(etiquetaClass[h.etiqueta] || '') + '">' + escapeHtml(h.etiqueta || '-') + '</span></div><div class="eval360-row-meta mini"><span>' + escapeHtml(h.area_nombre || h.area_id || '') + '</span></div></div>').join('')
-        : '<div class="eval360-empty">Sin datos de habilidades.</div>';
-      const sugHtml = sugerencias.length
-        ? '<ul class="eval360-sugerencias-lista">' + sugerencias.map((s) => '<li>' + escapeHtml(s) + '</li>').join('') + '</ul>'
+      const etiquetaClass = { crecio: 'pill-green', requiere_apoyo: 'pill-red', estable: 'pill-yellow', datos_insuficientes: 'pill-grey', sin_inicio: 'pill-grey', sin_final: 'pill-grey' };
+
+      // V2 fields with V1 fallbacks
+      const resumenTexto = report.resumen_humano || report.resumen || '';
+      const notaTexto = report.nota_interpretacion || report.disclaimer || '';
+      const estadoDatos = report.estado_datos || '';
+      const areasToRender = Array.isArray(report.areas_v2) && report.areas_v2.length ? report.areas_v2 : (Array.isArray(report.areas) ? report.areas : []);
+      const habilidadesPrioritarias = Array.isArray(report.habilidades_prioritarias) ? report.habilidades_prioritarias : [];
+      const fortalezas = Array.isArray(report.fortalezas) ? report.fortalezas : [];
+      const sugerenciasCasa = Array.isArray(report.sugerencias_casa) && report.sugerencias_casa.length
+        ? report.sugerencias_casa
+        : (Array.isArray(report.sugerencias_familia) ? report.sugerencias_familia.map((s) => ({ titulo: '', descripcion: s })) : []);
+      const crecimiento = report.crecimiento || {};
+
+      // Header
+      const headerHtml = [
+        '<div class="eval360-family-report-header">',
+          '<div class="eval360-family-report-meta">',
+            '<strong>' + escapeHtml(report.alumno_label || report.alumno_id || '') + '</strong>',
+            '<span class="mini"> &mdash; ' + escapeHtml(report.ciclo_nombre || report.ciclo_id || '') + '</span>',
+            report.ciclo_escolar ? '<span class="mini"> (' + escapeHtml(report.ciclo_escolar) + ')</span>' : '',
+            estadoDatos ? ' <span class="pill ' + escapeHtml(getEval360EstadoDatosPillClass(estadoDatos)) + '">' + escapeHtml(formatEval360EstadoDatos(estadoDatos)) + '</span>' : '',
+            report.generado_en ? '<span class="mini" style="margin-left:8px">' + escapeHtml(report.generado_en) + '</span>' : '',
+          '</div>',
+          '<div class="eval360-family-report-kpis">',
+            '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_que_crecieron != null ? String(crecimiento.areas_que_crecieron) : '-') + '</strong><span class="mini">avanzaron</span></span>',
+            '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_a_trabajar != null ? String(crecimiento.areas_a_trabajar) : '-') + '</strong><span class="mini">en proceso</span></span>',
+            '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.total_areas != null ? String(crecimiento.total_areas) : '-') + '</strong><span class="mini">areas total</span></span>',
+          '</div>',
+        '</div>',
+      ].join('');
+
+      // Resumen humano
+      const resumenHtml = resumenTexto
+        ? '<p class="eval360-family-report-resumen">' + escapeHtml(resumenTexto) + '</p>'
         : '';
+
+      // Areas (V2-enriched or V1 fallback)
+      const areasHtml = areasToRender.length
+        ? areasToRender.map((a) => {
+            const estadoLabel = a.estado || a.etiqueta || '-';
+            const pillClass = a.estado === 'Avanzó' ? 'pill-green'
+              : a.estado === 'Requiere acompanamiento' ? 'pill-red'
+              : a.estado === 'Se mantiene' ? 'pill-yellow'
+              : (etiquetaClass[a.etiqueta] || 'pill-grey');
+            const inicioVal = a.inicio_promedio !== undefined ? a.inicio_promedio : a.inicio;
+            const finalVal = a.final_promedio !== undefined ? a.final_promedio : a.final;
+            return [
+              '<div class="eval360-row">',
+                '<div class="eval360-row-head">',
+                  '<strong>' + escapeHtml(a.area_nombre || a.area_id || '-') + '</strong>',
+                  '<span class="pill ' + escapeHtml(pillClass) + '">' + escapeHtml(estadoLabel) + '</span>',
+                '</div>',
+                '<div class="eval360-row-meta mini">',
+                  '<span>Inicio: ' + escapeHtml(formatScore(inicioVal)) + '</span>',
+                  '<span>Final: ' + escapeHtml(formatScore(finalVal)) + '</span>',
+                  a.texto_familia ? '<span style="color:var(--text-soft)">' + escapeHtml(a.texto_familia) + '</span>' : '',
+                '</div>',
+              '</div>',
+            ].join('');
+          }).join('')
+        : '<div class="eval360-empty">Sin datos de areas para este alumno.</div>';
+
+      // Habilidades prioritarias (V2)
+      const habPrioHtml = habilidadesPrioritarias.length
+        ? [
+            '<section><div class="admin-alumnos-section-head"><h5>Habilidades a acompanar</h5></div>',
+            habilidadesPrioritarias.map((h) => [
+              '<div class="eval360-row">',
+                '<div class="eval360-row-head">',
+                  '<strong>' + escapeHtml(h.habilidad || h.item_id || '-') + '</strong>',
+                  '<span class="pill pill-yellow">' + escapeHtml(h.area_nombre || h.area_id || '') + '</span>',
+                '</div>',
+                '<div class="eval360-row-meta mini">',
+                  h.texto_familia ? '<span>' + escapeHtml(h.texto_familia) + '</span>' : '',
+                  h.sugerencia_casa ? '<span style="color:var(--text-soft)">En casa: ' + escapeHtml(h.sugerencia_casa) + '</span>' : '',
+                '</div>',
+              '</div>',
+            ].join('')).join(''),
+            '</section>',
+          ].join('')
+        : '';
+
+      // Fortalezas (V2)
+      const fortHtml = fortalezas.length
+        ? [
+            '<section><div class="admin-alumnos-section-head"><h5>Fortalezas observadas</h5></div>',
+            fortalezas.map((f) => [
+              '<div class="eval360-row">',
+                '<div class="eval360-row-head">',
+                  '<strong>' + escapeHtml(f.habilidad || f.area_nombre || f.area_id || '-') + '</strong>',
+                  '<span class="pill pill-green">Avanzó</span>',
+                '</div>',
+                f.texto_familia ? '<div class="eval360-row-meta mini"><span>' + escapeHtml(f.texto_familia) + '</span></div>' : '',
+              '</div>',
+            ].join('')).join(''),
+            '</section>',
+          ].join('')
+        : '';
+
+      // Sugerencias para casa
+      const sugHtml = sugerenciasCasa.length
+        ? [
+            '<div class="eval360-sugerencias">',
+              '<h5>Sugerencias para acompanar en casa</h5>',
+              '<ul class="eval360-sugerencias-lista">',
+              sugerenciasCasa.map((s) => {
+                const tit = typeof s === 'string' ? '' : (s.titulo || '');
+                const desc = typeof s === 'string' ? s : (s.descripcion || '');
+                return '<li>' + (tit ? '<strong>' + escapeHtml(tit) + ':</strong> ' : '') + escapeHtml(desc) + '</li>';
+              }).join(''),
+              '</ul>',
+            '</div>',
+          ].join('')
+        : '';
+
+      // Nota de interpretacion
+      const notaHtml = notaTexto
+        ? '<p class="eval360-family-report-disclaimer mini">' + escapeHtml(notaTexto) + '</p>'
+        : '';
+
       return [
         '<div class="eval360-family-report" id="eval360FamilyReportContent">',
-          '<div class="eval360-family-report-header">',
-            '<div class="eval360-family-report-meta">',
-              '<strong>' + escapeHtml(report.alumno_label || report.alumno_id || '') + '</strong>',
-              '<span class="mini"> &mdash; ' + escapeHtml(report.ciclo_nombre || report.ciclo_id || '') + '</span>',
-              report.ciclo_escolar ? '<span class="mini"> (' + escapeHtml(report.ciclo_escolar) + ')</span>' : '',
-            '</div>',
-            '<div class="eval360-family-report-kpis">',
-              '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_que_crecieron != null ? String(crecimiento.areas_que_crecieron) : '-') + '</strong><span class="mini">crecieron</span></span>',
-              '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_a_trabajar != null ? String(crecimiento.areas_a_trabajar) : '-') + '</strong><span class="mini">a trabajar</span></span>',
-              '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.total_areas != null ? String(crecimiento.total_areas) : '-') + '</strong><span class="mini">areas total</span></span>',
-            '</div>',
-          '</div>',
-          '<p class="eval360-family-report-resumen">' + escapeHtml(report.resumen || '') + '</p>',
-          report.datos_insuficientes ? '<p class="eval360-report-warn">Algunos datos aun son insuficientes para un calculo completo.</p>' : '',
+          headerHtml,
+          resumenHtml,
           '<div class="eval360-grid">',
-            '<section><div class="admin-alumnos-section-head"><h5>Areas</h5></div>' + areasHtml + '</section>',
-            '<section><div class="admin-alumnos-section-head"><h5>Habilidades</h5></div>' + habHtml + '</section>',
+            '<section><div class="admin-alumnos-section-head"><h5>Areas de desarrollo</h5></div>' + areasHtml + '</section>',
+            [habPrioHtml, fortHtml].filter(Boolean).join('') || '<section></section>',
           '</div>',
-          sugHtml ? '<div class="eval360-sugerencias"><h5>Sugerencias para la familia</h5>' + sugHtml + '</div>' : '',
-          '<p class="eval360-family-report-disclaimer mini">' + escapeHtml(report.disclaimer || '') + '</p>',
-        '</div>'
+          sugHtml,
+          notaHtml,
+        '</div>',
       ].join('');
     }
 
