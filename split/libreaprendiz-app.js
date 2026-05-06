@@ -272,6 +272,7 @@
           selectedMomento: 'inicio',
           pulso: null,
           sugerencias: [],
+          selectedNeed: null,
           error: ''
         },
         publicForm: {
@@ -15562,6 +15563,12 @@
 
     async function loadEval360FacilitadorSugerencias(areaId, skillId, button) {
       const ui = getEval360Ui().facilitador;
+      const pulso = ui.pulso || {};
+      const habilidades = Array.isArray(pulso.promedios_por_habilidad) ? pulso.promedios_por_habilidad : [];
+      const areas = Array.isArray(pulso.promedios_por_area) ? pulso.promedios_por_area : [];
+      ui.selectedNeed = habilidades.find((h) => h.item_id === skillId && h.area_id === areaId)
+        || areas.find((a) => a.area_id === areaId)
+        || { area_id: areaId, item_id: skillId };
       await handleAction('getEval360Sugerencias', async () => {
         const data = await api('getEval360Sugerencias', {
           area_id: String(areaId || '').trim(),
@@ -15621,19 +15628,82 @@
         '<div class="actions compact">',
           '<button class="btn-primary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas Mindset/STEAM</button>',
         '</div>',
-        renderEval360Sugerencias(ui.sugerencias),
+        renderEval360Sugerencias(ui.sugerencias, ui.selectedNeed),
       ].join('');
     }
 
-    function renderEval360Sugerencias(rows) {
+    function renderEval360Sugerencias(rows, selectedNeed) {
       const list = Array.isArray(rows) ? rows : [];
       if (!list.length) return '';
-      return '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Ideas para planeacion</h4></div>' + list.slice(0, 5).map((row) => [
-        '<div class="eval360-row">',
-          '<div class="eval360-row-head"><strong>' + escapeHtml(row.titulo || row.plantilla_id || '-') + '</strong><span class="pill">' + escapeHtml(row.materia_sugerida || 'Mindset') + '</span></div>',
-          '<p class="subtle">' + escapeHtml(row.objetivo || '') + '</p>',
-        '</div>'
-      ].join('')).join('') + '</section>';
+      const need = selectedNeed || {};
+      const needLabel = String(need.item_label || need.habilidad_nombre || need.item_id || need.area_id || '').trim();
+      const areaLabel = String(need.area_nombre || formatEval360AreaLabel(need.area_id || '') || '').trim();
+      const score = need.promedio_grupo !== undefined ? need.promedio_grupo : need.promedio;
+      const scoreStr = score !== undefined && score !== null ? formatEval360Score(score) + '/4' : '';
+      const alumnosCount = need.alumnos_count ? String(need.alumnos_count) + ' alumnos' : '';
+      const needContextParts = [needLabel, areaLabel, scoreStr, alumnosCount].filter(Boolean);
+      const needContextHtml = needContextParts.length
+        ? '<div class="eval360-need-context">'
+          + (needLabel ? '<span class="eval360-need-label">' + escapeHtml(needLabel) + '</span>' : '')
+          + (needContextParts.slice(needLabel ? 1 : 0).length
+            ? '<span class="eval360-need-meta">' + escapeHtml(needContextParts.slice(needLabel ? 1 : 0).join(' · ')) + '</span>'
+            : '')
+          + '</div>'
+        : '';
+      const cardsHtml = list.slice(0, 5).map((row) => {
+        const actividades = Array.isArray(row.actividades) ? row.actividades : [];
+        const materiales = Array.isArray(row.materiales) ? row.materiales : [];
+        const preguntasCierre = Array.isArray(row.preguntas_cierre) ? row.preguntas_cierre : [];
+        const evidencias = Array.isArray(row.evidencias) ? row.evidencias : [];
+        const duracion = String(row.duracion_min || '').trim() || '20-40 min';
+        return [
+          '<div class="eval360-plantilla">',
+            '<div class="eval360-plantilla-head">',
+              '<strong>' + escapeHtml(row.titulo || row.plantilla_id || '-') + '</strong>',
+              '<span class="pill">' + escapeHtml(row.materia_sugerida || 'Mindset') + '</span>',
+              '<span class="eval360-duracion">' + escapeHtml(duracion) + '</span>',
+            '</div>',
+            actividades.length ? (
+              '<div class="eval360-section">'
+              + '<span class="eval360-section-label">Objetivo</span>'
+              + '<p class="subtle">' + escapeHtml(row.objetivo || '') + '</p>'
+              + '</div>'
+            ) : (row.objetivo ? '<p class="subtle">' + escapeHtml(row.objetivo) + '</p>' : ''),
+            actividades.length ? (
+              '<div class="eval360-section">'
+              + '<span class="eval360-section-label">Actividades</span>'
+              + '<ol class="eval360-list">' + actividades.map((a) => '<li>' + escapeHtml(String(a)) + '</li>').join('') + '</ol>'
+              + '</div>'
+            ) : '',
+            materiales.length ? (
+              '<div class="eval360-section">'
+              + '<span class="eval360-section-label">Materiales</span>'
+              + '<ul class="eval360-list">' + materiales.map((m) => '<li>' + escapeHtml(String(m)) + '</li>').join('') + '</ul>'
+              + '</div>'
+            ) : '',
+            preguntasCierre.length ? (
+              '<div class="eval360-section">'
+              + '<span class="eval360-section-label">Preguntas de cierre</span>'
+              + '<ul class="eval360-list">' + preguntasCierre.map((q) => '<li>' + escapeHtml(String(q)) + '</li>').join('') + '</ul>'
+              + '</div>'
+            ) : '',
+            evidencias.length ? (
+              '<div class="eval360-section">'
+              + '<span class="eval360-section-label">Evidencias</span>'
+              + '<ul class="eval360-list">' + evidencias.map((e) => '<li>' + escapeHtml(String(e)) + '</li>').join('') + '</ul>'
+              + '</div>'
+            ) : '',
+            '<div class="eval360-plantilla-actions">',
+              '<button class="btn-secondary" type="button" disabled title="Proximamente: crear borrador de planeacion">Usar como borrador</button>',
+            '</div>',
+          '</div>'
+        ].join('');
+      }).join('');
+      return '<section class="eval360-panel eval360-sugerencias-panel">'
+        + '<div class="admin-alumnos-section-head"><h4>Ideas para planeacion</h4></div>'
+        + needContextHtml
+        + cardsHtml
+        + '</section>';
     }
 
     async function startEval360PublicRoute() {
