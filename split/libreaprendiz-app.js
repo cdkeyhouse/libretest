@@ -16002,8 +16002,13 @@
       const sugerencias = Array.isArray(report.sugerencias_familia) ? report.sugerencias_familia : [];
       const crecimiento = report.crecimiento || {};
       const etiquetaClass = { crecio: 'pill-green', requiere_apoyo: 'pill-red', estable: 'pill-yellow', datos_insuficientes: 'pill-grey', sin_inicio: 'pill-grey', sin_final: 'pill-grey' };
+      const formatReportScore = (value) => {
+        if (value === null || value === undefined || value === '') return '-';
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric.toFixed(1) : '-';
+      };
       const areasHtml = areas.length
-        ? areas.map((a) => '<div class="eval360-row"><div class="eval360-row-head"><strong>' + escapeHtml(a.area_nombre || a.area_id || '-') + '</strong><span class="pill ' + escapeHtml(etiquetaClass[a.etiqueta] || '') + '">' + escapeHtml(a.etiqueta || '-') + '</span></div><div class="eval360-row-meta mini"><span>Inicio: ' + escapeHtml(a.inicio != null ? String(Number(a.inicio).toFixed(1)) : '-') + '</span><span>Final: ' + escapeHtml(a.final != null ? String(Number(a.final).toFixed(1)) : '-') + '</span></div></div>').join('')
+        ? areas.map((a) => '<div class="eval360-row"><div class="eval360-row-head"><strong>' + escapeHtml(a.area_nombre || a.area_id || '-') + '</strong><span class="pill ' + escapeHtml(etiquetaClass[a.etiqueta] || '') + '">' + escapeHtml(a.etiqueta || '-') + '</span></div><div class="eval360-row-meta mini"><span>Inicio: ' + escapeHtml(formatReportScore(a.inicio)) + '</span><span>Final: ' + escapeHtml(formatReportScore(a.final)) + '</span></div></div>').join('')
         : '<div class="eval360-empty">Sin datos de areas para este alumno.</div>';
       const habHtml = habilidades.length
         ? habilidades.map((h) => '<div class="eval360-row"><div class="eval360-row-head"><strong>' + escapeHtml(h.item_label || h.item_id || '-') + '</strong><span class="pill ' + escapeHtml(etiquetaClass[h.etiqueta] || '') + '">' + escapeHtml(h.etiqueta || '-') + '</span></div><div class="eval360-row-meta mini"><span>' + escapeHtml(h.area_nombre || h.area_id || '') + '</span></div></div>').join('')
