@@ -16301,15 +16301,12 @@
         .find((p) => String(p.plantilla_id || '').trim() === String(plantillaId || '').trim());
       if (!plantilla) return;
 
-      // Asegurar catalogos de planeaciones disponibles
-      await ensurePlaneacionesCatalogosAvailable({ render: true });
-
       // Abrir editor en modo create (limpio)
       togglePlanBuilder(true);
 
-      // Pre-llenar materia si el nombre o id coincide en el catalogo
-      const sugeridaRaw = String(plantilla.materia_sugerida || '').trim().toLowerCase();
-      if (sugeridaRaw) {
+      const applySuggestedMateria = () => {
+        const sugeridaRaw = String(plantilla.materia_sugerida || '').trim().toLowerCase();
+        if (!sugeridaRaw) return false;
         const materia = (state.catalogos.materias || []).find((m) => {
           const nombre = String(m.nombre || '').trim().toLowerCase();
           const id = String(m.materia_id || '').trim().toLowerCase();
@@ -16317,10 +16314,14 @@
         });
         if (materia && $('planMateria')) {
           $('planMateria').value = materia.materia_id;
+          syncPlanSubmateriaSelect('');
+          return true;
         }
-      }
+        return false;
+      };
 
       // Sincronizar submateria y render completo
+      applySuggestedMateria();
       renderPlanEditor();
       syncPlanSubmateriaSelect('');
 
@@ -16344,6 +16345,18 @@
       if (target && typeof target.scrollIntoView === 'function') {
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+
+      // Cargar catalogos sin bloquear la apertura del borrador. Si llegan despues,
+      // solo completa materia/submateria y conserva la actividad ya prellenada.
+      ensurePlaneacionesCatalogosAvailable({ render: false })
+        .then(() => {
+          if (state.planEditor && state.planEditor.mode === 'create' && state.ui && state.ui.planBuilderExpanded) {
+            applySuggestedMateria();
+            renderPlanEditor();
+            renderPlanActivitiesEditor();
+          }
+        })
+        .catch(() => {});
     }
 
     function renderEval360FacilitadorInvitaciones() {
