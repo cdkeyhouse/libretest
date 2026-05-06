@@ -268,7 +268,8 @@
           familyReport: null,
           familyReportLoading: false,
           familyReportError: '',
-          selectedFamilyAlumnoId: ''
+          selectedFamilyAlumnoId: '',
+          showQaClosed: false
         },
         facilitador: {
           open: false,
@@ -290,6 +291,7 @@
           formGeneralComment: '',
           formSavedAt: '',
           formSubmitAttempted: false,
+          showQaClosed: false,
           error: ''
         },
         publicForm: {
@@ -15355,12 +15357,57 @@
       }).join('');
     }
 
-    function getEval360CicloOptions(ciclos, selectedId) {
+    function isEval360QaCycle(ciclo) {
+      const text = [
+        ciclo && ciclo.nombre,
+        ciclo && ciclo.ciclo_id,
+        ciclo && ciclo.ciclo_escolar
+      ].map((value) => String(value || '').trim().toLowerCase()).join(' ');
+      return /\bqa\b|fullflow|debug|sugerencias|manual eval360|public qa|fac qa/.test(text);
+    }
+
+    function isEval360ClosedCycle(ciclo) {
+      return String(ciclo && ciclo.estatus || ciclo && ciclo.ciclo_estatus || '').trim().toLowerCase() === 'cerrado';
+    }
+
+    function getEval360CycleDisplayLabel(ciclo) {
+      const id = String(ciclo && ciclo.ciclo_id || '').trim();
+      const name = String(ciclo && (ciclo.nombre || ciclo.ciclo_nombre) || '').trim();
+      const year = String(ciclo && ciclo.ciclo_escolar || '').trim();
+      const status = String(ciclo && (ciclo.estatus || ciclo.ciclo_estatus) || '').trim();
+      const base = name || year || id;
+      const meta = [year && name ? year : '', status].filter(Boolean).join(' · ');
+      return meta ? base + ' (' + meta + ')' : base;
+    }
+
+    function getEval360VisibleCiclos(ciclos, selectedId, options = {}) {
+      const showQaClosed = !!options.showQaClosed;
+      const selected = String(selectedId || '').trim();
+      return (Array.isArray(ciclos) ? ciclos : []).filter((ciclo) => {
+        const id = String(ciclo.ciclo_id || '').trim();
+        if (!id) return false;
+        if (id === selected) return true;
+        if (!showQaClosed && isEval360QaCycle(ciclo) && isEval360ClosedCycle(ciclo)) return false;
+        return true;
+      });
+    }
+
+    function getEval360HiddenQaClosedCount(ciclos, selectedId) {
+      const selected = String(selectedId || '').trim();
+      return (Array.isArray(ciclos) ? ciclos : []).filter((ciclo) => {
+        const id = String(ciclo.ciclo_id || '').trim();
+        return id && id !== selected && isEval360QaCycle(ciclo) && isEval360ClosedCycle(ciclo);
+      }).length;
+    }
+
+    function getEval360CicloOptions(ciclos, selectedId, options = {}) {
       const list = Array.isArray(ciclos) ? ciclos : [];
       if (!list.length) return '<option value="">Sin ciclos</option>';
-      return list.map((ciclo) => {
+      const visible = getEval360VisibleCiclos(list, selectedId, options);
+      if (!visible.length) return '<option value="">Sin ciclos visibles</option>';
+      return visible.map((ciclo) => {
         const id = String(ciclo.ciclo_id || '').trim();
-        const label = String(ciclo.nombre || ciclo.ciclo_escolar || id).trim();
+        const label = getEval360CycleDisplayLabel(ciclo);
         return '<option value="' + escapeHtml(id) + '"' + (id === selectedId ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
       }).join('');
     }
@@ -15371,7 +15418,12 @@
         const id = String(inv.ciclo_id || '').trim();
         if (!id || seen.has(id)) return null;
         seen.add(id);
-        return { ciclo_id: id, nombre: id };
+        return {
+          ciclo_id: id,
+          nombre: String(inv.ciclo_nombre || '').trim() || id,
+          ciclo_escolar: String(inv.ciclo_escolar || '').trim(),
+          estatus: String(inv.ciclo_estatus || '').trim()
+        };
       }).filter(Boolean);
     }
 
@@ -15593,6 +15645,12 @@
       ui.comparacion = null;
       renderAdminEval360Module();
       loadEval360AdminResultados().catch(() => {});
+    }
+
+    function setEval360AdminShowQaClosed(checked) {
+      const ui = getEval360Ui().admin;
+      ui.showQaClosed = !!checked;
+      renderAdminEval360Module();
     }
 
     function setEval360AdminFamilyAlumnoId(value) {
@@ -15872,7 +15930,7 @@
         '<section class="eval360-panel" id="eval360AdminInvitationPanel">',
           '<div class="admin-alumnos-section-head"><h4>Generar invitaciones</h4><span class="pill">Links one-time</span></div>',
           '<div class="grid-2">',
-            '<div><label for="eval360InviteCiclo">Ciclo</label><select id="eval360InviteCiclo" onchange="setEval360AdminInvitationDraft(\'ciclo_id\', this.value)">' + getEval360CicloOptions(ui.ciclos, draft.ciclo_id || ui.selectedCicloId) + '</select></div>',
+            '<div><label for="eval360InviteCiclo">Ciclo</label><select id="eval360InviteCiclo" onchange="setEval360AdminInvitationDraft(\'ciclo_id\', this.value)">' + getEval360CicloOptions(ui.ciclos, draft.ciclo_id || ui.selectedCicloId, { showQaClosed: ui.showQaClosed }) + '</select></div>',
             '<div><label for="eval360InviteMomento">Momento</label><select id="eval360InviteMomento" onchange="setEval360AdminInvitationDraft(\'momento\', this.value)"><option value="inicio"' + (draft.momento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (draft.momento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
             '<div><label for="eval360InviteInstrument">Instrumento</label><select id="eval360InviteInstrument" onchange="setEval360AdminInvitationDraft(\'instrumento_id\', this.value)">' + getEval360InstrumentOptions(draft.instrumento_id) + '</select></div>',
             '<div><label for="eval360InviteAlumno">Alumno</label><select id="eval360InviteAlumno" onchange="setEval360AdminInvitationDraft(\'alumno_id\', this.value)">' + getEval360AlumnoOptions(draft.alumno_id) + '</select></div>',
@@ -15957,6 +16015,8 @@
       const comparacion = ui.comparacion || {};
       const crecimientoAreas = Array.isArray(comparacion.por_area) ? comparacion.por_area : [];
       const crecimientoHabilidades = Array.isArray(comparacion.por_habilidad) ? comparacion.por_habilidad : [];
+      const visibleCiclos = getEval360VisibleCiclos(ui.ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed });
+      const hiddenQaClosed = getEval360HiddenQaClosedCount(ui.ciclos, ui.selectedCicloId);
       panel.innerHTML = [
         '<article class="admin-toolbar eval360-module">',
           '<div class="eval360-head">',
@@ -15968,13 +16028,13 @@
             '</div>',
           '</div>',
           '<div class="eval360-kpis">',
-            '<div class="eval360-kpi"><strong>' + escapeHtml(ui.ciclos.length) + '</strong><span class="mini">Ciclos</span></div>',
+            '<div class="eval360-kpi"><strong>' + escapeHtml(visibleCiclos.length) + '</strong><span class="mini">Ciclos visibles</span></div>',
             '<div class="eval360-kpi"><strong>' + escapeHtml(invitaciones.length) + '</strong><span class="mini">Invitaciones</span></div>',
             '<div class="eval360-kpi"><strong>' + escapeHtml(sent) + '</strong><span class="mini">Enviadas</span></div>',
             '<div class="eval360-kpi"><strong>' + escapeHtml(publicInvites) + '</strong><span class="mini">Links publicos</span></div>',
           '</div>',
           '<div class="grid-2">',
-            '<div><label for="eval360AdminCiclo">Ciclo</label><select id="eval360AdminCiclo" onchange="setEval360AdminCiclo(this.value)">' + getEval360CicloOptions(ui.ciclos, ui.selectedCicloId) + '</select></div>',
+            '<div><label for="eval360AdminCiclo">Ciclo</label><select id="eval360AdminCiclo" onchange="setEval360AdminCiclo(this.value)">' + getEval360CicloOptions(ui.ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed }) + '</select>' + (hiddenQaClosed ? '<label class="eval360-qa-toggle"><input type="checkbox"' + (ui.showQaClosed ? ' checked' : '') + ' onchange="setEval360AdminShowQaClosed(this.checked)"> Mostrar QA cerrados <span class="mini">(' + escapeHtml(hiddenQaClosed) + ' ocultos)</span></label>' : '') + '</div>',
             '<div><label for="eval360AdminMomento">Momento</label><select id="eval360AdminMomento" onchange="setEval360AdminMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
           '</div>',
           '<div class="eval360-grid">',
@@ -16154,6 +16214,12 @@
       clearEval360FacilitadorFormState();
       renderEval360FacilitadorPanel();
       loadEval360FacilitadorPulso().catch(() => {});
+    }
+
+    function setEval360FacilitadorShowQaClosed(checked) {
+      const ui = getEval360Ui().facilitador;
+      ui.showQaClosed = !!checked;
+      renderEval360FacilitadorPanel();
     }
 
     function clearEval360FacilitadorFormState() {
@@ -16501,6 +16567,7 @@
         return;
       }
       const ciclos = getUniqueEval360CiclosFromInvitaciones(ui.invitaciones);
+      const hiddenQaClosed = getEval360HiddenQaClosedCount(ciclos, ui.selectedCicloId);
       const pulso = ui.pulso || {};
       const areas = Array.isArray(pulso.promedios_por_area) ? pulso.promedios_por_area : [];
       const habilidades = Array.isArray(pulso.promedios_por_habilidad) ? pulso.promedios_por_habilidad : [];
@@ -16511,7 +16578,7 @@
           '<div class="actions compact"><button class="btn-secondary" type="button" onclick="refreshEval360FacilitadorModule(this)">Actualizar</button><button class="btn-ghost" type="button" onclick="loadEval360FacilitadorPulso(this)">Pulso</button></div>',
         '</div>',
         '<div class="grid-2">',
-          '<div><label for="eval360FacCiclo">Ciclo</label><select id="eval360FacCiclo" onchange="setEval360FacilitadorCiclo(this.value)">' + getEval360CicloOptions(ciclos, ui.selectedCicloId) + '</select></div>',
+          '<div><label for="eval360FacCiclo">Ciclo</label><select id="eval360FacCiclo" onchange="setEval360FacilitadorCiclo(this.value)">' + getEval360CicloOptions(ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed }) + '</select>' + (hiddenQaClosed ? '<label class="eval360-qa-toggle"><input type="checkbox"' + (ui.showQaClosed ? ' checked' : '') + ' onchange="setEval360FacilitadorShowQaClosed(this.checked)"> Mostrar QA cerrados <span class="mini">(' + escapeHtml(hiddenQaClosed) + ' ocultos)</span></label>' : '') + '</div>',
           '<div><label for="eval360FacMomento">Momento</label><select id="eval360FacMomento" onchange="setEval360FacilitadorMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
         '</div>',
         '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Mis observaciones</h4></div>' + renderEval360FacilitadorInvitaciones() + '</section>',
@@ -19575,6 +19642,7 @@
         loadEval360FacilitadorPulso,
         setEval360FacilitadorCiclo,
         setEval360FacilitadorMomento,
+        setEval360FacilitadorShowQaClosed,
         loadEval360FacilitadorSugerencias,
         openPlanDraftFromEval360Suggestion,
         loadEval360FacilitadorFormulario,
@@ -19597,6 +19665,7 @@
         closeEval360AdminCycle,
         setEval360AdminCiclo,
         setEval360AdminMomento,
+        setEval360AdminShowQaClosed,
         loadEval360FamilyReport,
         setEval360AdminFamilyAlumnoId,
         setEval360AdminCycleDraft,
