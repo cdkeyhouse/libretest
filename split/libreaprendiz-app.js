@@ -272,7 +272,8 @@
           familyReportLoading: false,
           familyReportError: '',
           selectedFamilyAlumnoId: '',
-          showQaClosed: false
+          showQaClosed: false,
+          participationFilter: 'todos'
         },
         facilitador: {
           open: false,
@@ -15457,6 +15458,74 @@
       return String(sent) + '/' + String(total);
     }
 
+    function setEval360AdminParticipationFilter(filter) {
+      const ui = getEval360Ui().admin;
+      ui.participationFilter = String(filter || 'todos').trim();
+      renderAdminEval360Module();
+    }
+
+    function filterEval360ParticipationRows(alumnos, filter) {
+      const f = String(filter || 'todos').trim();
+      if (f === 'listos') return alumnos.filter((a) => String(a.datos_suficientes || '').trim() === 'si');
+      if (f === 'incompletos') return alumnos.filter((a) => String(a.datos_suficientes || '').trim() !== 'si');
+      if (f === 'falta_familia') return alumnos.filter((a) => Number(a.familia_total || 0) > 0 && Number(a.familia_enviadas || 0) < Number(a.familia_total || 0));
+      if (f === 'falta_alumno') return alumnos.filter((a) => Number(a.alumno_total || 0) > 0 && Number(a.alumno_enviadas || 0) < Number(a.alumno_total || 0));
+      if (f === 'falta_facilitador') return alumnos.filter((a) => Number(a.facilitador_total || 0) > 0 && Number(a.facilitador_enviadas || 0) < Number(a.facilitador_total || 0));
+      return alumnos;
+    }
+
+    function renderEval360AdminSeguimiento(participacion) {
+      const alumnos = participacion && Array.isArray(participacion.alumnos) ? participacion.alumnos : [];
+      const resumen = (participacion && participacion.resumen) || null;
+      const ui = getEval360Ui().admin;
+      const filter = String(ui.participationFilter || 'todos').trim();
+      const filterDefs = [
+        { key: 'todos', label: 'Todos' },
+        { key: 'incompletos', label: 'Incompletos' },
+        { key: 'listos', label: 'Listos' },
+        { key: 'falta_familia', label: 'Falta familia' },
+        { key: 'falta_alumno', label: 'Falta alumno' },
+        { key: 'falta_facilitador', label: 'Falta facilitador' },
+      ];
+      const kpisHtml = resumen ? [
+        '<div class="eval360-kpis">',
+          renderEval360DiagnosticMetric('Listos', String(resumen.alumnos_listos) + '/' + String(resumen.alumnos_total), resumen.alumnos_incompletos ? 'atencion' : 'listo'),
+          renderEval360DiagnosticMetric('Incompletos', String(resumen.alumnos_incompletos), resumen.alumnos_incompletos ? 'atencion' : 'listo'),
+          renderEval360DiagnosticMetric('Falta familia', String(resumen.familia_pendientes), resumen.familia_pendientes ? 'atencion' : 'listo'),
+          renderEval360DiagnosticMetric('Falta alumno', String(resumen.alumno_pendientes), resumen.alumno_pendientes ? 'atencion' : 'listo'),
+          renderEval360DiagnosticMetric('Falta facilitador', String(resumen.facilitador_pendientes), resumen.facilitador_pendientes ? 'atencion' : 'listo'),
+          renderEval360DiagnosticMetric('Cache areas', String(resumen.cache_area_rows), resumen.cache_area_rows ? 'listo' : 'atencion'),
+          renderEval360DiagnosticMetric('Reportes', String(resumen.reporte_familiar_listos) + '/' + String(resumen.alumnos_total || 0), resumen.reporte_familiar_listos > 0 ? 'listo' : 'atencion'),
+        '</div>',
+        resumen.cache_actualizado_at ? '<div class="mini" style="text-align:right;margin-bottom:4px">Cache: ' + escapeHtml(String(resumen.cache_actualizado_at).substring(0, 16).replace('T', ' ')) + '</div>' : '',
+      ].join('') : '';
+      const filterBtnsHtml = [
+        '<div class="admin-alumnos-filterchips" id="eval360ParticipationFilters">',
+          filterDefs.map((fd) => '<button type="button" class="btn-ghost' + (fd.key === filter ? ' is-active' : '') + '" onclick="setEval360AdminParticipationFilter(\'' + fd.key + '\')">' + escapeHtml(fd.label) + '</button>').join(''),
+        '</div>',
+      ].join('');
+      const filteredAlumnos = filterEval360ParticipationRows(alumnos, filter);
+      const listHtml = filteredAlumnos.length
+        ? filteredAlumnos.slice(0, 30).map((row) => {
+            const suficiente = String(row.datos_suficientes || '').trim() === 'si';
+            return [
+              '<div class="eval360-row">',
+                '<div class="eval360-row-head">',
+                  '<strong>' + escapeHtml(row.alumno_id || '-') + '</strong>',
+                  '<span class="pill ' + (suficiente ? 'pill-green' : 'pill-yellow') + '">' + (suficiente ? 'Listo' : 'Falta') + '</span>',
+                '</div>',
+                '<div class="eval360-row-meta mini">',
+                  '<span>Familia ' + escapeHtml(renderEval360ParticipationRatio(row, 'familia')) + '</span>',
+                  '<span>Alumno ' + escapeHtml(renderEval360ParticipationRatio(row, 'alumno')) + '</span>',
+                  '<span>Facilitador ' + escapeHtml(renderEval360ParticipationRatio(row, 'facilitador')) + '</span>',
+                '</div>',
+              '</div>'
+            ].join('');
+          }).join('')
+        : '<div class="eval360-empty">' + (alumnos.length ? 'Ninguno coincide con el filtro seleccionado.' : 'Todavia no hay participacion para esta seleccion.') + '</div>';
+      return kpisHtml + filterBtnsHtml + listHtml;
+    }
+
     function renderEval360AdminParticipacion(participacion) {
       const alumnos = participacion && Array.isArray(participacion.alumnos) ? participacion.alumnos : [];
       if (!alumnos.length) {
@@ -16194,8 +16263,8 @@
               '<section><div class="admin-alumnos-section-head"><h4>Habilidades</h4></div>' + renderEval360GrowthRows(crecimientoHabilidades, { limit: 6 }) + '</section>',
             '</div>',
           '</section>',
-          '<section class="eval360-panel" id="eval360AdminParticipationPanel"><div class="admin-alumnos-section-head"><h4>Participacion por alumno</h4><span class="pill">' + escapeHtml((ui.participacion && ui.participacion.respondidas) || 0) + ' enviadas</span></div>',
-            renderEval360AdminParticipacion(ui.participacion),
+          '<section class="eval360-panel" id="eval360AdminParticipationPanel"><div class="admin-alumnos-section-head"><h4>Seguimiento de aplicacion</h4><span class="pill">' + escapeHtml((ui.participacion && ui.participacion.respondidas) || 0) + ' enviadas</span></div>',
+            renderEval360AdminSeguimiento(ui.participacion),
           '</section>',
           '<section class="eval360-panel" id="eval360AdminDiagnosticPanel"><div class="admin-alumnos-section-head"><h4>Diagnostico del ciclo</h4><span class="pill">' + escapeHtml(formatEval360DiagnosticStatus(ui.diagnostico && ui.diagnostico.estatus)) + '</span></div>',
             renderEval360AdminDiagnostico(),
