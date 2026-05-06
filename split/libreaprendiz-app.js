@@ -15390,6 +15390,37 @@
       }).join('');
     }
 
+    function renderEval360ParticipationRatio(row, actor) {
+      const sent = Number(row[actor + '_enviadas'] || 0);
+      const total = Number(row[actor + '_total'] || 0);
+      if (!total) return '0/0';
+      return String(sent) + '/' + String(total);
+    }
+
+    function renderEval360AdminParticipacion(participacion) {
+      const alumnos = participacion && Array.isArray(participacion.alumnos) ? participacion.alumnos : [];
+      if (!alumnos.length) {
+        return '<div class="eval360-empty">Todavia no hay participacion para esta seleccion.</div>';
+      }
+      return alumnos.slice(0, 20).map((row) => {
+        const suficiente = String(row.datos_suficientes || '').trim() === 'si';
+        return [
+          '<div class="eval360-row">',
+            '<div class="eval360-row-head">',
+              '<strong>' + escapeHtml(row.alumno_id || '-') + '</strong>',
+              '<span class="pill">' + (suficiente ? 'Listo' : 'Falta') + '</span>',
+            '</div>',
+            '<div class="eval360-row-meta mini">',
+              '<span>Familia ' + escapeHtml(renderEval360ParticipationRatio(row, 'familia')) + '</span>',
+              '<span>Alumno ' + escapeHtml(renderEval360ParticipationRatio(row, 'alumno')) + '</span>',
+              '<span>Facilitador ' + escapeHtml(renderEval360ParticipationRatio(row, 'facilitador')) + '</span>',
+              '<span>Actores ' + escapeHtml(row.actores_enviados || 0) + '</span>',
+            '</div>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
     function getEval360AlumnoOptions(selectedId) {
       const alumnos = Array.isArray(state.catalogos.alumnos) ? state.catalogos.alumnos : [];
       return '<option value="">Selecciona alumno</option>' + alumnos.map((row) => {
@@ -15496,6 +15527,7 @@
       ui.selectedMomento = normalizeEval360MomentFrontend(value);
       syncEval360InvitationDraftFromSelection();
       ui.resultados = [];
+      ui.participacion = null;
       renderAdminEval360Module();
       loadEval360AdminResultados().catch(() => {});
     }
@@ -15552,6 +15584,40 @@
         await loadEval360AdminModule({ loadResultados: false, preserveCreated: true });
         setBanner('Ciclo Eval360 activado.', 'success');
       }, { button, key: 'eval360-activate-cycle-' + cleanId, busyText: 'Activando' });
+    }
+
+    async function closeEval360AdminCycle(cicloId, button) {
+      const cleanId = String(cicloId || '').trim();
+      if (!cleanId) throw new Error('Selecciona un ciclo para cerrar.');
+      if (typeof window !== 'undefined' && window.confirm && !window.confirm('Cerrar este ciclo Eval360? Podras consultar resultados, pero ya no sera un ciclo activo.')) {
+        return;
+      }
+      await handleAction('cerrarEval360Ciclo', async () => {
+        await api('cerrarEval360Ciclo', { ciclo_id: cleanId });
+        uiEval360ClearCreatedLinks_();
+        await loadEval360AdminModule({ preserveCreated: true });
+        setBanner('Ciclo Eval360 cerrado.', 'success');
+      }, { button, key: 'eval360-close-cycle-' + cleanId, busyText: 'Cerrando' });
+    }
+
+    async function refreshEval360AdminCache(button) {
+      const ui = getEval360Ui().admin;
+      const cicloId = String(ui.selectedCicloId || '').trim();
+      if (!cicloId) throw new Error('Selecciona un ciclo para actualizar resultados.');
+      await handleAction('refreshEval360Cache', async () => {
+        const result = await api('refreshEval360Cache', {
+          ciclo_id: cicloId,
+          momento: ui.selectedMomento
+        });
+        const data = await api('getEval360ResultadosAdmin', {
+          ciclo_id: cicloId,
+          momento: ui.selectedMomento
+        });
+        ui.resultados = Array.isArray(data.resultados) ? data.resultados : [];
+        ui.participacion = data.participacion || null;
+        renderAdminEval360Module();
+        setBanner('Resultados Eval360 actualizados (' + String(result.computed || 0) + ' filas).', 'success');
+      }, { button, key: buildActionKey('refreshEval360Cache', [cicloId, ui.selectedMomento]), busyText: 'Actualizando' });
     }
 
     function uiEval360ClearCreatedLinks_() {
@@ -15644,6 +15710,7 @@
       const draft = ui.cycleDraft || createEmptyEval360CycleDraft();
       const selected = getEval360SelectedCiclo();
       const canActivate = selected && String(selected.estatus || '').trim() === 'borrador';
+      const canClose = selected && String(selected.estatus || '').trim() === 'activo';
       return [
         '<section class="eval360-panel" id="eval360AdminCyclePanel">',
           '<div class="admin-alumnos-section-head"><h4>Crear ciclo</h4><span class="pill">Admin</span></div>',
@@ -15659,6 +15726,7 @@
           '<div class="actions compact">',
             '<button id="eval360CreateCycleBtn" class="btn-primary" type="button" onclick="createEval360AdminCycle(this)">Crear ciclo</button>',
             canActivate ? '<button id="eval360ActivateCycleBtn" class="btn-secondary" type="button" onclick="activateEval360AdminCycle(\'' + escapeJsAttrValue(selected.ciclo_id || '') + '\', this)">Activar seleccionado</button>' : '',
+            canClose ? '<button id="eval360CloseCycleBtn" class="btn-secondary" type="button" onclick="closeEval360AdminCycle(\'' + escapeJsAttrValue(selected.ciclo_id || '') + '\', this)">Cerrar seleccionado</button>' : '',
           '</div>',
         '</section>'
       ].join('');
@@ -15760,6 +15828,7 @@
             '<div><h3>Evaluacion 360</h3><p class="subtle">Admin ve ciclos, invitaciones y resultados agregados. No se exponen hashes de token.</p></div>',
             '<div class="actions compact">',
               '<button class="btn-secondary" type="button" onclick="refreshEval360AdminModule(this)">Actualizar</button>',
+              '<button id="eval360RefreshCacheBtn" class="btn-secondary" type="button" onclick="refreshEval360AdminCache(this)">Actualizar cache</button>',
               '<button class="btn-ghost" type="button" onclick="loadEval360AdminResultados(this)">Resultados</button>',
             '</div>',
           '</div>',
@@ -15781,6 +15850,9 @@
             '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas con mayor necesidad</h4></div>' + renderEval360Rows(areaRows, { limit: 8 }) + '</section>',
             '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades especificas</h4></div>' + renderEval360Rows(skillRows, { titleField: 'item_label', limit: 8 }) + '</section>',
           '</div>',
+          '<section class="eval360-panel" id="eval360AdminParticipationPanel"><div class="admin-alumnos-section-head"><h4>Participacion por alumno</h4><span class="pill">' + escapeHtml((ui.participacion && ui.participacion.respondidas) || 0) + ' enviadas</span></div>',
+            renderEval360AdminParticipacion(ui.participacion),
+          '</section>',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Invitaciones recientes</h4></div>',
             renderEval360InvitacionesTable(invitaciones.slice(-10).reverse()),
           '</section>',
@@ -19256,6 +19328,8 @@
         activateAdminModule,
         refreshEval360AdminModule,
         loadEval360AdminResultados,
+        refreshEval360AdminCache,
+        closeEval360AdminCycle,
         setEval360AdminCiclo,
         setEval360AdminMomento,
         setEval360AdminCycleDraft,
