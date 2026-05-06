@@ -621,6 +621,77 @@
       line-height: 1.6;
     }
 
+    /* --- Reporte familiar --- */
+    .eval360-family-report-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+    .eval360-family-report-controls > * { flex: 1 1 180px; }
+    .eval360-family-report {
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--surface, #fff);
+    }
+    .eval360-family-report-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .eval360-family-report-kpis {
+      display: flex;
+      gap: 14px;
+    }
+    .eval360-kpi-small {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 48px;
+    }
+    .eval360-kpi-small strong { font-size: 1.3rem; line-height: 1.1; }
+    .eval360-family-report-resumen {
+      margin: 0 0 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary, #4a5568);
+    }
+    .eval360-family-report-disclaimer {
+      margin: 10px 0 0;
+      color: var(--text-muted, #718096);
+      font-size: 0.78rem;
+    }
+    .eval360-sugerencias { margin-top: 12px; }
+    .eval360-sugerencias h5 { margin: 0 0 6px; font-size: 0.85rem; }
+    .eval360-sugerencias-lista {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.85rem;
+    }
+    .eval360-sugerencias-lista li { margin-bottom: 4px; }
+    .eval360-report-error {
+      color: var(--danger, #e53e3e);
+      font-size: 0.85rem;
+      margin: 4px 0 8px;
+    }
+    .eval360-report-warn {
+      color: var(--warning, #d69e2e);
+      font-size: 0.82rem;
+      margin: 0 0 8px;
+    }
+    .eval360-family-report-empty {
+      color: var(--text-muted, #718096);
+      font-size: 0.85rem;
+    }
+    .pill-green { background: #c6f6d5; color: #276749; }
+    .pill-red   { background: #fed7d7; color: #9b2c2c; }
+    .pill-yellow{ background: #fefcbf; color: #744210; }
+    .pill-grey  { background: #e2e8f0; color: #4a5568; }
+
     .grid-2,
     .grid-3,
     .grid-4,

@@ -264,7 +264,11 @@
           cycleDraft: createEmptyEval360CycleDraft(),
           invitationDraft: createEmptyEval360InvitationDraft(),
           createdInvitations: [],
-          error: ''
+          error: '',
+          familyReport: null,
+          familyReportLoading: false,
+          familyReportError: '',
+          selectedFamilyAlumnoId: ''
         },
         facilitador: {
           open: false,
@@ -15591,6 +15595,48 @@
       loadEval360AdminResultados().catch(() => {});
     }
 
+    function setEval360AdminFamilyAlumnoId(value) {
+      const ui = getEval360Ui().admin;
+      ui.selectedFamilyAlumnoId = String(value || '').trim();
+      ui.familyReport = null;
+      ui.familyReportError = '';
+      renderAdminEval360Module();
+    }
+
+    async function loadEval360FamilyReport(button) {
+      const ui = getEval360Ui().admin;
+      const alumnoId = ui.selectedFamilyAlumnoId;
+      const cicloId = ui.selectedCicloId;
+      if (!alumnoId || !cicloId) {
+        ui.familyReportError = 'Selecciona un ciclo y un alumno.';
+        ui.familyReport = null;
+        renderAdminEval360Module();
+        return;
+      }
+      ui.familyReportLoading = true;
+      ui.familyReportError = '';
+      renderAdminEval360Module();
+      await handleAction('getEval360ExportFamiliar', async () => {
+        const data = await api('getEval360ExportFamiliar', {
+          alumno_id: alumnoId,
+          ciclo_id: cicloId,
+          include_sugerencias: true
+        });
+        ui.familyReport = data || null;
+        ui.familyReportLoading = false;
+        ui.familyReportError = '';
+        renderAdminEval360Module();
+      }, {
+        button,
+        key: buildActionKey('getEval360ExportFamiliar', [alumnoId, cicloId]),
+        onError: (err) => {
+          ui.familyReportLoading = false;
+          ui.familyReportError = String((err && err.message) || 'Error al cargar el reporte familiar.');
+          renderAdminEval360Module();
+        }
+      });
+    }
+
     function setEval360AdminCycleDraft(field, value) {
       const ui = getEval360Ui().admin;
       ui.cycleDraft[field] = String(value || '').trim();
@@ -15922,6 +15968,15 @@
           '<section class="eval360-panel" id="eval360AdminParticipationPanel"><div class="admin-alumnos-section-head"><h4>Participacion por alumno</h4><span class="pill">' + escapeHtml((ui.participacion && ui.participacion.respondidas) || 0) + ' enviadas</span></div>',
             renderEval360AdminParticipacion(ui.participacion),
           '</section>',
+          '<section class="eval360-panel" id="eval360AdminFamilyReportPanel">',
+            '<div class="admin-alumnos-section-head"><h4>Reporte familiar</h4><span class="pill">Por alumno</span></div>',
+            '<div class="eval360-family-report-controls">',
+              '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360AlumnoOptions(ui.selectedFamilyAlumnoId) + '</select></div>',
+              '<div class="actions compact"><button id="eval360FamilyReportBtn" class="btn-secondary" type="button" onclick="loadEval360FamilyReport(this)"' + (!ui.selectedFamilyAlumnoId ? ' disabled' : '') + '>' + (ui.familyReportLoading ? 'Cargando...' : 'Ver reporte familiar') + '</button></div>',
+            '</div>',
+            ui.familyReportError ? '<p class="eval360-report-error" role="alert">' + escapeHtml(ui.familyReportError) + '</p>' : '',
+            renderEval360FamilyReport(ui.familyReport),
+          '</section>',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Invitaciones recientes</h4></div>',
             renderEval360InvitacionesTable(invitaciones.slice(-10).reverse()),
           '</section>',
@@ -15938,6 +15993,48 @@
           '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.actor || '-') + '</span><span>' + escapeHtml(row.respondent_label || row.respondent_id || row.invitacion_id || '-') + '</span></div>',
         '</div>'
       ].join('')).join('');
+    }
+
+    function renderEval360FamilyReport(report) {
+      if (!report) return '<div class="eval360-empty eval360-family-report-empty">Selecciona un alumno y ciclo, luego presiona "Ver reporte familiar".</div>';
+      const areas = Array.isArray(report.areas) ? report.areas : [];
+      const habilidades = Array.isArray(report.habilidades) ? report.habilidades : [];
+      const sugerencias = Array.isArray(report.sugerencias_familia) ? report.sugerencias_familia : [];
+      const crecimiento = report.crecimiento || {};
+      const etiquetaClass = { crecio: 'pill-green', requiere_apoyo: 'pill-red', estable: 'pill-yellow', datos_insuficientes: 'pill-grey', sin_inicio: 'pill-grey', sin_final: 'pill-grey' };
+      const areasHtml = areas.length
+        ? areas.map((a) => '<div class="eval360-row"><div class="eval360-row-head"><strong>' + escapeHtml(a.area_nombre || a.area_id || '-') + '</strong><span class="pill ' + escapeHtml(etiquetaClass[a.etiqueta] || '') + '">' + escapeHtml(a.etiqueta || '-') + '</span></div><div class="eval360-row-meta mini"><span>Inicio: ' + escapeHtml(a.inicio != null ? String(Number(a.inicio).toFixed(1)) : '-') + '</span><span>Final: ' + escapeHtml(a.final != null ? String(Number(a.final).toFixed(1)) : '-') + '</span></div></div>').join('')
+        : '<div class="eval360-empty">Sin datos de areas para este alumno.</div>';
+      const habHtml = habilidades.length
+        ? habilidades.map((h) => '<div class="eval360-row"><div class="eval360-row-head"><strong>' + escapeHtml(h.item_label || h.item_id || '-') + '</strong><span class="pill ' + escapeHtml(etiquetaClass[h.etiqueta] || '') + '">' + escapeHtml(h.etiqueta || '-') + '</span></div><div class="eval360-row-meta mini"><span>' + escapeHtml(h.area_nombre || h.area_id || '') + '</span></div></div>').join('')
+        : '<div class="eval360-empty">Sin datos de habilidades.</div>';
+      const sugHtml = sugerencias.length
+        ? '<ul class="eval360-sugerencias-lista">' + sugerencias.map((s) => '<li>' + escapeHtml(s) + '</li>').join('') + '</ul>'
+        : '';
+      return [
+        '<div class="eval360-family-report" id="eval360FamilyReportContent">',
+          '<div class="eval360-family-report-header">',
+            '<div class="eval360-family-report-meta">',
+              '<strong>' + escapeHtml(report.alumno_label || report.alumno_id || '') + '</strong>',
+              '<span class="mini"> &mdash; ' + escapeHtml(report.ciclo_nombre || report.ciclo_id || '') + '</span>',
+              report.ciclo_escolar ? '<span class="mini"> (' + escapeHtml(report.ciclo_escolar) + ')</span>' : '',
+            '</div>',
+            '<div class="eval360-family-report-kpis">',
+              '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_que_crecieron != null ? String(crecimiento.areas_que_crecieron) : '-') + '</strong><span class="mini">crecieron</span></span>',
+              '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_a_trabajar != null ? String(crecimiento.areas_a_trabajar) : '-') + '</strong><span class="mini">a trabajar</span></span>',
+              '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.total_areas != null ? String(crecimiento.total_areas) : '-') + '</strong><span class="mini">areas total</span></span>',
+            '</div>',
+          '</div>',
+          '<p class="eval360-family-report-resumen">' + escapeHtml(report.resumen || '') + '</p>',
+          report.datos_insuficientes ? '<p class="eval360-report-warn">Algunos datos aun son insuficientes para un calculo completo.</p>' : '',
+          '<div class="eval360-grid">',
+            '<section><div class="admin-alumnos-section-head"><h5>Areas</h5></div>' + areasHtml + '</section>',
+            '<section><div class="admin-alumnos-section-head"><h5>Habilidades</h5></div>' + habHtml + '</section>',
+          '</div>',
+          sugHtml ? '<div class="eval360-sugerencias"><h5>Sugerencias para la familia</h5>' + sugHtml + '</div>' : '',
+          '<p class="eval360-family-report-disclaimer mini">' + escapeHtml(report.disclaimer || '') + '</p>',
+        '</div>'
+      ].join('');
     }
 
     function refreshEval360AdminModule(button) {
@@ -19401,6 +19498,8 @@
         closeEval360AdminCycle,
         setEval360AdminCiclo,
         setEval360AdminMomento,
+        loadEval360FamilyReport,
+        setEval360AdminFamilyAlumnoId,
         setEval360AdminCycleDraft,
         setEval360AdminInvitationDraft,
         toggleEval360AdminInvitationActor,
