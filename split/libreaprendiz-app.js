@@ -261,6 +261,9 @@
           resultados: [],
           participacion: null,
           comparacion: null,
+          diagnostico: null,
+          diagnosticoLoading: false,
+          diagnosticoError: '',
           cycleDraft: createEmptyEval360CycleDraft(),
           invitationDraft: createEmptyEval360InvitationDraft(),
           createdInvitations: [],
@@ -15478,6 +15481,104 @@
       }).join('');
     }
 
+    function formatEval360DiagnosticStatus(value) {
+      const clean = String(value || '').trim();
+      if (clean === 'listo') return 'Listo';
+      if (clean === 'atencion') return 'Atencion';
+      if (clean === 'bloqueado') return 'Bloqueado';
+      return clean ? formatEval360HumanLabel(clean) : 'Sin diagnostico';
+    }
+
+    function getEval360DiagnosticPillClass(value) {
+      const clean = String(value || '').trim();
+      if (clean === 'listo' || clean === 'ok') return 'pill-green';
+      if (clean === 'bloqueado' || clean === 'error') return 'pill-red';
+      return 'pill-yellow';
+    }
+
+    function renderEval360DiagnosticMetric(label, value, status) {
+      return [
+        '<div class="eval360-kpi">',
+          '<strong>' + escapeHtml(value) + '</strong>',
+          '<span class="mini">' + escapeHtml(label) + '</span>',
+          status ? '<span class="pill ' + escapeHtml(getEval360DiagnosticPillClass(status)) + '">' + escapeHtml(formatEval360DiagnosticStatus(status)) + '</span>' : '',
+        '</div>'
+      ].join('');
+    }
+
+    function renderEval360DiagnosticActorCounts(title, counts) {
+      const row = counts || {};
+      const actors = ['familia', 'alumno', 'facilitador'];
+      return [
+        '<div class="eval360-row">',
+          '<div class="eval360-row-head"><strong>' + escapeHtml(title) + '</strong></div>',
+          '<div class="eval360-row-meta mini">',
+            actors.map((actor) => {
+              const data = row[actor] || {};
+              return '<span>' + escapeHtml(formatEval360HumanLabel(actor)) + ' ' + escapeHtml(data.enviadas || 0) + '/' + escapeHtml(data.total || 0) + '</span>';
+            }).join(''),
+          '</div>',
+        '</div>'
+      ].join('');
+    }
+
+    function renderEval360AdminDiagnostico() {
+      const ui = getEval360Ui().admin;
+      if (ui.diagnosticoLoading) {
+        return '<div class="eval360-empty">Calculando diagnostico...</div>';
+      }
+      if (ui.diagnosticoError) {
+        return '<div class="eval360-report-error" role="alert">' + escapeHtml(ui.diagnosticoError) + '</div>';
+      }
+      const diag = ui.diagnostico;
+      if (!diag) {
+        return '<div class="eval360-empty">Sin diagnostico para este ciclo.</div>';
+      }
+      const cache = diag.cache || {};
+      const selectedCache = cache.seleccionado || {};
+      const participacion = diag.participacion || {};
+      const reporte = diag.reporte_familiar || {};
+      const sugerencias = diag.sugerencias || {};
+      const alertas = Array.isArray(diag.alertas) ? diag.alertas : [];
+      return [
+        '<div class="eval360-kpis">',
+          renderEval360DiagnosticMetric('Estado', formatEval360DiagnosticStatus(diag.estatus), diag.estatus),
+          renderEval360DiagnosticMetric('Preguntas', (diag.instrumento && diag.instrumento.preguntas_activas) || 0, (diag.instrumento && diag.instrumento.listo) ? 'listo' : 'bloqueado'),
+          renderEval360DiagnosticMetric('Alumnos listos', String(participacion.suficientes_count || 0) + '/' + String(participacion.alumnos_total || 0), participacion.insuficientes_count ? 'atencion' : 'listo'),
+          renderEval360DiagnosticMetric('Cache', String(selectedCache.filas_area || 0) + ' areas', selectedCache.filas_area ? 'listo' : 'atencion'),
+        '</div>',
+        '<div class="eval360-grid">',
+          '<section>' + renderEval360DiagnosticActorCounts('Invitaciones', diag.invitaciones && diag.invitaciones.por_actor) + '</section>',
+          '<section>' + renderEval360DiagnosticActorCounts('Respuestas', diag.respuestas && diag.respuestas.por_actor) + '</section>',
+        '</div>',
+        '<div class="eval360-row">',
+          '<div class="eval360-row-head"><strong>Salida familiar y sugerencias</strong></div>',
+          '<div class="eval360-row-meta mini">',
+            '<span>Reporte familiar ' + escapeHtml(reporte.disponible ? 'disponible' : 'sin cache') + '</span>',
+            '<span>Alumnos con cache ' + escapeHtml(reporte.alumnos_con_cache || 0) + '</span>',
+            '<span>Habilidades bajas ' + escapeHtml(sugerencias.habilidades_debiles_count || 0) + '</span>',
+            '<span>Plantillas ' + escapeHtml(sugerencias.plantillas_match_count || 0) + '</span>',
+          '</div>',
+        '</div>',
+        '<div class="eval360-row">',
+          '<div class="eval360-row-head"><strong>Cache inicio/final</strong></div>',
+          '<div class="eval360-row-meta mini">',
+            '<span>Inicio ' + escapeHtml((cache.inicio && cache.inicio.filas_area) || 0) + ' areas / ' + escapeHtml((cache.inicio && cache.inicio.filas_habilidad) || 0) + ' habilidades</span>',
+            '<span>Final ' + escapeHtml((cache.final && cache.final.filas_area) || 0) + ' areas / ' + escapeHtml((cache.final && cache.final.filas_habilidad) || 0) + ' habilidades</span>',
+          '</div>',
+        '</div>',
+        alertas.length ? alertas.map((alert) => [
+          '<div class="eval360-row">',
+            '<div class="eval360-row-head">',
+              '<strong>' + escapeHtml(alert.mensaje || '-') + '</strong>',
+              '<span class="pill ' + escapeHtml(getEval360DiagnosticPillClass(alert.tipo)) + '">' + escapeHtml(formatEval360DiagnosticStatus(alert.tipo)) + '</span>',
+            '</div>',
+            alert.accion ? '<div class="eval360-row-meta mini"><span>' + escapeHtml(alert.accion) + '</span></div>' : '',
+          '</div>'
+        ].join('')).join('') : '',
+      ].join('');
+    }
+
     function formatEval360Delta(value) {
       if (value === '' || value === null || value === undefined) return 'sin comparacion';
       const numeric = Number(value);
@@ -15610,6 +15711,8 @@
         ui.resultados = [];
         ui.participacion = null;
         ui.comparacion = null;
+        ui.diagnostico = null;
+        ui.diagnosticoError = '';
         renderAdminEval360Module();
         return;
       }
@@ -15625,6 +15728,34 @@
       }, { button, key: buildActionKey('getEval360ResultadosAdmin', [ui.selectedCicloId, ui.selectedMomento]) });
     }
 
+    async function loadEval360AdminDiagnostico(button) {
+      const ui = getEval360Ui().admin;
+      const cicloId = String(ui.selectedCicloId || '').trim();
+      if (!cicloId) throw new Error('Selecciona un ciclo para diagnosticar.');
+      ui.diagnosticoLoading = true;
+      ui.diagnosticoError = '';
+      renderAdminEval360Module();
+      await handleAction('getEval360DiagnosticoAdmin', async () => {
+        const data = await api('getEval360DiagnosticoAdmin', {
+          ciclo_id: cicloId,
+          momento: ui.selectedMomento
+        });
+        ui.diagnostico = data || null;
+        ui.diagnosticoError = '';
+      }, {
+        button,
+        key: buildActionKey('getEval360DiagnosticoAdmin', [cicloId, ui.selectedMomento]),
+        busyText: 'Diagnosticando',
+        onError(err) {
+          ui.diagnostico = null;
+          ui.diagnosticoError = formatApiError(err);
+          return false;
+        }
+      });
+      ui.diagnosticoLoading = false;
+      renderAdminEval360Module();
+    }
+
     function setEval360AdminCiclo(value) {
       const ui = getEval360Ui().admin;
       ui.selectedCicloId = String(value || '').trim();
@@ -15632,6 +15763,8 @@
       ui.resultados = [];
       ui.participacion = null;
       ui.comparacion = null;
+      ui.diagnostico = null;
+      ui.diagnosticoError = '';
       renderAdminEval360Module();
       loadEval360AdminResultados().catch(() => {});
     }
@@ -15643,6 +15776,8 @@
       ui.resultados = [];
       ui.participacion = null;
       ui.comparacion = null;
+      ui.diagnostico = null;
+      ui.diagnosticoError = '';
       renderAdminEval360Module();
       loadEval360AdminResultados().catch(() => {});
     }
@@ -15805,6 +15940,13 @@
         ui.resultados = Array.isArray(data.resultados) ? data.resultados : [];
         ui.participacion = data.participacion || null;
         ui.comparacion = data.comparacion || null;
+        if (ui.diagnostico) {
+          const diag = await api('getEval360DiagnosticoAdmin', {
+            ciclo_id: cicloId,
+            momento: ui.selectedMomento
+          });
+          ui.diagnostico = diag || null;
+        }
         renderAdminEval360Module();
         setBanner('Resultados Eval360 actualizados (' + String(result.computed || 0) + ' filas).', 'success');
       }, { button, key: buildActionKey('refreshEval360Cache', [cicloId, ui.selectedMomento]), busyText: 'Actualizando' });
@@ -16025,6 +16167,7 @@
               '<button class="btn-secondary" type="button" onclick="refreshEval360AdminModule(this)">Actualizar</button>',
               '<button id="eval360RefreshCacheBtn" class="btn-secondary" type="button" onclick="refreshEval360AdminCache(this)">Actualizar cache</button>',
               '<button class="btn-ghost" type="button" onclick="loadEval360AdminResultados(this)">Resultados</button>',
+              '<button id="eval360DiagnosticoBtn" class="btn-ghost" type="button" onclick="loadEval360AdminDiagnostico(this)">Diagnostico</button>',
             '</div>',
           '</div>',
           '<div class="eval360-kpis">',
@@ -16053,6 +16196,9 @@
           '</section>',
           '<section class="eval360-panel" id="eval360AdminParticipationPanel"><div class="admin-alumnos-section-head"><h4>Participacion por alumno</h4><span class="pill">' + escapeHtml((ui.participacion && ui.participacion.respondidas) || 0) + ' enviadas</span></div>',
             renderEval360AdminParticipacion(ui.participacion),
+          '</section>',
+          '<section class="eval360-panel" id="eval360AdminDiagnosticPanel"><div class="admin-alumnos-section-head"><h4>Diagnostico del ciclo</h4><span class="pill">' + escapeHtml(formatEval360DiagnosticStatus(ui.diagnostico && ui.diagnostico.estatus)) + '</span></div>',
+            renderEval360AdminDiagnostico(),
           '</section>',
           '<section class="eval360-panel" id="eval360AdminFamilyReportPanel">',
             '<div class="admin-alumnos-section-head"><h4>Reporte familiar</h4><span class="pill">Por alumno</span></div>',
@@ -19661,6 +19807,7 @@
         activateAdminModule,
         refreshEval360AdminModule,
         loadEval360AdminResultados,
+        loadEval360AdminDiagnostico,
         refreshEval360AdminCache,
         closeEval360AdminCycle,
         setEval360AdminCiclo,
