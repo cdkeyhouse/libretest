@@ -16290,6 +16290,57 @@
       }, { button, key: buildActionKey('getEval360Sugerencias', [areaId, skillId]) });
     }
 
+    async function openPlanDraftFromEval360Suggestion(plantillaId) {
+      const ui = getEval360Ui().facilitador;
+      const plantilla = (Array.isArray(ui.sugerencias) ? ui.sugerencias : [])
+        .find((p) => String(p.plantilla_id || '').trim() === String(plantillaId || '').trim());
+      if (!plantilla) return;
+
+      // Asegurar catalogos de planeaciones disponibles
+      await ensurePlaneacionesCatalogosAvailable({ render: true });
+
+      // Abrir editor en modo create (limpio)
+      togglePlanBuilder(true);
+
+      // Pre-llenar materia si el nombre o id coincide en el catalogo
+      const sugeridaRaw = String(plantilla.materia_sugerida || '').trim().toLowerCase();
+      if (sugeridaRaw) {
+        const materia = (state.catalogos.materias || []).find((m) => {
+          const nombre = String(m.nombre || '').trim().toLowerCase();
+          const id = String(m.materia_id || '').trim().toLowerCase();
+          return nombre === sugeridaRaw || id === sugeridaRaw;
+        });
+        if (materia && $('planMateria')) {
+          $('planMateria').value = materia.materia_id;
+        }
+      }
+
+      // Sincronizar submateria y render completo
+      renderPlanEditor();
+      syncPlanSubmateriaSelect('');
+
+      // Pre-llenar actividad con titulo y objetivo
+      const textoActividad = [plantilla.titulo, plantilla.objetivo].filter(Boolean).join(': ').slice(0, 300);
+      if (textoActividad) {
+        state.planEditor.activities = [{
+          key: uid('ACTROW'),
+          actividad_id: '',
+          texto: textoActividad,
+          material_en_carpeta: 'no_requiere',
+          realizada: '',
+          comentario_cierre: '',
+          last_known_updated_at: ''
+        }];
+        renderPlanActivitiesEditor();
+      }
+
+      // Scroll hasta el editor
+      const target = $('planBuilderCard') || $('planBuilderBody');
+      if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
     function renderEval360FacilitadorInvitaciones() {
       const ui = getEval360Ui().facilitador;
       const rows = (Array.isArray(ui.invitaciones) ? ui.invitaciones : []).filter((row) => {
@@ -16505,7 +16556,10 @@
               + '</div>'
             ) : '',
             '<div class="eval360-plantilla-actions">',
-              '<button class="btn-secondary" type="button" disabled title="Proximamente: crear borrador de planeacion">Usar como borrador</button>',
+              '<button class="btn-secondary eval360-draft-btn" type="button"'
+              + ' onclick="openPlanDraftFromEval360Suggestion(\'' + escapeJsAttrValue(row.plantilla_id || '') + '\')"'
+              + ' id="eval360DraftBtn-' + escapeHtml(row.plantilla_id || '') + '"'
+              + '>Usar como borrador</button>',
             '</div>',
           '</div>'
         ].join('');
@@ -19478,6 +19532,7 @@
         setEval360FacilitadorCiclo,
         setEval360FacilitadorMomento,
         loadEval360FacilitadorSugerencias,
+        openPlanDraftFromEval360Suggestion,
         loadEval360FacilitadorFormulario,
         setEval360FacilitadorFormValue,
         setEval360FacilitadorFormComment,
