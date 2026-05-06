@@ -271,6 +271,9 @@
           familyReport: null,
           familyReportLoading: false,
           familyReportError: '',
+          familyReportReleaseLoading: false,
+          familyReportReviewOpen: false,
+          familyReportReviewAccepted: false,
           selectedFamilyAlumnoId: '',
           showQaClosed: false,
           participationFilter: 'todos'
@@ -15494,10 +15497,10 @@
           renderEval360DiagnosticMetric('Falta familia', String(resumen.familia_pendientes), resumen.familia_pendientes ? 'atencion' : 'listo'),
           renderEval360DiagnosticMetric('Falta alumno', String(resumen.alumno_pendientes), resumen.alumno_pendientes ? 'atencion' : 'listo'),
           renderEval360DiagnosticMetric('Falta facilitador', String(resumen.facilitador_pendientes), resumen.facilitador_pendientes ? 'atencion' : 'listo'),
-          renderEval360DiagnosticMetric('Cache areas', String(resumen.cache_area_rows), resumen.cache_area_rows ? 'listo' : 'atencion'),
+          renderEval360DiagnosticMetric('Resultados por area', String(resumen.cache_area_rows), resumen.cache_area_rows ? 'listo' : 'atencion'),
           renderEval360DiagnosticMetric('Reportes', String(resumen.reporte_familiar_listos) + '/' + String(resumen.alumnos_total || 0), resumen.reporte_familiar_listos > 0 ? 'listo' : 'atencion'),
         '</div>',
-        resumen.cache_actualizado_at ? '<div class="mini" style="text-align:right;margin-bottom:4px">Cache: ' + escapeHtml(String(resumen.cache_actualizado_at).substring(0, 16).replace('T', ' ')) + '</div>' : '',
+        resumen.cache_actualizado_at ? '<div class="mini" style="text-align:right;margin-bottom:4px">Resultados actualizados: ' + escapeHtml(String(resumen.cache_actualizado_at).substring(0, 16).replace('T', ' ')) + '</div>' : '',
       ].join('') : '';
       const filterBtnsHtml = [
         '<div class="admin-alumnos-filterchips" id="eval360ParticipationFilters">',
@@ -15614,7 +15617,7 @@
           renderEval360DiagnosticMetric('Estado', formatEval360DiagnosticStatus(diag.estatus), diag.estatus),
           renderEval360DiagnosticMetric('Preguntas', (diag.instrumento && diag.instrumento.preguntas_activas) || 0, (diag.instrumento && diag.instrumento.listo) ? 'listo' : 'bloqueado'),
           renderEval360DiagnosticMetric('Alumnos listos', String(participacion.suficientes_count || 0) + '/' + String(participacion.alumnos_total || 0), participacion.insuficientes_count ? 'atencion' : 'listo'),
-          renderEval360DiagnosticMetric('Cache', String(selectedCache.filas_area || 0) + ' areas', selectedCache.filas_area ? 'listo' : 'atencion'),
+          renderEval360DiagnosticMetric('Resultados', String(selectedCache.filas_area || 0) + ' areas', selectedCache.filas_area ? 'listo' : 'atencion'),
         '</div>',
         '<div class="eval360-grid">',
           '<section>' + renderEval360DiagnosticActorCounts('Invitaciones', diag.invitaciones && diag.invitaciones.por_actor) + '</section>',
@@ -15623,14 +15626,14 @@
         '<div class="eval360-row">',
           '<div class="eval360-row-head"><strong>Salida familiar y sugerencias</strong></div>',
           '<div class="eval360-row-meta mini">',
-            '<span>Reporte familiar ' + escapeHtml(reporte.disponible ? 'disponible' : 'sin cache') + '</span>',
-            '<span>Alumnos con cache ' + escapeHtml(reporte.alumnos_con_cache || 0) + '</span>',
+            '<span>Reporte familiar ' + escapeHtml(reporte.disponible ? 'disponible' : 'sin resultados') + '</span>',
+            '<span>Alumnos con resultados ' + escapeHtml(reporte.alumnos_con_cache || 0) + '</span>',
             '<span>Habilidades bajas ' + escapeHtml(sugerencias.habilidades_debiles_count || 0) + '</span>',
             '<span>Plantillas ' + escapeHtml(sugerencias.plantillas_match_count || 0) + '</span>',
           '</div>',
         '</div>',
         '<div class="eval360-row">',
-          '<div class="eval360-row-head"><strong>Cache inicio/final</strong></div>',
+          '<div class="eval360-row-head"><strong>Resultados inicio/final</strong></div>',
           '<div class="eval360-row-meta mini">',
             '<span>Inicio ' + escapeHtml((cache.inicio && cache.inicio.filas_area) || 0) + ' areas / ' + escapeHtml((cache.inicio && cache.inicio.filas_habilidad) || 0) + ' habilidades</span>',
             '<span>Final ' + escapeHtml((cache.final && cache.final.filas_area) || 0) + ' areas / ' + escapeHtml((cache.final && cache.final.filas_habilidad) || 0) + ' habilidades</span>',
@@ -15862,6 +15865,8 @@
       ui.selectedFamilyAlumnoId = String(value || '').trim();
       ui.familyReport = null;
       ui.familyReportError = '';
+      ui.familyReportReviewOpen = false;
+      ui.familyReportReviewAccepted = false;
       renderAdminEval360Module();
     }
 
@@ -15890,6 +15895,8 @@
           include_sugerencias: true
         });
         ui.familyReport = data || null;
+        ui.familyReportReviewOpen = false;
+        ui.familyReportReviewAccepted = false;
         ui.familyReportLoading = false;
         ui.familyReportError = '';
         renderAdminEval360Module();
@@ -15920,6 +15927,230 @@
       };
       window.addEventListener('afterprint', cleanup);
       setTimeout(cleanup, 5000);
+    }
+
+    function formatEval360FamilyReleaseStatus(status) {
+      const clean = String(status || '').trim();
+      if (clean === 'listo_revision') return 'Listo para revisar';
+      if (clean === 'aprobado') return 'Aprobado';
+      if (clean === 'entregado') return 'Entregado';
+      return 'Borrador';
+    }
+
+    function getEval360FamilyReleasePillClass(status) {
+      const clean = String(status || '').trim();
+      if (clean === 'aprobado' || clean === 'entregado') return 'pill-green';
+      if (clean === 'listo_revision') return 'pill-yellow';
+      return 'pill-grey';
+    }
+
+    function renderEval360ChecklistItem(label, value) {
+      return '<span class="eval360-check-item ' + (value ? 'is-ok' : 'is-missing') + '">' +
+        '<strong>' + (value ? 'OK' : 'Falta') + '</strong> ' + escapeHtml(label) + '</span>';
+    }
+
+    function renderEval360FamilyReleaseHistory(release) {
+      const history = Array.isArray(release && release.history) ? release.history.slice(-5).reverse() : [];
+      if (!history.length && !(release && release.notas_admin)) {
+        return '<div class="eval360-empty">Todavia no hay historial de entrega para este reporte.</div>';
+      }
+      const rows = history.map((event) => [
+        '<div class="eval360-row">',
+          '<div class="eval360-row-head">',
+            '<strong>' + escapeHtml(formatEval360FamilyReleaseStatus(event.tipo)) + '</strong>',
+            '<span class="pill">' + escapeHtml(event.fecha_hora || '-') + '</span>',
+          '</div>',
+          '<div class="eval360-row-meta mini">',
+            '<span>' + escapeHtml(event.usuario_id || 'admin') + '</span>',
+            event.detalle ? '<span>' + escapeHtml(event.detalle) + '</span>' : '',
+          '</div>',
+        '</div>'
+      ].join('')).join('');
+      const notes = release && release.notas_admin
+        ? '<p class="mini muted">Notas internas: ' + escapeHtml(release.notas_admin) + '</p>'
+        : '';
+      return rows + notes;
+    }
+
+    function buildEval360FamilyEditorialReview(report) {
+      const areas = Array.isArray(report && report.areas_v2) ? report.areas_v2 : [];
+      const habilidades = Array.isArray(report && report.habilidades_prioritarias) ? report.habilidades_prioritarias : [];
+      const sugerencias = Array.isArray(report && report.sugerencias_casa) ? report.sugerencias_casa : [];
+      const release = (report && report.release_state) || {};
+      const checklist = release.checklist || {};
+      const text = JSON.stringify({
+        resumen: report && report.resumen_humano,
+        areas,
+        habilidades,
+        sugerencias
+      }).toLowerCase();
+      const delicateTerms = ['trastorno', 'patologia', 'enfermedad', 'deficiente', 'fracaso', 'incapaz'];
+      const sensitiveHits = delicateTerms.filter((term) => text.includes(term));
+      const insufficientAreas = areas.filter((a) =>
+        String(a.datos_insuficientes || '').trim() === 'si' ||
+        String(a.estado || '').toLowerCase().includes('insuficiente')
+      );
+      const missingGrowth = areas.filter((a) =>
+        a.inicio_promedio === null || a.inicio_promedio === undefined || a.inicio_promedio === '' ||
+        a.final_promedio === null || a.final_promedio === undefined || a.final_promedio === ''
+      );
+      return {
+        checklist,
+        sensitiveHits,
+        insufficientAreas,
+        missingGrowth,
+        previewAreas: areas.slice(0, 3),
+        previewHabilidades: habilidades.slice(0, 3),
+        previewSugerencias: sugerencias.slice(0, 3)
+      };
+    }
+
+    function renderEval360FamilyFinalReview(report) {
+      const ui = getEval360Ui().admin;
+      if (!report || !ui.familyReportReviewOpen) return '';
+      const review = buildEval360FamilyEditorialReview(report);
+      const release = report.release_state || {};
+      const checklist = release.checklist || {};
+      const alertas = [];
+      if (!checklist.listo) alertas.push('Las validaciones para compartir todavia no estan completas.');
+      if (review.insufficientAreas.length) alertas.push('Hay areas con datos insuficientes: ' + review.insufficientAreas.map((a) => a.area_nombre || a.area_id).join(', ') + '.');
+      if (review.missingGrowth.length) alertas.push('Hay areas sin inicio/final completo: ' + review.missingGrowth.map((a) => a.area_nombre || a.area_id).join(', ') + '.');
+      if (review.sensitiveHits.length) alertas.push('Revisar lenguaje sensible: ' + review.sensitiveHits.join(', ') + '.');
+      if (!alertas.length) alertas.push('No se detectaron alertas editoriales automaticas.');
+      const previewAreas = review.previewAreas.length
+        ? review.previewAreas.map((a) => '<li>' + escapeHtml((a.area_nombre || a.area_id || '-') + ': ' + (a.estado || a.etiqueta || '-')) + '</li>').join('')
+        : '<li>Sin areas para previsualizar.</li>';
+      const previewHab = review.previewHabilidades.length
+        ? review.previewHabilidades.map((h) => '<li>' + escapeHtml((h.habilidad || h.item_id || '-') + ' / ' + (h.area_nombre || h.area_id || '-')) + '</li>').join('')
+        : '<li>Sin habilidades prioritarias.</li>';
+      const previewSug = review.previewSugerencias.length
+        ? review.previewSugerencias.map((s) => '<li>' + escapeHtml((s.titulo ? s.titulo + ': ' : '') + (s.descripcion || s || '')) + '</li>').join('')
+        : '<li>Sin sugerencias para casa.</li>';
+      return [
+        '<div class="eval360-family-final-review no-print" id="eval360FamilyFinalReviewPanel">',
+          '<div class="admin-alumnos-section-head">',
+            '<h5>Revision antes de entregar</h5>',
+            '<span class="pill ' + (ui.familyReportReviewAccepted ? 'pill-green' : 'pill-yellow') + '">' + (ui.familyReportReviewAccepted ? 'Revision confirmada' : 'Pendiente') + '</span>',
+          '</div>',
+          '<div class="eval360-checklist">',
+            renderEval360ChecklistItem('Reporte completo para familia', checklist.listo === true),
+            renderEval360ChecklistItem('Lenguaje no clinico ni alarmista', review.sensitiveHits.length === 0),
+            renderEval360ChecklistItem('Areas insuficientes identificadas', true),
+            renderEval360ChecklistItem('Preview revisado por admin', ui.familyReportReviewAccepted === true),
+          '</div>',
+          '<div class="eval360-grid">',
+            '<section><div class="admin-alumnos-section-head"><h5>Alertas editoriales</h5></div><ul class="eval360-sugerencias-lista">' + alertas.map((a) => '<li>' + escapeHtml(a) + '</li>').join('') + '</ul></section>',
+            '<section><div class="admin-alumnos-section-head"><h5>Preview compacto</h5></div><p class="mini">' + escapeHtml(report.resumen_humano || report.resumen || 'Sin resumen.') + '</p><ul class="eval360-sugerencias-lista">' + previewAreas + previewHab + previewSug + '</ul></section>',
+          '</div>',
+          '<div class="actions compact">',
+            '<button class="btn-secondary" type="button" onclick="confirmEval360FamilyFinalReview()">Confirmar revision</button>',
+            '<button class="btn-ghost" type="button" onclick="closeEval360FamilyFinalReview()">Cerrar revision</button>',
+          '</div>',
+        '</div>'
+      ].join('');
+    }
+
+    function renderEval360FamilyReleaseState(report) {
+      if (!report) {
+        return '<div class="eval360-empty">Carga un reporte para revisar su estado de entrega.</div>';
+      }
+      const release = report.release_state || {};
+      const checklist = release.checklist || {};
+      const status = release.estatus || 'borrador';
+      const listo = checklist.listo === true;
+      const loading = !!(getEval360Ui().admin.familyReportReleaseLoading);
+      const reviewAccepted = getEval360Ui().admin.familyReportReviewAccepted === true;
+      const canReady = !!report && listo && status !== 'listo_revision' && status !== 'aprobado' && status !== 'entregado';
+      const canApprove = !!report && listo && status !== 'aprobado' && status !== 'entregado';
+      const canDeliver = !!report && status === 'aprobado' && reviewAccepted;
+      return [
+        '<div class="eval360-family-release no-print" id="eval360FamilyReleaseState">',
+          '<div class="admin-alumnos-section-head">',
+            '<h5>Revision de entrega</h5>',
+            '<span class="pill ' + escapeHtml(getEval360FamilyReleasePillClass(status)) + '">' + escapeHtml(formatEval360FamilyReleaseStatus(status)) + '</span>',
+          '</div>',
+          '<div class="eval360-checklist">',
+            renderEval360ChecklistItem('Reporte generado', checklist.tiene_reporte === true),
+            renderEval360ChecklistItem('Datos suficientes', checklist.datos_suficientes === true),
+            renderEval360ChecklistItem('Resultados actualizados', checklist.cache_actualizado === true),
+            renderEval360ChecklistItem('Inicio y final disponibles', checklist.tiene_inicio_final === true),
+            renderEval360ChecklistItem('Nota educativa incluida', checklist.nota_interpretacion === true),
+            renderEval360ChecklistItem('Sin datos internos sensibles', checklist.sin_campos_sensibles === true),
+          '</div>',
+          !listo ? '<p class="mini muted">Aun falta informacion antes de aprobar este reporte para familia.</p>' : '',
+          release.approved_at ? '<p class="mini muted">Aprobado: ' + escapeHtml(release.approved_at) + '</p>' : '',
+          release.delivered_at ? '<p class="mini muted">Entregado: ' + escapeHtml(release.delivered_at) + '</p>' : '',
+          '<div class="eval360-family-history no-print" id="eval360FamilyReleaseHistory"><div class="admin-alumnos-section-head"><h5>Historial interno</h5></div>' + renderEval360FamilyReleaseHistory(release) + '</div>',
+          '<div class="actions compact">',
+            '<button class="btn-secondary" type="button" onclick="openEval360FamilyFinalReview()"' + (!report ? ' disabled' : '') + '>Revisar antes de entregar</button>',
+            '<button class="btn-secondary" type="button" onclick="updateEval360FamilyReportRelease(\'listo_revision\', this)"' + (!canReady || loading ? ' disabled' : '') + '>' + (loading ? 'Guardando...' : 'Marcar listo para revisar') + '</button>',
+            '<button class="btn-secondary" type="button" onclick="updateEval360FamilyReportRelease(\'aprobado\', this)"' + (!canApprove || loading ? ' disabled' : '') + '>Aprobar reporte</button>',
+            '<button class="btn-secondary" type="button" onclick="updateEval360FamilyReportRelease(\'entregado\', this)"' + (!canDeliver || loading ? ' disabled' : '') + '>Registrar entregado</button>',
+          '</div>',
+          status === 'aprobado' && !reviewAccepted ? '<p class="mini muted">Antes de registrar entrega, confirma la revision editorial final.</p>' : '',
+        '</div>'
+      ].join('');
+    }
+
+    function openEval360FamilyFinalReview() {
+      const ui = getEval360Ui().admin;
+      if (!ui.familyReport) {
+        setBanner('Carga primero el reporte familiar.', 'info');
+        return;
+      }
+      ui.familyReportReviewOpen = true;
+      renderAdminEval360Module();
+    }
+
+    function closeEval360FamilyFinalReview() {
+      const ui = getEval360Ui().admin;
+      ui.familyReportReviewOpen = false;
+      renderAdminEval360Module();
+    }
+
+    function confirmEval360FamilyFinalReview() {
+      const ui = getEval360Ui().admin;
+      ui.familyReportReviewAccepted = true;
+      ui.familyReportReviewOpen = true;
+      setBanner('Revision final confirmada.', 'success');
+      renderAdminEval360Module();
+    }
+
+    async function updateEval360FamilyReportRelease(estatus, button) {
+      const ui = getEval360Ui().admin;
+      const alumnoId = ui.selectedFamilyAlumnoId;
+      const cicloId = ui.selectedCicloId;
+      if (!ui.familyReport || !alumnoId || !cicloId) {
+        setBanner('Carga primero el reporte familiar.', 'info');
+        return;
+      }
+      if (estatus === 'entregado' && ui.familyReportReviewAccepted !== true) {
+        setBanner('Confirma la revision antes de registrar la entrega.', 'info');
+        ui.familyReportReviewOpen = true;
+        renderAdminEval360Module();
+        return;
+      }
+      ui.familyReportReleaseLoading = true;
+      renderAdminEval360Module();
+      await handleAction('actualizarEval360ReporteFamiliarEstado', async () => {
+        const stateData = await api('actualizarEval360ReporteFamiliarEstado', {
+          alumno_id: alumnoId,
+          ciclo_id: cicloId,
+          estatus
+        });
+        ui.familyReport.release_state = stateData || null;
+        ui.familyReportReleaseLoading = false;
+        setBanner('Estado del reporte familiar actualizado.', 'success');
+        renderAdminEval360Module();
+      }, {
+        button,
+        key: buildActionKey('actualizarEval360ReporteFamiliarEstado', [alumnoId, cicloId, estatus]),
+        onError: (err) => {
+          ui.familyReportReleaseLoading = false;
+          setBanner(formatApiError(err), 'error');
+          renderAdminEval360Module();
+        }
+      });
     }
 
     function setEval360AdminCycleDraft(field, value) {
@@ -16257,7 +16488,7 @@
             '<div><h3>Evaluacion 360</h3><p class="subtle">Admin ve ciclos, invitaciones y resultados agregados. No se exponen hashes de token.</p></div>',
             '<div class="actions compact">',
               '<button class="btn-secondary" type="button" onclick="refreshEval360AdminModule(this)">Actualizar</button>',
-              '<button id="eval360RefreshCacheBtn" class="btn-secondary" type="button" onclick="refreshEval360AdminCache(this)">Actualizar cache</button>',
+              '<button id="eval360RefreshCacheBtn" class="btn-secondary" type="button" onclick="refreshEval360AdminCache(this)">Actualizar resultados</button>',
               '<button class="btn-ghost" type="button" onclick="loadEval360AdminResultados(this)">Resultados</button>',
               '<button id="eval360DiagnosticoBtn" class="btn-ghost" type="button" onclick="loadEval360AdminDiagnostico(this)">Diagnostico</button>',
             '</div>',
@@ -16302,6 +16533,8 @@
               '</div>',
             '</div>',
             ui.familyReportError ? '<p class="eval360-report-error" role="alert">' + escapeHtml(ui.familyReportError) + '</p>' : '',
+            renderEval360FamilyReleaseState(ui.familyReport),
+            renderEval360FamilyFinalReview(ui.familyReport),
             renderEval360FamilyReport(ui.familyReport),
           '</section>',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Invitaciones recientes</h4></div>',
@@ -20060,6 +20293,10 @@
         setEval360AdminShowQaClosed,
         loadEval360FamilyReport,
         printEval360FamilyReport,
+        openEval360FamilyFinalReview,
+        closeEval360FamilyFinalReview,
+        confirmEval360FamilyFinalReview,
+        updateEval360FamilyReportRelease,
         setEval360AdminFamilyAlumnoId,
         setEval360AdminCycleDraft,
         setEval360AdminInvitationDraft,
