@@ -6040,6 +6040,31 @@
         min-height: 26px;
       }
     }
+
+    /* ── Eval360 family report: impresion / guardar PDF ─────────────────── */
+    @media print {
+      body.eval360-print-family-report * { visibility: hidden; }
+      body.eval360-print-family-report #eval360FamilyReportContent,
+      body.eval360-print-family-report #eval360FamilyReportContent * { visibility: visible; }
+      body.eval360-print-family-report #eval360FamilyReportContent {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
+        color: #111;
+        box-shadow: none;
+        padding: 24px;
+        font-size: 13px;
+      }
+      body.eval360-print-family-report .eval360-family-report-header { margin-bottom: 12px; }
+      .eval360-family-report .eval360-row { break-inside: avoid; page-break-inside: avoid; }
+      .eval360-family-report section { break-inside: avoid; page-break-inside: avoid; }
+      .eval360-family-report .eval360-sugerencias { break-inside: avoid; page-break-inside: avoid; }
+      .eval360-family-report .eval360-family-report-disclaimer { break-inside: avoid; page-break-inside: avoid; margin-top: 16px; }
+      .no-print, button, nav, header, aside,
+      .eval360-family-report-controls { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -6868,7 +6893,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260506-eval360-reporte-familiar-v2"></script>
+<script defer src="./libreaprendiz-app.js?v=20260506-eval360-reporte-familiar-print"></script>
 </body>
 </html>
 

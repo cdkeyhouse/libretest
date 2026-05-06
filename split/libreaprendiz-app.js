@@ -15869,6 +15869,10 @@
       const ui = getEval360Ui().admin;
       const alumnoId = ui.selectedFamilyAlumnoId;
       const cicloId = ui.selectedCicloId;
+      const alumnoSelect = document.getElementById('eval360FamilyAlumno');
+      const alumnoLabel = alumnoSelect && alumnoSelect.selectedOptions && alumnoSelect.selectedOptions[0]
+        ? String(alumnoSelect.selectedOptions[0].textContent || '').split(' / ')[0].trim()
+        : '';
       if (!alumnoId || !cicloId) {
         ui.familyReportError = 'Selecciona un ciclo y un alumno.';
         ui.familyReport = null;
@@ -15882,6 +15886,7 @@
         const data = await api('getEval360ExportFamiliar', {
           alumno_id: alumnoId,
           ciclo_id: cicloId,
+          alumno_label: alumnoLabel,
           include_sugerencias: true
         });
         ui.familyReport = data || null;
@@ -15897,6 +15902,24 @@
           renderAdminEval360Module();
         }
       });
+    }
+
+    function printEval360FamilyReport() {
+      const reportEl = document.getElementById('eval360FamilyReportContent');
+      if (!reportEl) return;
+      // Security: do not print if sensitive internal fields leaked into DOM
+      const html = reportEl.innerHTML;
+      if (html.includes('token_hash') || html.includes('plain_token') || html.includes('respondent_id')) return;
+      window.__eval360PrintClassApplied = true;
+      document.body.classList.add('eval360-print-family-report');
+      window.print();
+      // Remove class once print dialog closes (afterprint) or after fallback timeout
+      const cleanup = () => {
+        document.body.classList.remove('eval360-print-family-report');
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      setTimeout(cleanup, 5000);
     }
 
     function setEval360AdminCycleDraft(field, value) {
@@ -16273,7 +16296,10 @@
             '<div class="admin-alumnos-section-head"><h4>Reporte familiar</h4><span class="pill">Por alumno</span></div>',
             '<div class="eval360-family-report-controls">',
               '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360AlumnoOptions(ui.selectedFamilyAlumnoId) + '</select></div>',
-              '<div class="actions compact"><button id="eval360FamilyReportBtn" class="btn-secondary" type="button" onclick="loadEval360FamilyReport(this)"' + (!ui.selectedFamilyAlumnoId ? ' disabled' : '') + '>' + (ui.familyReportLoading ? 'Cargando...' : 'Ver reporte familiar') + '</button></div>',
+              '<div class="actions compact">',
+                '<button id="eval360FamilyReportBtn" class="btn-secondary" type="button" onclick="loadEval360FamilyReport(this)"' + (!ui.selectedFamilyAlumnoId ? ' disabled' : '') + '>' + (ui.familyReportLoading ? 'Cargando...' : 'Ver reporte familiar') + '</button>',
+                '<button id="eval360PrintFamilyReportBtn" class="btn-ghost no-print" type="button" onclick="printEval360FamilyReport()"' + (!ui.familyReport ? ' disabled' : '') + '>Imprimir / Guardar PDF</button>',
+              '</div>',
             '</div>',
             ui.familyReportError ? '<p class="eval360-report-error" role="alert">' + escapeHtml(ui.familyReportError) + '</p>' : '',
             renderEval360FamilyReport(ui.familyReport),
@@ -20033,6 +20059,7 @@
         setEval360AdminMomento,
         setEval360AdminShowQaClosed,
         loadEval360FamilyReport,
+        printEval360FamilyReport,
         setEval360AdminFamilyAlumnoId,
         setEval360AdminCycleDraft,
         setEval360AdminInvitationDraft,
