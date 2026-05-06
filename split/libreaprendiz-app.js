@@ -15698,9 +15698,16 @@
         return;
       }
       await handleAction('cerrarEval360Ciclo', async () => {
-        await api('cerrarEval360Ciclo', { ciclo_id: cleanId });
+        const result = await api('cerrarEval360Ciclo', { ciclo_id: cleanId });
+        const ciclo = (ui.ciclos || []).find((row) => String(row.ciclo_id || '').trim() === cleanId);
+        if (ciclo) {
+          ciclo.estatus = String(result.estatus || 'cerrado').trim() || 'cerrado';
+          ciclo.closed_at = result.closed_at || ciclo.closed_at || '';
+          ciclo.updated_at = result.closed_at || ciclo.updated_at || '';
+        }
         uiEval360ClearCreatedLinks_();
-        await loadEval360AdminModule({ preserveCreated: true });
+        renderAdminEval360Module();
+        await loadEval360AdminModule({ preserveCreated: true, loadResultados: false });
         setBanner('Ciclo Eval360 cerrado.', 'success');
       }, { button, key: 'eval360-close-cycle-' + cleanId, busyText: 'Cerrando' });
     }
