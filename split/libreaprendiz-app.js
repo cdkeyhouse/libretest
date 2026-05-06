@@ -248,6 +248,47 @@
       };
     }
 
+    function createEmptyEval360UiState() {
+      return {
+        admin: {
+          loaded: false,
+          loading: false,
+          feature: null,
+          ciclos: [],
+          invitaciones: [],
+          selectedCicloId: '',
+          selectedMomento: 'inicio',
+          resultados: [],
+          participacion: null,
+          error: ''
+        },
+        facilitador: {
+          open: false,
+          loaded: false,
+          loading: false,
+          feature: null,
+          invitaciones: [],
+          selectedCicloId: '',
+          selectedMomento: 'inicio',
+          pulso: null,
+          sugerencias: [],
+          error: ''
+        },
+        publicForm: {
+          token: '',
+          loading: false,
+          loaded: false,
+          form: null,
+          respuestaId: '',
+          values: {},
+          comments: {},
+          submitting: false,
+          submitted: false,
+          error: ''
+        }
+      };
+    }
+
     const STAGING_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbw_uv4htKdG-Qur5DZysZgdbOdQ8kCeGJiIkErJut3-U7QQqGq8TV3HwggGaJfGIqgqyw/exec';
     const PRODUCTION_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwoUFz4MwbWimGIHgQZtykkdHOSRA694gA8QDGzEkqIX4dX93H8Mvst8LuaVOnaznNj/exec';
     const FIXED_BACKEND_URL = (
@@ -343,6 +384,7 @@
       materiasUi: createEmptyMateriasUiState(),
       reportesUi: createEmptyReportesUiState(),
       maintenanceUi: createEmptyMaintenanceUiState(),
+      eval360Ui: createEmptyEval360UiState(),
       planEditor: {
         mode: 'create',
         planId: '',
@@ -3377,6 +3419,9 @@
         case 'reporte-ciclo':
           renderAdminReporteCicloModule();
           break;
+        case 'eval360':
+          renderAdminEval360Module();
+          break;
         case 'configuracion':
           renderAdminConfiguracionModule();
           break;
@@ -3453,6 +3498,11 @@
             title: 'Cargando reporte de ciclo',
             body: 'Se est\u00e1n preparando alumnos y per\u00edodos para este m\u00f3dulo.'
           };
+        case 'eval360':
+          return {
+            title: 'Cargando Evaluaci\u00f3n 360',
+            body: 'Consultamos este m\u00f3dulo solo bajo demanda para no afectar planeaciones.'
+          };
         default:
           return {
             title: 'Cargando m\u00f3dulo',
@@ -3475,6 +3525,8 @@
           return 'Reporte de ciclo';
         case 'facilitadores':
           return 'Facilitadores';
+        case 'eval360':
+          return 'Evaluaci\u00f3n 360';
         case 'materias':
           return 'Materias';
         case 'talleres':
@@ -3786,7 +3838,7 @@
         if ($('filterAlumnoSearch')) $('filterAlumnoSearch').value = '';
         if ($('filterAlumnoId')) $('filterAlumnoId').value = '';
       }
-      if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'materias', 'talleres', 'configuracion'].includes(state.activeAdminModule)) {
+      if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'eval360', 'materias', 'talleres', 'configuracion'].includes(state.activeAdminModule)) {
         state.activeAdminModule = 'dashboard';
       }
       if (facilitatorMode && state.activeTab !== 'planeaciones') {
@@ -3815,6 +3867,7 @@
         if (logoutBtn) logoutBtn.hidden = true;
         if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = true;
         if (workspaceSessionBar) workspaceSessionBar.hidden = true;
+        renderEval360FacilitadorPanel();
         syncRoleUi();
         return;
       }
@@ -3838,6 +3891,7 @@
       if (logoutBtn) logoutBtn.hidden = false;
       if (workspaceLogoutBtn) workspaceLogoutBtn.hidden = false;
       if (workspaceSessionBar) workspaceSessionBar.hidden = false;
+      renderEval360FacilitadorPanel();
       syncRoleUi();
     }
 
@@ -3928,6 +3982,20 @@
       state.activeAdminModule = nextModule;
       setAdminModuleError(nextModule, '');
       renderAdminShell();
+      if (nextModule === 'eval360') {
+        renderAdminEval360Module();
+        const evalAdmin = getEval360Ui().admin;
+        if (!evalAdmin.loaded && !evalAdmin.loading) {
+          loadEval360AdminModule().catch((err) => {
+            evalAdmin.loading = false;
+            evalAdmin.loaded = true;
+            evalAdmin.error = formatApiError(err);
+            renderAdminEval360Module();
+          });
+        }
+        syncRoleUi();
+        return;
+      }
       const bootstrappingNotificationsModule = nextModule === 'notificaciones' && (!Array.isArray(state.notificaciones) || !state.notificaciones.length);
       if (bootstrappingNotificationsModule) {
         setAdminModuleLoading(nextModule, true);
@@ -4063,6 +4131,12 @@
           : Number(state.dashboardStats && state.dashboardStats.notificaciones_activas || 0)) || 0
       );
       if ($('adminCountFacilitadoresCard')) $('adminCountFacilitadoresCard').textContent = String(activeFacilitadores);
+      if ($('adminCountEval360')) {
+        const evalAdmin = getEval360Ui().admin;
+        $('adminCountEval360').textContent = evalAdmin.loaded && evalAdmin.feature && evalAdmin.feature.enabled === true
+          ? String((evalAdmin.invitaciones || []).length || 'On')
+          : 'Off';
+      }
       if ($('adminCountMaterias')) $('adminCountMaterias').textContent = String(activeMaterias);
       if ($('adminCountTalleres')) $('adminCountTalleres').textContent = String(activeTalleres);
       if ($('adminCountReportes')) $('adminCountReportes').textContent = getReportStatusLabel(getReportSelectionState().lastResult && (getReportSelectionState().lastResult.status || getReportSelectionState().lastResult.estado) || 'PDF');
@@ -15145,6 +15219,571 @@
       setBanner('Estado de reporte actualizado.', data.status === 'listo' ? 'success' : 'info');
     }
 
+    function getEval360Ui() {
+      if (!state.eval360Ui) state.eval360Ui = createEmptyEval360UiState();
+      return state.eval360Ui;
+    }
+
+    function normalizeEval360MomentFrontend(value) {
+      return String(value || '').trim() === 'final' ? 'final' : 'inicio';
+    }
+
+    function getEval360PublicTokenFromUrl() {
+      if (typeof window === 'undefined' || !window.location) return '';
+      const params = new URLSearchParams(window.location.search || '');
+      const queryToken = params.get('eval360_token') || params.get('token') || params.get('e360');
+      if (queryToken) return String(queryToken).trim();
+      const hash = String(window.location.hash || '').replace(/^#/, '');
+      if (!hash) return '';
+      if (hash.indexOf('eval360=') === 0) return decodeURIComponent(hash.slice('eval360='.length)).trim();
+      if (hash.indexOf('eval360_token=') === 0) return decodeURIComponent(hash.slice('eval360_token='.length)).trim();
+      return '';
+    }
+
+    function isEval360PublicRoute() {
+      return !!getEval360PublicTokenFromUrl();
+    }
+
+    function formatEval360Score(value) {
+      if (value === '' || value === null || value === undefined || Number.isNaN(Number(value))) return 'Sin dato';
+      return String(Math.round(Number(value) * 100) / 100);
+    }
+
+    function eval360MeterWidth(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return 0;
+      return Math.max(0, Math.min(100, (numeric / 4) * 100));
+    }
+
+    function formatEval360HumanLabel(value) {
+      const clean = String(value || '').trim();
+      if (!clean) return '';
+      return clean.replace(/[_-]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    function formatEval360AreaLabel(value) {
+      const clean = String(value || '').trim();
+      if (!clean) return '';
+      if (/^area[-_\s]/i.test(clean)) return 'Area sin nombre';
+      return formatEval360HumanLabel(clean);
+    }
+
+    function renderEval360Rows(rows, options = {}) {
+      const list = Array.isArray(rows) ? rows : [];
+      if (!list.length) return '<div class="eval360-empty">Todavia no hay resultados calculados para esta seleccion.</div>';
+      const titleField = options.titleField || 'area_id';
+      return list.slice(0, Number(options.limit || 8)).map((row) => {
+        const score = row.promedio_grupo !== undefined ? row.promedio_grupo : row.promedio;
+        const rawTitle = String(row[titleField] || '').trim();
+        const titleLabel = titleField === 'area_id' ? formatEval360AreaLabel(rawTitle) : rawTitle;
+        const itemLabel = String(row.item_label || '').trim();
+        const hasHumanItemLabel = itemLabel && itemLabel !== String(row.item_id || '').trim();
+        const label = String(row.item_id
+          ? ((hasHumanItemLabel ? itemLabel : '') || row.habilidad_nombre || 'Habilidad sin nombre')
+          : (row.area_nombre || titleLabel || formatEval360AreaLabel(row.area_id) || 'Sin nombre')
+        ).trim();
+        const count = row.alumnos_count ? String(row.alumnos_count) + ' alumnos' : '';
+        const areaLabel = String(row.area_nombre || formatEval360AreaLabel(row.area_id)).trim();
+        const itemMeta = row.item_id ? (areaLabel ? areaLabel + ' · Habilidad' : 'Habilidad') : (row.scope_id ? 'Alumno ' + row.scope_id : '');
+        return [
+          '<div class="eval360-row">',
+            '<div class="eval360-row-head">',
+              '<strong>' + escapeHtml(label) + '</strong>',
+              '<span class="pill">' + escapeHtml(formatEval360Score(score)) + '/4</span>',
+            '</div>',
+            '<div class="eval360-meter"><span style="width:' + eval360MeterWidth(score) + '%"></span></div>',
+            '<div class="eval360-row-meta mini">',
+              '<span>' + escapeHtml(itemMeta || 'Area') + '</span>',
+              '<span>' + escapeHtml(count || String(row.datos_insuficientes || '').trim() || '') + '</span>',
+            '</div>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
+    function getEval360CicloOptions(ciclos, selectedId) {
+      const list = Array.isArray(ciclos) ? ciclos : [];
+      if (!list.length) return '<option value="">Sin ciclos</option>';
+      return list.map((ciclo) => {
+        const id = String(ciclo.ciclo_id || '').trim();
+        const label = String(ciclo.nombre || ciclo.ciclo_escolar || id).trim();
+        return '<option value="' + escapeHtml(id) + '"' + (id === selectedId ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+      }).join('');
+    }
+
+    function getUniqueEval360CiclosFromInvitaciones(invitaciones) {
+      const seen = new Set();
+      return (Array.isArray(invitaciones) ? invitaciones : []).map((inv) => {
+        const id = String(inv.ciclo_id || '').trim();
+        if (!id || seen.has(id)) return null;
+        seen.add(id);
+        return { ciclo_id: id, nombre: id };
+      }).filter(Boolean);
+    }
+
+    async function loadEval360AdminModule(options = {}) {
+      if (!canUseAdminShell()) return;
+      const ui = getEval360Ui().admin;
+      ui.loading = true;
+      ui.error = '';
+      renderAdminEval360Module();
+      try {
+        const feature = await api('getEval360FeatureStatus', {});
+        ui.feature = feature || null;
+        if (!feature || feature.enabled !== true) {
+          ui.loaded = true;
+          ui.loading = false;
+          renderAdminEval360Module();
+          return;
+        }
+        const data = await api('getEval360AdminData', {});
+        ui.ciclos = Array.isArray(data.ciclos) ? data.ciclos : [];
+        ui.invitaciones = Array.isArray(data.invitaciones) ? data.invitaciones : [];
+        if (!ui.selectedCicloId && ui.ciclos.length) {
+          ui.selectedCicloId = String(ui.ciclos[ui.ciclos.length - 1].ciclo_id || '').trim();
+        }
+        ui.loaded = true;
+        ui.loading = false;
+        renderAdminEval360Module();
+        if (ui.selectedCicloId && options.loadResultados !== false) {
+          setTimeout(() => {
+            loadEval360AdminResultados().catch(() => {});
+          }, 0);
+        }
+      } catch (err) {
+        ui.loaded = true;
+        ui.loading = false;
+        ui.error = err && err.code === 'FEATURE_DISABLED' ? 'Eval360 esta apagado en este backend.' : formatApiError(err);
+        renderAdminEval360Module();
+      }
+    }
+
+    async function loadEval360AdminResultados(button) {
+      const ui = getEval360Ui().admin;
+      if (!ui.selectedCicloId) {
+        ui.resultados = [];
+        ui.participacion = null;
+        renderAdminEval360Module();
+        return;
+      }
+      await handleAction('getEval360ResultadosAdmin', async () => {
+        const data = await api('getEval360ResultadosAdmin', {
+          ciclo_id: ui.selectedCicloId,
+          momento: ui.selectedMomento
+        });
+        ui.resultados = Array.isArray(data.resultados) ? data.resultados : [];
+        ui.participacion = data.participacion || null;
+        renderAdminEval360Module();
+      }, { button, key: buildActionKey('getEval360ResultadosAdmin', [ui.selectedCicloId, ui.selectedMomento]) });
+    }
+
+    function setEval360AdminCiclo(value) {
+      const ui = getEval360Ui().admin;
+      ui.selectedCicloId = String(value || '').trim();
+      ui.resultados = [];
+      ui.participacion = null;
+      renderAdminEval360Module();
+      loadEval360AdminResultados().catch(() => {});
+    }
+
+    function setEval360AdminMomento(value) {
+      const ui = getEval360Ui().admin;
+      ui.selectedMomento = normalizeEval360MomentFrontend(value);
+      ui.resultados = [];
+      renderAdminEval360Module();
+      loadEval360AdminResultados().catch(() => {});
+    }
+
+    function renderAdminEval360Module() {
+      const panel = $('admin-panel-eval360');
+      if (!panel) return;
+      const ui = getEval360Ui().admin;
+      if (ui.loading && !ui.loaded) {
+        panel.innerHTML = '<article class="admin-placeholder"><h3>Cargando Evaluacion 360</h3><p>Consultando solo el modulo Eval360.</p></article>';
+        return;
+      }
+      if (ui.error) {
+        panel.innerHTML = [
+          '<article class="admin-placeholder">',
+            '<h3>Evaluacion 360</h3>',
+            '<p>' + escapeHtml(ui.error) + '</p>',
+            '<div class="actions compact"><button class="btn-secondary" type="button" onclick="refreshEval360AdminModule(this)">Reintentar</button></div>',
+          '</article>'
+        ].join('');
+        return;
+      }
+      if (!ui.loaded) {
+        panel.innerHTML = [
+          '<article class="admin-toolbar eval360-module">',
+            '<div class="eval360-head">',
+              '<div><h3>Evaluacion 360</h3><p class="subtle">Este modulo se carga solo cuando lo abres.</p></div>',
+              '<button class="btn-primary" type="button" onclick="refreshEval360AdminModule(this)">Cargar Eval360</button>',
+            '</div>',
+          '</article>'
+        ].join('');
+        return;
+      }
+      if (!ui.feature || ui.feature.enabled !== true) {
+        panel.innerHTML = '<article class="admin-toolbar eval360-module"><div class="eval360-disabled">Eval360 esta apagado. La app actual sigue operando sin cargar datos de este modulo.</div></article>';
+        return;
+      }
+      const invitaciones = ui.invitaciones || [];
+      const sent = invitaciones.filter((row) => String(row.estatus || '').trim() === 'enviada').length;
+      const publicInvites = invitaciones.filter((row) => String(row.actor || '').trim() !== 'facilitador').length;
+      const resultados = ui.resultados || [];
+      const areaRows = resultados.filter((row) => !String(row.item_id || '').trim());
+      const skillRows = resultados.filter((row) => !!String(row.item_id || '').trim());
+      panel.innerHTML = [
+        '<article class="admin-toolbar eval360-module">',
+          '<div class="eval360-head">',
+            '<div><h3>Evaluacion 360</h3><p class="subtle">Admin ve ciclos, invitaciones y resultados agregados. No se exponen hashes de token.</p></div>',
+            '<div class="actions compact">',
+              '<button class="btn-secondary" type="button" onclick="refreshEval360AdminModule(this)">Actualizar</button>',
+              '<button class="btn-ghost" type="button" onclick="loadEval360AdminResultados(this)">Resultados</button>',
+            '</div>',
+          '</div>',
+          '<div class="eval360-kpis">',
+            '<div class="eval360-kpi"><strong>' + escapeHtml(ui.ciclos.length) + '</strong><span class="mini">Ciclos</span></div>',
+            '<div class="eval360-kpi"><strong>' + escapeHtml(invitaciones.length) + '</strong><span class="mini">Invitaciones</span></div>',
+            '<div class="eval360-kpi"><strong>' + escapeHtml(sent) + '</strong><span class="mini">Enviadas</span></div>',
+            '<div class="eval360-kpi"><strong>' + escapeHtml(publicInvites) + '</strong><span class="mini">Links publicos</span></div>',
+          '</div>',
+          '<div class="grid-2">',
+            '<div><label for="eval360AdminCiclo">Ciclo</label><select id="eval360AdminCiclo" onchange="setEval360AdminCiclo(this.value)">' + getEval360CicloOptions(ui.ciclos, ui.selectedCicloId) + '</select></div>',
+            '<div><label for="eval360AdminMomento">Momento</label><select id="eval360AdminMomento" onchange="setEval360AdminMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
+          '</div>',
+          '<div class="eval360-grid">',
+            '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas con mayor necesidad</h4></div>' + renderEval360Rows(areaRows, { limit: 8 }) + '</section>',
+            '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades especificas</h4></div>' + renderEval360Rows(skillRows, { titleField: 'item_label', limit: 8 }) + '</section>',
+          '</div>',
+          '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Invitaciones recientes</h4></div>',
+            renderEval360InvitacionesTable(invitaciones.slice(-10).reverse()),
+          '</section>',
+        '</article>'
+      ].join('');
+    }
+
+    function renderEval360InvitacionesTable(rows) {
+      const list = Array.isArray(rows) ? rows : [];
+      if (!list.length) return '<div class="eval360-empty">Todavia no hay invitaciones para mostrar.</div>';
+      return list.map((row) => [
+        '<div class="eval360-row">',
+          '<div class="eval360-row-head"><strong>' + escapeHtml(row.alumno_id || '-') + '</strong><span class="pill">' + escapeHtml(row.estatus || '-') + '</span></div>',
+          '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.actor || '-') + '</span><span>' + escapeHtml(row.respondent_label || row.respondent_id || row.invitacion_id || '-') + '</span></div>',
+        '</div>'
+      ].join('')).join('');
+    }
+
+    function refreshEval360AdminModule(button) {
+      return handleAction('getEval360AdminData', () => loadEval360AdminModule(), {
+        button,
+        key: 'eval360-admin-refresh'
+      });
+    }
+
+    function toggleEval360FacilitadorPanel(button) {
+      const ui = getEval360Ui().facilitador;
+      ui.open = !ui.open;
+      renderEval360FacilitadorPanel();
+      if (ui.open && !ui.loaded && !ui.loading) {
+        refreshEval360FacilitadorModule(button);
+      }
+    }
+
+    async function loadEval360FacilitadorModule() {
+      const ui = getEval360Ui().facilitador;
+      ui.loading = true;
+      ui.error = '';
+      renderEval360FacilitadorPanel();
+      try {
+        const feature = await api('getEval360FeatureStatus', {});
+        ui.feature = feature || null;
+        if (!feature || feature.enabled !== true) {
+          ui.loaded = true;
+          ui.loading = false;
+          renderEval360FacilitadorPanel();
+          return;
+        }
+        const data = await api('getEval360InvitacionesFacilitador', {});
+        ui.invitaciones = Array.isArray(data.invitaciones) ? data.invitaciones : [];
+        const ciclos = getUniqueEval360CiclosFromInvitaciones(ui.invitaciones);
+        if (!ui.selectedCicloId && ciclos.length) ui.selectedCicloId = ciclos[ciclos.length - 1].ciclo_id;
+        ui.loaded = true;
+        ui.loading = false;
+        renderEval360FacilitadorPanel();
+        if (ui.selectedCicloId) {
+          setTimeout(() => {
+            loadEval360FacilitadorPulso().catch(() => {});
+          }, 0);
+        }
+      } catch (err) {
+        ui.loaded = true;
+        ui.loading = false;
+        ui.error = err && err.code === 'FEATURE_DISABLED' ? 'Eval360 esta apagado en este backend.' : formatApiError(err);
+        renderEval360FacilitadorPanel();
+      }
+    }
+
+    function refreshEval360FacilitadorModule(button) {
+      return handleAction('getEval360InvitacionesFacilitador', () => loadEval360FacilitadorModule(), {
+        button,
+        key: 'eval360-facilitador-refresh'
+      });
+    }
+
+    async function loadEval360FacilitadorPulso(button) {
+      const ui = getEval360Ui().facilitador;
+      if (!ui.selectedCicloId) return;
+      await handleAction('getEval360PulsoPedagogico', async () => {
+        const data = await api('getEval360PulsoPedagogico', {
+          ciclo_id: ui.selectedCicloId,
+          momento: ui.selectedMomento
+        });
+        ui.pulso = data || null;
+        renderEval360FacilitadorPanel();
+      }, { button, key: buildActionKey('getEval360PulsoPedagogico', [ui.selectedCicloId, ui.selectedMomento]) });
+    }
+
+    function setEval360FacilitadorCiclo(value) {
+      const ui = getEval360Ui().facilitador;
+      ui.selectedCicloId = String(value || '').trim();
+      ui.pulso = null;
+      renderEval360FacilitadorPanel();
+      loadEval360FacilitadorPulso().catch(() => {});
+    }
+
+    function setEval360FacilitadorMomento(value) {
+      const ui = getEval360Ui().facilitador;
+      ui.selectedMomento = normalizeEval360MomentFrontend(value);
+      ui.pulso = null;
+      renderEval360FacilitadorPanel();
+      loadEval360FacilitadorPulso().catch(() => {});
+    }
+
+    async function loadEval360FacilitadorSugerencias(areaId, skillId, button) {
+      const ui = getEval360Ui().facilitador;
+      await handleAction('getEval360Sugerencias', async () => {
+        const data = await api('getEval360Sugerencias', {
+          area_id: String(areaId || '').trim(),
+          skill_id: String(skillId || '').trim()
+        });
+        ui.sugerencias = Array.isArray(data.plantillas) ? data.plantillas : [];
+        renderEval360FacilitadorPanel();
+      }, { button, key: buildActionKey('getEval360Sugerencias', [areaId, skillId]) });
+    }
+
+    function renderEval360FacilitadorPanel() {
+      const panel = $('eval360FacilitadorPanel');
+      if (!panel) return;
+      const role = getCurrentRole();
+      const ui = getEval360Ui().facilitador;
+      panel.hidden = !(role === 'facilitador' && ui.open);
+      const btn = $('eval360FacilitadorOpenBtn');
+      if (btn) {
+        btn.hidden = role !== 'facilitador' || canUseAdminShell();
+        btn.textContent = ui.open ? 'Ocultar Eval360' : 'Evaluacion 360';
+      }
+      if (panel.hidden) return;
+      if (ui.loading && !ui.loaded) {
+        panel.innerHTML = '<div class="eval360-empty">Cargando pulso pedagogico...</div>';
+        return;
+      }
+      if (ui.error) {
+        panel.innerHTML = '<div class="eval360-head"><div><h2>Evaluacion 360</h2><p class="subtle">' + escapeHtml(ui.error) + '</p></div><button class="btn-secondary" type="button" onclick="refreshEval360FacilitadorModule(this)">Reintentar</button></div>';
+        return;
+      }
+      if (!ui.loaded) {
+        panel.innerHTML = '<div class="eval360-head"><div><h2>Evaluacion 360</h2><p class="subtle">Carga el pulso solo cuando lo necesitas para planear.</p></div><button class="btn-primary" type="button" onclick="refreshEval360FacilitadorModule(this)">Cargar pulso</button></div>';
+        return;
+      }
+      if (!ui.feature || ui.feature.enabled !== true) {
+        panel.innerHTML = '<div class="eval360-disabled">Eval360 esta apagado. Planeaciones sigue igual.</div>';
+        return;
+      }
+      const ciclos = getUniqueEval360CiclosFromInvitaciones(ui.invitaciones);
+      const pulso = ui.pulso || {};
+      const areas = Array.isArray(pulso.promedios_por_area) ? pulso.promedios_por_area : [];
+      const habilidades = Array.isArray(pulso.promedios_por_habilidad) ? pulso.promedios_por_habilidad : [];
+      const firstNeed = habilidades[0] || areas[0] || {};
+      panel.innerHTML = [
+        '<div class="eval360-head">',
+          '<div><h2>Evaluacion 360</h2><p class="subtle">Promedios agregados de tus alumnos asignados. No muestra respuestas crudas de familia ni alumno.</p></div>',
+          '<div class="actions compact"><button class="btn-secondary" type="button" onclick="refreshEval360FacilitadorModule(this)">Actualizar</button><button class="btn-ghost" type="button" onclick="loadEval360FacilitadorPulso(this)">Pulso</button></div>',
+        '</div>',
+        '<div class="grid-2">',
+          '<div><label for="eval360FacCiclo">Ciclo</label><select id="eval360FacCiclo" onchange="setEval360FacilitadorCiclo(this.value)">' + getEval360CicloOptions(ciclos, ui.selectedCicloId) + '</select></div>',
+          '<div><label for="eval360FacMomento">Momento</label><select id="eval360FacMomento" onchange="setEval360FacilitadorMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
+        '</div>',
+        '<div class="eval360-grid">',
+          '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas a trabajar</h4></div>' + renderEval360Rows(areas, { limit: 6 }) + '</section>',
+          '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades prioritarias</h4></div>' + renderEval360Rows(habilidades, { titleField: 'item_label', limit: 6 }) + '</section>',
+        '</div>',
+        '<div class="actions compact">',
+          '<button class="btn-primary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas Mindset/STEAM</button>',
+        '</div>',
+        renderEval360Sugerencias(ui.sugerencias),
+      ].join('');
+    }
+
+    function renderEval360Sugerencias(rows) {
+      const list = Array.isArray(rows) ? rows : [];
+      if (!list.length) return '';
+      return '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Ideas para planeacion</h4></div>' + list.slice(0, 5).map((row) => [
+        '<div class="eval360-row">',
+          '<div class="eval360-row-head"><strong>' + escapeHtml(row.titulo || row.plantilla_id || '-') + '</strong><span class="pill">' + escapeHtml(row.materia_sugerida || 'Mindset') + '</span></div>',
+          '<p class="subtle">' + escapeHtml(row.objetivo || '') + '</p>',
+        '</div>'
+      ].join('')).join('') + '</section>';
+    }
+
+    async function startEval360PublicRoute() {
+      const token = getEval360PublicTokenFromUrl();
+      const ui = getEval360Ui().publicForm;
+      ui.token = token;
+      document.body.classList.add('eval360-public-mode');
+      renderEval360PublicForm();
+      await loadEval360PublicForm();
+    }
+
+    async function loadEval360PublicForm() {
+      const ui = getEval360Ui().publicForm;
+      ui.loading = true;
+      ui.error = '';
+      renderEval360PublicForm();
+      try {
+        const form = await api('getEval360FormularioToken', { token: ui.token });
+        ui.form = form || null;
+        ui.loaded = true;
+        ui.loading = false;
+        (form.items || []).forEach((item) => {
+          const id = String(item.item_id || '').trim();
+          if (id && !Object.prototype.hasOwnProperty.call(ui.values, id)) ui.values[id] = '';
+        });
+        renderEval360PublicForm();
+      } catch (err) {
+        ui.loaded = true;
+        ui.loading = false;
+        ui.error = formatApiError(err);
+        renderEval360PublicForm();
+      }
+    }
+
+    function buildEval360PublicItemsPayload() {
+      const ui = getEval360Ui().publicForm;
+      const items = ui.form && Array.isArray(ui.form.items) ? ui.form.items : [];
+      return items.map((item) => {
+        const itemId = String(item.item_id || '').trim();
+        return {
+          item_id: itemId,
+          area_id: String(item.area_id || '').trim(),
+          valor: Object.prototype.hasOwnProperty.call(ui.values, itemId) ? ui.values[itemId] : '',
+          label_snapshot: String(item.texto || '').trim(),
+          comentario: String(ui.comments[itemId] || '').trim()
+        };
+      });
+    }
+
+    function setEval360PublicValue(itemId, value) {
+      const ui = getEval360Ui().publicForm;
+      ui.values[String(itemId || '').trim()] = value === '' ? '' : Number(value);
+    }
+
+    function setEval360PublicComment(itemId, value) {
+      const ui = getEval360Ui().publicForm;
+      ui.comments[String(itemId || '').trim()] = String(value || '');
+    }
+
+    async function saveEval360PublicProgress(button) {
+      const ui = getEval360Ui().publicForm;
+      await handleAction('guardarEval360AvanceToken', async () => {
+        const data = await api('guardarEval360AvanceToken', {
+          token: ui.token,
+          respuesta_id: ui.respuestaId,
+          items: buildEval360PublicItemsPayload()
+        });
+        ui.respuestaId = String(data.respuesta_id || ui.respuestaId || '').trim();
+        renderEval360PublicForm();
+        setBanner('Avance guardado.', 'success');
+      }, { button, key: 'eval360-public-save' });
+    }
+
+    async function submitEval360PublicForm(button) {
+      const ui = getEval360Ui().publicForm;
+      await handleAction('enviarEval360RespuestaToken', async () => {
+        if (!ui.respuestaId) {
+          const draft = await api('guardarEval360AvanceToken', {
+            token: ui.token,
+            items: buildEval360PublicItemsPayload()
+          });
+          ui.respuestaId = String(draft.respuesta_id || '').trim();
+        }
+        const data = await api('enviarEval360RespuestaToken', {
+          token: ui.token,
+          respuesta_id: ui.respuestaId,
+          items: buildEval360PublicItemsPayload()
+        });
+        ui.submitted = String(data.estatus || '').trim() === 'enviada';
+        renderEval360PublicForm();
+      }, { button, key: 'eval360-public-submit' });
+    }
+
+    function renderEval360PublicForm() {
+      const mount = $('eval360PublicMount');
+      if (!mount) return;
+      const ui = getEval360Ui().publicForm;
+      if (ui.loading && !ui.loaded) {
+        mount.innerHTML = '<article class="card eval360-public-shell"><h1>Evaluacion 360</h1><p class="subtle">Cargando formulario...</p></article>';
+        return;
+      }
+      if (ui.error) {
+        mount.innerHTML = '<article class="card eval360-public-shell"><h1>Evaluacion 360</h1><p class="subtle">' + escapeHtml(ui.error) + '</p></article>';
+        return;
+      }
+      if (ui.submitted) {
+        mount.innerHTML = '<article class="card eval360-public-shell"><h1>Gracias</h1><p class="subtle">Tu evaluacion fue enviada correctamente.</p></article>';
+        return;
+      }
+      const form = ui.form || {};
+      const items = Array.isArray(form.items) ? form.items : [];
+      mount.innerHTML = [
+        '<article class="card eval360-public-shell eval360-module">',
+          '<div class="eval360-head">',
+            '<div><h1>Evaluacion 360</h1><p class="subtle">' + escapeHtml([form.actor, form.momento, form.alumno_id].filter(Boolean).join(' | ')) + '</p></div>',
+            '<span class="pill brand">' + escapeHtml(form.ciclo_id || '') + '</span>',
+          '</div>',
+          '<div class="eval360-public-items">',
+            items.length ? items.map(renderEval360PublicItem).join('') : '<div class="eval360-empty">Este instrumento todavia no tiene preguntas disponibles.</div>',
+          '</div>',
+          '<div class="actions compact">',
+            '<button class="btn-secondary" type="button" onclick="saveEval360PublicProgress(this)">Guardar avance</button>',
+            '<button class="btn-primary" type="button" onclick="submitEval360PublicForm(this)">Enviar evaluacion</button>',
+          '</div>',
+        '</article>'
+      ].join('');
+    }
+
+    function renderEval360PublicItem(item) {
+      const ui = getEval360Ui().publicForm;
+      const itemId = String(item.item_id || '').trim();
+      const current = Object.prototype.hasOwnProperty.call(ui.values, itemId) ? String(ui.values[itemId]) : '';
+      const labels = [
+        { value: '', label: 'No lo vi' },
+        { value: '1', label: 'Apenas empieza' },
+        { value: '2', label: 'Va avanzando' },
+        { value: '3', label: 'Lo hace seguido' },
+        { value: '4', label: 'Ya lo tiene claro' }
+      ];
+      return [
+        '<section class="eval360-public-item">',
+          '<div><strong>' + escapeHtml(item.texto || itemId) + '</strong><div class="mini">' + escapeHtml(item.area_nombre || item.area_id || '') + '</div></div>',
+          '<div class="eval360-public-scale">',
+            labels.map((entry) => '<label><input type="radio" name="eval360-' + escapeHtml(itemId) + '" value="' + escapeHtml(entry.value) + '"' + (current === entry.value ? ' checked' : '') + ' onchange="setEval360PublicValue(\'' + escapeJsAttrValue(itemId) + '\', this.value)">' + escapeHtml(entry.label) + '</label>').join(''),
+          '</div>',
+          '<textarea placeholder="Comentario opcional" oninput="setEval360PublicComment(\'' + escapeJsAttrValue(itemId) + '\', this.value)">' + escapeHtml(ui.comments[itemId] || '') + '</textarea>',
+        '</section>'
+      ].join('');
+    }
+
     async function handleAction(label, fn, options = {}) {
       const actionKey = options.key || label;
       const button = options.button || null;
@@ -17743,6 +18382,7 @@
       });
       $('logoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('workspaceLogoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
+      if ($('eval360FacilitadorOpenBtn')) $('eval360FacilitadorOpenBtn').addEventListener('click', (event) => toggleEval360FacilitadorPanel(event.currentTarget));
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
       $('savePlanBtn').addEventListener('click', (event) => handleAction('guardarPlaneacionCompleta', () => savePlanEditor(), {
         button: event.currentTarget,
@@ -17857,10 +18497,24 @@
         moveEditorActivity,
         removeEditorActivity,
         usePlanForActivities,
-        usePlanForObservation
+        usePlanForObservation,
+        toggleEval360FacilitadorPanel,
+        refreshEval360FacilitadorModule,
+        loadEval360FacilitadorPulso,
+        setEval360FacilitadorCiclo,
+        setEval360FacilitadorMomento,
+        loadEval360FacilitadorSugerencias,
+        setEval360PublicValue,
+        setEval360PublicComment,
+        saveEval360PublicProgress,
+        submitEval360PublicForm
       },
       admin: {
         activateAdminModule,
+        refreshEval360AdminModule,
+        loadEval360AdminResultados,
+        setEval360AdminCiclo,
+        setEval360AdminMomento,
         editNotification,
         notificationAction,
         toggleNotificationAudienceFacilitador,
@@ -17934,8 +18588,12 @@
 
     async function boot() {
       loadConfig();
-      loadSession();
       bindWindowActionGroup('core');
+      if (isEval360PublicRoute()) {
+        await startEval360PublicRoute();
+        return;
+      }
+      loadSession();
       if (state.session && state.session.token && canUseAdminShell()) {
         ensureAdminShellMarkupLoaded();
         bindWindowActionGroup('admin');

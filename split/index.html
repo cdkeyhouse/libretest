@@ -328,6 +328,7 @@
     .workspace { display: grid; gap: 20px; }
     .workspace,
     #panel-planeaciones,
+    #eval360FacilitadorPanel,
     #planeacionesList,
     .planeaciones-shell-card {
       min-width: 0;
@@ -378,6 +379,146 @@
       color: var(--brand-deep);
       font-size: 0.84rem;
       line-height: 1.45;
+    }
+
+    body.eval360-public-mode {
+      background: linear-gradient(180deg, #fbfaf4 0%, #f1ede3 100%);
+    }
+
+    body.eval360-public-mode .page > :not(#eval360PublicMount) {
+      display: none !important;
+    }
+
+    #eval360PublicMount:empty {
+      display: none;
+    }
+
+    #eval360PublicMount {
+      display: grid;
+      gap: 16px;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .eval360-module {
+      display: grid;
+      gap: 16px;
+    }
+
+    .eval360-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .eval360-kpis,
+    .eval360-grid,
+    .eval360-public-scale {
+      display: grid;
+      gap: 12px;
+    }
+
+    .eval360-kpis {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .eval360-grid {
+      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+      align-items: start;
+    }
+
+    .eval360-panel,
+    .eval360-kpi,
+    .eval360-row,
+    .eval360-public-item {
+      border: 1px solid rgba(23, 51, 45, 0.08);
+      background: rgba(255, 255, 255, 0.78);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .eval360-kpi strong {
+      display: block;
+      font-family: var(--font-title);
+      font-size: 1.55rem;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .eval360-row {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .eval360-row-head,
+    .eval360-row-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .eval360-meter {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(23, 51, 45, 0.08);
+      overflow: hidden;
+    }
+
+    .eval360-meter > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--berry), var(--accent), var(--brand));
+    }
+
+    .eval360-empty,
+    .eval360-disabled {
+      padding: 18px;
+      border-radius: 14px;
+      background: rgba(23, 51, 45, 0.04);
+      color: var(--muted);
+    }
+
+    .eval360-public-shell {
+      margin-top: 28px;
+    }
+
+    .eval360-public-item {
+      display: grid;
+      gap: 10px;
+    }
+
+    .eval360-public-scale {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .eval360-public-scale label {
+      display: grid;
+      place-items: center;
+      min-height: 54px;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(23, 51, 45, 0.12);
+      background: rgba(255, 255, 255, 0.84);
+      cursor: pointer;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .eval360-public-scale input {
+      margin-bottom: 5px;
+    }
+
+    .eval360-public-scale label:has(input:checked) {
+      border-color: rgba(31, 176, 186, 0.46);
+      background: rgba(31, 176, 186, 0.12);
+      color: var(--brand-deep);
     }
 
     .grid-2,
@@ -5560,6 +5701,9 @@
       .top-grid,
       .admin-panel-grid,
       .admin-panel-kpis,
+      .eval360-kpis,
+      .eval360-grid,
+      .eval360-public-scale,
       .grid-4,
       .grid-3,
       .grid-2 { grid-template-columns: 1fr !important; }
@@ -5706,11 +5850,14 @@
 
     <div id="statusBanner" class="status-banner info">Cada semana abre una nueva oportunidad para acompañar, observar y hacer crecer el aprendizaje.</div>
 
+    <div id="eval360PublicMount"></div>
+
     <div id="workspaceSessionBar" class="actions workspace-session-bar" hidden>
       <div id="workspaceSessionCopy" class="workspace-session-copy">
         <strong>Sin sesión</strong>
         <span class="mini">Libre Aprendiz</span>
       </div>
+      <button id="eval360FacilitadorOpenBtn" class="btn-secondary" type="button" hidden>Evaluación 360</button>
       <button id="workspaceLogoutBtn" class="btn-ghost" type="button">Cerrar sesión</button>
     </div>
 
@@ -5805,6 +5952,7 @@
           <button class="admin-nav-btn" type="button" data-admin-module="notificaciones">Notificaciones</button>
           <button class="admin-nav-btn" type="button" data-admin-module="reporte-ciclo">Reporte de ciclo</button>
           <button class="admin-nav-btn" type="button" data-admin-module="facilitadores">Facilitadores</button>
+          <button class="admin-nav-btn" type="button" data-admin-module="eval360">Evaluación 360</button>
           <button class="admin-nav-btn" type="button" data-admin-module="materias">Materias</button>
           <button class="admin-nav-btn" type="button" data-admin-module="talleres">Talleres</button>
           <button class="admin-nav-btn" type="button" data-admin-module="configuracion">Configuración</button>
@@ -5889,6 +6037,18 @@
             </div>
             <div class="actions">
               <button class="btn-primary" type="button" data-admin-module-launch="facilitadores">Abrir facilitadores</button>
+            </div>
+          </article>
+          <article class="module-card">
+            <div class="module-card-top">
+              <div>
+                <h3>Evaluación 360</h3>
+                <p>Revisa ciclos, invitaciones y resultados sin cargar este módulo durante el flujo diario.</p>
+              </div>
+              <div class="module-card-count" id="adminCountEval360">Off</div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" type="button" data-admin-module-launch="eval360">Abrir evaluación</button>
             </div>
           </article>
           <article class="module-card">
@@ -6117,6 +6277,8 @@
 
       <section id="admin-panel-facilitadores" class="admin-panel"></section>
 
+      <section id="admin-panel-eval360" class="admin-panel"></section>
+
       <section id="admin-panel-materias" class="admin-panel"></section>
 
       <section id="admin-panel-talleres" class="admin-panel"></section>
@@ -6139,6 +6301,8 @@
       <div class="tabs">
         <button class="tab-btn is-active" data-tab="planeaciones" type="button">Planeaciones</button>
       </div>
+
+      <article id="eval360FacilitadorPanel" class="card eval360-module" hidden></article>
 
       <section id="panel-planeaciones" class="panel is-active">
         <div class="grid-2">
@@ -6476,7 +6640,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260505-admin-side-panel-scroll-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260505-eval360-frontend-v1"></script>
 </body>
 </html>
 
