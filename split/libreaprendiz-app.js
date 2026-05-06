@@ -276,6 +276,15 @@
           pulso: null,
           sugerencias: [],
           selectedNeed: null,
+          form: null,
+          formLoading: false,
+          formError: '',
+          formValues: {},
+          formTouched: {},
+          formComments: {},
+          formGeneralComment: '',
+          formSavedAt: '',
+          formSubmitAttempted: false,
           error: ''
         },
         publicForm: {
@@ -15864,6 +15873,7 @@
       const ui = getEval360Ui().facilitador;
       ui.selectedCicloId = String(value || '').trim();
       ui.pulso = null;
+      clearEval360FacilitadorFormState();
       renderEval360FacilitadorPanel();
       loadEval360FacilitadorPulso().catch(() => {});
     }
@@ -15872,8 +15882,156 @@
       const ui = getEval360Ui().facilitador;
       ui.selectedMomento = normalizeEval360MomentFrontend(value);
       ui.pulso = null;
+      clearEval360FacilitadorFormState();
       renderEval360FacilitadorPanel();
       loadEval360FacilitadorPulso().catch(() => {});
+    }
+
+    function clearEval360FacilitadorFormState() {
+      const ui = getEval360Ui().facilitador;
+      ui.form = null;
+      ui.formError = '';
+      ui.formValues = {};
+      ui.formTouched = {};
+      ui.formComments = {};
+      ui.formGeneralComment = '';
+      ui.formSavedAt = '';
+      ui.formSubmitAttempted = false;
+    }
+
+    function hydrateEval360FacilitadorForm(data) {
+      const ui = getEval360Ui().facilitador;
+      ui.form = data || null;
+      ui.formValues = {};
+      ui.formTouched = {};
+      ui.formComments = {};
+      ui.formGeneralComment = String((data && data.comentario_general) || '');
+      (Array.isArray(data && data.respuestas) ? data.respuestas : []).forEach((row) => {
+        const itemId = String(row.item_id || '').trim();
+        if (!itemId) return;
+        ui.formValues[itemId] = row.valor === '' || row.valor === null || row.valor === undefined ? '' : Number(row.valor);
+        ui.formTouched[itemId] = true;
+        ui.formComments[itemId] = String(row.comentario || '');
+      });
+      (Array.isArray(data && data.items) ? data.items : []).forEach((item) => {
+        const itemId = String(item.item_id || '').trim();
+        if (itemId && !Object.prototype.hasOwnProperty.call(ui.formValues, itemId)) ui.formValues[itemId] = '';
+      });
+    }
+
+    async function loadEval360FacilitadorFormulario(invitacionId, button) {
+      const ui = getEval360Ui().facilitador;
+      const cleanId = String(invitacionId || '').trim();
+      if (!cleanId) return;
+      ui.formLoading = true;
+      ui.formError = '';
+      renderEval360FacilitadorPanel();
+      await handleAction('getEval360FormularioFacilitador', async () => {
+        const data = await api('getEval360FormularioFacilitador', { invitacion_id: cleanId });
+        hydrateEval360FacilitadorForm(data);
+        ui.formLoading = false;
+        renderEval360FacilitadorPanel();
+      }, {
+        button,
+        key: 'eval360-fac-form-' + cleanId,
+        busyText: 'Cargando',
+        onError: (err) => {
+          ui.formLoading = false;
+          ui.formError = formatApiError(err);
+          renderEval360FacilitadorPanel();
+          return false;
+        }
+      });
+    }
+
+    function setEval360FacilitadorFormValue(itemId, value) {
+      const ui = getEval360Ui().facilitador;
+      const cleanId = String(itemId || '').trim();
+      ui.formValues[cleanId] = value === '' ? '' : Number(value);
+      ui.formTouched[cleanId] = true;
+      renderEval360FacilitadorPanel();
+    }
+
+    function setEval360FacilitadorFormComment(itemId, value) {
+      const ui = getEval360Ui().facilitador;
+      ui.formComments[String(itemId || '').trim()] = String(value || '');
+    }
+
+    function setEval360FacilitadorFormGeneralComment(value) {
+      const ui = getEval360Ui().facilitador;
+      ui.formGeneralComment = String(value || '');
+    }
+
+    function isEval360FacilitadorFormItemAnswered(itemId) {
+      const ui = getEval360Ui().facilitador;
+      const cleanId = String(itemId || '').trim();
+      if (!cleanId) return false;
+      if (ui.formTouched && ui.formTouched[cleanId]) return true;
+      const value = ui.formValues ? ui.formValues[cleanId] : '';
+      return value !== '' && value !== null && value !== undefined;
+    }
+
+    function getEval360FacilitadorFormProgress() {
+      const ui = getEval360Ui().facilitador;
+      const items = ui.form && Array.isArray(ui.form.items) ? ui.form.items : [];
+      const answered = items.filter((item) => isEval360FacilitadorFormItemAnswered(item.item_id)).length;
+      return {
+        total: items.length,
+        answered,
+        missing: Math.max(0, items.length - answered),
+        percent: items.length ? Math.round((answered / items.length) * 100) : 0
+      };
+    }
+
+    function buildEval360FacilitadorItemsPayload() {
+      const ui = getEval360Ui().facilitador;
+      const items = ui.form && Array.isArray(ui.form.items) ? ui.form.items : [];
+      return items.map((item) => {
+        const itemId = String(item.item_id || '').trim();
+        return {
+          item_id: itemId,
+          area_id: String(item.area_id || '').trim(),
+          valor: Object.prototype.hasOwnProperty.call(ui.formValues, itemId) ? ui.formValues[itemId] : '',
+          label_snapshot: String(item.texto || '').trim(),
+          comentario: String(ui.formComments[itemId] || '').trim()
+        };
+      });
+    }
+
+    async function saveEval360FacilitadorForm(button, enviar) {
+      const ui = getEval360Ui().facilitador;
+      const form = ui.form || {};
+      const invitacion = form.invitacion || {};
+      const invitacionId = String(invitacion.invitacion_id || '').trim();
+      if (!invitacionId) return;
+      if (enviar) {
+        ui.formSubmitAttempted = true;
+        const progress = getEval360FacilitadorFormProgress();
+        if (progress.missing > 0) {
+          renderEval360FacilitadorPanel();
+          setBanner('Faltan ' + progress.missing + ' respuestas antes de enviar.', 'error', { anchor: captureFeedbackAnchor(button) });
+          return;
+        }
+      }
+      await handleAction('guardarEval360RespuestaFacilitador', async () => {
+        const data = await api('guardarEval360RespuestaFacilitador', {
+          invitacion_id: invitacionId,
+          respuesta_id: String(form.respuesta_id || '').trim(),
+          enviar: enviar === true,
+          comentario_general: ui.formGeneralComment,
+          items: buildEval360FacilitadorItemsPayload()
+        });
+        ui.formSavedAt = new Date().toISOString();
+        form.respuesta_id = String(data.respuesta_id || form.respuesta_id || '').trim();
+        form.respuesta_estatus = String(data.estatus || '').trim();
+        if (enviar) {
+          invitacion.estatus = 'enviada';
+          const inv = (ui.invitaciones || []).find((row) => String(row.invitacion_id || '').trim() === invitacionId);
+          if (inv) inv.estatus = 'enviada';
+        }
+        renderEval360FacilitadorPanel();
+        setBanner(enviar ? 'Evaluacion enviada.' : 'Borrador guardado.', 'success');
+      }, { button, key: 'eval360-fac-save-' + invitacionId + '-' + (enviar ? 'send' : 'draft'), busyText: enviar ? 'Enviando' : 'Guardando' });
     }
 
     async function loadEval360FacilitadorSugerencias(areaId, skillId, button) {
@@ -15892,6 +16050,93 @@
         ui.sugerencias = Array.isArray(data.plantillas) ? data.plantillas : [];
         renderEval360FacilitadorPanel();
       }, { button, key: buildActionKey('getEval360Sugerencias', [areaId, skillId]) });
+    }
+
+    function renderEval360FacilitadorInvitaciones() {
+      const ui = getEval360Ui().facilitador;
+      const rows = (Array.isArray(ui.invitaciones) ? ui.invitaciones : []).filter((row) => {
+        if (ui.selectedCicloId && String(row.ciclo_id || '').trim() !== ui.selectedCicloId) return false;
+        if (ui.selectedMomento && String(row.momento || '').trim() !== ui.selectedMomento) return false;
+        return true;
+      });
+      if (!rows.length) return '<div class="eval360-empty">No tienes observaciones pendientes para esta seleccion.</div>';
+      return rows.slice().reverse().map((row) => {
+        const invId = String(row.invitacion_id || '').trim();
+        const estatus = String(row.estatus || '').trim();
+        const sent = estatus === 'enviada';
+        return [
+          '<div class="eval360-row">',
+            '<div class="eval360-row-head"><strong>' + escapeHtml(row.alumno_id || '-') + '</strong><span class="pill">' + escapeHtml(estatus || '-') + '</span></div>',
+            '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.momento || '-') + '</span><span>' + escapeHtml(row.respondent_label || row.invitacion_id || '-') + '</span></div>',
+            '<div class="eval360-row-actions">',
+              '<button class="btn-secondary eval360-fac-answer-btn" type="button" onclick="loadEval360FacilitadorFormulario(\'' + escapeJsAttrValue(invId) + '\', this)">' + (sent ? 'Ver enviada' : 'Responder') + '</button>',
+            '</div>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
+    function renderEval360FacilitadorForm() {
+      const ui = getEval360Ui().facilitador;
+      if (ui.formLoading) return '<section class="eval360-panel"><div class="eval360-empty">Cargando observacion...</div></section>';
+      if (ui.formError) {
+        return '<section class="eval360-panel"><div class="eval360-empty">' + escapeHtml(ui.formError) + '</div></section>';
+      }
+      const form = ui.form || null;
+      if (!form) return '';
+      const inv = form.invitacion || {};
+      const items = Array.isArray(form.items) ? form.items : [];
+      const progress = getEval360FacilitadorFormProgress();
+      const sent = String(form.respuesta_estatus || inv.estatus || '').trim() === 'enviada';
+      const savedLabel = ui.formSavedAt ? 'Guardado ' + new Date(ui.formSavedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '';
+      const grouped = groupEval360PublicItemsByArea(items);
+      return [
+        '<section class="eval360-panel eval360-fac-form-panel" id="eval360FacilitadorFormPanel">',
+          '<div class="eval360-head">',
+            '<div><h3>Mi observacion</h3><p class="subtle">' + escapeHtml([inv.alumno_id, inv.momento, sent ? 'enviada' : 'borrador'].filter(Boolean).join(' | ')) + '</p></div>',
+            '<span class="pill">' + escapeHtml(progress.answered + '/' + progress.total) + '</span>',
+          '</div>',
+          '<div class="eval360-meter"><span style="width:' + escapeHtml(progress.percent) + '%"></span></div>',
+          savedLabel ? '<div class="mini">' + escapeHtml(savedLabel) + '</div>' : '',
+          ui.formSubmitAttempted && progress.missing ? '<div class="mini">Faltan ' + escapeHtml(progress.missing) + ' respuestas por completar.</div>' : '',
+          grouped.length ? grouped.map((group) => [
+            '<section class="eval360-public-area">',
+              '<div class="admin-alumnos-section-head"><h4>' + escapeHtml(group.label || 'Area') + '</h4></div>',
+              (group.items || []).map((item) => renderEval360FacilitadorFormItem(item, sent)).join(''),
+            '</section>'
+          ].join('')).join('') : '<div class="eval360-empty">Este instrumento todavia no tiene preguntas disponibles.</div>',
+          '<label for="eval360FacGeneralComment">Comentario general opcional</label>',
+          '<textarea id="eval360FacGeneralComment" placeholder="Algo util para tu observacion" oninput="setEval360FacilitadorFormGeneralComment(this.value)"' + (sent ? ' disabled' : '') + '>' + escapeHtml(ui.formGeneralComment || '') + '</textarea>',
+          '<div class="actions compact">',
+            '<button class="btn-secondary" type="button" onclick="saveEval360FacilitadorForm(this, false)"' + (sent ? ' disabled' : '') + '>Guardar borrador</button>',
+            '<button class="btn-primary" type="button" onclick="saveEval360FacilitadorForm(this, true)"' + (sent || !items.length ? ' disabled' : '') + '>Enviar observacion</button>',
+          '</div>',
+        '</section>'
+      ].join('');
+    }
+
+    function renderEval360FacilitadorFormItem(item, locked) {
+      const ui = getEval360Ui().facilitador;
+      const itemId = String(item.item_id || '').trim();
+      const current = Object.prototype.hasOwnProperty.call(ui.formValues, itemId) ? String(ui.formValues[itemId]) : '';
+      const missing = ui.formSubmitAttempted && !isEval360FacilitadorFormItemAnswered(itemId);
+      const labels = [
+        { value: '', label: 'No lo vi' },
+        { value: '1', label: 'Apenas empieza' },
+        { value: '2', label: 'Va avanzando' },
+        { value: '3', label: 'Lo hace seguido' },
+        { value: '4', label: 'Ya lo tiene claro' }
+      ];
+      return [
+        '<div class="eval360-public-item' + (missing ? ' is-missing' : '') + '">',
+          '<div><strong>' + escapeHtml(item.texto || itemId) + '</strong><div class="mini">' + escapeHtml(item.area_nombre || item.area_id || '') + '</div></div>',
+          '<div class="eval360-public-scale">',
+            labels.map((entry) => '<label><input type="radio" name="eval360-fac-' + escapeHtml(itemId) + '" value="' + escapeHtml(entry.value) + '"' + (current === entry.value ? ' checked' : '') + (locked ? ' disabled' : '') + ' onchange="setEval360FacilitadorFormValue(\'' + escapeJsAttrValue(itemId) + '\', this.value)">' + escapeHtml(entry.label) + '</label>').join(''),
+          '</div>',
+          missing ? '<div class="mini">Pendiente de responder.</div>' : '',
+          '<textarea placeholder="Comentario opcional" oninput="setEval360FacilitadorFormComment(\'' + escapeJsAttrValue(itemId) + '\', this.value)"' + (locked ? ' disabled' : '') + '>' + escapeHtml(ui.formComments[itemId] || '') + '</textarea>',
+        '</div>'
+      ].join('');
     }
 
     function renderEval360FacilitadorPanel() {
@@ -15936,6 +16181,8 @@
           '<div><label for="eval360FacCiclo">Ciclo</label><select id="eval360FacCiclo" onchange="setEval360FacilitadorCiclo(this.value)">' + getEval360CicloOptions(ciclos, ui.selectedCicloId) + '</select></div>',
           '<div><label for="eval360FacMomento">Momento</label><select id="eval360FacMomento" onchange="setEval360FacilitadorMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
         '</div>',
+        '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Mis observaciones</h4></div>' + renderEval360FacilitadorInvitaciones() + '</section>',
+        renderEval360FacilitadorForm(),
         '<div class="eval360-grid">',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas a trabajar</h4></div>' + renderEval360Rows(areas, { limit: 6 }) + '</section>',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades prioritarias</h4></div>' + renderEval360Rows(habilidades, { titleField: 'item_label', limit: 6,
@@ -18993,6 +19240,11 @@
         setEval360FacilitadorCiclo,
         setEval360FacilitadorMomento,
         loadEval360FacilitadorSugerencias,
+        loadEval360FacilitadorFormulario,
+        setEval360FacilitadorFormValue,
+        setEval360FacilitadorFormComment,
+        setEval360FacilitadorFormGeneralComment,
+        saveEval360FacilitadorForm,
         loadEval360PublicForm,
         setEval360PublicValue,
         setEval360PublicComment,
