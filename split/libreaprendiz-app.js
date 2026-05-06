@@ -285,7 +285,11 @@
           form: null,
           respuestaId: '',
           values: {},
+          touched: {},
           comments: {},
+          generalComment: '',
+          savedAt: '',
+          submitAttempted: false,
           submitting: false,
           submitted: false,
           error: ''
@@ -16055,7 +16059,7 @@
       } catch (err) {
         ui.loaded = true;
         ui.loading = false;
-        ui.error = formatApiError(err);
+        ui.error = getEval360PublicFriendlyError(err);
         renderEval360PublicForm();
       }
     }
@@ -16077,12 +16081,51 @@
 
     function setEval360PublicValue(itemId, value) {
       const ui = getEval360Ui().publicForm;
-      ui.values[String(itemId || '').trim()] = value === '' ? '' : Number(value);
+      const cleanId = String(itemId || '').trim();
+      ui.values[cleanId] = value === '' ? '' : Number(value);
+      ui.touched[cleanId] = true;
+      renderEval360PublicForm();
     }
 
     function setEval360PublicComment(itemId, value) {
       const ui = getEval360Ui().publicForm;
       ui.comments[String(itemId || '').trim()] = String(value || '');
+    }
+
+    function setEval360PublicGeneralComment(value) {
+      const ui = getEval360Ui().publicForm;
+      ui.generalComment = String(value || '');
+    }
+
+    function isEval360PublicItemAnswered(itemId) {
+      const ui = getEval360Ui().publicForm;
+      const cleanId = String(itemId || '').trim();
+      if (!cleanId) return false;
+      if (ui.touched && ui.touched[cleanId]) return true;
+      const value = ui.values ? ui.values[cleanId] : '';
+      return value !== '' && value !== null && value !== undefined;
+    }
+
+    function getEval360PublicProgress() {
+      const ui = getEval360Ui().publicForm;
+      const items = ui.form && Array.isArray(ui.form.items) ? ui.form.items : [];
+      const answered = items.filter((item) => isEval360PublicItemAnswered(item.item_id)).length;
+      return {
+        total: items.length,
+        answered,
+        missing: Math.max(0, items.length - answered),
+        percent: items.length ? Math.round((answered / items.length) * 100) : 0
+      };
+    }
+
+    function getEval360PublicFriendlyError(err) {
+      const code = String(err && err.code || '').trim();
+      const message = String(err && err.message || err || '').trim();
+      if (code === 'FEATURE_DISABLED') return 'Este formulario todavia no esta disponible. Intentalo mas tarde.';
+      if (code === 'FORBIDDEN') return 'Este link no esta disponible. Puede estar vencido, cancelado o ya enviado.';
+      if (code === 'NOT_FOUND') return 'No encontramos este formulario. Revisa que el link este completo.';
+      if (code === 'VALIDATION_ERROR') return message || 'Revisa las respuestas pendientes antes de continuar.';
+      return message || 'No pudimos cargar el formulario en este momento.';
     }
 
     async function saveEval360PublicProgress(button) {
@@ -16094,6 +16137,7 @@
           items: buildEval360PublicItemsPayload()
         });
         ui.respuestaId = String(data.respuesta_id || ui.respuestaId || '').trim();
+        ui.savedAt = new Date().toISOString();
         renderEval360PublicForm();
         setBanner('Avance guardado.', 'success');
       }, { button, key: 'eval360-public-save' });
@@ -16101,6 +16145,13 @@
 
     async function submitEval360PublicForm(button) {
       const ui = getEval360Ui().publicForm;
+      ui.submitAttempted = true;
+      const progress = getEval360PublicProgress();
+      if (progress.missing > 0) {
+        renderEval360PublicForm();
+        setBanner('Faltan ' + progress.missing + ' respuestas antes de enviar.', 'error', { anchor: captureFeedbackAnchor(button) });
+        return;
+      }
       await handleAction('enviarEval360RespuestaToken', async () => {
         if (!ui.respuestaId) {
           const draft = await api('guardarEval360AvanceToken', {
@@ -16112,7 +16163,8 @@
         const data = await api('enviarEval360RespuestaToken', {
           token: ui.token,
           respuesta_id: ui.respuestaId,
-          items: buildEval360PublicItemsPayload()
+          items: buildEval360PublicItemsPayload(),
+          comentario_general: ui.generalComment
         });
         ui.submitted = String(data.estatus || '').trim() === 'enviada';
         renderEval360PublicForm();
@@ -16128,29 +16180,73 @@
         return;
       }
       if (ui.error) {
-        mount.innerHTML = '<article class="card eval360-public-shell"><h1>Evaluacion 360</h1><p class="subtle">' + escapeHtml(ui.error) + '</p></article>';
+        mount.innerHTML = [
+          '<article class="card eval360-public-shell">',
+            '<h1>Evaluacion 360</h1>',
+            '<p class="subtle">' + escapeHtml(ui.error) + '</p>',
+            '<div class="actions compact"><button class="btn-secondary" type="button" onclick="loadEval360PublicForm()">Reintentar</button></div>',
+          '</article>'
+        ].join('');
         return;
       }
       if (ui.submitted) {
-        mount.innerHTML = '<article class="card eval360-public-shell"><h1>Gracias</h1><p class="subtle">Tu evaluacion fue enviada correctamente.</p></article>';
+        mount.innerHTML = '<article class="card eval360-public-shell"><h1>Gracias</h1><p class="subtle">Tu evaluacion fue enviada correctamente. Ya puedes cerrar esta pantalla.</p></article>';
         return;
       }
       const form = ui.form || {};
       const items = Array.isArray(form.items) ? form.items : [];
+      const progress = getEval360PublicProgress();
+      const savedLabel = ui.savedAt ? 'Guardado ' + new Date(ui.savedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'Sin guardar';
+      const grouped = groupEval360PublicItemsByArea(items);
       mount.innerHTML = [
         '<article class="card eval360-public-shell eval360-module">',
           '<div class="eval360-head">',
             '<div><h1>Evaluacion 360</h1><p class="subtle">' + escapeHtml([form.actor, form.momento, form.alumno_id].filter(Boolean).join(' | ')) + '</p></div>',
             '<span class="pill brand">' + escapeHtml(form.ciclo_id || '') + '</span>',
           '</div>',
-          '<div class="eval360-public-items">',
-            items.length ? items.map(renderEval360PublicItem).join('') : '<div class="eval360-empty">Este instrumento todavia no tiene preguntas disponibles.</div>',
+          '<div class="eval360-row">',
+            '<div class="eval360-row-head"><strong>' + escapeHtml(progress.answered + ' de ' + progress.total + ' respuestas') + '</strong><span class="pill">' + escapeHtml(savedLabel) + '</span></div>',
+            '<div class="eval360-meter"><span style="width:' + escapeHtml(progress.percent) + '%"></span></div>',
+            ui.submitAttempted && progress.missing ? '<div class="mini">Faltan ' + escapeHtml(progress.missing) + ' preguntas por responder.</div>' : '',
           '</div>',
+          '<div class="eval360-public-items">',
+            grouped.length ? grouped.map(renderEval360PublicAreaGroup).join('') : '<div class="eval360-empty">Este instrumento todavia no tiene preguntas disponibles.</div>',
+          '</div>',
+          '<label for="eval360PublicGeneralComment">Comentario general opcional</label>',
+          '<textarea id="eval360PublicGeneralComment" placeholder="Algo que quieras agregar antes de enviar" oninput="setEval360PublicGeneralComment(this.value)">' + escapeHtml(ui.generalComment || '') + '</textarea>',
           '<div class="actions compact">',
             '<button class="btn-secondary" type="button" onclick="saveEval360PublicProgress(this)">Guardar avance</button>',
-            '<button class="btn-primary" type="button" onclick="submitEval360PublicForm(this)">Enviar evaluacion</button>',
+            '<button class="btn-primary" type="button" onclick="submitEval360PublicForm(this)"' + (!items.length ? ' disabled' : '') + '>Enviar evaluacion</button>',
           '</div>',
         '</article>'
+      ].join('');
+    }
+
+    function groupEval360PublicItemsByArea(items) {
+      const groups = [];
+      const byKey = new Map();
+      (Array.isArray(items) ? items : []).forEach((item) => {
+        const key = String(item.area_id || item.area_nombre || 'general').trim() || 'general';
+        if (!byKey.has(key)) {
+          const group = {
+            key,
+            label: String(item.area_nombre || formatEval360AreaLabel(item.area_id) || 'Area').trim(),
+            items: []
+          };
+          byKey.set(key, group);
+          groups.push(group);
+        }
+        byKey.get(key).items.push(item);
+      });
+      return groups;
+    }
+
+    function renderEval360PublicAreaGroup(group) {
+      return [
+        '<section class="eval360-panel eval360-public-area">',
+          '<div class="admin-alumnos-section-head"><h2>' + escapeHtml(group.label || 'Area') + '</h2></div>',
+          (group.items || []).map(renderEval360PublicItem).join(''),
+        '</section>'
       ].join('');
     }
 
@@ -16166,11 +16262,12 @@
         { value: '4', label: 'Ya lo tiene claro' }
       ];
       return [
-        '<section class="eval360-public-item">',
+        '<section class="eval360-public-item' + (ui.submitAttempted && !isEval360PublicItemAnswered(itemId) ? ' is-missing' : '') + '">',
           '<div><strong>' + escapeHtml(item.texto || itemId) + '</strong><div class="mini">' + escapeHtml(item.area_nombre || item.area_id || '') + '</div></div>',
           '<div class="eval360-public-scale">',
             labels.map((entry) => '<label><input type="radio" name="eval360-' + escapeHtml(itemId) + '" value="' + escapeHtml(entry.value) + '"' + (current === entry.value ? ' checked' : '') + ' onchange="setEval360PublicValue(\'' + escapeJsAttrValue(itemId) + '\', this.value)">' + escapeHtml(entry.label) + '</label>').join(''),
           '</div>',
+          ui.submitAttempted && !isEval360PublicItemAnswered(itemId) ? '<div class="mini">Pendiente de responder.</div>' : '',
           '<textarea placeholder="Comentario opcional" oninput="setEval360PublicComment(\'' + escapeJsAttrValue(itemId) + '\', this.value)">' + escapeHtml(ui.comments[itemId] || '') + '</textarea>',
         '</section>'
       ].join('');
@@ -18896,8 +18993,10 @@
         setEval360FacilitadorCiclo,
         setEval360FacilitadorMomento,
         loadEval360FacilitadorSugerencias,
+        loadEval360PublicForm,
         setEval360PublicValue,
         setEval360PublicComment,
+        setEval360PublicGeneralComment,
         saveEval360PublicProgress,
         submitEval360PublicForm
       },
