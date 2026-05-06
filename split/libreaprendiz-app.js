@@ -260,6 +260,7 @@
           selectedMomento: 'inicio',
           resultados: [],
           participacion: null,
+          comparacion: null,
           cycleDraft: createEmptyEval360CycleDraft(),
           invitationDraft: createEmptyEval360InvitationDraft(),
           createdInvitations: [],
@@ -15421,6 +15422,60 @@
       }).join('');
     }
 
+    function formatEval360Delta(value) {
+      if (value === '' || value === null || value === undefined) return 'sin comparacion';
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return 'sin comparacion';
+      const sign = numeric > 0 ? '+' : '';
+      return sign + numeric.toFixed(2).replace(/\.00$/, '').replace(/0$/, '');
+    }
+
+    function formatEval360GrowthLabel(value) {
+      const clean = String(value || '').trim();
+      if (clean === 'crecio') return 'Crecio';
+      if (clean === 'estable') return 'Estable';
+      if (clean === 'requiere_apoyo') return 'Requiere apoyo';
+      if (clean === 'sin_inicio') return 'Sin inicio';
+      if (clean === 'sin_final') return 'Sin final';
+      if (clean === 'datos_insuficientes') return 'Datos insuficientes';
+      return clean ? formatEval360HumanLabel(clean) : 'Sin comparacion';
+    }
+
+    function renderEval360GrowthRows(rows, options = {}) {
+      const list = Array.isArray(rows) ? rows : [];
+      if (!list.length) {
+        return '<div class="eval360-empty">Todavia no hay inicio y final calculados para comparar.</div>';
+      }
+      const limit = Number(options.limit || 6);
+      return list.slice(0, limit).map((row) => {
+        const label = String(row.item_id
+          ? (row.item_label || row.item_id)
+          : (row.area_nombre || formatEval360AreaLabel(row.area_id) || row.area_id || 'Area')
+        ).trim();
+        const meta = [
+          row.item_id ? (row.area_nombre || row.area_id || 'Habilidad') : 'Area',
+          row.alumnos_count ? String(row.alumnos_count) + ' alumnos' : '',
+          row.sin_final_count ? String(row.sin_final_count) + ' sin final' : '',
+          row.sin_inicio_count ? String(row.sin_inicio_count) + ' sin inicio' : '',
+          row.datos_insuficientes_count ? String(row.datos_insuficientes_count) + ' con datos insuficientes' : ''
+        ].filter(Boolean);
+        return [
+          '<div class="eval360-row">',
+            '<div class="eval360-row-head">',
+              '<strong>' + escapeHtml(label) + '</strong>',
+              '<span class="pill">' + escapeHtml(formatEval360GrowthLabel(row.etiqueta)) + '</span>',
+            '</div>',
+            '<div class="eval360-row-meta mini">',
+              '<span>Inicio ' + escapeHtml(formatEval360Score(row.inicio)) + '</span>',
+              '<span>Final ' + escapeHtml(formatEval360Score(row.final)) + '</span>',
+              '<span>Delta ' + escapeHtml(formatEval360Delta(row.delta)) + '</span>',
+            '</div>',
+            '<div class="eval360-row-meta mini"><span>' + escapeHtml(meta.join(' | ')) + '</span></div>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
     function getEval360AlumnoOptions(selectedId) {
       const alumnos = Array.isArray(state.catalogos.alumnos) ? state.catalogos.alumnos : [];
       return '<option value="">Selecciona alumno</option>' + alumnos.map((row) => {
@@ -15498,6 +15553,7 @@
       if (!ui.selectedCicloId) {
         ui.resultados = [];
         ui.participacion = null;
+        ui.comparacion = null;
         renderAdminEval360Module();
         return;
       }
@@ -15508,6 +15564,7 @@
         });
         ui.resultados = Array.isArray(data.resultados) ? data.resultados : [];
         ui.participacion = data.participacion || null;
+        ui.comparacion = data.comparacion || null;
         renderAdminEval360Module();
       }, { button, key: buildActionKey('getEval360ResultadosAdmin', [ui.selectedCicloId, ui.selectedMomento]) });
     }
@@ -15518,6 +15575,7 @@
       syncEval360InvitationDraftFromSelection();
       ui.resultados = [];
       ui.participacion = null;
+      ui.comparacion = null;
       renderAdminEval360Module();
       loadEval360AdminResultados().catch(() => {});
     }
@@ -15528,6 +15586,7 @@
       syncEval360InvitationDraftFromSelection();
       ui.resultados = [];
       ui.participacion = null;
+      ui.comparacion = null;
       renderAdminEval360Module();
       loadEval360AdminResultados().catch(() => {});
     }
@@ -15615,6 +15674,7 @@
         });
         ui.resultados = Array.isArray(data.resultados) ? data.resultados : [];
         ui.participacion = data.participacion || null;
+        ui.comparacion = data.comparacion || null;
         renderAdminEval360Module();
         setBanner('Resultados Eval360 actualizados (' + String(result.computed || 0) + ' filas).', 'success');
       }, { button, key: buildActionKey('refreshEval360Cache', [cicloId, ui.selectedMomento]), busyText: 'Actualizando' });
@@ -15822,6 +15882,9 @@
       const resultados = ui.resultados || [];
       const areaRows = resultados.filter((row) => !String(row.item_id || '').trim());
       const skillRows = resultados.filter((row) => !!String(row.item_id || '').trim());
+      const comparacion = ui.comparacion || {};
+      const crecimientoAreas = Array.isArray(comparacion.por_area) ? comparacion.por_area : [];
+      const crecimientoHabilidades = Array.isArray(comparacion.por_habilidad) ? comparacion.por_habilidad : [];
       panel.innerHTML = [
         '<article class="admin-toolbar eval360-module">',
           '<div class="eval360-head">',
@@ -15850,6 +15913,12 @@
             '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas con mayor necesidad</h4></div>' + renderEval360Rows(areaRows, { limit: 8 }) + '</section>',
             '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades especificas</h4></div>' + renderEval360Rows(skillRows, { titleField: 'item_label', limit: 8 }) + '</section>',
           '</div>',
+          '<section class="eval360-panel" id="eval360AdminGrowthPanel"><div class="admin-alumnos-section-head"><h4>Crecimiento inicio/final</h4><span class="pill">Agregado</span></div>',
+            '<div class="eval360-grid">',
+              '<section><div class="admin-alumnos-section-head"><h4>Areas</h4></div>' + renderEval360GrowthRows(crecimientoAreas, { limit: 6 }) + '</section>',
+              '<section><div class="admin-alumnos-section-head"><h4>Habilidades</h4></div>' + renderEval360GrowthRows(crecimientoHabilidades, { limit: 6 }) + '</section>',
+            '</div>',
+          '</section>',
           '<section class="eval360-panel" id="eval360AdminParticipationPanel"><div class="admin-alumnos-section-head"><h4>Participacion por alumno</h4><span class="pill">' + escapeHtml((ui.participacion && ui.participacion.respondidas) || 0) + ' enviadas</span></div>',
             renderEval360AdminParticipacion(ui.participacion),
           '</section>',
