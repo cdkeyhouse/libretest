@@ -15286,6 +15286,7 @@
         const count = row.alumnos_count ? String(row.alumnos_count) + ' alumnos' : '';
         const areaLabel = String(row.area_nombre || formatEval360AreaLabel(row.area_id)).trim();
         const itemMeta = row.item_id ? (areaLabel ? areaLabel + ' · Habilidad' : 'Habilidad') : (row.scope_id ? 'Alumno ' + row.scope_id : '');
+        const actionHtml = typeof options.rowAction === 'function' ? options.rowAction(row) : '';
         return [
           '<div class="eval360-row">',
             '<div class="eval360-row-head">',
@@ -15297,6 +15298,7 @@
               '<span>' + escapeHtml(itemMeta || 'Area') + '</span>',
               '<span>' + escapeHtml(count || String(row.datos_insuficientes || '').trim() || '') + '</span>',
             '</div>',
+            actionHtml,
           '</div>'
         ].join('');
       }).join('');
@@ -15623,10 +15625,21 @@
         '</div>',
         '<div class="eval360-grid">',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas a trabajar</h4></div>' + renderEval360Rows(areas, { limit: 6 }) + '</section>',
-          '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades prioritarias</h4></div>' + renderEval360Rows(habilidades, { titleField: 'item_label', limit: 6 }) + '</section>',
+          '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades prioritarias</h4></div>' + renderEval360Rows(habilidades, { titleField: 'item_label', limit: 6,
+            rowAction: function(row) {
+              if (!row.item_id) return '';
+              return '<div class="eval360-row-actions">'
+                + '<button class="btn-ghost eval360-ideas-btn" type="button"'
+                + ' onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(row.area_id || '') + '\', \'' + escapeJsAttrValue(row.item_id || '') + '\', this)"'
+                + ' title="Ver ideas para esta habilidad">Ideas</button>'
+                + '</div>';
+            }
+          }) + '</section>',
         '</div>',
         '<div class="actions compact">',
-          '<button class="btn-primary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas Mindset/STEAM</button>',
+          firstNeed.item_id || firstNeed.area_id
+            ? '<button class="btn-secondary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas (prioridad 1)</button>'
+            : '',
         '</div>',
         renderEval360Sugerencias(ui.sugerencias, ui.selectedNeed),
       ].join('');
