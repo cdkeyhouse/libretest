@@ -276,7 +276,13 @@
           familyReportReviewAccepted: false,
           selectedFamilyAlumnoId: '',
           showQaClosed: false,
-          participationFilter: 'todos'
+          participationFilter: 'todos',
+          suggestionBankOpen: false,
+          suggestionBankLoading: false,
+          suggestionBankError: '',
+          suggestionBank: null,
+          suggestionBankFilters: { area_id: '', skill_id: '', estatus: '', q: '' },
+          suggestionBankDraft: null
         },
         facilitador: {
           open: false,
@@ -16153,6 +16159,375 @@
       });
     }
 
+    // ── Banco de sugerencias admin ────────────────────────────────────────────
+
+    function getEval360BancoUi() {
+      return getEval360Ui().admin;
+    }
+
+    async function openEval360SuggestionBank(button) {
+      const ui = getEval360BancoUi();
+      ui.suggestionBankOpen = true;
+      renderAdminEval360Module();
+      if (!ui.suggestionBank) {
+        await loadEval360SuggestionBank(button);
+      }
+    }
+
+    async function loadEval360SuggestionBank(button) {
+      const ui = getEval360BancoUi();
+      return handleAction('getEval360BancoSugerenciasAdmin', async () => {
+        ui.suggestionBankLoading = true;
+        ui.suggestionBankError = '';
+        renderAdminEval360Module();
+        const filters = ui.suggestionBankFilters;
+        const payload = {};
+        if (filters.area_id)  payload.area_id  = filters.area_id;
+        if (filters.skill_id) payload.skill_id = filters.skill_id;
+        const data = await api('getEval360BancoSugerenciasAdmin', payload);
+        ui.suggestionBank = data || { plantillas: [], areas: [], habilidades: [], total: 0 };
+        ui.suggestionBankLoading = false;
+        renderAdminEval360Module();
+      }, {
+        button,
+        key: 'eval360-banco-load',
+        onError: (err) => {
+          ui.suggestionBankLoading = false;
+          ui.suggestionBankError = String((err && err.message) || 'Error al cargar banco de sugerencias.');
+          renderAdminEval360Module();
+        }
+      });
+    }
+
+    function setEval360SuggestionBankFilter(field, value) {
+      const ui = getEval360BancoUi();
+      ui.suggestionBankFilters[field] = String(value || '');
+      renderAdminEval360Module();
+    }
+
+    function startNewEval360PlantillaDraft() {
+      const ui = getEval360BancoUi();
+      ui.suggestionBankDraft = {
+        plantilla_id: '',
+        area_id: '',
+        skill_refs: [],
+        materia_sugerida: '',
+        titulo: '',
+        objetivo: '',
+        actividades: [],
+        materiales: [],
+        preguntas_cierre: [],
+        evidencias: [],
+        estatus: 'borrador'
+      };
+      renderAdminEval360Module();
+    }
+
+    function startEval360PlantillaDraft(plantillaId) {
+      const ui = getEval360BancoUi();
+      const bank = ui.suggestionBank;
+      const found = bank && Array.isArray(bank.plantillas)
+        ? bank.plantillas.find((p) => p.plantilla_id === plantillaId)
+        : null;
+      if (!found) return;
+      ui.suggestionBankDraft = {
+        plantilla_id: found.plantilla_id,
+        area_id: found.area_id || '',
+        skill_refs: Array.isArray(found.skill_refs) ? found.skill_refs.slice() : [],
+        materia_sugerida: found.materia_sugerida || '',
+        titulo: found.titulo || '',
+        objetivo: found.objetivo || '',
+        actividades: Array.isArray(found.actividades) ? found.actividades.slice() : [],
+        materiales: Array.isArray(found.materiales) ? found.materiales.slice() : [],
+        preguntas_cierre: Array.isArray(found.preguntas_cierre) ? found.preguntas_cierre.slice() : [],
+        evidencias: Array.isArray(found.evidencias) ? found.evidencias.slice() : [],
+        estatus: found.estatus || 'borrador'
+      };
+      renderAdminEval360Module();
+    }
+
+    function cancelEval360PlantillaDraft() {
+      const ui = getEval360BancoUi();
+      ui.suggestionBankDraft = null;
+      renderAdminEval360Module();
+    }
+
+    function setEval360PlantillaDraftField(field, value) {
+      const ui = getEval360BancoUi();
+      if (!ui.suggestionBankDraft) return;
+      ui.suggestionBankDraft[field] = value;
+    }
+
+    async function saveEval360PlantillaDraft(button) {
+      const ui = getEval360BancoUi();
+      const draft = ui.suggestionBankDraft;
+      if (!draft) return;
+      // Parse textarea-style arrays (one item per line)
+      const parseLines = (val) => {
+        if (Array.isArray(val)) return val.filter(Boolean);
+        return String(val || '').split('\n').map((s) => s.trim()).filter(Boolean);
+      };
+      const payload = {
+        area_id: String(draft.area_id || '').trim(),
+        titulo: String(draft.titulo || '').trim(),
+        objetivo: String(draft.objetivo || '').trim(),
+        materia_sugerida: String(draft.materia_sugerida || '').trim(),
+        skill_refs: Array.isArray(draft.skill_refs) ? draft.skill_refs : [],
+        actividades: parseLines(draft.actividades),
+        materiales: parseLines(draft.materiales),
+        preguntas_cierre: parseLines(draft.preguntas_cierre),
+        evidencias: parseLines(draft.evidencias),
+        estatus: String(draft.estatus || 'borrador').trim()
+      };
+      if (draft.plantilla_id) payload.plantilla_id = draft.plantilla_id;
+      return handleAction('guardarEval360PlantillaSugerencia', async () => {
+        await api('guardarEval360PlantillaSugerencia', payload);
+        ui.suggestionBankDraft = null;
+        ui.suggestionBank = null; // force reload
+        renderAdminEval360Module();
+        await loadEval360SuggestionBank(button);
+      }, {
+        button,
+        key: 'eval360-banco-save',
+        onError: (err) => {
+          if (button) flashButtonLabel(button, 'Error: ' + String((err && err.message) || 'Error al guardar'), 4000);
+        }
+      });
+    }
+
+    async function duplicateEval360Plantilla(plantillaId, button) {
+      const ui = getEval360BancoUi();
+      return handleAction('duplicarEval360PlantillaSugerencia', async () => {
+        await api('duplicarEval360PlantillaSugerencia', { plantilla_id: plantillaId });
+        ui.suggestionBank = null;
+        renderAdminEval360Module();
+        await loadEval360SuggestionBank(button);
+      }, {
+        button,
+        key: 'eval360-banco-dup-' + plantillaId,
+        onError: (err) => {
+          if (button) flashButtonLabel(button, 'Error', 3000);
+        }
+      });
+    }
+
+    async function cambiarEstatusEval360Plantilla(plantillaId, estatus, button) {
+      const ui = getEval360BancoUi();
+      return handleAction('cambiarEstatusEval360PlantillaSugerencia', async () => {
+        await api('cambiarEstatusEval360PlantillaSugerencia', { plantilla_id: plantillaId, estatus: estatus });
+        ui.suggestionBank = null;
+        renderAdminEval360Module();
+        await loadEval360SuggestionBank(button);
+      }, {
+        button,
+        key: 'eval360-banco-estatus-' + plantillaId,
+        onError: (err) => {
+          if (button) flashButtonLabel(button, 'Error', 3000);
+        }
+      });
+    }
+
+    // ── Render banco de sugerencias ───────────────────────────────────────────
+
+    function filterBancoPlantillas(plantillas, filters) {
+      const q = String(filters.q || '').trim().toLowerCase();
+      const areaId = String(filters.area_id || '').trim();
+      const skillId = String(filters.skill_id || '').trim();
+      const estatus = String(filters.estatus || '').trim();
+      return (Array.isArray(plantillas) ? plantillas : []).filter((p) => {
+        if (areaId && p.area_id !== areaId) return false;
+        if (estatus && p.estatus !== estatus) return false;
+        if (skillId && (!Array.isArray(p.skill_refs) || p.skill_refs.indexOf(skillId) === -1)) return false;
+        if (q) {
+          const haystack = ((p.titulo || '') + ' ' + (p.objetivo || '') + ' ' + (p.materia_sugerida || '')).toLowerCase();
+          if (haystack.indexOf(q) === -1) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderEval360PlantillaDraft(draft, bank) {
+      const areas = (bank && Array.isArray(bank.areas)) ? bank.areas : [];
+      const habilidades = (bank && Array.isArray(bank.habilidades)) ? bank.habilidades : [];
+      const skillRefsCurrent = Array.isArray(draft.skill_refs) ? draft.skill_refs : [];
+      const areaOptions = ['<option value="">-- Área --</option>']
+        .concat(areas.map((a) => '<option value="' + escapeHtml(a.area_id) + '"' + (draft.area_id === a.area_id ? ' selected' : '') + '>' + escapeHtml(a.area_nombre || a.area_id) + '</option>'))
+        .join('');
+      // Habilidades filtradas por area actual
+      const habsFiltradas = draft.area_id
+        ? habilidades.filter((h) => h.area_id === draft.area_id)
+        : habilidades;
+      const skillCheckboxes = habsFiltradas.length
+        ? habsFiltradas.map((h) => {
+            const checked = skillRefsCurrent.indexOf(h.item_id) !== -1 ? ' checked' : '';
+            return '<label class="mini"><input type="checkbox" ' + checked + ' onchange="toggleEval360DraftSkillRef(\'' + escapeHtml(h.item_id) + '\', this.checked)"> ' + escapeHtml(h.label || h.item_id) + '</label>';
+          }).join(' ')
+        : '<span class="mini" style="color:var(--text-soft)">Selecciona un área primero</span>';
+      const estatusOptions = ['borrador', 'activa', 'archivada'].map((e) =>
+        '<option value="' + e + '"' + (draft.estatus === e ? ' selected' : '') + '>' + escapeHtml(e) + '</option>'
+      ).join('');
+      const toTextarea = (val) => Array.isArray(val) ? val.join('\n') : String(val || '');
+      return [
+        '<div class="eval360-banco-editor">',
+          '<div class="eval360-banco-editor-grid">',
+            '<div><label>Área <span class="required">*</span></label>',
+              '<select onchange="setEval360PlantillaDraftField(\'area_id\', this.value); setEval360PlantillaDraftField(\'skill_refs\', []); renderAdminEval360Module();">' + areaOptions + '</select>',
+            '</div>',
+            '<div><label>Materia sugerida</label>',
+              '<input type="text" value="' + escapeHtml(draft.materia_sugerida || '') + '" oninput="setEval360PlantillaDraftField(\'materia_sugerida\', this.value)">',
+            '</div>',
+            '<div><label>Estatus</label><select onchange="setEval360PlantillaDraftField(\'estatus\', this.value)">' + estatusOptions + '</select></div>',
+          '</div>',
+          '<div><label>Título <span class="required">*</span></label>',
+            '<input type="text" value="' + escapeHtml(draft.titulo || '') + '" oninput="setEval360PlantillaDraftField(\'titulo\', this.value)">',
+          '</div>',
+          '<div><label>Objetivo <span class="required">*</span></label>',
+            '<textarea rows="2" oninput="setEval360PlantillaDraftField(\'objetivo\', this.value)">' + escapeHtml(draft.objetivo || '') + '</textarea>',
+          '</div>',
+          '<div><label class="mini">Habilidades relacionadas</label><div class="eval360-skill-checks">' + skillCheckboxes + '</div></div>',
+          '<div><label class="mini">Actividades <span class="mini" style="color:var(--text-soft)">(una por línea)</span></label>',
+            '<textarea rows="3" oninput="setEval360PlantillaDraftField(\'actividades\', this.value.split(\'\\n\'))">' + escapeHtml(toTextarea(draft.actividades)) + '</textarea>',
+          '</div>',
+          '<div><label class="mini">Materiales</label>',
+            '<textarea rows="2" oninput="setEval360PlantillaDraftField(\'materiales\', this.value.split(\'\\n\'))">' + escapeHtml(toTextarea(draft.materiales)) + '</textarea>',
+          '</div>',
+          '<div><label class="mini">Preguntas de cierre</label>',
+            '<textarea rows="2" oninput="setEval360PlantillaDraftField(\'preguntas_cierre\', this.value.split(\'\\n\'))">' + escapeHtml(toTextarea(draft.preguntas_cierre)) + '</textarea>',
+          '</div>',
+          '<div><label class="mini">Evidencias</label>',
+            '<textarea rows="2" oninput="setEval360PlantillaDraftField(\'evidencias\', this.value.split(\'\\n\'))">' + escapeHtml(toTextarea(draft.evidencias)) + '</textarea>',
+          '</div>',
+          '<div class="actions compact">',
+            '<button class="btn-primary" type="button" onclick="saveEval360PlantillaDraft(this)">',
+              draft.plantilla_id ? 'Guardar cambios' : 'Crear plantilla',
+            '</button>',
+            '<button class="btn-ghost" type="button" onclick="cancelEval360PlantillaDraft()">Cancelar</button>',
+          '</div>',
+        '</div>',
+      ].join('');
+    }
+
+    function renderEval360PlantillaRow(p) {
+      const estatusPillClass = p.estatus === 'activa' ? 'pill-green' : p.estatus === 'archivada' ? 'pill-grey' : 'pill-yellow';
+      const skillStr = Array.isArray(p.skill_labels) && p.skill_labels.length
+        ? p.skill_labels.map((s) => escapeHtml(s.label)).join(', ')
+        : '<span class="mini" style="color:var(--text-soft)">Área completa</span>';
+      const objetivoCorto = (p.objetivo || '').length > 80 ? p.objetivo.substring(0, 80) + '…' : (p.objetivo || '');
+      const accionEstatus = p.estatus === 'activa'
+        ? '<button class="btn-ghost mini" type="button" onclick="cambiarEstatusEval360Plantilla(\'' + escapeHtml(p.plantilla_id) + '\', \'archivada\', this)">Archivar</button>'
+        : '<button class="btn-ghost mini" type="button" onclick="cambiarEstatusEval360Plantilla(\'' + escapeHtml(p.plantilla_id) + '\', \'activa\', this)">Activar</button>';
+      return [
+        '<div class="eval360-banco-row' + (p.estatus === 'archivada' ? ' eval360-banco-row--archived' : '') + '">',
+          '<div class="eval360-row-head">',
+            '<strong>' + escapeHtml(p.titulo || '-') + '</strong>',
+            '<span class="pill ' + escapeHtml(estatusPillClass) + '">' + escapeHtml(p.estatus || '-') + '</span>',
+            p.materia_sugerida ? '<span class="pill">' + escapeHtml(p.materia_sugerida) + '</span>' : '',
+          '</div>',
+          '<div class="eval360-row-meta mini">',
+            '<span>' + escapeHtml(p.area_nombre || p.area_id || '-') + '</span>',
+            '<span>' + skillStr + '</span>',
+          '</div>',
+          objetivoCorto ? '<div class="eval360-banco-objetivo mini" style="color:var(--text-soft)">' + escapeHtml(objetivoCorto) + '</div>' : '',
+          '<div class="eval360-banco-actions">',
+            '<button class="btn-ghost mini" type="button" onclick="startEval360PlantillaDraft(\'' + escapeHtml(p.plantilla_id) + '\')">Editar</button>',
+            '<button class="btn-ghost mini" type="button" onclick="duplicateEval360Plantilla(\'' + escapeHtml(p.plantilla_id) + '\', this)">Duplicar</button>',
+            accionEstatus,
+          '</div>',
+        '</div>',
+      ].join('');
+    }
+
+    function renderEval360BancoSugerencias(ui) {
+      const bankOpen = ui.suggestionBankOpen;
+      const bankLoading = ui.suggestionBankLoading;
+      const bank = ui.suggestionBank;
+      const draft = ui.suggestionBankDraft;
+      const filters = ui.suggestionBankFilters || { area_id: '', skill_id: '', estatus: '', q: '' };
+
+      const header = [
+        '<div class="admin-alumnos-section-head">',
+          '<h4>Banco de sugerencias</h4>',
+          '<div class="actions compact">',
+            !bankOpen
+              ? '<button id="eval360OpenBancoBtn" class="btn-secondary" type="button" onclick="openEval360SuggestionBank(this)">Abrir banco de sugerencias</button>'
+              : [
+                  '<button class="btn-ghost" type="button" onclick="loadEval360SuggestionBank(this)">' + (bankLoading ? 'Cargando...' : 'Actualizar') + '</button>',
+                  '<button id="eval360NewPlantillaBtn" class="btn-secondary" type="button" onclick="startNewEval360PlantillaDraft()"' + (draft ? ' disabled' : '') + '>Nueva sugerencia</button>',
+                ].join(''),
+          '</div>',
+        '</div>',
+      ].join('');
+
+      if (!bankOpen) {
+        return header + '<div class="eval360-empty mini" style="color:var(--text-soft)">Carga el banco solo cuando lo necesites.</div>';
+      }
+
+      if (bankLoading) {
+        return header + '<div class="eval360-empty">Cargando banco de sugerencias...</div>';
+      }
+
+      if (ui.suggestionBankError) {
+        return header + '<p class="eval360-report-error" role="alert">' + escapeHtml(ui.suggestionBankError) + '</p>';
+      }
+
+      if (!bank) {
+        return header + '<div class="eval360-empty">Presiona "Actualizar" para cargar el banco.</div>';
+      }
+
+      // Draft editor
+      const draftHtml = draft ? renderEval360PlantillaDraft(draft, bank) : '';
+
+      // Filters
+      const areas = Array.isArray(bank.areas) ? bank.areas : [];
+      const habilidades = Array.isArray(bank.habilidades) ? bank.habilidades : [];
+      const areaFilterOptions = ['<option value="">Todas las áreas</option>']
+        .concat(areas.map((a) => '<option value="' + escapeHtml(a.area_id) + '"' + (filters.area_id === a.area_id ? ' selected' : '') + '>' + escapeHtml(a.area_nombre || a.area_id) + '</option>'))
+        .join('');
+      const habsParaFiltro = filters.area_id ? habilidades.filter((h) => h.area_id === filters.area_id) : habilidades;
+      const skillFilterOptions = ['<option value="">Todas las habilidades</option>']
+        .concat(habsParaFiltro.map((h) => '<option value="' + escapeHtml(h.item_id) + '"' + (filters.skill_id === h.item_id ? ' selected' : '') + '>' + escapeHtml(h.label || h.item_id) + '</option>'))
+        .join('');
+      const estatusFilterOptions = [
+        '<option value="">Todos</option>',
+        '<option value="activa"' + (filters.estatus === 'activa' ? ' selected' : '') + '>Activa</option>',
+        '<option value="borrador"' + (filters.estatus === 'borrador' ? ' selected' : '') + '>Borrador</option>',
+        '<option value="archivada"' + (filters.estatus === 'archivada' ? ' selected' : '') + '>Archivada</option>',
+      ].join('');
+      const filtersHtml = [
+        '<div id="eval360BancoFilters" class="eval360-banco-filters">',
+          '<select onchange="setEval360SuggestionBankFilter(\'area_id\', this.value)">' + areaFilterOptions + '</select>',
+          '<select onchange="setEval360SuggestionBankFilter(\'skill_id\', this.value)">' + skillFilterOptions + '</select>',
+          '<select onchange="setEval360SuggestionBankFilter(\'estatus\', this.value)">' + estatusFilterOptions + '</select>',
+          '<input type="search" placeholder="Buscar..." value="' + escapeHtml(filters.q || '') + '" oninput="setEval360SuggestionBankFilter(\'q\', this.value)" style="min-width:120px">',
+        '</div>',
+      ].join('');
+
+      // List
+      const filtered = filterBancoPlantillas(bank.plantillas, filters);
+      const totalLabel = '<span class="pill">' + escapeHtml(String(filtered.length)) + (filtered.length !== bank.total ? ' de ' + escapeHtml(String(bank.total)) : '') + ' plantillas</span>';
+      const listHtml = filtered.length
+        ? filtered.map(renderEval360PlantillaRow).join('')
+        : '<div class="eval360-empty">Sin plantillas con estos filtros.</div>';
+
+      return [
+        header,
+        draftHtml,
+        filtersHtml,
+        '<div class="eval360-banco-list-header mini">' + totalLabel + '</div>',
+        '<div id="eval360BancoList">' + listHtml + '</div>',
+      ].join('');
+    }
+
+    function toggleEval360DraftSkillRef(itemId, checked) {
+      const ui = getEval360BancoUi();
+      if (!ui.suggestionBankDraft) return;
+      const refs = Array.isArray(ui.suggestionBankDraft.skill_refs) ? ui.suggestionBankDraft.skill_refs.slice() : [];
+      const idx = refs.indexOf(itemId);
+      if (checked && idx === -1) refs.push(itemId);
+      if (!checked && idx !== -1) refs.splice(idx, 1);
+      ui.suggestionBankDraft.skill_refs = refs;
+    }
+
     function setEval360AdminCycleDraft(field, value) {
       const ui = getEval360Ui().admin;
       ui.cycleDraft[field] = String(value || '').trim();
@@ -16536,6 +16911,9 @@
             renderEval360FamilyReleaseState(ui.familyReport),
             renderEval360FamilyFinalReview(ui.familyReport),
             renderEval360FamilyReport(ui.familyReport),
+          '</section>',
+          '<section class="eval360-panel" id="eval360AdminSuggestionBankPanel">',
+            renderEval360BancoSugerencias(ui),
           '</section>',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Invitaciones recientes</h4></div>',
             renderEval360InvitacionesTable(invitaciones.slice(-10).reverse()),
@@ -20298,6 +20676,17 @@
         confirmEval360FamilyFinalReview,
         updateEval360FamilyReportRelease,
         setEval360AdminFamilyAlumnoId,
+        openEval360SuggestionBank,
+        loadEval360SuggestionBank,
+        setEval360SuggestionBankFilter,
+        startNewEval360PlantillaDraft,
+        startEval360PlantillaDraft,
+        cancelEval360PlantillaDraft,
+        setEval360PlantillaDraftField,
+        saveEval360PlantillaDraft,
+        duplicateEval360Plantilla,
+        cambiarEstatusEval360Plantilla,
+        toggleEval360DraftSkillRef,
         setEval360AdminCycleDraft,
         setEval360AdminInvitationDraft,
         toggleEval360AdminInvitationActor,
