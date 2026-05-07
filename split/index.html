@@ -6090,6 +6090,133 @@
       align-items: start;
     }
 
+    .eval360-growth-panel {
+      display: grid;
+      gap: 16px;
+    }
+
+    .eval360-growth-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .eval360-growth-summary span {
+      min-height: 72px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      padding: 12px;
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.045);
+      color: var(--text-soft);
+      font-weight: 800;
+    }
+
+    .eval360-growth-summary strong {
+      display: block;
+      color: var(--text-strong);
+      font-family: var(--font-title);
+      font-size: 1.55rem;
+      line-height: 1;
+    }
+
+    .eval360-growth-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(320px, .82fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .eval360-growth-area-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .eval360-growth-card,
+    .eval360-growth-focus-row {
+      border: 1px solid var(--border-strong);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .eval360-growth-card {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .eval360-growth-card-head,
+    .eval360-growth-card-foot,
+    .eval360-growth-focus-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .eval360-growth-card-head strong,
+    .eval360-growth-focus-row strong {
+      color: var(--text-strong);
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .eval360-growth-bars {
+      display: grid;
+      gap: 8px;
+    }
+
+    .eval360-growth-bar-row {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) 34px;
+      gap: 8px;
+      align-items: center;
+      color: var(--text-soft);
+      font-size: .82rem;
+      font-weight: 800;
+    }
+
+    .eval360-growth-track {
+      height: 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.09);
+    }
+
+    .eval360-growth-track i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: rgba(155,163,168,0.55);
+    }
+
+    .eval360-growth-track i.is-start {
+      background: linear-gradient(90deg, rgba(245,192,36,0.85), rgba(240,123,32,0.85));
+    }
+
+    .eval360-growth-track i.is-end {
+      background: linear-gradient(90deg, rgba(184,216,50,0.86), rgba(31,182,229,0.86));
+    }
+
+    .eval360-growth-focus-row {
+      padding: 13px;
+      margin-bottom: 10px;
+    }
+
+    .eval360-growth-focus-row > div {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .eval360-growth-focus-row .mini {
+      color: var(--text-soft);
+      overflow-wrap: anywhere;
+    }
+
     #eval360AdminFamilyReportPanel .eval360-family-report {
       padding: 18px;
       border-radius: 16px;
@@ -6178,12 +6305,20 @@
       .eval360-compact-grid {
         grid-template-columns: 1fr;
       }
+      .eval360-growth-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .eval360-growth-layout {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 680px) {
       .eval360-context-bar,
       .eval360-compact-cards,
-      .eval360-compact-strip {
+      .eval360-compact-strip,
+      .eval360-growth-summary,
+      .eval360-growth-area-grid {
         grid-template-columns: 1fr;
       }
       .eval360-compact-hero,
@@ -7192,7 +7327,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-admin-compact-dark-v4"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-admin-growth-v1"></script>
 </body>
 </html>
 
