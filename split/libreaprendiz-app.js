@@ -17069,10 +17069,27 @@
       ].join('');
     }
 
+    function focusEval360ActiveSectionBody() {
+      window.requestAnimationFrame(() => {
+        const panel = $('admin-panel-eval360');
+        const body = panel ? panel.querySelector('.eval360-section-body') : null;
+        if (!body || typeof body.scrollIntoView !== 'function') return;
+        const rect = body.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const lowerComfortLine = Math.max(300, viewportHeight * 0.58);
+        if (rect.top > lowerComfortLine || rect.top < 0) {
+          const pageTop = window.scrollY || document.documentElement.scrollTop || 0;
+          const targetTop = Math.max(0, pageTop + rect.top - 96);
+          window.scrollTo({ top: targetTop, behavior: 'auto' });
+        }
+      });
+    }
+
     function setEval360AdminSection(section) {
       const ui = getEval360Ui().admin;
       ui.activeSection = String(section || 'resumen').trim() || 'resumen';
       renderAdminEval360Module();
+      focusEval360ActiveSectionBody();
       if (ui.activeSection === 'resultados' && ui.selectedCicloId && !ui.resultados.length) {
         loadEval360AdminResultados().catch(() => {});
       }
@@ -17333,6 +17350,16 @@
       const hiddenQaClosed = getEval360HiddenQaClosedCount(ui.ciclos, ui.selectedCicloId);
       const activeSection = ui.activeSection || 'resumen';
       const sectionHtml = buildEval360AdminSectionHtml(ui);
+      const kpisHtml = activeSection === 'resumen'
+        ? [
+            '<div class="eval360-kpis eval360-compact-strip">',
+              '<div class="eval360-kpi"><strong>' + escapeHtml(visibleCiclos.length) + '</strong><span class="mini">Ciclos</span></div>',
+              '<div class="eval360-kpi"><strong>' + escapeHtml(invitaciones.length) + '</strong><span class="mini">Invitaciones</span></div>',
+              '<div class="eval360-kpi"><strong>' + escapeHtml(sent) + '</strong><span class="mini">Enviadas</span></div>',
+              '<div class="eval360-kpi"><strong>' + escapeHtml(publicInvites) + '</strong><span class="mini">Links publicos</span></div>',
+            '</div>'
+          ].join('')
+        : '';
       panel.innerHTML = [
         '<article class="admin-toolbar eval360-module">',
           '<div class="eval360-head">',
@@ -17342,12 +17369,7 @@
               '<button id="eval360RefreshCacheBtn" class="btn-secondary" type="button" onclick="refreshEval360AdminCache(this)">Actualizar resultados</button>',
             '</div>',
           '</div>',
-          '<div class="eval360-kpis eval360-compact-strip">',
-            '<div class="eval360-kpi"><strong>' + escapeHtml(visibleCiclos.length) + '</strong><span class="mini">Ciclos</span></div>',
-            '<div class="eval360-kpi"><strong>' + escapeHtml(invitaciones.length) + '</strong><span class="mini">Invitaciones</span></div>',
-            '<div class="eval360-kpi"><strong>' + escapeHtml(sent) + '</strong><span class="mini">Enviadas</span></div>',
-            '<div class="eval360-kpi"><strong>' + escapeHtml(publicInvites) + '</strong><span class="mini">Links publicos</span></div>',
-          '</div>',
+          kpisHtml,
           renderEval360AdminContextBar(ui, hiddenQaClosed),
           getEval360AdminTabs(activeSection),
           '<div class="eval360-section-body">',
