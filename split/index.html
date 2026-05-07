@@ -6366,14 +6366,21 @@
     }
 
     .eval360-family-brand-mark {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
       display: grid;
       place-items: center;
-      color: #fff;
-      font-weight: 950;
-      background: conic-gradient(from 20deg, #1f6fd1, #2f8f46, #f3a51c, #d92d20, #1f6fd1);
+      background: #fff;
+      border: 1px solid #e6e9ef;
+      overflow: hidden;
+    }
+
+    .eval360-family-brand-mark img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 5px;
     }
 
     .eval360-family-public-hero {
@@ -6444,7 +6451,21 @@
       min-height: 180px;
       display: grid;
       place-items: center;
+      align-content: center;
+      gap: 8px;
+      padding: 20px;
+      text-align: center;
       color: #667085;
+    }
+
+    .eval360-family-radar-empty strong {
+      color: #162033 !important;
+    }
+
+    .eval360-family-radar-empty span {
+      max-width: 220px;
+      color: #667085 !important;
+      line-height: 1.35;
     }
 
     .eval360-family-kpis {
@@ -6480,6 +6501,13 @@
       gap: 18px;
       align-items: start;
       margin-bottom: 18px;
+    }
+
+    .eval360-family-column {
+      display: grid;
+      gap: 18px;
+      align-content: start;
+      min-width: 0;
     }
 
     .eval360-family-card {
@@ -6589,6 +6617,35 @@
       background: #fff;
     }
 
+    .eval360-family-strength-card {
+      gap: 10px;
+    }
+
+    .eval360-family-strength-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .eval360-family-strength-head span {
+      flex: 0 0 auto;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #1f6fd1 !important;
+      background: #eaf3ff;
+      font-weight: 950;
+    }
+
+    .eval360-family-strength-card small {
+      color: #667085;
+      font-weight: 850;
+    }
+
     .eval360-family-home-card {
       display: grid;
       grid-template-columns: 38px minmax(0, 1fr);
@@ -6623,6 +6680,19 @@
       border-color: #d8e9ff;
       border-radius: 18px;
       box-shadow: none;
+    }
+
+    .eval360-family-note strong {
+      width: 26px;
+      height: 26px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: #fff !important;
+      background: #1f6fd1;
+      font-weight: 950;
+      line-height: 1;
     }
 
     .eval360-checklist {
@@ -6863,6 +6933,11 @@
 
     /* ── Eval360 family report: impresion / guardar PDF ─────────────────── */
     @media print {
+      html,
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       body.eval360-print-family-report * { visibility: hidden; }
       body.eval360-print-family-report #eval360FamilyReportContent,
       body.eval360-print-family-report #eval360FamilyReportContent * { visibility: visible; }
@@ -6871,10 +6946,12 @@
         left: 0;
         top: 0;
         width: 100%;
-        background: white !important;
+        background:
+          radial-gradient(circle at top left, rgba(31,111,209,0.10), transparent 34rem),
+          linear-gradient(180deg, #fbfcff 0%, #f2f5f9 100%) !important;
         color: #162033 !important;
         box-shadow: none !important;
-        padding: 18px !important;
+        padding: 0 !important;
         font-size: 13px;
       }
       body.eval360-print-family-report .eval360-family-public-brand,
@@ -6882,7 +6959,14 @@
       body.eval360-print-family-report .eval360-family-card,
       body.eval360-print-family-report .eval360-family-kpis article,
       body.eval360-print-family-report .eval360-family-note {
-        box-shadow: none !important;
+        box-shadow: 0 10px 26px rgba(21,31,52,0.06) !important;
+      }
+      body.eval360-print-family-report .eval360-family-public-hero,
+      body.eval360-print-family-report .eval360-family-main-grid {
+        grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr) !important;
+      }
+      body.eval360-print-family-report .eval360-family-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
       }
       .eval360-family-report section,
       .eval360-family-public-hero,
@@ -7722,7 +7806,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-speed-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-family-print-v1"></script>
 </body>
 </html>
 
