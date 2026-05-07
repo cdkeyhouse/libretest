@@ -5893,6 +5893,278 @@
     .pill-yellow { background: rgba(245,192,36,0.18) !important; color: #ffe08f !important; }
     .pill-grey { background: rgba(155,163,168,0.16) !important; color: #d0d5d9 !important; }
 
+    /* Eval360 Admin Compact UX */
+    #admin-panel-eval360 .eval360-module {
+      gap: 18px;
+    }
+
+    #admin-panel-eval360 .eval360-head {
+      align-items: center;
+      padding-bottom: 4px;
+    }
+
+    .eval360-compact-strip {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .eval360-context-bar {
+      position: sticky;
+      top: 78px;
+      z-index: 8;
+      display: grid;
+      grid-template-columns: minmax(220px, 1.05fr) minmax(260px, 1.25fr) minmax(150px, .65fr) minmax(190px, .85fr) auto;
+      gap: 12px;
+      align-items: end;
+      padding: 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(43,39,36,0.98), rgba(31,28,26,0.98));
+      box-shadow: 0 18px 42px rgba(0,0,0,0.22);
+    }
+
+    .eval360-context-title {
+      min-height: 46px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+      padding: 0 4px;
+    }
+
+    .eval360-context-title strong {
+      color: var(--text-soft);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .eval360-context-title span {
+      color: var(--text-strong);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .eval360-compact-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 4px 0 10px;
+      border-bottom: 1px solid var(--border-soft);
+      overflow-x: auto;
+    }
+
+    .eval360-compact-tabs button {
+      min-height: 40px;
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      padding: 0 14px;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-soft);
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .eval360-compact-tabs button.is-active {
+      background: linear-gradient(90deg, rgba(232,25,106,0.92), rgba(31,182,229,0.82));
+      border-color: rgba(255,255,255,0.16);
+      color: #fff;
+      box-shadow: 0 10px 26px rgba(232,25,106,0.22);
+    }
+
+    .eval360-section-body {
+      display: grid;
+      gap: 18px;
+    }
+
+    .eval360-compact-hero {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 16px;
+      align-items: center;
+      padding: 18px;
+      border: 1px solid rgba(245,192,36,0.28);
+      border-radius: 16px;
+      background: linear-gradient(90deg, rgba(245,192,36,0.14), rgba(255,255,255,0.04));
+    }
+
+    .eval360-compact-hero h4 {
+      margin: 0 0 4px;
+      font-size: 1.15rem;
+    }
+
+    .eval360-compact-hero p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .eval360-hero-mark,
+    .eval360-compact-icon {
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      font-weight: 950;
+    }
+
+    .eval360-hero-mark {
+      width: 58px;
+      height: 58px;
+      background: linear-gradient(135deg, rgba(245,192,36,0.95), rgba(240,123,32,0.9));
+      color: #fff;
+    }
+
+    .eval360-compact-cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .eval360-compact-card {
+      min-height: 112px;
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(48,44,41,0.98), rgba(38,34,31,0.98));
+    }
+
+    .eval360-compact-icon {
+      width: 54px;
+      height: 54px;
+      background: rgba(31,182,229,0.16);
+      color: #b8e8ff;
+      font-size: 1.3rem;
+    }
+
+    .eval360-compact-card span:not(.pill) {
+      display: block;
+      color: var(--text-soft);
+      font-weight: 800;
+      font-size: .82rem;
+      margin-bottom: 4px;
+    }
+
+    .eval360-compact-card strong {
+      display: inline-block;
+      margin-right: 8px;
+      color: var(--text-strong);
+      font-family: var(--font-title);
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .eval360-compact-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(320px, .82fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    #eval360AdminFamilyReportPanel .eval360-family-report {
+      padding: 18px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(47,43,40,0.99), rgba(34,31,29,0.99)) !important;
+    }
+
+    #eval360AdminFamilyReportPanel .eval360-family-report-header {
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    #eval360AdminFamilyReportPanel .eval360-family-report-meta strong {
+      display: inline-block;
+      font-size: 1.35rem;
+      margin-right: 8px;
+    }
+
+    #eval360AdminFamilyReportPanel .eval360-family-report-resumen {
+      padding: 16px;
+      border: 1px solid rgba(245,192,36,0.28);
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(245,192,36,0.13), rgba(255,255,255,0.04)) !important;
+      color: var(--text-strong) !important;
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    #eval360AdminFamilyReportPanel .eval360-sugerencias {
+      padding: 16px;
+      border: 1px solid rgba(245,192,36,0.22);
+      border-radius: 14px;
+      background: rgba(245,192,36,0.07);
+    }
+
+    #eval360AdminFamilyReportPanel .eval360-family-release,
+    #eval360AdminFamilyReportPanel .eval360-family-final-review {
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .eval360-checklist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .eval360-check-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      color: var(--text-soft);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .eval360-check-item.is-ok {
+      color: #ddf487;
+      background: rgba(184,216,50,0.12);
+      border-color: rgba(184,216,50,0.2);
+    }
+
+    .eval360-check-item.is-missing {
+      color: #ffe08f;
+      background: rgba(245,192,36,0.10);
+      border-color: rgba(245,192,36,0.2);
+    }
+
+    @media (max-width: 1180px) {
+      .eval360-context-bar {
+        grid-template-columns: 1fr 1fr;
+        position: static;
+      }
+      .eval360-context-bar .btn-primary {
+        width: 100%;
+      }
+      .eval360-compact-cards,
+      .eval360-compact-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .eval360-compact-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .eval360-context-bar,
+      .eval360-compact-cards,
+      .eval360-compact-strip {
+        grid-template-columns: 1fr;
+      }
+      .eval360-compact-hero,
+      .eval360-compact-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .badge.borrador { background: rgba(155,163,168,0.16) !important; color: #d8dde0 !important; }
     .badge.borrador_pendiente_aprobacion { background: rgba(240,123,32,0.18) !important; color: #ffc089 !important; }
     .badge.rechazada { background: rgba(232,25,106,0.18) !important; color: #ff90bb !important; }
@@ -6893,7 +7165,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260506-eval360-banco-sugerencias-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-admin-compact-dark-v1"></script>
 </body>
 </html>
 
