@@ -17631,7 +17631,8 @@
             label,
             finalVal,
             delta,
-            texto: text
+            texto: text,
+            accion: String(source.accion_casa || source.accion || '').trim()
           };
         });
     }
@@ -17659,7 +17660,6 @@
             { valor: 3, label: 'Lo hace seguido' },
             { valor: 4, label: 'Ya lo tiene claro' },
           ];
-      const proximoPaso = normalizeEval360FamilyCopy(report.proximo_paso || 'Revisa este reporte con el facilitador para elegir una o dos acciones concretas de acompañamiento en casa y en el grupo.');
       const showDataWarning = estadoDatos && estadoDatos !== 'completo';
       const headerHtml = [
         '<div class="eval360-family-public-hero">',
@@ -17730,6 +17730,7 @@
             '<div class="eval360-family-side-card eval360-family-strength-card">',
               '<div class="eval360-family-strength-head"><h3>' + escapeHtml(f.label || '-') + '</h3><span>' + escapeHtml(formatEval360FamilyScore(f.finalVal)) + '/4</span></div>',
               '<p>' + escapeHtml(normalizeEval360FamilyCopy(f.texto || '')) + '</p>',
+              f.accion ? '<p class="eval360-family-action"><strong>Para reforzar:</strong> ' + escapeHtml(normalizeEval360FamilyCopy(f.accion)) + '</p>' : '',
               Number.isFinite(f.delta) ? '<small>Avance observado: ' + escapeHtml(f.delta > 0 ? '+' + formatEval360FamilyScore(f.delta) : formatEval360FamilyScore(f.delta)) + '</small>' : '',
             '</div>',
           ].join('')).join('')
@@ -17738,19 +17739,17 @@
         ? sugerenciasCasa.map((s, index) => {
             const tit = typeof s === 'string' ? 'Sugerencia' : (s.titulo || 'Sugerencia');
             const desc = normalizeEval360FamilyCopy(typeof s === 'string' ? s : (s.descripcion || ''));
+            const area = typeof s === 'string' ? '' : getEval360FamilyAreaLabel(s.area_id, s.area_nombre);
             return [
               '<div class="eval360-family-home-card">',
                 '<div class="eval360-family-home-number">' + escapeHtml(String(index + 1)) + '</div>',
-                '<div><h3>' + escapeHtml(tit) + '</h3><p>' + escapeHtml(desc) + '</p></div>',
+                '<div>' + (area ? '<span class="eval360-family-home-area">' + escapeHtml(area) + '</span>' : '') + '<h3>' + escapeHtml(tit) + '</h3><p>' + escapeHtml(desc) + '</p></div>',
               '</div>'
             ].join('');
           }).join('')
         : '<div class="eval360-family-side-card"><p>Sin sugerencias disponibles.</p></div>';
       const notaHtml = notaTexto
         ? '<footer class="eval360-family-note"><strong>!</strong><p><b>&iexcl;Importante!</b> ' + escapeHtml(notaTexto) + '</p></footer>'
-        : '';
-      const nextStepHtml = proximoPaso
-        ? '<section class="eval360-family-card eval360-family-next-step"><div class="eval360-family-section-head"><div><h3>Pr&oacute;ximo paso</h3><p>Para convertir el reporte en acompa&ntilde;amiento.</p></div></div><p>' + escapeHtml(proximoPaso) + '</p></section>'
         : '';
       return [
         '<div class="eval360-family-report" id="eval360FamilyReportContent">',
@@ -17763,11 +17762,10 @@
               '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Habilidades para acompa&ntilde;ar</h3><p>Focos concretos para el siguiente periodo.</p></div></div><div class="eval360-family-side-list">' + habPrioHtml + '</div></section>',
             '</div>',
             '<aside class="eval360-family-column">',
-              '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Fortalezas observadas</h3><p>Lo que conviene reconocer.</p></div></div><div class="eval360-family-side-list">' + fortHtml + '</div></section>',
-              '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Para acompa&ntilde;ar en casa</h3><p>Acciones sencillas y observables.</p></div></div><div>' + sugHtml + '</div></section>',
+              '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Fortalezas observadas</h3><p>C&oacute;mo reconocerlas y seguirlas fortaleciendo.</p></div></div><div class="eval360-family-side-list">' + fortHtml + '</div></section>',
+              '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Para acompa&ntilde;ar en casa</h3><p>Consejos pr&aacute;cticos ligados a las &aacute;reas evaluadas.</p></div></div><div>' + sugHtml + '</div></section>',
             '</aside>',
           '</div>',
-          nextStepHtml,
           notaHtml,
         '</div>',
       ].join('');
