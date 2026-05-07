@@ -283,7 +283,9 @@
           suggestionBank: null,
           suggestionBankFilters: { area_id: '', skill_id: '', estatus: '', q: '' },
           suggestionBankDraft: null,
-          activeSection: 'resumen'
+          activeSection: 'resumen',
+          resultAreasLimit: 6,
+          resultSkillsLimit: 6
         },
         facilitador: {
           open: false,
@@ -15340,7 +15342,9 @@
       const list = Array.isArray(rows) ? rows : [];
       if (!list.length) return '<div class="eval360-empty">Todavia no hay resultados calculados para esta seleccion.</div>';
       const titleField = options.titleField || 'area_id';
-      return list.slice(0, Number(options.limit || 8)).map((row) => {
+      const limit = Number(options.limit || 8);
+      const visibleRows = list.slice(0, limit);
+      const rowsHtml = visibleRows.map((row) => {
         const score = row.promedio_grupo !== undefined ? row.promedio_grupo : row.promedio;
         const rawTitle = String(row[titleField] || '').trim();
         const titleLabel = titleField === 'area_id' ? formatEval360AreaLabel(rawTitle) : rawTitle;
@@ -15369,6 +15373,10 @@
           '</div>'
         ].join('');
       }).join('');
+      if (typeof options.moreAction === 'function' && list.length > limit) {
+        return rowsHtml + options.moreAction({ total: list.length, shown: visibleRows.length, remaining: list.length - visibleRows.length });
+      }
+      return rowsHtml;
     }
 
     function isEval360QaCycle(ciclo) {
@@ -16941,6 +16949,17 @@
       }
     }
 
+    function loadMoreEval360AdminResults(kind) {
+      const ui = getEval360Ui().admin;
+      const clean = String(kind || '').trim();
+      if (clean === 'areas') {
+        ui.resultAreasLimit = Number(ui.resultAreasLimit || 6) + 6;
+      } else if (clean === 'skills') {
+        ui.resultSkillsLimit = Number(ui.resultSkillsLimit || 6) + 6;
+      }
+      renderAdminEval360Module();
+    }
+
     function getEval360AdminSelectedCicloLabel() {
       const selected = getEval360SelectedCiclo();
       return selected ? getEval360CycleDisplayLabel(selected) : 'Sin ciclo seleccionado';
@@ -17033,10 +17052,19 @@
     }
 
     function renderEval360AdminResultadosCompact(areaRows, skillRows, crecimientoAreas, crecimientoHabilidades) {
+      const ui = getEval360Ui().admin;
+      const areaLimit = Number(ui.resultAreasLimit || 6);
+      const skillLimit = Number(ui.resultSkillsLimit || 6);
+      const moreButton = (kind, label) => (meta) => [
+        '<div class="eval360-load-more">',
+          '<span class="mini">Mostrando ' + escapeHtml(meta.shown) + ' de ' + escapeHtml(meta.total) + '</span>',
+          '<button class="btn-ghost" type="button" onclick="loadMoreEval360AdminResults(\'' + escapeHtml(kind) + '\')">' + escapeHtml(label) + '</button>',
+        '</div>'
+      ].join('');
       return [
         '<section class="eval360-compact-grid">',
-          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas con mayor necesidad</h4></div>' + renderEval360Rows(areaRows, { limit: 8 }) + '</article>',
-          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades especificas</h4></div>' + renderEval360Rows(skillRows, { titleField: 'item_label', limit: 8 }) + '</article>',
+          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><div><h4>Areas de desarrollo</h4><p class="mini">Las 6 areas, ordenadas por mayor necesidad.</p></div></div>' + renderEval360Rows(areaRows, { limit: areaLimit, moreAction: moreButton('areas', 'Cargar mas areas') }) + '</article>',
+          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><div><h4>Habilidades prioritarias</h4><p class="mini">Primeras 6: las que requieren mas atencion.</p></div></div>' + renderEval360Rows(skillRows, { titleField: 'item_label', limit: skillLimit, moreAction: moreButton('skills', 'Cargar mas habilidades') }) + '</article>',
         '</section>',
         '<section class="eval360-panel eval360-growth-panel" id="eval360AdminGrowthPanel"><div class="admin-alumnos-section-head"><div><h4>Avance inicio/final</h4><p class="mini">Lectura rapida del cambio por area y focos de acompanamiento.</p></div><span class="pill">Agregado</span></div>',
           renderEval360GrowthSummary(crecimientoAreas, crecimientoHabilidades),
@@ -20910,6 +20938,7 @@
         setEval360AdminMomento,
         setEval360AdminShowQaClosed,
         setEval360AdminSection,
+        loadMoreEval360AdminResults,
         loadEval360FamilyReport,
         printEval360FamilyReport,
         openEval360FamilyFinalReview,
