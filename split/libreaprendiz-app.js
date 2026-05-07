@@ -15426,6 +15426,17 @@
       }).join('');
     }
 
+    function getEval360PreferredCicloId(ciclos) {
+      const visible = getEval360VisibleCiclos(ciclos, '', { showQaClosed: false });
+      const candidates = visible.length ? visible : (Array.isArray(ciclos) ? ciclos : []);
+      const active = candidates.filter((ciclo) =>
+        String(ciclo && (ciclo.estatus || ciclo.ciclo_estatus) || '').trim().toLowerCase() === 'activo'
+      );
+      const list = active.length ? active : candidates;
+      const selected = list.length ? list[list.length - 1] : null;
+      return String(selected && selected.ciclo_id || '').trim();
+    }
+
     function getUniqueEval360CiclosFromInvitaciones(invitaciones) {
       const seen = new Set();
       return (Array.isArray(invitaciones) ? invitaciones : []).map((inv) => {
@@ -15764,7 +15775,7 @@
         ui.ciclos = Array.isArray(data.ciclos) ? data.ciclos : [];
         ui.invitaciones = Array.isArray(data.invitaciones) ? data.invitaciones : [];
         if (!ui.selectedCicloId && ui.ciclos.length) {
-          ui.selectedCicloId = String(ui.ciclos[ui.ciclos.length - 1].ciclo_id || '').trim();
+          ui.selectedCicloId = getEval360PreferredCicloId(ui.ciclos);
         }
         if (!options.preserveCreated) ui.createdInvitations = [];
         syncEval360InvitationDraftFromSelection();
@@ -17246,7 +17257,7 @@
         const data = await api('getEval360InvitacionesFacilitador', {});
         ui.invitaciones = Array.isArray(data.invitaciones) ? data.invitaciones : [];
         const ciclos = getUniqueEval360CiclosFromInvitaciones(ui.invitaciones);
-        if (!ui.selectedCicloId && ciclos.length) ui.selectedCicloId = ciclos[ciclos.length - 1].ciclo_id;
+        if (!ui.selectedCicloId && ciclos.length) ui.selectedCicloId = getEval360PreferredCicloId(ciclos);
         ui.loaded = true;
         ui.loading = false;
         renderEval360FacilitadorPanel();
