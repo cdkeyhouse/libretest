@@ -17650,6 +17650,16 @@
         : (Array.isArray(report.sugerencias_familia) ? report.sugerencias_familia.map((s) => ({ titulo: '', descripcion: s })) : []);
       const crecimiento = report.crecimiento || {};
       const alumnoLabel = report.alumno_label || report.alumno_id || 'Alumno';
+      const facilitadorLabel = String(report.facilitador_label || '').trim();
+      const escala = Array.isArray(report.escala) && report.escala.length
+        ? report.escala
+        : [
+            { valor: 1, label: 'Apenas empieza' },
+            { valor: 2, label: 'Va avanzando' },
+            { valor: 3, label: 'Lo hace seguido' },
+            { valor: 4, label: 'Ya lo tiene claro' },
+          ];
+      const proximoPaso = normalizeEval360FamilyCopy(report.proximo_paso || 'Revisa este reporte con el facilitador para elegir una o dos acciones concretas de acompañamiento en casa y en el grupo.');
       const showDataWarning = estadoDatos && estadoDatos !== 'completo';
       const headerHtml = [
         '<div class="eval360-family-public-hero">',
@@ -17659,6 +17669,7 @@
               '<div>',
                 '<h2>' + escapeHtml(alumnoLabel) + '</h2>',
                 '<p>' + escapeHtml([report.ciclo_nombre || report.ciclo_id || '', report.ciclo_escolar || '', report.generado_en || ''].filter(Boolean).join(' - ')) + '</p>',
+                facilitadorLabel ? '<p>Facilitador: ' + escapeHtml(facilitadorLabel) + '</p>' : '',
               '</div>',
             '</div>',
             showDataWarning ? '<span class="eval360-family-pill mid">' + escapeHtml(formatEval360EstadoDatos(estadoDatos)) + '</span>' : '',
@@ -17699,6 +17710,12 @@
             ].join('');
           }).join('')
         : '<div class="eval360-family-side-card"><p>Sin datos de &aacute;reas para este alumno.</p></div>';
+      const escalaHtml = escala.map((entry) => [
+        '<span>',
+          '<b>' + escapeHtml(String(entry.valor || '')) + '</b>',
+          escapeHtml(normalizeEval360FamilyCopy(entry.label || '')),
+        '</span>'
+      ].join('')).join('');
       const habPrioHtml = habilidadesPrioritarias.length
         ? habilidadesPrioritarias.map((h) => [
             '<div class="eval360-family-side-card">',
@@ -17732,6 +17749,9 @@
       const notaHtml = notaTexto
         ? '<footer class="eval360-family-note"><strong>!</strong><p><b>&iexcl;Importante!</b> ' + escapeHtml(notaTexto) + '</p></footer>'
         : '';
+      const nextStepHtml = proximoPaso
+        ? '<section class="eval360-family-card eval360-family-next-step"><div class="eval360-family-section-head"><div><h3>Pr&oacute;ximo paso</h3><p>Para convertir el reporte en acompa&ntilde;amiento.</p></div></div><p>' + escapeHtml(proximoPaso) + '</p></section>'
+        : '';
       return [
         '<div class="eval360-family-report" id="eval360FamilyReportContent">',
           '<div class="eval360-family-public-brand"><div class="eval360-family-brand-mark"><img src="./logo-la.png" alt="Libre Aprendiz"></div><div><h3>Libre Aprendiz</h3><p>Eval360 · Reporte familiar de acompa&ntilde;amiento</p></div></div>',
@@ -17739,7 +17759,7 @@
           kpisHtml,
           '<div class="eval360-family-main-grid">',
             '<div class="eval360-family-column">',
-              '<section class="eval360-family-card eval360-family-area-card"><div class="eval360-family-section-head"><div><h3>&Aacute;reas de desarrollo</h3><p>Comparaci&oacute;n de inicio y final por &aacute;rea.</p></div><span class="eval360-family-pill info">Escala 1-4</span></div><div class="eval360-family-area-list">' + areasHtml + '</div></section>',
+              '<section class="eval360-family-card eval360-family-area-card"><div class="eval360-family-section-head"><div><h3>&Aacute;reas de desarrollo</h3><p>Comparaci&oacute;n de inicio y final por &aacute;rea.</p></div><span class="eval360-family-pill info">Escala 1-4</span></div><div class="eval360-family-scale-legend">' + escalaHtml + '</div><div class="eval360-family-area-list">' + areasHtml + '</div></section>',
               '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Habilidades para acompa&ntilde;ar</h3><p>Focos concretos para el siguiente periodo.</p></div></div><div class="eval360-family-side-list">' + habPrioHtml + '</div></section>',
             '</div>',
             '<aside class="eval360-family-column">',
@@ -17747,6 +17767,7 @@
               '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Para acompa&ntilde;ar en casa</h3><p>Acciones sencillas y observables.</p></div></div><div>' + sugHtml + '</div></section>',
             '</aside>',
           '</div>',
+          nextStepHtml,
           notaHtml,
         '</div>',
       ].join('');
@@ -17868,7 +17889,9 @@
       (Array.isArray(data && data.respuestas) ? data.respuestas : []).forEach((row) => {
         const itemId = String(row.item_id || '').trim();
         if (!itemId) return;
-        ui.formValues[itemId] = row.valor === '' || row.valor === null || row.valor === undefined ? '' : Number(row.valor);
+        ui.formValues[itemId] = row.valor === '' || row.valor === null || row.valor === undefined
+          ? ''
+          : (String(row.valor) === 'no_vi' ? 'no_vi' : Number(row.valor));
         ui.formTouched[itemId] = true;
         ui.formComments[itemId] = String(row.comentario || '');
       });
@@ -17906,7 +17929,7 @@
     function setEval360FacilitadorFormValue(itemId, value) {
       const ui = getEval360Ui().facilitador;
       const cleanId = String(itemId || '').trim();
-      ui.formValues[cleanId] = value === '' ? '' : Number(value);
+      ui.formValues[cleanId] = value === '' || value === 'no_vi' ? value : Number(value);
       ui.formTouched[cleanId] = true;
       renderEval360FacilitadorPanel();
     }
@@ -18144,7 +18167,7 @@
       const current = Object.prototype.hasOwnProperty.call(ui.formValues, itemId) ? String(ui.formValues[itemId]) : '';
       const missing = ui.formSubmitAttempted && !isEval360FacilitadorFormItemAnswered(itemId);
       const labels = [
-        { value: '', label: 'No lo vi' },
+        { value: 'no_vi', label: 'No lo vi' },
         { value: '1', label: 'Apenas empieza' },
         { value: '2', label: 'Va avanzando' },
         { value: '3', label: 'Lo hace seguido' },
@@ -18366,6 +18389,21 @@
         ui.form = form || null;
         ui.loaded = true;
         ui.loading = false;
+        ui.respuestaId = String((form && form.respuesta_id) || '');
+        ui.submitted = String((form && form.respuesta_estatus) || '') === 'enviada';
+        ui.generalComment = String((form && form.comentario_general) || '');
+        ui.values = {};
+        ui.touched = {};
+        ui.comments = {};
+        (Array.isArray(form && form.respuestas) ? form.respuestas : []).forEach((row) => {
+          const itemId = String(row.item_id || '').trim();
+          if (!itemId) return;
+          ui.values[itemId] = row.valor === '' || row.valor === null || row.valor === undefined
+            ? ''
+            : (String(row.valor) === 'no_vi' ? 'no_vi' : Number(row.valor));
+          ui.touched[itemId] = true;
+          ui.comments[itemId] = String(row.comentario || '');
+        });
         (form.items || []).forEach((item) => {
           const id = String(item.item_id || '').trim();
           if (id && !Object.prototype.hasOwnProperty.call(ui.values, id)) ui.values[id] = '';
@@ -18391,13 +18429,15 @@
           label_snapshot: String(item.texto || '').trim(),
           comentario: String(ui.comments[itemId] || '').trim()
         };
+      }).filter((row) => {
+        return !!(ui.touched && ui.touched[row.item_id]) || row.valor !== '' || row.comentario;
       });
     }
 
     function setEval360PublicValue(itemId, value) {
       const ui = getEval360Ui().publicForm;
       const cleanId = String(itemId || '').trim();
-      ui.values[cleanId] = value === '' ? '' : Number(value);
+      ui.values[cleanId] = value === '' || value === 'no_vi' ? value : Number(value);
       ui.touched[cleanId] = true;
       renderEval360PublicForm();
     }
@@ -18449,12 +18489,13 @@
         const data = await api('guardarEval360AvanceToken', {
           token: ui.token,
           respuesta_id: ui.respuestaId,
+          comentario_general: ui.generalComment,
           items: buildEval360PublicItemsPayload()
         });
         ui.respuestaId = String(data.respuesta_id || ui.respuestaId || '').trim();
         ui.savedAt = new Date().toISOString();
         renderEval360PublicForm();
-        setBanner('Avance guardado.', 'success');
+        setBanner('Avance y comentarios guardados.', 'success');
       }, { button, key: 'eval360-public-save' });
     }
 
@@ -18570,7 +18611,7 @@
       const itemId = String(item.item_id || '').trim();
       const current = Object.prototype.hasOwnProperty.call(ui.values, itemId) ? String(ui.values[itemId]) : '';
       const labels = [
-        { value: '', label: 'No lo vi' },
+        { value: 'no_vi', label: 'No lo vi' },
         { value: '1', label: 'Apenas empieza' },
         { value: '2', label: 'Va avanzando' },
         { value: '3', label: 'Lo hace seguido' },

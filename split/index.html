@@ -6538,6 +6538,38 @@
       gap: 12px;
     }
 
+    .eval360-family-scale-legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: -4px 0 14px;
+    }
+
+    .eval360-family-scale-legend span {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      min-height: 36px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      color: #526071;
+      background: #f6f8fb;
+      font-size: .76rem;
+      font-weight: 850;
+    }
+
+    .eval360-family-scale-legend b {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #1f6fd1;
+      background: #eaf3ff;
+      font-weight: 950;
+    }
+
     .eval360-family-area-row {
       display: grid;
       grid-template-columns: 42px minmax(0, 1fr) minmax(220px, .76fr) auto;
@@ -6670,6 +6702,18 @@
       font-weight: 950;
     }
 
+    .eval360-family-next-step {
+      margin-top: 22px;
+      border-color: #ffdca8;
+      background: #fffaf2;
+    }
+
+    .eval360-family-next-step p:last-child {
+      color: #344054;
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
     .eval360-family-note {
       display: flex;
       gap: 12px;
@@ -6769,6 +6813,9 @@
       }
       .eval360-family-kpis {
         grid-template-columns: 1fr;
+      }
+      .eval360-family-scale-legend {
+        grid-template-columns: 1fr 1fr;
       }
       .eval360-family-area-row {
         grid-template-columns: 42px minmax(0, 1fr);
@@ -7839,7 +7886,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-empty-states-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-family-trust-v1"></script>
 </body>
 </html>
 
