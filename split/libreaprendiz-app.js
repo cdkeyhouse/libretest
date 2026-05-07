@@ -284,6 +284,9 @@
           suggestionBankFilters: { area_id: '', skill_id: '', estatus: '', q: '' },
           suggestionBankDraft: null,
           activeSection: 'resumen',
+          sectionLoading: '',
+          sectionError: '',
+          debounceTimers: {},
           resultAreasLimit: 6,
           resultSkillsLimit: 6
         },
@@ -15490,7 +15493,7 @@
     function setEval360AdminParticipationFilter(filter) {
       const ui = getEval360Ui().admin;
       ui.participationFilter = String(filter || 'todos').trim();
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function filterEval360ParticipationRows(alumnos, filter) {
@@ -15906,7 +15909,9 @@
       ui.error = '';
       renderAdminEval360Module();
       try {
-        const feature = await api('getEval360FeatureStatus', {});
+        const featurePromise = api('getEval360FeatureStatus', {});
+        const dataPromise = api('getEval360AdminData', {}).catch((err) => err);
+        const feature = await featurePromise;
         ui.feature = feature || null;
         if (!feature || feature.enabled !== true) {
           ui.loaded = true;
@@ -15914,7 +15919,8 @@
           renderAdminEval360Module();
           return;
         }
-        const data = await api('getEval360AdminData', {});
+        const data = await dataPromise;
+        if (data instanceof Error) throw data;
         const missingBlocks = getMissingCatalogBlocks(['alumnos', 'grupos', 'facilitadores', 'facilitadores_admin']);
         if (missingBlocks.length) {
           await refreshCatalogos({ blocks: missingBlocks });
@@ -15950,9 +15956,12 @@
         ui.comparacion = null;
         ui.diagnostico = null;
         ui.diagnosticoError = '';
-        renderAdminEval360Module();
+        ui.sectionLoading = '';
+        renderEval360SectionBodyOnly();
         return;
       }
+      ui.sectionLoading = ui.activeSection || 'resumen';
+      renderEval360SectionBodyOnly();
       await handleAction('getEval360ResultadosAdmin', async () => {
         const data = await api('getEval360ResultadosAdmin', {
           ciclo_id: ui.selectedCicloId,
@@ -15961,8 +15970,16 @@
         ui.resultados = Array.isArray(data.resultados) ? data.resultados : [];
         ui.participacion = data.participacion || null;
         ui.comparacion = data.comparacion || null;
-        renderAdminEval360Module();
-      }, { button, key: buildActionKey('getEval360ResultadosAdmin', [ui.selectedCicloId, ui.selectedMomento]) });
+        ui.sectionLoading = '';
+        renderEval360SectionBodyOnly();
+      }, {
+        button,
+        key: buildActionKey('getEval360ResultadosAdmin', [ui.selectedCicloId, ui.selectedMomento]),
+        onError: () => {
+          ui.sectionLoading = '';
+          renderEval360SectionBodyOnly();
+        }
+      });
     }
 
     async function loadEval360AdminDiagnostico(button) {
@@ -15971,7 +15988,8 @@
       if (!cicloId) throw new Error('Selecciona un ciclo para diagnosticar.');
       ui.diagnosticoLoading = true;
       ui.diagnosticoError = '';
-      renderAdminEval360Module();
+      ui.sectionLoading = 'configuracion';
+      renderEval360SectionBodyOnly();
       await handleAction('getEval360DiagnosticoAdmin', async () => {
         const data = await api('getEval360DiagnosticoAdmin', {
           ciclo_id: cicloId,
@@ -15990,7 +16008,8 @@
         }
       });
       ui.diagnosticoLoading = false;
-      renderAdminEval360Module();
+      ui.sectionLoading = '';
+      renderEval360SectionBodyOnly();
     }
 
     function setEval360AdminCiclo(value) {
@@ -16032,7 +16051,9 @@
       ui.familyReportError = '';
       ui.familyReportReviewOpen = false;
       ui.familyReportReviewAccepted = false;
-      renderAdminEval360Module();
+      const quickSelect = document.getElementById('eval360FamilyAlumnoQuick');
+      if (quickSelect && quickSelect.value !== ui.selectedFamilyAlumnoId) quickSelect.value = ui.selectedFamilyAlumnoId;
+      renderEval360SectionBodyOnly();
     }
 
     async function loadEval360FamilyReport(button) {
@@ -16051,12 +16072,13 @@
       if (!alumnoId || !cicloId) {
         ui.familyReportError = 'Selecciona un ciclo y un alumno.';
         ui.familyReport = null;
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
         return;
       }
       ui.familyReportLoading = true;
       ui.familyReportError = '';
-      renderAdminEval360Module();
+      ui.sectionLoading = 'reporte';
+      renderEval360SectionBodyOnly();
       await handleAction('getEval360ExportFamiliar', async () => {
         const data = await api('getEval360ExportFamiliar', {
           alumno_id: alumnoId,
@@ -16069,14 +16091,16 @@
         ui.familyReportReviewAccepted = false;
         ui.familyReportLoading = false;
         ui.familyReportError = '';
-        renderAdminEval360Module();
+        ui.sectionLoading = '';
+        renderEval360SectionBodyOnly();
       }, {
         button,
         key: buildActionKey('getEval360ExportFamiliar', [alumnoId, cicloId]),
         onError: (err) => {
           ui.familyReportLoading = false;
           ui.familyReportError = String((err && err.message) || 'Error al cargar el reporte familiar.');
-          renderAdminEval360Module();
+          ui.sectionLoading = '';
+          renderEval360SectionBodyOnly();
         }
       });
     }
@@ -16269,13 +16293,13 @@
         return;
       }
       ui.familyReportReviewOpen = true;
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function closeEval360FamilyFinalReview() {
       const ui = getEval360Ui().admin;
       ui.familyReportReviewOpen = false;
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function confirmEval360FamilyFinalReview() {
@@ -16283,7 +16307,7 @@
       ui.familyReportReviewAccepted = true;
       ui.familyReportReviewOpen = true;
       setBanner('Revision final confirmada.', 'success');
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     async function updateEval360FamilyReportRelease(estatus, button) {
@@ -16297,11 +16321,11 @@
       if (estatus === 'entregado' && ui.familyReportReviewAccepted !== true) {
         setBanner('Confirma la revision antes de registrar la entrega.', 'info');
         ui.familyReportReviewOpen = true;
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
         return;
       }
       ui.familyReportReleaseLoading = true;
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
       await handleAction('actualizarEval360ReporteFamiliarEstado', async () => {
         const stateData = await api('actualizarEval360ReporteFamiliarEstado', {
           alumno_id: alumnoId,
@@ -16311,14 +16335,14 @@
         ui.familyReport.release_state = stateData || null;
         ui.familyReportReleaseLoading = false;
         setBanner('Estado del reporte familiar actualizado.', 'success');
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
       }, {
         button,
         key: buildActionKey('actualizarEval360ReporteFamiliarEstado', [alumnoId, cicloId, estatus]),
         onError: (err) => {
           ui.familyReportReleaseLoading = false;
           setBanner(formatApiError(err), 'error');
-          renderAdminEval360Module();
+          renderEval360SectionBodyOnly();
         }
       });
     }
@@ -16332,7 +16356,7 @@
     async function openEval360SuggestionBank(button) {
       const ui = getEval360BancoUi();
       ui.suggestionBankOpen = true;
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
       if (!ui.suggestionBank) {
         await loadEval360SuggestionBank(button);
       }
@@ -16343,7 +16367,7 @@
       return handleAction('getEval360BancoSugerenciasAdmin', async () => {
         ui.suggestionBankLoading = true;
         ui.suggestionBankError = '';
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
         const filters = ui.suggestionBankFilters;
         const payload = {};
         if (filters.area_id)  payload.area_id  = filters.area_id;
@@ -16351,22 +16375,31 @@
         const data = await api('getEval360BancoSugerenciasAdmin', payload);
         ui.suggestionBank = data || { plantillas: [], areas: [], habilidades: [], total: 0 };
         ui.suggestionBankLoading = false;
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
       }, {
         button,
         key: 'eval360-banco-load',
         onError: (err) => {
           ui.suggestionBankLoading = false;
           ui.suggestionBankError = String((err && err.message) || 'Error al cargar banco de sugerencias.');
-          renderAdminEval360Module();
+          renderEval360SectionBodyOnly();
         }
       });
     }
 
     function setEval360SuggestionBankFilter(field, value) {
       const ui = getEval360BancoUi();
+      if (!ui.debounceTimers) ui.debounceTimers = {};
+      if (field === 'q') {
+        clearTimeout(ui.debounceTimers.suggestionBankQ);
+        ui.debounceTimers.suggestionBankQ = setTimeout(() => {
+          ui.suggestionBankFilters[field] = String(value || '');
+          renderEval360SectionBodyOnly();
+        }, 150);
+        return;
+      }
       ui.suggestionBankFilters[field] = String(value || '');
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function startNewEval360PlantillaDraft() {
@@ -16384,7 +16417,7 @@
         evidencias: [],
         estatus: 'borrador'
       };
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function startEval360PlantillaDraft(plantillaId) {
@@ -16407,13 +16440,13 @@
         evidencias: Array.isArray(found.evidencias) ? found.evidencias.slice() : [],
         estatus: found.estatus || 'borrador'
       };
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function cancelEval360PlantillaDraft() {
       const ui = getEval360BancoUi();
       ui.suggestionBankDraft = null;
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function setEval360PlantillaDraftField(field, value) {
@@ -16448,7 +16481,7 @@
         await api('guardarEval360PlantillaSugerencia', payload);
         ui.suggestionBankDraft = null;
         ui.suggestionBank = null; // force reload
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
         await loadEval360SuggestionBank(button);
       }, {
         button,
@@ -16464,7 +16497,7 @@
       return handleAction('duplicarEval360PlantillaSugerencia', async () => {
         await api('duplicarEval360PlantillaSugerencia', { plantilla_id: plantillaId });
         ui.suggestionBank = null;
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
         await loadEval360SuggestionBank(button);
       }, {
         button,
@@ -16480,7 +16513,7 @@
       return handleAction('cambiarEstatusEval360PlantillaSugerencia', async () => {
         await api('cambiarEstatusEval360PlantillaSugerencia', { plantilla_id: plantillaId, estatus: estatus });
         ui.suggestionBank = null;
-        renderAdminEval360Module();
+        renderEval360SectionBodyOnly();
         await loadEval360SuggestionBank(button);
       }, {
         button,
@@ -16535,7 +16568,7 @@
         '<div class="eval360-banco-editor">',
           '<div class="eval360-banco-editor-grid">',
             '<div><label>Área <span class="required">*</span></label>',
-              '<select onchange="setEval360PlantillaDraftField(\'area_id\', this.value); setEval360PlantillaDraftField(\'skill_refs\', []); renderAdminEval360Module();">' + areaOptions + '</select>',
+              '<select onchange="setEval360PlantillaDraftField(\'area_id\', this.value); setEval360PlantillaDraftField(\'skill_refs\', []); renderEval360SectionBodyOnly();">' + areaOptions + '</select>',
             '</div>',
             '<div><label>Materia sugerida</label>',
               '<input type="text" value="' + escapeHtml(draft.materia_sugerida || '') + '" oninput="setEval360PlantillaDraftField(\'materia_sugerida\', this.value)">',
@@ -16791,6 +16824,8 @@
       const cicloId = String(ui.selectedCicloId || '').trim();
       if (!cicloId) throw new Error('Selecciona un ciclo para actualizar resultados.');
       await handleAction('refreshEval360Cache', async () => {
+        ui.sectionLoading = ui.activeSection || 'resumen';
+        renderEval360SectionBodyOnly();
         const result = await api('refreshEval360Cache', {
           ciclo_id: cicloId,
           momento: ui.selectedMomento
@@ -16802,16 +16837,25 @@
         ui.resultados = Array.isArray(data.resultados) ? data.resultados : [];
         ui.participacion = data.participacion || null;
         ui.comparacion = data.comparacion || null;
-        if (ui.diagnostico) {
+        if ((ui.activeSection === 'configuracion') && ui.diagnostico) {
           const diag = await api('getEval360DiagnosticoAdmin', {
             ciclo_id: cicloId,
             momento: ui.selectedMomento
           });
           ui.diagnostico = diag || null;
         }
-        renderAdminEval360Module();
+        ui.sectionLoading = '';
+        renderEval360SectionBodyOnly();
         setBanner('Resultados Eval360 actualizados (' + String(result.computed || 0) + ' filas).', 'success');
-      }, { button, key: buildActionKey('refreshEval360Cache', [cicloId, ui.selectedMomento]), busyText: 'Actualizando' });
+      }, {
+        button,
+        key: buildActionKey('refreshEval360Cache', [cicloId, ui.selectedMomento]),
+        busyText: 'Actualizando',
+        onError: () => {
+          ui.sectionLoading = '';
+          renderEval360SectionBodyOnly();
+        }
+      });
     }
 
     function uiEval360ClearCreatedLinks_() {
@@ -16997,7 +17041,7 @@
       } else if (clean === 'skills') {
         ui.resultSkillsLimit = Number(ui.resultSkillsLimit || 6) + 6;
       }
-      renderAdminEval360Module();
+      renderEval360SectionBodyOnly();
     }
 
     function getEval360AdminSelectedCicloLabel() {
@@ -17147,6 +17191,60 @@
       ].join('');
     }
 
+    function renderEval360SectionSkeleton(label) {
+      return [
+        '<section class="eval360-panel eval360-section-skeleton" aria-live="polite">',
+          '<div class="admin-alumnos-section-head"><h4>' + escapeHtml(label || 'Cargando seccion') + '</h4><span class="pill">Actualizando</span></div>',
+          '<div class="eval360-skeleton-line is-wide"></div>',
+          '<div class="eval360-skeleton-grid">',
+            '<span class="eval360-skeleton-line"></span>',
+            '<span class="eval360-skeleton-line"></span>',
+            '<span class="eval360-skeleton-line"></span>',
+          '</div>',
+        '</section>'
+      ].join('');
+    }
+
+    function buildEval360AdminSectionHtml(ui) {
+      const resultados = ui.resultados || [];
+      const areaRows = resultados.filter((row) => !String(row.item_id || '').trim());
+      const skillRows = resultados.filter((row) => !!String(row.item_id || '').trim());
+      const comparacion = ui.comparacion || {};
+      const crecimientoAreas = Array.isArray(comparacion.por_area) ? comparacion.por_area : [];
+      const crecimientoHabilidades = Array.isArray(comparacion.por_habilidad) ? comparacion.por_habilidad : [];
+      const activeSection = ui.activeSection || 'resumen';
+      const loadingSection = String(ui.sectionLoading || '').trim();
+      if (loadingSection && (loadingSection === activeSection || (loadingSection === 'resultados' && activeSection === 'resumen'))) {
+        return renderEval360SectionSkeleton(activeSection === 'resumen' ? 'Actualizando resumen' : 'Cargando ' + formatEval360HumanLabel(activeSection));
+      }
+      if (activeSection === 'aplicacion') {
+        return renderEval360AdminAplicacion(ui);
+      }
+      if (activeSection === 'resultados') {
+        return renderEval360AdminResultadosCompact(areaRows, skillRows, crecimientoAreas, crecimientoHabilidades);
+      }
+      if (activeSection === 'reporte') {
+        return renderEval360AdminReporteCompact(ui);
+      }
+      if (activeSection === 'sugerencias') {
+        return '<section class="eval360-panel" id="eval360AdminSuggestionBankPanel">' + renderEval360BancoSugerencias(ui) + '</section>';
+      }
+      if (activeSection === 'configuracion') {
+        return renderEval360AdminConfiguracion(ui);
+      }
+      return renderEval360AdminSummary(ui, areaRows, skillRows, crecimientoAreas);
+    }
+
+    function renderEval360SectionBodyOnly() {
+      const panel = $('admin-panel-eval360');
+      const body = panel ? panel.querySelector('.eval360-section-body') : null;
+      if (!body) {
+        renderAdminEval360Module();
+        return;
+      }
+      body.innerHTML = buildEval360AdminSectionHtml(getEval360Ui().admin);
+    }
+
     function renderAdminEval360Module() {
       const panel = $('admin-panel-eval360');
       if (!panel) return;
@@ -17183,29 +17281,10 @@
       const invitaciones = ui.invitaciones || [];
       const sent = invitaciones.filter((row) => String(row.estatus || '').trim() === 'enviada').length;
       const publicInvites = invitaciones.filter((row) => String(row.actor || '').trim() !== 'facilitador').length;
-      const resultados = ui.resultados || [];
-      const areaRows = resultados.filter((row) => !String(row.item_id || '').trim());
-      const skillRows = resultados.filter((row) => !!String(row.item_id || '').trim());
-      const comparacion = ui.comparacion || {};
-      const crecimientoAreas = Array.isArray(comparacion.por_area) ? comparacion.por_area : [];
-      const crecimientoHabilidades = Array.isArray(comparacion.por_habilidad) ? comparacion.por_habilidad : [];
       const visibleCiclos = getEval360VisibleCiclos(ui.ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed });
       const hiddenQaClosed = getEval360HiddenQaClosedCount(ui.ciclos, ui.selectedCicloId);
       const activeSection = ui.activeSection || 'resumen';
-      let sectionHtml = '';
-      if (activeSection === 'aplicacion') {
-        sectionHtml = renderEval360AdminAplicacion(ui);
-      } else if (activeSection === 'resultados') {
-        sectionHtml = renderEval360AdminResultadosCompact(areaRows, skillRows, crecimientoAreas, crecimientoHabilidades);
-      } else if (activeSection === 'reporte') {
-        sectionHtml = renderEval360AdminReporteCompact(ui);
-      } else if (activeSection === 'sugerencias') {
-        sectionHtml = '<section class="eval360-panel" id="eval360AdminSuggestionBankPanel">' + renderEval360BancoSugerencias(ui) + '</section>';
-      } else if (activeSection === 'configuracion') {
-        sectionHtml = renderEval360AdminConfiguracion(ui);
-      } else {
-        sectionHtml = renderEval360AdminSummary(ui, areaRows, skillRows, crecimientoAreas);
-      }
+      const sectionHtml = buildEval360AdminSectionHtml(ui);
       panel.innerHTML = [
         '<article class="admin-toolbar eval360-module">',
           '<div class="eval360-head">',

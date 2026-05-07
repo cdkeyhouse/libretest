@@ -6002,6 +6002,36 @@
       gap: 18px;
     }
 
+    .eval360-section-skeleton {
+      min-height: 180px;
+    }
+
+    .eval360-skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .eval360-skeleton-line {
+      display: block;
+      min-height: 54px;
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+      background-size: 220% 100%;
+      animation: eval360SkeletonPulse 1.2s ease-in-out infinite;
+    }
+
+    .eval360-skeleton-line.is-wide {
+      min-height: 26px;
+      width: min(560px, 78%);
+    }
+
+    @keyframes eval360SkeletonPulse {
+      0% { background-position: 0% 0; }
+      100% { background-position: -220% 0; }
+    }
+
     .eval360-compact-hero {
       display: grid;
       grid-template-columns: 64px 1fr;
@@ -7692,7 +7722,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-family-report-students-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-speed-v1"></script>
 </body>
 </html>
 
