@@ -16005,8 +16005,13 @@
       const alumnoId = ui.selectedFamilyAlumnoId;
       const cicloId = ui.selectedCicloId;
       const alumnoSelect = document.getElementById('eval360FamilyAlumno');
-      const alumnoLabel = alumnoSelect && alumnoSelect.selectedOptions && alumnoSelect.selectedOptions[0]
-        ? String(alumnoSelect.selectedOptions[0].textContent || '').split(' / ')[0].trim()
+      const selectedAlumnoOption = alumnoSelect && alumnoSelect.selectedOptions && alumnoSelect.selectedOptions[0]
+        ? alumnoSelect.selectedOptions[0]
+        : null;
+      const selectedAlumnoOptionValue = selectedAlumnoOption ? String(selectedAlumnoOption.value || '').trim() : '';
+      const selectedAlumnoOptionLabel = selectedAlumnoOption ? String(selectedAlumnoOption.textContent || '').split(' / ')[0].trim() : '';
+      const alumnoLabel = selectedAlumnoOptionValue === alumnoId && selectedAlumnoOptionLabel && selectedAlumnoOptionLabel !== 'Selecciona alumno'
+        ? selectedAlumnoOptionLabel
         : '';
       if (!alumnoId || !cicloId) {
         ui.familyReportError = 'Selecciona un ciclo y un alumno.';
@@ -17214,17 +17219,105 @@
       return 'pill-grey';
     }
 
+
+    function getEval360FamilyAreaColor(areaId) {
+      const colors = {
+        corporalidad: '#2f80ed',
+        creatividad: '#27ae60',
+        afectividad: '#d9468f',
+        caracter: '#f2994a',
+        sociabilidad: '#8b5cf6',
+        espiritualidad: '#0ea5a8'
+      };
+      return colors[String(areaId || '').trim().toLowerCase()] || '#1f6fd1';
+    }
+
+    function getEval360FamilyAreaInitial(areaId, areaName) {
+      const initials = {
+        corporalidad: 'M',
+        creatividad: 'C',
+        afectividad: 'A',
+        caracter: 'K',
+        sociabilidad: 'S',
+        espiritualidad: 'E'
+      };
+      const key = String(areaId || '').trim().toLowerCase();
+      return initials[key] || String(areaName || areaId || 'A').trim().substring(0, 1).toUpperCase();
+    }
+
+    function getEval360FamilyInitials(name) {
+      const parts = String(name || 'Alumno').trim().split(/\s+/).filter(Boolean);
+      return (parts.length ? parts.slice(0, 2) : ['A']).map((part) => part.substring(0, 1)).join('').toUpperCase();
+    }
+
+    function formatEval360FamilyScore(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric.toFixed(1).replace(/\.0$/, '') : '-';
+    }
+
+    function getEval360FamilyScorePercent(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return 0;
+      return Math.max(0, Math.min(100, (numeric / 4) * 100));
+    }
+
+    function getEval360FamilyStatusClass(etiqueta) {
+      const clean = String(etiqueta || '').trim();
+      if (clean === 'crecio') return 'ok';
+      if (clean === 'estable') return 'mid';
+      if (clean === 'requiere_apoyo') return 'warn';
+      return 'info';
+    }
+
+    function renderEval360FamilyBar(label, value, color, isStart) {
+      return [
+        '<div class="eval360-family-bar-line">',
+          '<span>' + escapeHtml(label) + '</span>',
+          '<div class="eval360-family-track"><i class="' + (isStart ? 'is-start' : '') + '" style="width:' + escapeHtml(String(getEval360FamilyScorePercent(value))) + '%;' + (!isStart ? 'background:' + escapeHtml(color) + ';' : '') + '"></i></div>',
+          '<strong>' + escapeHtml(formatEval360FamilyScore(value)) + '</strong>',
+        '</div>'
+      ].join('');
+    }
+
+    function renderEval360FamilyRadar(areas) {
+      const list = Array.isArray(areas) ? areas.slice(0, 6) : [];
+      if (list.length < 3) {
+        return '<div class="eval360-family-radar-empty">Sin grafica suficiente</div>';
+      }
+      const cx = 150, cy = 150, maxR = 96;
+      const points = list.map((area, index) => {
+        const angle = (-Math.PI / 2) + (Math.PI * 2 * index / list.length);
+        const finalValue = area.final_promedio !== undefined ? area.final_promedio : area.final;
+        const radius = maxR * (getEval360FamilyScorePercent(finalValue) / 100);
+        return [cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius];
+      });
+      const rings = [0.25, 0.5, 0.75, 1].map((scale) => {
+        const ringPoints = list.map((_, index) => {
+          const angle = (-Math.PI / 2) + (Math.PI * 2 * index / list.length);
+          const radius = maxR * scale;
+          return (cx + Math.cos(angle) * radius).toFixed(1) + ',' + (cy + Math.sin(angle) * radius).toFixed(1);
+        }).join(' ');
+        return '<polygon points="' + ringPoints + '" fill="none" stroke="#e6e9ef" stroke-width="1"></polygon>';
+      }).join('');
+      const axes = list.map((area, index) => {
+        const angle = (-Math.PI / 2) + (Math.PI * 2 * index / list.length);
+        const x = cx + Math.cos(angle) * maxR;
+        const y = cy + Math.sin(angle) * maxR;
+        const lx = cx + Math.cos(angle) * (maxR + 25);
+        const ly = cy + Math.sin(angle) * (maxR + 25);
+        const label = String(area.area_nombre || area.area_id || '').trim().substring(0, 3);
+        return [
+          '<line x1="' + cx + '" y1="' + cy + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#d9dee8" stroke-width="1"></line>',
+          '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" fill="#667085" font-size="10" font-weight="800">' + escapeHtml(label) + '</text>',
+        ].join('');
+      }).join('');
+      const poly = points.map((point) => point[0].toFixed(1) + ',' + point[1].toFixed(1)).join(' ');
+      return '<svg class="eval360-family-radar" viewBox="0 0 300 300" role="img" aria-label="Promedio final por area">' + rings + axes + '<polygon points="' + poly + '" fill="rgba(31,111,209,0.22)" stroke="#1f6fd1" stroke-width="3"></polygon></svg>';
+    }
+
     function renderEval360FamilyReport(report) {
       if (!report) return '<div class="eval360-empty eval360-family-report-empty">Selecciona un alumno y ciclo, luego presiona "Ver reporte familiar".</div>';
-
-      const formatScore = (value) => {
-        if (value === null || value === undefined || value === '') return '-';
-        const numeric = Number(value);
-        return Number.isFinite(numeric) ? numeric.toFixed(1) : '-';
-      };
-      const etiquetaClass = { crecio: 'pill-green', requiere_apoyo: 'pill-red', estable: 'pill-yellow', datos_insuficientes: 'pill-grey', sin_inicio: 'pill-grey', sin_final: 'pill-grey' };
-
-      // V2 fields with V1 fallbacks
       const resumenTexto = report.resumen_humano || report.resumen || '';
       const notaTexto = report.nota_interpretacion || report.disclaimer || '';
       const estadoDatos = report.estado_datos || '';
@@ -17235,123 +17328,100 @@
         ? report.sugerencias_casa
         : (Array.isArray(report.sugerencias_familia) ? report.sugerencias_familia.map((s) => ({ titulo: '', descripcion: s })) : []);
       const crecimiento = report.crecimiento || {};
-
-      // Header
+      const alumnoLabel = report.alumno_label || report.alumno_id || 'Alumno';
+      const showDataWarning = estadoDatos && estadoDatos !== 'completo';
       const headerHtml = [
-        '<div class="eval360-family-report-header">',
-          '<div class="eval360-family-report-meta">',
-            '<strong>' + escapeHtml(report.alumno_label || report.alumno_id || '') + '</strong>',
-            '<span class="mini"> &mdash; ' + escapeHtml(report.ciclo_nombre || report.ciclo_id || '') + '</span>',
-            report.ciclo_escolar ? '<span class="mini"> (' + escapeHtml(report.ciclo_escolar) + ')</span>' : '',
-            estadoDatos ? ' <span class="pill ' + escapeHtml(getEval360EstadoDatosPillClass(estadoDatos)) + '">' + escapeHtml(formatEval360EstadoDatos(estadoDatos)) + '</span>' : '',
-            report.generado_en ? '<span class="mini" style="margin-left:8px">' + escapeHtml(report.generado_en) + '</span>' : '',
+        '<div class="eval360-family-public-hero">',
+          '<div class="eval360-family-public-copy">',
+            '<div class="eval360-family-student">',
+              '<div class="eval360-family-avatar">' + escapeHtml(getEval360FamilyInitials(alumnoLabel)) + '</div>',
+              '<div>',
+                '<h2>' + escapeHtml(alumnoLabel) + '</h2>',
+                '<p>' + escapeHtml([report.ciclo_nombre || report.ciclo_id || '', report.ciclo_escolar || '', report.generado_en || ''].filter(Boolean).join(' - ')) + '</p>',
+              '</div>',
+            '</div>',
+            showDataWarning ? '<span class="eval360-family-pill mid">' + escapeHtml(formatEval360EstadoDatos(estadoDatos)) + '</span>' : '',
+            resumenTexto ? '<p class="eval360-family-summary">' + escapeHtml(resumenTexto) + '</p>' : '',
           '</div>',
-          '<div class="eval360-family-report-kpis">',
-            '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_que_crecieron != null ? String(crecimiento.areas_que_crecieron) : '-') + '</strong><span class="mini">avanzaron</span></span>',
-            '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.areas_a_trabajar != null ? String(crecimiento.areas_a_trabajar) : '-') + '</strong><span class="mini">en proceso</span></span>',
-            '<span class="eval360-kpi-small"><strong>' + escapeHtml(crecimiento.total_areas != null ? String(crecimiento.total_areas) : '-') + '</strong><span class="mini">areas total</span></span>',
-          '</div>',
-        '</div>',
+          '<aside class="eval360-family-radar-card">',
+            renderEval360FamilyRadar(areasToRender),
+            '<p>Promedio final por area</p>',
+          '</aside>',
+        '</div>'
       ].join('');
-
-      // Resumen humano
-      const resumenHtml = resumenTexto
-        ? '<p class="eval360-family-report-resumen">' + escapeHtml(resumenTexto) + '</p>'
-        : '';
-
-      // Areas (V2-enriched or V1 fallback)
+      const kpisHtml = [
+        '<div class="eval360-family-kpis">',
+          '<article><strong>' + escapeHtml(crecimiento.areas_que_crecieron != null ? String(crecimiento.areas_que_crecieron) : '-') + '</strong><span>Areas con avance</span></article>',
+          '<article><strong>' + escapeHtml(crecimiento.areas_a_trabajar != null ? String(crecimiento.areas_a_trabajar) : '-') + '</strong><span>Areas por acompanar</span></article>',
+          '<article><strong>' + escapeHtml(crecimiento.total_areas != null ? String(crecimiento.total_areas) : '-') + '</strong><span>Areas evaluadas</span></article>',
+        '</div>'
+      ].join('');
       const areasHtml = areasToRender.length
         ? areasToRender.map((a) => {
-            const estadoLabel = a.estado || a.etiqueta || '-';
-            const pillClass = a.estado === 'Avanzó' ? 'pill-green'
-              : a.estado === 'Requiere acompanamiento' ? 'pill-red'
-              : a.estado === 'Se mantiene' ? 'pill-yellow'
-              : (etiquetaClass[a.etiqueta] || 'pill-grey');
             const inicioVal = a.inicio_promedio !== undefined ? a.inicio_promedio : a.inicio;
             const finalVal = a.final_promedio !== undefined ? a.final_promedio : a.final;
+            const color = getEval360FamilyAreaColor(a.area_id);
             return [
-              '<div class="eval360-row">',
-                '<div class="eval360-row-head">',
-                  '<strong>' + escapeHtml(a.area_nombre || a.area_id || '-') + '</strong>',
-                  '<span class="pill ' + escapeHtml(pillClass) + '">' + escapeHtml(estadoLabel) + '</span>',
+              '<div class="eval360-family-area-row">',
+                '<div class="eval360-family-area-icon" style="background:' + escapeHtml(color) + '18;color:' + escapeHtml(color) + '">' + escapeHtml(getEval360FamilyAreaInitial(a.area_id, a.area_nombre)) + '</div>',
+                '<div class="eval360-family-area-copy">',
+                  '<h3>' + escapeHtml(a.area_nombre || a.area_id || '-') + '</h3>',
+                  a.texto_familia ? '<p>' + escapeHtml(a.texto_familia) + '</p>' : '',
                 '</div>',
-                '<div class="eval360-row-meta mini">',
-                  '<span>Inicio: ' + escapeHtml(formatScore(inicioVal)) + '</span>',
-                  '<span>Final: ' + escapeHtml(formatScore(finalVal)) + '</span>',
-                  a.texto_familia ? '<span style="color:var(--text-soft)">' + escapeHtml(a.texto_familia) + '</span>' : '',
+                '<div class="eval360-family-bars">',
+                  renderEval360FamilyBar('Inicio', inicioVal, color, true),
+                  renderEval360FamilyBar('Final', finalVal, color, false),
                 '</div>',
+                '<span class="eval360-family-pill ' + escapeHtml(getEval360FamilyStatusClass(a.etiqueta)) + '">' + escapeHtml(a.estado || a.etiqueta || '-') + '</span>',
               '</div>',
             ].join('');
           }).join('')
-        : '<div class="eval360-empty">Sin datos de areas para este alumno.</div>';
-
-      // Habilidades prioritarias (V2)
+        : '<div class="eval360-family-side-card"><p>Sin datos de areas para este alumno.</p></div>';
       const habPrioHtml = habilidadesPrioritarias.length
-        ? [
-            '<section><div class="admin-alumnos-section-head"><h5>Habilidades a acompanar</h5></div>',
-            habilidadesPrioritarias.map((h) => [
-              '<div class="eval360-row">',
-                '<div class="eval360-row-head">',
-                  '<strong>' + escapeHtml(h.habilidad || h.item_id || '-') + '</strong>',
-                  '<span class="pill pill-yellow">' + escapeHtml(h.area_nombre || h.area_id || '') + '</span>',
-                '</div>',
-                '<div class="eval360-row-meta mini">',
-                  h.texto_familia ? '<span>' + escapeHtml(h.texto_familia) + '</span>' : '',
-                  h.sugerencia_casa ? '<span style="color:var(--text-soft)">En casa: ' + escapeHtml(h.sugerencia_casa) + '</span>' : '',
-                '</div>',
-              '</div>',
-            ].join('')).join(''),
-            '</section>',
-          ].join('')
-        : '';
-
-      // Fortalezas (V2)
-      const fortHtml = fortalezas.length
-        ? [
-            '<section><div class="admin-alumnos-section-head"><h5>Fortalezas observadas</h5></div>',
-            fortalezas.map((f) => [
-              '<div class="eval360-row">',
-                '<div class="eval360-row-head">',
-                  '<strong>' + escapeHtml(f.habilidad || f.area_nombre || f.area_id || '-') + '</strong>',
-                  '<span class="pill pill-green">Avanzó</span>',
-                '</div>',
-                f.texto_familia ? '<div class="eval360-row-meta mini"><span>' + escapeHtml(f.texto_familia) + '</span></div>' : '',
-              '</div>',
-            ].join('')).join(''),
-            '</section>',
-          ].join('')
-        : '';
-
-      // Sugerencias para casa
-      const sugHtml = sugerenciasCasa.length
-        ? [
-            '<div class="eval360-sugerencias">',
-              '<h5>Sugerencias para acompanar en casa</h5>',
-              '<ul class="eval360-sugerencias-lista">',
-              sugerenciasCasa.map((s) => {
-                const tit = typeof s === 'string' ? '' : (s.titulo || '');
-                const desc = typeof s === 'string' ? s : (s.descripcion || '');
-                return '<li>' + (tit ? '<strong>' + escapeHtml(tit) + ':</strong> ' : '') + escapeHtml(desc) + '</li>';
-              }).join(''),
-              '</ul>',
+        ? habilidadesPrioritarias.map((h) => [
+            '<div class="eval360-family-side-card">',
+              '<h3>' + escapeHtml(h.habilidad || h.item_id || '-') + '</h3>',
+              h.texto_familia ? '<p>' + escapeHtml(h.texto_familia) + '</p>' : '',
+              h.sugerencia_casa ? '<p><strong>En casa:</strong> ' + escapeHtml(h.sugerencia_casa) + '</p>' : '',
             '</div>',
-          ].join('')
-        : '';
-
-      // Nota de interpretacion
+          ].join('')).join('')
+        : '<div class="eval360-family-side-card"><h3>No hay habilidades prioritarias</h3><p>Con los datos actuales no se detectan habilidades que requieran atencion especial.</p></div>';
+      const fortHtml = fortalezas.length
+        ? fortalezas.map((f) => [
+            '<div class="eval360-family-side-card">',
+              '<h3>' + escapeHtml(f.habilidad || f.area_nombre || f.area_id || '-') + '</h3>',
+              f.texto_familia ? '<p>' + escapeHtml(f.texto_familia) + '</p>' : '',
+            '</div>',
+          ].join('')).join('')
+        : '<div class="eval360-family-side-card"><p>No hay fortalezas destacadas todavia.</p></div>';
+      const sugHtml = sugerenciasCasa.length
+        ? sugerenciasCasa.map((s, index) => {
+            const tit = typeof s === 'string' ? 'Sugerencia' : (s.titulo || 'Sugerencia');
+            const desc = typeof s === 'string' ? s : (s.descripcion || '');
+            return [
+              '<div class="eval360-family-home-card">',
+                '<div class="eval360-family-home-number">' + escapeHtml(String(index + 1)) + '</div>',
+                '<div><h3>' + escapeHtml(tit) + '</h3><p>' + escapeHtml(desc) + '</p></div>',
+              '</div>'
+            ].join('');
+          }).join('')
+        : '<div class="eval360-family-side-card"><p>Sin sugerencias disponibles.</p></div>';
       const notaHtml = notaTexto
-        ? '<p class="eval360-family-report-disclaimer mini">' + escapeHtml(notaTexto) + '</p>'
+        ? '<footer class="eval360-family-note"><strong>i</strong><p>' + escapeHtml(notaTexto) + '</p></footer>'
         : '';
-
       return [
         '<div class="eval360-family-report" id="eval360FamilyReportContent">',
+          '<div class="eval360-family-public-brand"><div class="eval360-family-brand-mark">360</div><div><h3>Eval360</h3><p>Reporte familiar de acompanamiento</p></div></div>',
           headerHtml,
-          resumenHtml,
-          '<div class="eval360-grid">',
-            '<section><div class="admin-alumnos-section-head"><h5>Areas de desarrollo</h5></div>' + areasHtml + '</section>',
-            [habPrioHtml, fortHtml].filter(Boolean).join('') || '<section></section>',
+          kpisHtml,
+          '<div class="eval360-family-main-grid">',
+            '<section class="eval360-family-card eval360-family-area-card"><div class="eval360-family-section-head"><div><h3>Areas de desarrollo</h3><p>Comparacion de inicio y final por area.</p></div><span class="eval360-family-pill info">Escala 1-4</span></div><div class="eval360-family-area-list">' + areasHtml + '</div></section>',
+            '<aside class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Fortalezas observadas</h3><p>Lo que conviene reconocer.</p></div></div><div class="eval360-family-side-list">' + fortHtml + '</div></aside>',
           '</div>',
-          sugHtml,
+          '<div class="eval360-family-main-grid">',
+            '<section class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Habilidades para acompanar</h3><p>Solo aparecen si el reporte tiene habilidades prioritarias.</p></div></div><div class="eval360-family-side-list">' + habPrioHtml + '</div></section>',
+            '<aside class="eval360-family-card"><div class="eval360-family-section-head"><div><h3>Para acompanar en casa</h3><p>Acciones sencillas y observables.</p></div></div><div>' + sugHtml + '</div></aside>',
+          '</div>',
           notaHtml,
         '</div>',
       ].join('');
