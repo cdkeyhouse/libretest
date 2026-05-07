@@ -15835,12 +15835,47 @@
       ].join('');
     }
 
-    function getEval360AlumnoOptions(selectedId) {
+    function getEval360AlumnoOptions(selectedId, options = {}) {
       const alumnos = Array.isArray(state.catalogos.alumnos) ? state.catalogos.alumnos : [];
-      return '<option value="">Selecciona alumno</option>' + alumnos.map((row) => {
+      const onlyCycle = options.onlyCycle === true;
+      const ui = getEval360Ui().admin;
+      const cicloId = String((options.cicloId !== undefined ? options.cicloId : ui.selectedCicloId) || '').trim();
+      const byId = {};
+      alumnos.forEach((row) => {
         const id = String(row.alumno_id || '').trim();
-        if (!id) return '';
+        if (!id) return;
         const label = String(row.nombre_completo || row.nombre || row.alias || id).trim();
+        byId[id] = { id, label, fromCycle: false };
+      });
+      (Array.isArray(ui.invitaciones) ? ui.invitaciones : []).forEach((row) => {
+        const id = String(row.alumno_id || '').trim();
+        if (!id) return;
+        if (cicloId && String(row.ciclo_id || '').trim() !== cicloId) return;
+        const actor = String(row.actor || '').trim();
+        const priority = actor === 'alumno' ? 3 : (actor === 'familia' ? 2 : 1);
+        const label = String(row.alumno_label || row.alumno_nombre || row.respondent_label || '').trim();
+        const existing = byId[id] || {};
+        if (existing.fromCycle && Number(existing.priority || 0) > priority) return;
+        byId[id] = {
+          id,
+          label: label || existing.label || id,
+          fromCycle: true,
+          priority
+        };
+      });
+      const list = Object.keys(byId)
+        .map((id) => byId[id])
+        .filter((row) => !onlyCycle || row.fromCycle || row.id === selectedId);
+      const ordered = list.sort((a, b) => {
+        if (a.fromCycle !== b.fromCycle) return a.fromCycle ? -1 : 1;
+        return a.label.localeCompare(b.label, 'es');
+      });
+      if (selectedId && !ordered.some((row) => row.id === selectedId)) {
+        ordered.unshift({ id: selectedId, label: selectedId, fromCycle: true });
+      }
+      return '<option value="">Selecciona alumno</option>' + ordered.map((row) => {
+        const id = String(row.id || '').trim();
+        const label = String(row.label || id).trim();
         return '<option value="' + escapeHtml(id) + '"' + (id === selectedId ? ' selected' : '') + '>' + escapeHtml(label + ' / ' + id) + '</option>';
       }).join('');
     }
@@ -17000,7 +17035,7 @@
           '<div class="eval360-context-title"><strong>Mostrando</strong><span>' + escapeHtml(contextText) + '</span></div>',
           '<div><label for="eval360AdminCiclo">Ciclo</label><select id="eval360AdminCiclo" onchange="setEval360AdminCiclo(this.value)">' + getEval360CicloOptions(ui.ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed }) + '</select>' + (hiddenQaClosed ? '<label class="eval360-qa-toggle"><input type="checkbox"' + (ui.showQaClosed ? ' checked' : '') + ' onchange="setEval360AdminShowQaClosed(this.checked)"> Mostrar QA cerrados <span class="mini">(' + escapeHtml(hiddenQaClosed) + ' ocultos)</span></label>' : '') + '</div>',
           '<div><label for="eval360AdminMomento">Momento</label><select id="eval360AdminMomento" onchange="setEval360AdminMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
-          '<div><label for="eval360FamilyAlumnoQuick">Alumno</label><select id="eval360FamilyAlumnoQuick" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360AlumnoOptions(selectedAlumno) + '</select></div>',
+          '<div><label for="eval360FamilyAlumnoQuick">Alumno</label><select id="eval360FamilyAlumnoQuick" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360AlumnoOptions(selectedAlumno, { onlyCycle: true }) + '</select></div>',
           '<button class="btn-primary" type="button" onclick="loadEval360AdminResultados(this)">Actualizar</button>',
         '</section>'
       ].join('');
@@ -17086,7 +17121,7 @@
         '<section class="eval360-panel" id="eval360AdminFamilyReportPanel">',
           '<div class="admin-alumnos-section-head"><h4>Reporte familiar</h4><span class="pill">Por alumno</span></div>',
           '<div class="eval360-family-report-controls">',
-            '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360AlumnoOptions(ui.selectedFamilyAlumnoId) + '</select></div>',
+            '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360AlumnoOptions(ui.selectedFamilyAlumnoId, { onlyCycle: true }) + '</select></div>',
             '<div class="actions compact">',
               '<button id="eval360FamilyReportBtn" class="btn-secondary" type="button" onclick="loadEval360FamilyReport(this)"' + (!ui.selectedFamilyAlumnoId ? ' disabled' : '') + '>' + (ui.familyReportLoading ? 'Cargando...' : 'Ver reporte familiar') + '</button>',
               '<button id="eval360PrintFamilyReportBtn" class="btn-ghost no-print" type="button" onclick="printEval360FamilyReport()"' + (!ui.familyReport ? ' disabled' : '') + '>Imprimir / Guardar PDF</button>',
