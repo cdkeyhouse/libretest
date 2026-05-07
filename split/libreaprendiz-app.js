@@ -16957,7 +16957,7 @@
           renderEval360AdminCycleForm(),
           renderEval360AdminInvitationForm(),
         '</section>',
-        '<section class="eval360-panel" id="eval360AdminDiagnosticPanel"><div class="admin-alumnos-section-head"><h4>Diagnostico del ciclo</h4><span class="pill">' + escapeHtml(formatEval360DiagnosticStatus(ui.diagnostico && ui.diagnostico.estatus)) + '</span></div>',
+        '<section class="eval360-panel" id="eval360AdminDiagnosticPanel"><div class="admin-alumnos-section-head"><h4>Diagnostico del ciclo</h4><div class="actions compact"><span class="pill">' + escapeHtml(formatEval360DiagnosticStatus(ui.diagnostico && ui.diagnostico.estatus)) + '</span><button id="eval360DiagnosticoBtn" class="btn-ghost" type="button" onclick="loadEval360AdminDiagnostico(this)">' + (ui.diagnosticoLoading ? 'Revisando...' : 'Revisar ciclo') + '</button></div></div>',
           renderEval360AdminDiagnostico(),
         '</section>'
       ].join('');
