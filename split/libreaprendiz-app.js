@@ -426,6 +426,7 @@
         planeacionesRestoreLock: false,
         adminModuleLoading: {},
         adminCatalogPrefetchPromise: null,
+        adminCatalogPrefetchScheduled: false,
         adminCatalogPrefetchDone: false,
         adminPlaneacionesWarmupPromise: null,
         adminPlaneacionesWarmupDone: false,
@@ -961,7 +962,7 @@
     }
 
     function getAdminCatalogPrefetchModules() {
-      return ['alumnos', 'materias', 'talleres', 'facilitadores'];
+      return ['alumnos', 'facilitadores', 'materias', 'talleres'];
     }
 
     function hasAdminCatalogPrefetchWork() {
@@ -975,13 +976,15 @@
 
     function scheduleAdminCatalogPrefetch(delay = 520) {
       if (!canUseAdminShell() || !state.ui) return;
-      if (state.ui.adminCatalogPrefetchPromise || state.ui.adminCatalogPrefetchDone) return;
+      if (state.ui.adminCatalogPrefetchPromise || state.ui.adminCatalogPrefetchScheduled || state.ui.adminCatalogPrefetchDone) return;
       if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
       if (!hasAdminCatalogPrefetchWork()) {
         state.ui.adminCatalogPrefetchDone = true;
         return;
       }
+      state.ui.adminCatalogPrefetchScheduled = true;
       scheduleUiDebounce('admin-catalog-prefetch', () => {
+        if (state.ui) state.ui.adminCatalogPrefetchScheduled = false;
         if (!canUseAdminShell() || !state.ui || state.ui.adminCatalogPrefetchPromise) return;
         if (state.ui.adminCatalogPrefetchDone) return;
         if (String(state.activeAdminModule || '').trim() !== 'dashboard') return;
@@ -1359,6 +1362,9 @@
         }
         state.ui.restoreSnapshotSyncFinishedTimeout = null;
         state.ui.restoreSnapshotSyncJustFinished = false;
+        state.ui.adminCatalogPrefetchPromise = null;
+        state.ui.adminCatalogPrefetchScheduled = false;
+        state.ui.adminCatalogPrefetchDone = false;
         state.ui.adminNotificationsPrefetchPromise = null;
         state.ui.adminNotificationsPrefetchDone = false;
         state.ui.adminPlaneacionesWarmupPromise = null;
