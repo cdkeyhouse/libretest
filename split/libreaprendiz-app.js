@@ -17476,6 +17476,7 @@
         .replace(/\barea\b/gi, (match) => match.charAt(0) === 'A' ? 'Área' : 'área')
         .replace(/\btodavia\b/gi, (match) => match.charAt(0) === 'T' ? 'Todavía' : 'todavía')
         .replace(/\binformacion\b/gi, (match) => match.charAt(0) === 'I' ? 'Información' : 'información')
+        .replace(/\binformacións\b/gi, (match) => match.charAt(0) === 'I' ? 'Información' : 'información')
         .replace(/\bmas\b/gi, (match) => match.charAt(0) === 'M' ? 'Más' : 'más')
         .replace(/\bsolucion\b/gi, (match) => match.charAt(0) === 'S' ? 'Solución' : 'solución')
         .replace(/\bdiagnostico\b/gi, (match) => match.charAt(0) === 'D' ? 'Diagnóstico' : 'diagnóstico')

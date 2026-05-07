@@ -6933,6 +6933,10 @@
 
     /* ── Eval360 family report: impresion / guardar PDF ─────────────────── */
     @media print {
+      @page {
+        size: Letter;
+        margin: 10mm;
+      }
       html,
       body {
         -webkit-print-color-adjust: exact !important;
@@ -6946,6 +6950,7 @@
         left: 0;
         top: 0;
         width: 100%;
+        max-width: 100%;
         background:
           radial-gradient(circle at top left, rgba(31,111,209,0.10), transparent 34rem),
           linear-gradient(180deg, #fbfcff 0%, #f2f5f9 100%) !important;
@@ -6963,10 +6968,38 @@
       }
       body.eval360-print-family-report .eval360-family-public-hero,
       body.eval360-print-family-report .eval360-family-main-grid {
-        grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr) !important;
+        grid-template-columns: 1fr !important;
       }
       body.eval360-print-family-report .eval360-family-kpis {
         grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      }
+      body.eval360-print-family-report .eval360-family-public-brand,
+      body.eval360-print-family-report .eval360-family-public-hero,
+      body.eval360-print-family-report .eval360-family-card,
+      body.eval360-print-family-report .eval360-family-kpis,
+      body.eval360-print-family-report .eval360-family-main-grid,
+      body.eval360-print-family-report .eval360-family-column {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      body.eval360-print-family-report .eval360-family-public-hero {
+        align-items: start !important;
+      }
+      body.eval360-print-family-report .eval360-family-student h2 {
+        font-size: 2rem !important;
+        overflow-wrap: anywhere;
+      }
+      body.eval360-print-family-report .eval360-family-area-row {
+        grid-template-columns: 42px minmax(0, 1fr) !important;
+        align-items: start !important;
+      }
+      body.eval360-print-family-report .eval360-family-bars,
+      body.eval360-print-family-report .eval360-family-area-row .eval360-family-pill {
+        grid-column: 2 / -1 !important;
+      }
+      body.eval360-print-family-report .eval360-family-radar-card {
+        max-width: 360px !important;
+        justify-self: start !important;
       }
       .eval360-family-report section,
       .eval360-family-public-hero,
@@ -7806,7 +7839,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-family-print-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-family-print-v2"></script>
 </body>
 </html>
 
