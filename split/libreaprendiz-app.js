@@ -15395,9 +15395,25 @@
       return formatEval360HumanLabel(clean);
     }
 
+    function renderEval360AdminEmptyState(title, body, actionHtml = '') {
+      return [
+        '<div class="eval360-empty eval360-admin-empty">',
+          '<div><strong>' + escapeHtml(title || 'Sin datos para mostrar') + '</strong>',
+          body ? '<div class="subtle">' + escapeHtml(body) + '</div>' : '',
+          actionHtml ? '<div class="actions compact" style="margin-top:12px">' + actionHtml + '</div>' : '',
+          '</div>',
+        '</div>'
+      ].join('');
+    }
+
     function renderEval360Rows(rows, options = {}) {
       const list = Array.isArray(rows) ? rows : [];
-      if (!list.length) return '<div class="eval360-empty">Todavia no hay resultados calculados para esta seleccion.</div>';
+      if (!list.length) {
+        return options.emptyHtml || renderEval360AdminEmptyState(
+          'Sin resultados calculados',
+          'Actualiza resultados para el ciclo y momento seleccionado, o revisa que ya existan respuestas enviadas.'
+        );
+      }
       const titleField = options.titleField || 'area_id';
       const limit = Number(options.limit || 8);
       const visibleRows = list.slice(0, limit);
@@ -15608,14 +15624,16 @@
               '</div>'
             ].join('');
           }).join('')
-        : '<div class="eval360-empty">' + (alumnos.length ? 'Ninguno coincide con el filtro seleccionado.' : 'Todavia no hay participacion para esta seleccion.') + '</div>';
+        : (alumnos.length
+            ? renderEval360AdminEmptyState('Sin alumnos en este filtro', 'Cambia el filtro de seguimiento para revisar otros pendientes.')
+            : renderEval360AdminEmptyState('Sin participación registrada', 'Genera invitaciones o espera respuestas enviadas para ver el avance de aplicación.'));
       return kpisHtml + filterBtnsHtml + listHtml;
     }
 
     function renderEval360AdminParticipacion(participacion) {
       const alumnos = participacion && Array.isArray(participacion.alumnos) ? participacion.alumnos : [];
       if (!alumnos.length) {
-        return '<div class="eval360-empty">Todavia no hay participacion para esta seleccion.</div>';
+        return renderEval360AdminEmptyState('Sin participación registrada', 'Aún no hay respuestas vinculadas a este ciclo y momento.');
       }
       return alumnos.slice(0, 20).map((row) => {
         const suficiente = String(row.datos_suficientes || '').trim() === 'si';
@@ -16710,7 +16728,7 @@
       ].join('');
 
       if (!bankOpen) {
-        return header + '<div class="eval360-empty mini" style="color:var(--text-soft)">Carga el banco solo cuando lo necesites.</div>';
+        return header + renderEval360AdminEmptyState('Banco cerrado para mantener fluida la pantalla', 'Ábrelo solo cuando quieras revisar, editar o crear planeaciones sugeridas por habilidad.');
       }
 
       if (bankLoading) {
@@ -16722,7 +16740,7 @@
       }
 
       if (!bank) {
-        return header + '<div class="eval360-empty">Presiona "Actualizar" para cargar el banco.</div>';
+        return header + renderEval360AdminEmptyState('Banco sin cargar', 'Presiona Actualizar para traer áreas, habilidades y plantillas disponibles.', '<button class="btn-secondary" type="button" onclick="loadEval360SuggestionBank(this)">Actualizar banco</button>');
       }
 
       // Draft editor
@@ -16758,7 +16776,7 @@
       const totalLabel = '<span class="pill">' + escapeHtml(String(filtered.length)) + (filtered.length !== bank.total ? ' de ' + escapeHtml(String(bank.total)) : '') + ' plantillas</span>';
       const listHtml = filtered.length
         ? filtered.map(renderEval360PlantillaRow).join('')
-        : '<div class="eval360-empty">Sin plantillas con estos filtros.</div>';
+        : renderEval360AdminEmptyState('Sin plantillas con estos filtros', 'Prueba quitar el área, habilidad o texto de búsqueda. También puedes crear una sugerencia nueva para esta habilidad.');
 
       return [
         header,
@@ -17210,6 +17228,18 @@
       const ui = getEval360Ui().admin;
       const areaLimit = Number(ui.resultAreasLimit || 6);
       const skillLimit = Number(ui.resultSkillsLimit || 6);
+      if (!areaRows.length && !skillRows.length && !crecimientoAreas.length && !crecimientoHabilidades.length) {
+        return [
+          '<section class="eval360-panel">',
+            '<div class="admin-alumnos-section-head"><div><h4>Resultados</h4><p class="mini">Promedios por área y habilidad del ciclo seleccionado.</p></div></div>',
+            renderEval360AdminEmptyState(
+              'Aún no hay resultados calculados',
+              'Primero asegúrate de tener respuestas enviadas. Después presiona Actualizar resultados para construir los promedios.',
+              '<button class="btn-secondary" type="button" onclick="refreshEval360AdminCache(this)">Actualizar resultados</button><button class="btn-ghost" type="button" onclick="setEval360AdminSection(\'aplicacion\')">Ver aplicación</button>'
+            ),
+          '</section>'
+        ].join('');
+      }
       const moreButton = (kind, label) => (meta) => [
         '<div class="eval360-load-more">',
           '<span class="mini">Mostrando ' + escapeHtml(meta.shown) + ' de ' + escapeHtml(meta.total) + '</span>',
@@ -17218,8 +17248,8 @@
       ].join('');
       return [
         '<section class="eval360-compact-grid">',
-          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><div><h4>Areas de desarrollo</h4><p class="mini">Las 6 areas, ordenadas por mayor necesidad.</p></div></div>' + renderEval360Rows(areaRows, { limit: areaLimit, moreAction: moreButton('areas', 'Cargar mas areas') }) + '</article>',
-          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><div><h4>Habilidades prioritarias</h4><p class="mini">Primeras 6: las que requieren mas atencion.</p></div></div>' + renderEval360Rows(skillRows, { titleField: 'item_label', limit: skillLimit, moreAction: moreButton('skills', 'Cargar mas habilidades') }) + '</article>',
+          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><div><h4>Areas de desarrollo</h4><p class="mini">Las 6 areas, ordenadas por mayor necesidad.</p></div></div>' + renderEval360Rows(areaRows, { limit: areaLimit, moreAction: moreButton('areas', 'Cargar mas areas'), emptyHtml: renderEval360AdminEmptyState('Sin áreas calculadas', 'Actualiza resultados para ver las seis áreas de desarrollo.') }) + '</article>',
+          '<article class="eval360-panel"><div class="admin-alumnos-section-head"><div><h4>Habilidades prioritarias</h4><p class="mini">Primeras 6: las que requieren mas atencion.</p></div></div>' + renderEval360Rows(skillRows, { titleField: 'item_label', limit: skillLimit, moreAction: moreButton('skills', 'Cargar mas habilidades'), emptyHtml: renderEval360AdminEmptyState('Sin habilidades prioritarias', 'Cuando haya resultados por habilidad, aquí aparecerán las primeras que requieren más atención.') }) + '</article>',
         '</section>',
         '<section class="eval360-panel eval360-growth-panel" id="eval360AdminGrowthPanel"><div class="admin-alumnos-section-head"><div><h4>Avance inicio/final</h4><p class="mini">Lectura rapida del cambio por area y focos de acompanamiento.</p></div><span class="pill">Agregado</span></div>',
           renderEval360GrowthSummary(crecimientoAreas, crecimientoHabilidades),
@@ -17232,6 +17262,19 @@
     }
 
     function renderEval360AdminReporteCompact(ui) {
+      const needsAlumno = !String(ui.selectedFamilyAlumnoId || '').trim();
+      const needsFinal = String(ui.selectedMomento || '').trim() !== 'final';
+      const guidanceHtml = !ui.familyReport && !ui.familyReportError
+        ? renderEval360AdminEmptyState(
+            needsAlumno
+              ? 'Selecciona un alumno para generar el reporte'
+              : (needsFinal ? 'Usa el momento Final para revisar crecimiento' : 'Reporte listo para consultar'),
+            needsAlumno
+              ? 'El reporte familiar se genera por alumno. Elige un alumno del ciclo y presiona Ver reporte familiar.'
+              : (needsFinal ? 'El reporte familiar puede abrirse en inicio, pero el crecimiento se entiende mejor comparando contra el momento final.' : 'Presiona Ver reporte familiar para cargar la vista que después podrás imprimir o guardar como PDF.'),
+            needsFinal ? '<button class="btn-ghost" type="button" onclick="setEval360AdminMomento(\'final\')">Cambiar a Final</button>' : ''
+          )
+        : '';
       return [
         '<section class="eval360-panel" id="eval360AdminFamilyReportPanel">',
           '<div class="admin-alumnos-section-head"><h4>Reporte familiar</h4><span class="pill">Por alumno</span></div>',
@@ -17243,9 +17286,10 @@
             '</div>',
           '</div>',
           ui.familyReportError ? '<p class="eval360-report-error" role="alert">' + escapeHtml(ui.familyReportError) + '</p>' : '',
-          renderEval360FamilyReport(ui.familyReport),
-          renderEval360FamilyReleaseState(ui.familyReport),
-          renderEval360FamilyFinalReview(ui.familyReport),
+          guidanceHtml,
+          ui.familyReport ? renderEval360FamilyReport(ui.familyReport) : '',
+          ui.familyReport ? renderEval360FamilyReleaseState(ui.familyReport) : '',
+          ui.familyReport ? renderEval360FamilyFinalReview(ui.familyReport) : '',
         '</section>'
       ].join('');
     }
