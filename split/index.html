@@ -6998,7 +6998,12 @@
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      body.eval360-print-family-report * { visibility: hidden; }
+      body.eval360-print-family-report {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #f2f5f9 !important;
+      }
+      body.eval360-print-family-report * { visibility: visible; }
       body.eval360-print-family-report #eval360FamilyReportContent,
       body.eval360-print-family-report #eval360FamilyReportContent * { visibility: visible; }
       body.eval360-print-family-report #eval360FamilyReportContent {
@@ -7052,7 +7057,6 @@
       body.eval360-print-family-report .eval360-family-area-card { order: 1; }
       body.eval360-print-family-report .eval360-family-strengths-panel { order: 2; }
       body.eval360-print-family-report .eval360-family-home-panel { order: 3; }
-      body.eval360-print-family-report .eval360-family-skills-card { order: 4; }
       body.eval360-print-family-report .eval360-family-student h2 {
         font-size: 2rem !important;
         overflow-wrap: anywhere;
@@ -7086,7 +7090,6 @@
       }
       body.eval360-print-family-report .eval360-family-strengths-panel,
       body.eval360-print-family-report .eval360-family-home-panel,
-      body.eval360-print-family-report .eval360-family-skills-card,
       body.eval360-print-family-report .eval360-family-public-hero,
       .eval360-family-area-row,
       .eval360-family-side-card,
@@ -7923,7 +7926,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-print-iframe-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-print-clean-v1"></script>
 </body>
 </html>
 

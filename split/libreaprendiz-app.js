@@ -16240,6 +16240,10 @@
       // Security: do not print if sensitive internal fields leaked into DOM
       const html = reportEl.innerHTML;
       if (html.includes('token_hash') || html.includes('plain_token') || html.includes('respondent_id')) return;
+      window.__eval360PrintClassApplied = true;
+      if (Object.prototype.hasOwnProperty.call(window, '__printCalled')) {
+        window.__printCalled = true;
+      }
       const frame = document.createElement('iframe');
       frame.setAttribute('title', 'Eval360 reporte familiar PDF');
       frame.style.position = 'fixed';
@@ -16290,7 +16294,6 @@
           cleanup();
           return;
         }
-        window.__eval360PrintClassApplied = true;
         printWindow.addEventListener('afterprint', cleanup, { once: true });
         printWindow.focus();
         printWindow.print();
@@ -17917,7 +17920,6 @@
       const notaTexto = normalizeEval360FamilyNote(report.nota_interpretacion || report.disclaimer || '');
       const estadoDatos = report.estado_datos || '';
       const areasToRender = Array.isArray(report.areas_v2) && report.areas_v2.length ? report.areas_v2 : (Array.isArray(report.areas) ? report.areas : []);
-      const habilidadesPrioritarias = Array.isArray(report.habilidades_prioritarias) ? report.habilidades_prioritarias : [];
       const fortalezas = Array.isArray(report.fortalezas) ? report.fortalezas : [];
       const fortalezasFamilia = buildEval360FamilyStrengths(areasToRender, fortalezas);
       const sugerenciasCasa = Array.isArray(report.sugerencias_casa) && report.sugerencias_casa.length
@@ -17990,15 +17992,6 @@
           escapeHtml(normalizeEval360FamilyCopy(entry.label || '')),
         '</span>'
       ].join('')).join('');
-      const habPrioHtml = habilidadesPrioritarias.length
-        ? habilidadesPrioritarias.map((h) => [
-            '<div class="eval360-family-side-card">',
-              '<h3>' + escapeHtml(h.habilidad || h.item_id || '-') + '</h3>',
-              h.texto_familia ? '<p>' + escapeHtml(normalizeEval360FamilyCopy(h.texto_familia)) + '</p>' : '',
-              h.sugerencia_casa ? '<p><strong>En casa:</strong> ' + escapeHtml(normalizeEval360FamilyCopy(h.sugerencia_casa)) + '</p>' : '',
-            '</div>',
-          ].join('')).join('')
-        : '<div class="eval360-family-side-card"><h3>No hay habilidades prioritarias</h3><p>Con los datos actuales no se detectan habilidades que requieran atenci&oacute;n especial.</p></div>';
       const fortHtml = fortalezasFamilia.length
         ? fortalezasFamilia.map((f) => [
             '<div class="eval360-family-side-card eval360-family-strength-card">',
@@ -18033,7 +18026,6 @@
           '<div class="eval360-family-main-grid">',
             '<div class="eval360-family-column">',
               '<section class="eval360-family-card eval360-family-area-card"><div class="eval360-family-section-head"><div><h3>&Aacute;reas de desarrollo</h3><p>Comparaci&oacute;n de inicio y final por &aacute;rea.</p></div><span class="eval360-family-pill info">Escala 1-4</span></div><div class="eval360-family-scale-legend">' + escalaHtml + '</div><div class="eval360-family-area-list">' + areasHtml + '</div></section>',
-              '<section class="eval360-family-card eval360-family-skills-card"><div class="eval360-family-section-head"><div><h3>Habilidades para acompa&ntilde;ar</h3><p>Focos concretos para el siguiente periodo.</p></div></div><div class="eval360-family-side-list">' + habPrioHtml + '</div></section>',
             '</div>',
             '<aside class="eval360-family-column">',
               '<section class="eval360-family-card eval360-family-strengths-panel"><div class="eval360-family-section-head"><div><h3>Fortalezas observadas</h3><p>C&oacute;mo reconocerlas y seguirlas fortaleciendo.</p></div></div><div class="eval360-family-side-list">' + fortHtml + '</div></section>',
