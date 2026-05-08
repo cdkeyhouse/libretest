@@ -7022,9 +7022,13 @@
       body.eval360-print-family-report .eval360-family-note {
         box-shadow: 0 10px 26px rgba(21,31,52,0.06) !important;
       }
-      body.eval360-print-family-report .eval360-family-public-hero,
-      body.eval360-print-family-report .eval360-family-main-grid {
+      body.eval360-print-family-report .eval360-family-public-hero {
         grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr) !important;
+        gap: 14px !important;
+      }
+      body.eval360-print-family-report .eval360-family-main-grid {
+        display: flex !important;
+        flex-direction: column !important;
         gap: 14px !important;
       }
       body.eval360-print-family-report .eval360-family-kpis {
@@ -7042,6 +7046,13 @@
       body.eval360-print-family-report .eval360-family-public-hero {
         align-items: start !important;
       }
+      body.eval360-print-family-report .eval360-family-column {
+        display: contents !important;
+      }
+      body.eval360-print-family-report .eval360-family-area-card { order: 1; }
+      body.eval360-print-family-report .eval360-family-strengths-panel { order: 2; }
+      body.eval360-print-family-report .eval360-family-home-panel { order: 3; }
+      body.eval360-print-family-report .eval360-family-skills-card { order: 4; }
       body.eval360-print-family-report .eval360-family-student h2 {
         font-size: 2rem !important;
         overflow-wrap: anywhere;
@@ -7066,9 +7077,17 @@
       body.eval360-print-family-report .eval360-family-side-list {
         gap: 8px !important;
       }
-      .eval360-family-report section,
-      .eval360-family-public-hero,
-      .eval360-family-card,
+      body.eval360-print-family-report .eval360-family-card {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+      }
+      body.eval360-print-family-report .eval360-family-area-card {
+        margin-top: 0 !important;
+      }
+      body.eval360-print-family-report .eval360-family-strengths-panel,
+      body.eval360-print-family-report .eval360-family-home-panel,
+      body.eval360-print-family-report .eval360-family-skills-card,
+      body.eval360-print-family-report .eval360-family-public-hero,
       .eval360-family-area-row,
       .eval360-family-side-card,
       .eval360-family-home-card,
@@ -7904,7 +7923,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-hardening-v2"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-print-flow-v1"></script>
 </body>
 </html>
 
