@@ -276,7 +276,7 @@
           familyReportReviewAccepted: false,
           selectedFamilyAlumnoId: '',
           familyAlumnoSearch: '',
-          familyOnlyReportReady: true,
+          familyOnlyReportReady: false,
           showQaClosed: false,
           participationFilter: 'todos',
           suggestionBankOpen: false,
