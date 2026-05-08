@@ -16437,6 +16437,11 @@
           display: grid;
           gap: 8px;
         }
+        .eval360-family-strengths-panel .eval360-family-section-head,
+        .eval360-family-home-panel .eval360-family-section-head {
+          break-after: avoid;
+          page-break-after: avoid;
+        }
         .eval360-family-scale-legend {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -16629,26 +16634,42 @@
           html, body { background: #f2f5f9 !important; }
           body { padding: 0; }
           .eval360-family-report { max-width: 100%; }
+          .eval360-family-side-list {
+            display: block;
+          }
+          .eval360-family-side-list > * + * {
+            margin-top: 8px;
+          }
+          .eval360-family-strengths-panel,
+          .eval360-family-home-panel {
+            break-inside: auto;
+            page-break-inside: auto;
+          }
         }
       `;
-      const printWindow = window.open('', 'eval360FamilyReportPrint');
+      const printUrl = new URL(window.location.href);
+      printUrl.hash = 'eval360-family-report-print';
+      const printWindow = window.open(printUrl.href, 'eval360FamilyReportPrint');
       if (!printWindow) {
         setBanner('El navegador bloqueo la ventana de impresion. Permite ventanas emergentes para guardar el PDF.', 'error');
         return;
       }
-      const printDoc = printWindow.document;
-      printDoc.open();
-      printDoc.write([
-        '<!doctype html><html><head><meta charset="utf-8">',
-        '<base href="' + escapeHtml(window.location.href) + '">',
-        '<title>Eval360 - Reporte familiar</title>',
-        '<style>' + printCss + '</style>',
-        '</head><body class="eval360-print-family-report">',
-        reportEl.outerHTML,
-        '</body></html>'
-      ].join(''));
-      printDoc.close();
-      const waitForImages = () => {
+      const writePrintDocument = () => {
+        const printDoc = printWindow.document;
+        printDoc.open();
+        printDoc.write([
+          '<!doctype html><html><head><meta charset="utf-8">',
+          '<base href="' + escapeHtml(window.location.href) + '">',
+          '<title>Eval360 - Reporte familiar</title>',
+          '<style>' + printCss + '</style>',
+          '</head><body class="eval360-print-family-report">',
+          reportEl.outerHTML,
+          '</body></html>'
+        ].join(''));
+        printDoc.close();
+        return printDoc;
+      };
+      const waitForImages = (printDoc) => {
         const images = Array.from(printDoc.images || []);
         if (!images.length) return Promise.resolve();
         return Promise.all(images.map((img) => {
@@ -16659,12 +16680,26 @@
           });
         }));
       };
-      waitForImages().then(() => {
-        printWindow.focus();
-        printWindow.print();
-      }).catch(() => {
-        printWindow.focus();
-      });
+      const openPrintDocument = () => {
+        var printDoc;
+        try {
+          if (printWindow.document && printWindow.document.readyState === 'loading') {
+            window.setTimeout(openPrintDocument, 80);
+            return;
+          }
+          printDoc = writePrintDocument();
+        } catch (err) {
+          window.setTimeout(openPrintDocument, 120);
+          return;
+        }
+        waitForImages(printDoc).then(() => {
+          printWindow.focus();
+          printWindow.print();
+        }).catch(() => {
+          printWindow.focus();
+        });
+      };
+      openPrintDocument();
     }
 
     function formatEval360FamilyReleaseStatus(status) {
