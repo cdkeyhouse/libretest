@@ -7024,7 +7024,8 @@
       }
       body.eval360-print-family-report .eval360-family-public-hero,
       body.eval360-print-family-report .eval360-family-main-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr) !important;
+        gap: 14px !important;
       }
       body.eval360-print-family-report .eval360-family-kpis {
         grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -7054,8 +7055,16 @@
         grid-column: 2 / -1 !important;
       }
       body.eval360-print-family-report .eval360-family-radar-card {
-        max-width: 360px !important;
+        max-width: 320px !important;
         justify-self: start !important;
+      }
+      body.eval360-print-family-report .eval360-family-card,
+      body.eval360-print-family-report .eval360-family-public-hero,
+      body.eval360-print-family-report .eval360-family-public-brand {
+        padding: 16px !important;
+      }
+      body.eval360-print-family-report .eval360-family-side-list {
+        gap: 8px !important;
       }
       .eval360-family-report section,
       .eval360-family-public-hero,
@@ -7895,7 +7904,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260507-eval360-family-guidance-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260507-eval360-hardening-v1"></script>
 </body>
 </html>
 

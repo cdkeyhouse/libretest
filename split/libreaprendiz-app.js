@@ -275,6 +275,8 @@
           familyReportReviewOpen: false,
           familyReportReviewAccepted: false,
           selectedFamilyAlumnoId: '',
+          familyAlumnoSearch: '',
+          familyOnlyReportReady: true,
           showQaClosed: false,
           participationFilter: 'todos',
           suggestionBankOpen: false,
@@ -283,6 +285,10 @@
           suggestionBank: null,
           suggestionBankFilters: { area_id: '', skill_id: '', estatus: '', q: '' },
           suggestionBankDraft: null,
+          familyAdviceBank: null,
+          familyAdviceLoading: false,
+          familyAdviceError: '',
+          familyAdviceDraft: null,
           activeSection: 'resumen',
           sectionLoading: '',
           sectionError: '',
@@ -15955,6 +15961,45 @@
       }).join('');
     }
 
+    function getEval360FamilyReportAlumnoOptions(selectedId) {
+      const ui = getEval360Ui().admin;
+      const q = String(ui.familyAlumnoSearch || '').trim().toLowerCase();
+      const onlyReady = ui.familyOnlyReportReady !== false;
+      const participation = ui.participacion && Array.isArray(ui.participacion.alumnos) ? ui.participacion.alumnos : [];
+      const readinessById = {};
+      participation.forEach((row) => {
+        const id = String(row.alumno_id || '').trim();
+        if (!id) return;
+        readinessById[id] = {
+          ready: String(row.datos_suficientes || '').trim() === 'si',
+          familia: renderEval360ParticipationRatio(row, 'familia'),
+          alumno: renderEval360ParticipationRatio(row, 'alumno'),
+          facilitador: renderEval360ParticipationRatio(row, 'facilitador'),
+        };
+      });
+      const baseHtml = getEval360AlumnoOptions(selectedId, { onlyCycle: true });
+      const options = Array.from(new DOMParser().parseFromString('<select>' + baseHtml + '</select>', 'text/html').querySelectorAll('option'))
+        .map((option) => ({ id: String(option.value || '').trim(), label: String(option.textContent || '').trim() }))
+        .filter((row) => {
+          if (!row.id) return true;
+          const ready = readinessById[row.id] && readinessById[row.id].ready;
+          if (onlyReady && !ready && row.id !== selectedId) return false;
+          if (q && (row.label.toLowerCase().indexOf(q) === -1 && row.id.toLowerCase().indexOf(q) === -1)) return false;
+          return true;
+        });
+      if (selectedId && !options.some((row) => row.id === selectedId)) {
+        options.push({ id: selectedId, label: selectedId });
+      }
+      return options.map((row) => {
+        if (!row.id) return '<option value="">' + escapeHtml(row.label || 'Selecciona alumno') + '</option>';
+        const ready = readinessById[row.id];
+        const suffix = ready
+          ? ' - ' + (ready.ready ? 'listo' : 'incompleto') + ' (F ' + ready.familia + ', A ' + ready.alumno + ', Fac ' + ready.facilitador + ')'
+          : '';
+        return '<option value="' + escapeHtml(row.id) + '"' + (row.id === selectedId ? ' selected' : '') + '>' + escapeHtml(row.label + suffix) + '</option>';
+      }).join('');
+    }
+
     function getEval360FacilitadorOptions(selectedId) {
       const source = Array.isArray(state.catalogos.facilitadores_admin) && state.catalogos.facilitadores_admin.length
         ? state.catalogos.facilitadores_admin
@@ -16125,6 +16170,18 @@
       ui.familyReportReviewAccepted = false;
       const quickSelect = document.getElementById('eval360FamilyAlumnoQuick');
       if (quickSelect && quickSelect.value !== ui.selectedFamilyAlumnoId) quickSelect.value = ui.selectedFamilyAlumnoId;
+      renderEval360SectionBodyOnly();
+    }
+
+    function setEval360FamilyAlumnoSearch(value) {
+      const ui = getEval360Ui().admin;
+      ui.familyAlumnoSearch = String(value || '');
+      renderEval360SectionBodyOnly();
+    }
+
+    function setEval360FamilyOnlyReportReady(checked) {
+      const ui = getEval360Ui().admin;
+      ui.familyOnlyReportReady = !!checked;
       renderEval360SectionBodyOnly();
     }
 
@@ -16706,6 +16763,79 @@
       ].join('');
     }
 
+    function renderEval360FamilyAdviceDraft(draft, bank) {
+      const areas = bank && Array.isArray(bank.areas) ? bank.areas : [];
+      const areaOptions = ['<option value="">-- Area --</option>']
+        .concat(areas.map((a) => '<option value="' + escapeHtml(a.area_id) + '"' + (draft.area_id === a.area_id ? ' selected' : '') + '>' + escapeHtml(a.area_nombre || a.area_id) + '</option>'))
+        .join('');
+      const tipoOptions = [
+        ['area_texto', 'Texto de area'],
+        ['sugerencia_casa', 'Consejo para casa'],
+        ['fortaleza', 'Fortaleza observada'],
+      ].map(([value, label]) => '<option value="' + value + '"' + (draft.tipo === value ? ' selected' : '') + '>' + escapeHtml(label) + '</option>').join('');
+      const estatusOptions = ['activa', 'borrador', 'archivada'].map((value) =>
+        '<option value="' + value + '"' + (draft.estatus === value ? ' selected' : '') + '>' + escapeHtml(value) + '</option>'
+      ).join('');
+      return [
+        '<div class="eval360-banco-editor eval360-family-advice-editor">',
+          '<div class="eval360-banco-editor-grid">',
+            '<div><label>Area</label><select onchange="setEval360FamilyAdviceDraftField(\'area_id\', this.value)">' + areaOptions + '</select></div>',
+            '<div><label>Tipo</label><select onchange="setEval360FamilyAdviceDraftField(\'tipo\', this.value)">' + tipoOptions + '</select></div>',
+            '<div><label>Estatus</label><select onchange="setEval360FamilyAdviceDraftField(\'estatus\', this.value)">' + estatusOptions + '</select></div>',
+            '<div><label>Orden</label><input type="number" value="' + escapeHtml(String(draft.orden || 999)) + '" oninput="setEval360FamilyAdviceDraftField(\'orden\', this.value)"></div>',
+          '</div>',
+          '<div><label>Titulo</label><input type="text" value="' + escapeHtml(draft.titulo || '') + '" oninput="setEval360FamilyAdviceDraftField(\'titulo\', this.value)"></div>',
+          '<div><label>Texto para familia</label><textarea rows="3" oninput="setEval360FamilyAdviceDraftField(\'descripcion\', this.value)">' + escapeHtml(draft.descripcion || '') + '</textarea></div>',
+          '<div><label>Refuerzo opcional</label><textarea rows="2" oninput="setEval360FamilyAdviceDraftField(\'accion_refuerzo\', this.value)">' + escapeHtml(draft.accion_refuerzo || '') + '</textarea></div>',
+          '<div class="actions compact"><button class="btn-primary" type="button" onclick="saveEval360FamilyAdviceDraft(this)">Guardar consejo</button><button class="btn-ghost" type="button" onclick="cancelEval360FamilyAdviceDraft()">Cancelar</button></div>',
+        '</div>'
+      ].join('');
+    }
+
+    function renderEval360FamilyAdviceBank(ui) {
+      const bank = ui.familyAdviceBank;
+      const loading = ui.familyAdviceLoading;
+      const rows = bank && Array.isArray(bank.consejos) ? bank.consejos : [];
+      const grouped = {};
+      rows.forEach((row) => {
+        const area = row.area_id || 'sin_area';
+        if (!grouped[area]) grouped[area] = [];
+        grouped[area].push(row);
+      });
+      const body = !bank
+        ? renderEval360AdminEmptyState('Consejos familiares sin cargar', 'Este banco alimenta las fortalezas y recomendaciones del reporte familiar.', '<button class="btn-secondary" type="button" onclick="loadEval360FamilyAdviceBank(this)">Cargar consejos</button><button class="btn-ghost" type="button" onclick="seedEval360FamilyAdviceBank(this)">Sembrar base</button>')
+        : (rows.length
+            ? Object.keys(grouped).sort().map((area) => [
+                '<div class="eval360-family-advice-area">',
+                  '<div class="eval360-row-head"><strong>' + escapeHtml(area) + '</strong><span class="pill">' + escapeHtml(String(grouped[area].length)) + ' textos</span></div>',
+                  grouped[area].map((row) => [
+                    '<div class="eval360-banco-row">',
+                      '<div class="eval360-row-head"><strong>' + escapeHtml(row.titulo || row.tipo || '-') + '</strong><span class="pill">' + escapeHtml(row.tipo || '-') + '</span><span class="pill ' + (row.estatus === 'activa' ? 'pill-green' : 'pill-grey') + '">' + escapeHtml(row.estatus || '-') + '</span></div>',
+                      '<p class="mini">' + escapeHtml(row.descripcion || '') + '</p>',
+                      row.accion_refuerzo ? '<p class="mini muted">Refuerzo: ' + escapeHtml(row.accion_refuerzo) + '</p>' : '',
+                      '<div class="eval360-banco-actions"><button class="btn-ghost mini" type="button" onclick="startEval360FamilyAdviceDraft(\'' + escapeHtml(row.consejo_id) + '\')">Editar</button></div>',
+                    '</div>'
+                  ].join('')).join(''),
+                '</div>'
+              ].join('')).join('')
+            : renderEval360AdminEmptyState('Banco familiar vacio', 'Siembra la base o crea el primer consejo familiar.'));
+      return [
+        '<section class="eval360-family-advice-panel">',
+          '<div class="admin-alumnos-section-head">',
+            '<div><h4>Consejos familiares</h4><p class="mini">Textos que alimentan fortalezas y recomendaciones del reporte familiar.</p></div>',
+            '<div class="actions compact">',
+              '<button class="btn-ghost" type="button" onclick="loadEval360FamilyAdviceBank(this)">' + (loading ? 'Cargando...' : 'Actualizar') + '</button>',
+              '<button class="btn-secondary" type="button" onclick="startEval360FamilyAdviceDraft(\'\')">Nuevo consejo</button>',
+              '<button class="btn-ghost" type="button" onclick="seedEval360FamilyAdviceBank(this)">Sembrar base</button>',
+            '</div>',
+          '</div>',
+          ui.familyAdviceError ? '<p class="eval360-report-error" role="alert">' + escapeHtml(ui.familyAdviceError) + '</p>' : '',
+          ui.familyAdviceDraft ? renderEval360FamilyAdviceDraft(ui.familyAdviceDraft, bank || { areas: [] }) : '',
+          body,
+        '</section>'
+      ].join('');
+    }
+
     function renderEval360BancoSugerencias(ui) {
       const bankOpen = ui.suggestionBankOpen;
       const bankLoading = ui.suggestionBankLoading;
@@ -16784,6 +16914,7 @@
         filtersHtml,
         '<div class="eval360-banco-list-header mini">' + totalLabel + '</div>',
         '<div id="eval360BancoList">' + listHtml + '</div>',
+        renderEval360FamilyAdviceBank(ui),
       ].join('');
     }
 
@@ -16926,6 +17057,102 @@
         onError: () => {
           ui.sectionLoading = '';
           renderEval360SectionBodyOnly();
+        }
+      });
+    }
+
+    async function loadEval360FamilyAdviceBank(button) {
+      const ui = getEval360BancoUi();
+      return handleAction('getEval360ConsejosFamiliaAdmin', async () => {
+        ui.familyAdviceLoading = true;
+        ui.familyAdviceError = '';
+        renderEval360SectionBodyOnly();
+        const data = await api('getEval360ConsejosFamiliaAdmin', {});
+        ui.familyAdviceBank = data || { consejos: [], areas: [], total: 0 };
+        ui.familyAdviceLoading = false;
+        renderEval360SectionBodyOnly();
+      }, {
+        button,
+        key: 'eval360-family-advice-load',
+        onError: (err) => {
+          ui.familyAdviceLoading = false;
+          ui.familyAdviceError = String((err && err.message) || 'Error al cargar consejos familiares.');
+          renderEval360SectionBodyOnly();
+        }
+      });
+    }
+
+    async function seedEval360FamilyAdviceBank(button) {
+      const ui = getEval360BancoUi();
+      return handleAction('seedEval360ConsejosFamilia', async () => {
+        await api('seedEval360ConsejosFamilia', { confirmation_code: 'SEED_EVAL360_CONSEJOS_FAMILIA' });
+        ui.familyAdviceBank = null;
+        await loadEval360FamilyAdviceBank(button);
+        setBanner('Consejos familiares sembrados.', 'success');
+      }, {
+        button,
+        key: 'eval360-family-advice-seed',
+        onError: (err) => {
+          setBanner(formatApiError(err), 'error');
+          return false;
+        }
+      });
+    }
+
+    function startEval360FamilyAdviceDraft(consejoId) {
+      const ui = getEval360BancoUi();
+      const rows = ui.familyAdviceBank && Array.isArray(ui.familyAdviceBank.consejos) ? ui.familyAdviceBank.consejos : [];
+      const found = rows.find((row) => row.consejo_id === consejoId) || null;
+      ui.familyAdviceDraft = found ? Object.assign({}, found) : {
+        consejo_id: '',
+        area_id: '',
+        tipo: 'sugerencia_casa',
+        titulo: '',
+        descripcion: '',
+        accion_refuerzo: '',
+        estatus: 'activa',
+        orden: 999
+      };
+      renderEval360SectionBodyOnly();
+    }
+
+    function cancelEval360FamilyAdviceDraft() {
+      getEval360BancoUi().familyAdviceDraft = null;
+      renderEval360SectionBodyOnly();
+    }
+
+    function setEval360FamilyAdviceDraftField(field, value) {
+      const ui = getEval360BancoUi();
+      if (!ui.familyAdviceDraft) return;
+      ui.familyAdviceDraft[field] = value;
+    }
+
+    async function saveEval360FamilyAdviceDraft(button) {
+      const ui = getEval360BancoUi();
+      const draft = ui.familyAdviceDraft;
+      if (!draft) return;
+      const payload = {
+        consejo_id: String(draft.consejo_id || '').trim(),
+        area_id: String(draft.area_id || '').trim(),
+        tipo: String(draft.tipo || '').trim(),
+        titulo: String(draft.titulo || '').trim(),
+        descripcion: String(draft.descripcion || '').trim(),
+        accion_refuerzo: String(draft.accion_refuerzo || '').trim(),
+        estatus: String(draft.estatus || 'activa').trim(),
+        orden: draft.orden
+      };
+      return handleAction('guardarEval360ConsejoFamilia', async () => {
+        await api('guardarEval360ConsejoFamilia', payload);
+        ui.familyAdviceDraft = null;
+        ui.familyAdviceBank = null;
+        await loadEval360FamilyAdviceBank(button);
+        setBanner('Consejo familiar guardado.', 'success');
+      }, {
+        button,
+        key: 'eval360-family-advice-save',
+        onError: (err) => {
+          setBanner(formatApiError(err), 'error');
+          return false;
         }
       });
     }
@@ -17279,7 +17506,8 @@
         '<section class="eval360-panel" id="eval360AdminFamilyReportPanel">',
           '<div class="admin-alumnos-section-head"><h4>Reporte familiar</h4><span class="pill">Por alumno</span></div>',
           '<div class="eval360-family-report-controls">',
-            '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360AlumnoOptions(ui.selectedFamilyAlumnoId, { onlyCycle: true }) + '</select></div>',
+            '<div><label for="eval360FamilyAlumnoSearch">Buscar alumno</label><input id="eval360FamilyAlumnoSearch" type="search" placeholder="Nombre o ID" value="' + escapeHtml(ui.familyAlumnoSearch || '') + '" oninput="setEval360FamilyAlumnoSearch(this.value)"><label class="eval360-qa-toggle"><input type="checkbox"' + (ui.familyOnlyReportReady !== false ? ' checked' : '') + ' onchange="setEval360FamilyOnlyReportReady(this.checked)"> Solo listos para reporte</label></div>',
+            '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360FamilyReportAlumnoOptions(ui.selectedFamilyAlumnoId) + '</select></div>',
             '<div class="actions compact">',
               '<button id="eval360FamilyReportBtn" class="btn-secondary" type="button" onclick="loadEval360FamilyReport(this)"' + (!ui.selectedFamilyAlumnoId ? ' disabled' : '') + '>' + (ui.familyReportLoading ? 'Cargando...' : 'Ver reporte familiar') + '</button>',
               '<button id="eval360PrintFamilyReportBtn" class="btn-ghost no-print" type="button" onclick="printEval360FamilyReport()"' + (!ui.familyReport ? ' disabled' : '') + '>Imprimir / Guardar PDF</button>',
@@ -21380,6 +21608,8 @@
         confirmEval360FamilyFinalReview,
         updateEval360FamilyReportRelease,
         setEval360AdminFamilyAlumnoId,
+        setEval360FamilyAlumnoSearch,
+        setEval360FamilyOnlyReportReady,
         openEval360SuggestionBank,
         loadEval360SuggestionBank,
         setEval360SuggestionBankFilter,
@@ -21391,6 +21621,12 @@
         duplicateEval360Plantilla,
         cambiarEstatusEval360Plantilla,
         toggleEval360DraftSkillRef,
+        loadEval360FamilyAdviceBank,
+        seedEval360FamilyAdviceBank,
+        startEval360FamilyAdviceDraft,
+        cancelEval360FamilyAdviceDraft,
+        setEval360FamilyAdviceDraftField,
+        saveEval360FamilyAdviceDraft,
         setEval360AdminCycleDraft,
         setEval360AdminInvitationDraft,
         toggleEval360AdminInvitationActor,
