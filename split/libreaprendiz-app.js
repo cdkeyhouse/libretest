@@ -16240,16 +16240,62 @@
       // Security: do not print if sensitive internal fields leaked into DOM
       const html = reportEl.innerHTML;
       if (html.includes('token_hash') || html.includes('plain_token') || html.includes('respondent_id')) return;
-      window.__eval360PrintClassApplied = true;
-      document.body.classList.add('eval360-print-family-report');
-      window.print();
-      // Remove class once print dialog closes (afterprint) or after fallback timeout
+      const frame = document.createElement('iframe');
+      frame.setAttribute('title', 'Eval360 reporte familiar PDF');
+      frame.style.position = 'fixed';
+      frame.style.left = '-10000px';
+      frame.style.top = '0';
+      frame.style.width = '1024px';
+      frame.style.height = '1400px';
+      frame.style.border = '0';
+      frame.style.opacity = '0';
+      frame.style.pointerEvents = 'none';
+      document.body.appendChild(frame);
+      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map((node) => node.outerHTML)
+        .join('\n');
+      const printDoc = frame.contentWindow && frame.contentWindow.document;
+      if (!printDoc) {
+        frame.remove();
+        return;
+      }
+      printDoc.open();
+      printDoc.write([
+        '<!doctype html><html><head><meta charset="utf-8">',
+        '<base href="' + escapeHtml(window.location.href) + '">',
+        '<title>Eval360 - Reporte familiar</title>',
+        styles,
+        '</head><body class="eval360-print-family-report">',
+        reportEl.outerHTML,
+        '</body></html>'
+      ].join(''));
+      printDoc.close();
       const cleanup = () => {
-        document.body.classList.remove('eval360-print-family-report');
-        window.removeEventListener('afterprint', cleanup);
+        if (frame.parentNode) frame.parentNode.removeChild(frame);
       };
-      window.addEventListener('afterprint', cleanup);
-      setTimeout(cleanup, 5000);
+      const waitForImages = () => {
+        const images = Array.from(printDoc.images || []);
+        if (!images.length) return Promise.resolve();
+        return Promise.all(images.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.addEventListener('load', resolve, { once: true });
+            img.addEventListener('error', resolve, { once: true });
+          });
+        }));
+      };
+      waitForImages().then(() => {
+        const printWindow = frame.contentWindow;
+        if (!printWindow) {
+          cleanup();
+          return;
+        }
+        window.__eval360PrintClassApplied = true;
+        printWindow.addEventListener('afterprint', cleanup, { once: true });
+        printWindow.focus();
+        printWindow.print();
+        setTimeout(cleanup, 60000);
+      }).catch(cleanup);
     }
 
     function formatEval360FamilyReleaseStatus(status) {
