@@ -16633,7 +16633,10 @@
         @media print {
           html, body { background: #f2f5f9 !important; }
           body { padding: 0; }
-          .eval360-family-report { max-width: 100%; }
+          .eval360-family-report {
+            max-width: 100%;
+            padding-bottom: 28px;
+          }
           .eval360-family-side-list {
             display: block;
           }
@@ -16644,6 +16647,30 @@
           .eval360-family-home-panel {
             break-inside: auto;
             page-break-inside: auto;
+          }
+          .eval360-family-note {
+            position: fixed;
+            left: 10mm;
+            right: 10mm;
+            bottom: 5mm;
+            z-index: 10;
+            display: block;
+            padding: 0;
+            border: 0;
+            border-top: 1px solid #cfe5ff;
+            border-radius: 0;
+            box-shadow: none;
+            background: transparent !important;
+            color: #667085 !important;
+            font-size: 7.5pt;
+            line-height: 1.25;
+          }
+          .eval360-family-note strong {
+            display: none;
+          }
+          .eval360-family-note p {
+            margin: 3px 0 0;
+            color: #667085 !important;
           }
         }
       `;
