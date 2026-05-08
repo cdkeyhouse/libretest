@@ -16244,25 +16244,15 @@
       if (Object.prototype.hasOwnProperty.call(window, '__printCalled')) {
         window.__printCalled = true;
       }
-      const frame = document.createElement('iframe');
-      frame.setAttribute('title', 'Eval360 reporte familiar PDF');
-      frame.style.position = 'fixed';
-      frame.style.left = '-10000px';
-      frame.style.top = '0';
-      frame.style.width = '1024px';
-      frame.style.height = '1400px';
-      frame.style.border = '0';
-      frame.style.opacity = '0';
-      frame.style.pointerEvents = 'none';
-      document.body.appendChild(frame);
       const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
         .map((node) => node.outerHTML)
         .join('\n');
-      const printDoc = frame.contentWindow && frame.contentWindow.document;
-      if (!printDoc) {
-        frame.remove();
+      const printWindow = window.open('', 'eval360FamilyReportPrint');
+      if (!printWindow) {
+        setBanner('El navegador bloqueo la ventana de impresion. Permite ventanas emergentes para guardar el PDF.', 'error');
         return;
       }
+      const printDoc = printWindow.document;
       printDoc.open();
       printDoc.write([
         '<!doctype html><html><head><meta charset="utf-8">',
@@ -16274,9 +16264,6 @@
         '</body></html>'
       ].join(''));
       printDoc.close();
-      const cleanup = () => {
-        if (frame.parentNode) frame.parentNode.removeChild(frame);
-      };
       const waitForImages = () => {
         const images = Array.from(printDoc.images || []);
         if (!images.length) return Promise.resolve();
@@ -16289,16 +16276,11 @@
         }));
       };
       waitForImages().then(() => {
-        const printWindow = frame.contentWindow;
-        if (!printWindow) {
-          cleanup();
-          return;
-        }
-        printWindow.addEventListener('afterprint', cleanup, { once: true });
         printWindow.focus();
         printWindow.print();
-        setTimeout(cleanup, 60000);
-      }).catch(cleanup);
+      }).catch(() => {
+        printWindow.focus();
+      });
     }
 
     function formatEval360FamilyReleaseStatus(status) {
