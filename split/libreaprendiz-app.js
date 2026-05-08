@@ -16244,9 +16244,393 @@
       if (Object.prototype.hasOwnProperty.call(window, '__printCalled')) {
         window.__printCalled = true;
       }
-      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-        .map((node) => node.outerHTML)
-        .join('\n');
+      const printCss = `
+        @page { size: Letter; margin: 10mm; }
+        * { box-sizing: border-box; }
+        html, body {
+          margin: 0;
+          padding: 0;
+          min-height: 0;
+          background: #f2f5f9 !important;
+          color: #162033;
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body { padding: 12px; }
+        .eval360-family-report {
+          max-width: 980px;
+          margin: 0 auto;
+          padding: 0;
+          color: #162033 !important;
+          background:
+            radial-gradient(circle at top left, rgba(31,111,209,0.10), transparent 34rem),
+            linear-gradient(180deg, #fbfcff 0%, #f2f5f9 100%) !important;
+          border: 0;
+          border-radius: 18px;
+          overflow: hidden;
+        }
+        .eval360-family-report h2,
+        .eval360-family-report h3,
+        .eval360-family-report p { margin: 0; }
+        .eval360-family-report h2,
+        .eval360-family-report h3,
+        .eval360-family-report strong { color: #162033 !important; }
+        .eval360-family-public-brand,
+        .eval360-family-public-hero,
+        .eval360-family-card,
+        .eval360-family-kpis article,
+        .eval360-family-note {
+          background: rgba(255,255,255,0.96);
+          border: 1px solid #e6e9ef;
+          box-shadow: 0 10px 26px rgba(21,31,52,0.06);
+        }
+        .eval360-family-public-brand {
+          min-height: 68px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 18px;
+          margin-bottom: 18px;
+          border-radius: 18px;
+        }
+        .eval360-family-public-brand h3 {
+          font-size: 1rem;
+          line-height: 1.1;
+        }
+        .eval360-family-public-brand p,
+        .eval360-family-public-hero p,
+        .eval360-family-section-head p,
+        .eval360-family-area-copy p,
+        .eval360-family-side-card p,
+        .eval360-family-home-card p,
+        .eval360-family-note p {
+          color: #667085 !important;
+          line-height: 1.42;
+        }
+        .eval360-family-brand-mark {
+          width: 50px;
+          height: 50px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          background: #fff;
+          border: 1px solid #e6e9ef;
+          overflow: hidden;
+        }
+        .eval360-family-brand-mark img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          padding: 5px;
+        }
+        .eval360-family-public-hero {
+          display: grid;
+          grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+          gap: 14px;
+          align-items: start;
+          padding: 16px;
+          border-radius: 18px;
+          margin-bottom: 18px;
+        }
+        .eval360-family-student {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .eval360-family-avatar {
+          width: 64px;
+          height: 64px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #f6d9e3, #dbeafe);
+          color: #8a174d;
+          font-weight: 950;
+          font-size: 1.25rem;
+        }
+        .eval360-family-student h2 {
+          font-size: 2rem;
+          line-height: 1.04;
+          overflow-wrap: anywhere;
+        }
+        .eval360-family-summary {
+          margin-top: 18px !important;
+          padding: 16px 18px;
+          border: 1px solid #f4d28b;
+          border-radius: 14px;
+          background: linear-gradient(90deg, #fff8e7, #fff);
+          color: #2c3446 !important;
+          font-size: 1rem;
+          line-height: 1.45;
+        }
+        .eval360-family-radar-card {
+          display: grid;
+          place-items: center;
+          gap: 8px;
+          max-width: 320px;
+          justify-self: start;
+          padding: 18px;
+          border-radius: 16px;
+          background: linear-gradient(180deg, #f8fbff, #fff);
+          border: 1px solid #e6e9ef;
+        }
+        .eval360-family-radar {
+          width: 250px;
+          max-width: 100%;
+          aspect-ratio: 1;
+        }
+        .eval360-family-kpis {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+        .eval360-family-kpis article {
+          min-height: 104px;
+          display: grid;
+          align-content: center;
+          gap: 6px;
+          padding: 18px;
+          border-radius: 18px;
+        }
+        .eval360-family-kpis strong {
+          font-size: 2.15rem;
+          line-height: 1;
+        }
+        .eval360-family-kpis span { color: #667085; }
+        .eval360-family-main-grid,
+        .eval360-family-column {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          width: 100%;
+          max-width: 100%;
+          margin-bottom: 18px;
+        }
+        .eval360-family-card {
+          width: 100%;
+          max-width: 100%;
+          padding: 16px;
+          border-radius: 18px;
+          break-inside: auto;
+          page-break-inside: auto;
+        }
+        .eval360-family-section-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .eval360-family-section-head h3,
+        .eval360-family-area-copy h3,
+        .eval360-family-side-card h3,
+        .eval360-family-home-card h3 {
+          font-size: 1rem;
+          line-height: 1.25;
+        }
+        .eval360-family-area-list,
+        .eval360-family-side-list {
+          display: grid;
+          gap: 8px;
+        }
+        .eval360-family-scale-legend {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+          margin: -4px 0 14px;
+        }
+        .eval360-family-scale-legend span {
+          display: grid;
+          grid-template-columns: 24px minmax(0, 1fr);
+          gap: 8px;
+          align-items: center;
+          min-height: 36px;
+          padding: 8px 10px;
+          border-radius: 12px;
+          color: #526071;
+          background: #f6f8fb;
+          font-size: .76rem;
+          font-weight: 850;
+        }
+        .eval360-family-scale-legend b {
+          width: 24px;
+          height: 24px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          color: #1f6fd1;
+          background: #eaf3ff;
+          font-weight: 950;
+        }
+        .eval360-family-area-row {
+          display: grid;
+          grid-template-columns: 42px minmax(0, 1fr);
+          gap: 14px;
+          align-items: start;
+          padding: 14px;
+          border: 1px solid #e6e9ef;
+          border-radius: 14px;
+          background: #fff;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .eval360-family-area-icon {
+          width: 42px;
+          height: 42px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          font-weight: 950;
+        }
+        .eval360-family-bars {
+          grid-column: 2 / -1;
+          display: grid;
+          gap: 8px;
+        }
+        .eval360-family-bar-line {
+          display: grid;
+          grid-template-columns: 44px minmax(0, 1fr) 34px;
+          gap: 8px;
+          align-items: center;
+          color: #667085;
+          font-size: .78rem;
+          font-weight: 850;
+        }
+        .eval360-family-track {
+          height: 9px;
+          overflow: hidden;
+          border-radius: 999px;
+          background: #e9edf3;
+        }
+        .eval360-family-track i {
+          display: block;
+          height: 100%;
+          border-radius: inherit;
+          background: #1f6fd1;
+        }
+        .eval360-family-track i.is-start { background: #aab3c2; }
+        .eval360-family-pill {
+          grid-column: 2 / -1;
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          justify-content: center;
+          min-height: 32px;
+          padding: 0 12px;
+          border-radius: 999px;
+          font-weight: 900;
+          font-size: .84rem;
+          white-space: nowrap;
+        }
+        .eval360-family-pill.ok { color: #2f8f46; background: #eaf7ee; }
+        .eval360-family-pill.mid { color: #b76b00; background: #fff5dc; }
+        .eval360-family-pill.warn { color: #b42318; background: #fff0ed; }
+        .eval360-family-pill.info { color: #1f6fd1; background: #eaf3ff; }
+        .eval360-family-side-card {
+          display: grid;
+          gap: 8px;
+          padding: 14px;
+          border: 1px solid #e6e9ef;
+          border-radius: 14px;
+          background: #fff;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .eval360-family-strength-card { gap: 10px; }
+        .eval360-family-strength-head {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: center;
+        }
+        .eval360-family-strength-head span {
+          flex: 0 0 auto;
+          min-height: 30px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 10px;
+          border-radius: 999px;
+          color: #1f6fd1 !important;
+          background: #eaf3ff;
+          font-weight: 950;
+        }
+        .eval360-family-strength-card small {
+          color: #667085;
+          font-weight: 850;
+        }
+        .eval360-family-action {
+          padding: 10px 12px;
+          border-radius: 12px;
+          color: #344054 !important;
+          background: #f7fbff;
+          border: 1px solid #d8e9ff;
+          font-weight: 780;
+        }
+        .eval360-family-home-card {
+          display: grid;
+          grid-template-columns: 38px minmax(0, 1fr);
+          gap: 12px;
+          align-items: start;
+          padding: 14px 0;
+          border-bottom: 1px solid #e6e9ef;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .eval360-family-home-card:last-child { border-bottom: 0; }
+        .eval360-family-home-number {
+          width: 38px;
+          height: 38px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #fff5dc;
+          color: #b76b00;
+          font-weight: 950;
+        }
+        .eval360-family-home-area {
+          display: inline-flex;
+          width: fit-content;
+          margin-bottom: 5px;
+          padding: 3px 8px;
+          border-radius: 999px;
+          color: #1f6fd1;
+          background: #eaf3ff;
+          font-size: .72rem;
+          font-weight: 950;
+        }
+        .eval360-family-note {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          padding: 16px 18px;
+          border-radius: 18px;
+          background: #f4f9ff;
+          border-color: #cfe5ff;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .eval360-family-note strong {
+          width: 30px;
+          height: 30px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          background: #1f6fd1;
+          color: #fff !important;
+        }
+        button, nav, header, .no-print, .eval360-family-report-controls { display: none !important; }
+        @media print {
+          html, body { background: #f2f5f9 !important; }
+          body { padding: 0; }
+          .eval360-family-report { max-width: 100%; }
+        }
+      `;
       const printWindow = window.open('', 'eval360FamilyReportPrint');
       if (!printWindow) {
         setBanner('El navegador bloqueo la ventana de impresion. Permite ventanas emergentes para guardar el PDF.', 'error');
@@ -16258,7 +16642,7 @@
         '<!doctype html><html><head><meta charset="utf-8">',
         '<base href="' + escapeHtml(window.location.href) + '">',
         '<title>Eval360 - Reporte familiar</title>',
-        styles,
+        '<style>' + printCss + '</style>',
         '</head><body class="eval360-print-family-report">',
         reportEl.outerHTML,
         '</body></html>'
