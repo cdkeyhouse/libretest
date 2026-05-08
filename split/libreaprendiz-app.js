@@ -16635,7 +16635,7 @@
           body { padding: 0; }
           .eval360-family-report {
             max-width: 100%;
-            padding-bottom: 28px;
+            padding-bottom: 0;
           }
           .eval360-family-side-list {
             display: block;
@@ -16649,13 +16649,9 @@
             page-break-inside: auto;
           }
           .eval360-family-note {
-            position: fixed;
-            left: 10mm;
-            right: 10mm;
-            bottom: 5mm;
-            z-index: 10;
             display: block;
-            padding: 0;
+            margin-top: 8px;
+            padding: 5px 0 0;
             border: 0;
             border-top: 1px solid #cfe5ff;
             border-radius: 0;
@@ -16664,6 +16660,10 @@
             color: #667085 !important;
             font-size: 7.5pt;
             line-height: 1.25;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            break-before: avoid;
+            page-break-before: avoid;
           }
           .eval360-family-note strong {
             display: none;
