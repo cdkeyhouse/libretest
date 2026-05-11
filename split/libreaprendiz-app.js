@@ -15990,6 +15990,9 @@
       if (selectedId && !options.some((row) => row.id === selectedId)) {
         options.push({ id: selectedId, label: selectedId });
       }
+      if (!options.some((row) => row.id)) {
+        return '<option value="">' + escapeHtml(onlyReady ? 'No hay reportes listos en este ciclo' : 'No hay alumnos en este ciclo') + '</option>';
+      }
       return options.map((row) => {
         if (!row.id) return '<option value="">' + escapeHtml(row.label || 'Selecciona alumno') + '</option>';
         const ready = readinessById[row.id];
@@ -17979,15 +17982,24 @@
     function renderEval360AdminReporteCompact(ui) {
       const needsAlumno = !String(ui.selectedFamilyAlumnoId || '').trim();
       const needsFinal = String(ui.selectedMomento || '').trim() !== 'final';
+      const familyOptionsHtml = getEval360FamilyReportAlumnoOptions(ui.selectedFamilyAlumnoId);
+      const hasFamilyReportAlumnoOptions = /<option value="[^"]+"/.test(familyOptionsHtml);
+      const noReadyReports = !hasFamilyReportAlumnoOptions && ui.familyOnlyReportReady !== false;
       const guidanceHtml = !ui.familyReport && !ui.familyReportError
         ? renderEval360AdminEmptyState(
-            needsAlumno
-              ? 'Selecciona un alumno para generar el reporte'
-              : (needsFinal ? 'Usa el momento Final para revisar crecimiento' : 'Reporte listo para consultar'),
-            needsAlumno
-              ? 'El reporte familiar se genera por alumno. Elige un alumno del ciclo y presiona Ver reporte familiar.'
-              : (needsFinal ? 'El reporte familiar puede abrirse en inicio, pero el crecimiento se entiende mejor comparando contra el momento final.' : 'Presiona Ver reporte familiar para cargar la vista que después podrás imprimir o guardar como PDF.'),
-            needsFinal ? '<button class="btn-ghost" type="button" onclick="setEval360AdminMomento(\'final\')">Cambiar a Final</button>' : ''
+            noReadyReports
+              ? 'No hay reportes listos en este ciclo'
+              : (needsAlumno
+                ? 'Selecciona un alumno para generar el reporte'
+                : (needsFinal ? 'Usa el momento Final para revisar crecimiento' : 'Reporte listo para consultar')),
+            noReadyReports
+              ? 'Para liberar un reporte familiar, primero deben estar completas las respuestas requeridas y los resultados actualizados. Puedes quitar el filtro para revisar alumnos incompletos.'
+              : (needsAlumno
+                ? 'El reporte familiar se genera por alumno. Elige un alumno del ciclo y presiona Ver reporte familiar.'
+                : (needsFinal ? 'El reporte familiar puede abrirse en inicio, pero el crecimiento se entiende mejor comparando contra el momento final.' : 'Presiona Ver reporte familiar para cargar la vista que despues podras imprimir o guardar como PDF.')),
+            noReadyReports
+              ? '<button class="btn-ghost" type="button" onclick="setEval360FamilyOnlyReportReady(false)">Ver alumnos incompletos</button>'
+              : (needsFinal ? '<button class="btn-ghost" type="button" onclick="setEval360AdminMomento(\'final\')">Cambiar a Final</button>' : '')
           )
         : '';
       return [
@@ -17995,7 +18007,7 @@
           '<div class="admin-alumnos-section-head"><h4>Reporte familiar</h4><span class="pill">Por alumno</span></div>',
           '<div class="eval360-family-report-controls">',
             '<div><label for="eval360FamilyAlumnoSearch">Buscar alumno</label><input id="eval360FamilyAlumnoSearch" type="search" placeholder="Nombre o ID" value="' + escapeHtml(ui.familyAlumnoSearch || '') + '" oninput="setEval360FamilyAlumnoSearch(this.value)"><label class="eval360-qa-toggle"><input type="checkbox"' + (ui.familyOnlyReportReady !== false ? ' checked' : '') + ' onchange="setEval360FamilyOnlyReportReady(this.checked)"> Solo listos para reporte</label></div>',
-            '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + getEval360FamilyReportAlumnoOptions(ui.selectedFamilyAlumnoId) + '</select></div>',
+            '<div><label for="eval360FamilyAlumno">Alumno</label><select id="eval360FamilyAlumno" onchange="setEval360AdminFamilyAlumnoId(this.value)">' + familyOptionsHtml + '</select></div>',
             '<div class="actions compact">',
               '<button id="eval360FamilyReportBtn" class="btn-secondary" type="button" onclick="loadEval360FamilyReport(this)"' + (!ui.selectedFamilyAlumnoId ? ' disabled' : '') + '>' + (ui.familyReportLoading ? 'Cargando...' : 'Ver reporte familiar') + '</button>',
               '<button id="eval360PrintFamilyReportBtn" class="btn-ghost no-print" type="button" onclick="printEval360FamilyReport()"' + (!ui.familyReport ? ' disabled' : '') + '>Imprimir / Guardar PDF</button>',
