@@ -276,7 +276,7 @@
           familyReportReviewAccepted: false,
           selectedFamilyAlumnoId: '',
           familyAlumnoSearch: '',
-          familyOnlyReportReady: false,
+          familyOnlyReportReady: true,
           showQaClosed: false,
           participationFilter: 'todos',
           suggestionBankOpen: false,
@@ -17785,9 +17785,10 @@
           publicRows.map((row) => {
             const token = String(row.plain_token || '').trim();
             const url = getEval360PublicUrl(token);
+            const alumnoLabel = getEval360AlumnoDisplayLabel(row);
             return [
               '<div class="eval360-row">',
-                '<div class="eval360-row-head"><strong>' + escapeHtml(row.actor || '-') + '</strong><span class="pill">' + escapeHtml(row.alumno_id || '-') + '</span></div>',
+                '<div class="eval360-row-head"><strong>' + escapeHtml(row.actor || '-') + '</strong><span class="pill">' + escapeHtml(alumnoLabel || row.alumno_id || '-') + '</span></div>',
                 '<input class="eval360-created-link" type="text" readonly value="' + escapeHtml(url) + '">',
                 '<div class="actions compact"><button class="btn-ghost" type="button" onclick="copyEval360PublicLink(\'' + escapeJsAttrValue(token) + '\', this)">Copiar link</button></div>',
               '</div>'
@@ -17848,6 +17849,16 @@
       const found = alumnos.find((row) => String(row.alumno_id || '').trim() === clean);
       if (!found) return clean || 'Todo el grupo';
       return String(found.nombre_completo || found.nombre || found.alumno_nombre || clean).trim() || clean;
+    }
+
+    function getEval360AlumnoDisplayLabel(rowOrId) {
+      if (rowOrId && typeof rowOrId === 'object') {
+        const id = String(rowOrId.alumno_id || '').trim();
+        const label = String(rowOrId.alumno_label || rowOrId.alumno_nombre || rowOrId.nombre_alumno || '').trim();
+        if (label && label !== id) return label;
+        return getEval360SelectedAlumnoLabel(id);
+      }
+      return getEval360SelectedAlumnoLabel(rowOrId);
     }
 
     function getEval360AdminTabs(active) {
@@ -18802,10 +18813,11 @@
         const invId = String(row.invitacion_id || '').trim();
         const estatus = String(row.estatus || '').trim();
         const sent = estatus === 'enviada';
+        const alumnoLabel = getEval360AlumnoDisplayLabel(row);
         return [
           '<div class="eval360-row">',
-            '<div class="eval360-row-head"><strong>' + escapeHtml(row.alumno_id || '-') + '</strong><span class="pill">' + escapeHtml(estatus || '-') + '</span></div>',
-            '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.momento || '-') + '</span><span>' + escapeHtml(row.respondent_label || row.invitacion_id || '-') + '</span></div>',
+            '<div class="eval360-row-head"><strong>' + escapeHtml(alumnoLabel || row.alumno_id || '-') + '</strong><span class="pill">' + escapeHtml(estatus || '-') + '</span></div>',
+            '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.momento || '-') + '</span><span>ID ' + escapeHtml(row.alumno_id || '-') + '</span></div>',
             '<div class="eval360-row-actions">',
               '<button class="btn-secondary eval360-fac-answer-btn" type="button" onclick="loadEval360FacilitadorFormulario(\'' + escapeJsAttrValue(invId) + '\', this)">' + (sent ? 'Ver enviada' : 'Responder') + '</button>',
             '</div>',
@@ -18828,10 +18840,11 @@
       const sent = String(form.respuesta_estatus || inv.estatus || '').trim() === 'enviada';
       const savedLabel = ui.formSavedAt ? 'Guardado ' + new Date(ui.formSavedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '';
       const grouped = groupEval360PublicItemsByArea(items);
+      const alumnoLabel = getEval360AlumnoDisplayLabel(inv);
       return [
         '<section class="eval360-panel eval360-fac-form-panel" id="eval360FacilitadorFormPanel">',
           '<div class="eval360-head">',
-            '<div><h3>Mi observacion</h3><p class="subtle">' + escapeHtml([inv.alumno_id, inv.momento, sent ? 'enviada' : 'borrador'].filter(Boolean).join(' | ')) + '</p></div>',
+            '<div><h3>Mi observacion</h3><p class="subtle">' + escapeHtml([alumnoLabel, inv.momento, sent ? 'enviada' : 'borrador'].filter(Boolean).join(' | ')) + '</p><p class="mini">ID ' + escapeHtml(inv.alumno_id || '-') + '</p></div>',
             '<span class="pill">' + escapeHtml(progress.answered + '/' + progress.total) + '</span>',
           '</div>',
           '<div class="eval360-meter"><span style="width:' + escapeHtml(progress.percent) + '%"></span></div>',
@@ -18969,12 +18982,14 @@
             + ' title="Ver ideas para este alumno">Ideas</button>'
             + '</div>')
           : '';
+        const alumnoLabel = getEval360AlumnoDisplayLabel(row);
         return '<div class="eval360-row">'
           + '<div class="eval360-row-head">'
-            + '<span>' + escapeHtml(row.alumno_id || '') + '</span>'
+            + '<span>' + escapeHtml(alumnoLabel || row.alumno_id || '') + '</span>'
             + '<span class="' + pillClass + '">' + escapeHtml(pillLabel) + '</span>'
           + '</div>'
           + '<div class="eval360-row-meta">'
+            + '<span class="mini">ID ' + escapeHtml(row.alumno_id || '-') + '</span>'
             + '<span class="mini">' + escapeHtml(row.area_nombre || row.area_id || '') + '</span>'
             + habilidadHtml
             + '<span class="mini">' + escapeHtml(promStr) + '</span>'
@@ -19246,12 +19261,16 @@
       const progress = getEval360PublicProgress();
       const savedLabel = ui.savedAt ? 'Guardado ' + new Date(ui.savedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'Sin guardar';
       const grouped = groupEval360PublicItemsByArea(items);
+      const alumnoLabel = String(form.alumno_label || form.alumno_nombre || form.alumno_id || 'Alumno').trim();
+      const cicloLabel = String(form.ciclo_nombre || form.ciclo_escolar || '').trim();
+      const momentoLabel = String(form.momento || '').trim() === 'final' ? 'Final' : 'Inicio';
       mount.innerHTML = [
         '<article class="card eval360-public-shell eval360-module">',
           '<div class="eval360-head">',
-            '<div><h1>Evaluacion 360</h1><p class="subtle">' + escapeHtml([form.actor, form.momento, form.alumno_id].filter(Boolean).join(' | ')) + '</p></div>',
-            '<span class="pill brand">' + escapeHtml(form.ciclo_id || '') + '</span>',
+            '<div><h1>Evaluacion 360</h1><p class="subtle">' + escapeHtml([alumnoLabel, form.actor, momentoLabel].filter(Boolean).join(' | ')) + '</p>' + (cicloLabel ? '<p class="mini">' + escapeHtml(cicloLabel) + '</p>' : '') + '</div>',
+            '<span class="pill brand">' + escapeHtml(momentoLabel) + '</span>',
           '</div>',
+          '<div class="eval360-empty">Marca lo que observaste. Usa "No lo vi" si no tuviste oportunidad de observarlo.</div>',
           '<div class="eval360-row">',
             '<div class="eval360-row-head"><strong>' + escapeHtml(progress.answered + ' de ' + progress.total + ' respuestas') + '</strong><span class="pill">' + escapeHtml(savedLabel) + '</span></div>',
             '<div class="eval360-meter"><span style="width:' + escapeHtml(progress.percent) + '%"></span></div>',
