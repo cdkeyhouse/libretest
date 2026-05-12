@@ -3,6 +3,7 @@
       bootSnapshot: 'la_v8_boot_snapshot',
       planeacionOutbox: 'la_v8_planeacion_outbox'
     };
+    const APP_CLIENT_VERSION = '20260512-fac-editor-cache-repair-v1';
     const BOOT_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 12;
     const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
     const OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
@@ -1782,6 +1783,14 @@
       return (Date.now() - savedAtMs) <= BOOT_SNAPSHOT_MAX_AGE_MS;
     }
 
+    function isBootSnapshotCatalogosCompatible(snapshot) {
+      return !!(
+        snapshot &&
+        typeof snapshot === 'object' &&
+        String(snapshot.client_version || '').trim() === APP_CLIENT_VERSION
+      );
+    }
+
     function isTimestampFreshWithin(isoString, maxAgeMs) {
       const value = String(isoString || '').trim();
       if (!value || !Number.isFinite(Number(maxAgeMs)) || Number(maxAgeMs) <= 0) return false;
@@ -1822,6 +1831,7 @@
     }
 
     function mergeLoginPreloadCatalogos(snapshot) {
+      if (!isBootSnapshotCatalogosCompatible(snapshot)) return false;
       const catalogos = snapshot && snapshot.catalogos && typeof snapshot.catalogos === 'object'
         ? snapshot.catalogos
         : null;
@@ -2074,6 +2084,7 @@
       const payload = {
         kind: kind || role || 'unknown',
         saved_at: new Date().toISOString(),
+        client_version: APP_CLIENT_VERSION,
         user_key: userKey,
         dashboardStats: state.dashboardStats || {}
       };
@@ -2130,7 +2141,7 @@
           ).trim(),
           FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS
         );
-      if (snapshot.catalogos && typeof snapshot.catalogos === 'object') {
+      if (isBootSnapshotCatalogosCompatible(snapshot) && snapshot.catalogos && typeof snapshot.catalogos === 'object') {
         mergeCatalogosPayload(snapshot.catalogos, Object.keys(snapshot.catalogos));
       }
       if (snapshot.dashboardStats && typeof snapshot.dashboardStats === 'object') {
