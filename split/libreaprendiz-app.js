@@ -3,7 +3,7 @@
       bootSnapshot: 'la_v8_boot_snapshot',
       planeacionOutbox: 'la_v8_planeacion_outbox'
     };
-    const APP_CLIENT_VERSION = '20260512-invalid-session-boundary-v5';
+    const APP_CLIENT_VERSION = '20260512-fac-session-boundary-v2';
     const BOOT_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 12;
     const FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 3;
     const OPEN_PLAN_DETAIL_SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 8;
@@ -1513,6 +1513,11 @@
       return true;
     }
 
+    function handleBackgroundInvalidSessionError(error, expectedToken) {
+      if (!isInvalidSessionError(error)) return false;
+      return handleInvalidSessionBoundary(error, expectedToken);
+    }
+
     function isPlanBuilderExpanded() {
       return !!(state.ui && state.ui.planBuilderExpanded) || state.planEditor.mode === 'edit';
     }
@@ -2180,6 +2185,7 @@
     function restoreBootSnapshotForSession(sessionLike = state.session) {
       const snapshot = getBootSnapshotForSession(sessionLike);
       if (!snapshot || typeof snapshot !== 'object') return false;
+      if (!isBootSnapshotCatalogosCompatible(snapshot)) return false;
       const canReusePlaneacionesSnapshot =
         !(sessionLike && String((sessionLike.rol || getCurrentRole() || '')).trim() === 'facilitador')
         || isTimestampFreshWithin(
@@ -2190,7 +2196,10 @@
           ).trim(),
           FACILITADOR_FEED_SNAPSHOT_MAX_AGE_MS
         );
-      if (isBootSnapshotCatalogosCompatible(snapshot) && snapshot.catalogos && typeof snapshot.catalogos === 'object') {
+      const reusableSnapshotPlaneaciones = canReusePlaneacionesSnapshot && Array.isArray(snapshot.planeaciones)
+        ? snapshot.planeaciones.filter((plan) => !isPlaneacionPendingCreation(plan))
+        : [];
+      if (snapshot.catalogos && typeof snapshot.catalogos === 'object') {
         const reusableCatalogBlocks = Object.keys(snapshot.catalogos).filter((block) =>
           catalogBlockValueHasRows(block, snapshot.catalogos[block])
         );
@@ -2201,8 +2210,8 @@
       if (snapshot.dashboardStats && typeof snapshot.dashboardStats === 'object') {
         state.dashboardStats = Object.assign({}, state.dashboardStats || {}, snapshot.dashboardStats);
       }
-      if (canReusePlaneacionesSnapshot && Array.isArray(snapshot.planeaciones)) {
-        state.planeaciones = snapshot.planeaciones.filter((plan) => !isPlaneacionPendingCreation(plan));
+      if (reusableSnapshotPlaneaciones.length) {
+        state.planeaciones = reusableSnapshotPlaneaciones;
       }
       if (Array.isArray(snapshot.alertas)) {
         state.alertas = snapshot.alertas;
@@ -2236,7 +2245,7 @@
       // sigue existiendo en la lista, no hay versión más nueva en backend, y el
       // detalle persistido sigue dentro del TTL. No restaura drafts locales.
       if (
-        canReusePlaneacionesSnapshot &&
+        reusableSnapshotPlaneaciones.length &&
         Array.isArray(snapshot.prefetchedOpenPlans) &&
         snapshot.prefetchedOpenPlans.length
       ) {
@@ -2272,7 +2281,7 @@
         });
       }
       if (
-        canReusePlaneacionesSnapshot &&
+        reusableSnapshotPlaneaciones.length &&
         snapshot.openPlanId &&
         Array.isArray(snapshot.planeaciones) &&
         snapshot.planeaciones.some(
@@ -2292,7 +2301,7 @@
       ) {
         state.openPlanDraft = snapshot.openPlanDraft;
       }
-      if (canReusePlaneacionesSnapshot && snapshot.planeacionesMeta && state.ui) {
+      if (reusableSnapshotPlaneaciones.length && snapshot.planeacionesMeta && state.ui) {
         state.ui.planeacionesLoaded = !!snapshot.planeacionesMeta.loaded;
         state.ui.planeacionesHasMore = !!snapshot.planeacionesMeta.hasMore;
         state.ui.planeacionesOffset = Number(snapshot.planeacionesMeta.offset || state.planeaciones.length || 0);
@@ -3526,6 +3535,7 @@
       if (!state.ui || state.ui.planeacionDetailPrefetchRunning) return;
       const planIds = getVisiblePlaneacionDetailPrefetchIds(options);
       if (!planIds.length) return;
+      const prefetchSessionToken = String((state.session && state.session.token) || '');
       state.ui.planeacionDetailPrefetchRunning = true;
       try {
         let nextIndex = 0;
@@ -3538,7 +3548,9 @@
             if (!canPrefetchPlaneacionDetail(currentPlan)) continue;
             try {
               await ensurePlaneacionDetailLoaded(planId, { silent: true });
-            } catch (_) {}
+            } catch (error) {
+              if (handleBackgroundInvalidSessionError(error, prefetchSessionToken)) throw error;
+            }
           }
         };
         const workerCount = Math.min(getPlaneacionDetailPrefetchConcurrency(options), planIds.length);
@@ -3551,10 +3563,13 @@
     function prioritizePlaneacionDetailPrefetch(planId) {
       const normalizedPlanId = String(planId || '').trim();
       if (!normalizedPlanId || !state.session || !state.session.token) return;
+      const prefetchSessionToken = String(state.session.token || '');
       if (!isPlaneacionesSurfaceVisible()) return;
       const currentPlan = getPlanById(normalizedPlanId);
       if (!canPrefetchPlaneacionDetail(currentPlan)) return;
-      ensurePlaneacionDetailLoaded(normalizedPlanId, { silent: true }).catch(() => {});
+      ensurePlaneacionDetailLoaded(normalizedPlanId, { silent: true }).catch((error) => {
+        handleBackgroundInvalidSessionError(error, prefetchSessionToken);
+      });
     }
 
     function buildOpenPlanPrefetchIntentAttrs(planId) {
@@ -3570,8 +3585,11 @@
       if (!state.session || !state.session.token) return;
       if (!state.ui || !state.ui.planeacionesLoaded) return;
       if (!isPlaneacionesSurfaceVisible()) return;
+      const prefetchSessionToken = String(state.session.token || '');
       scheduleUiDebounce('planeacion-detail-prefetch', () => {
-        prefetchVisiblePlaneacionDetails().catch(() => {});
+        prefetchVisiblePlaneacionDetails().catch((error) => {
+          handleBackgroundInvalidSessionError(error, prefetchSessionToken);
+        });
       }, delay);
     }
 
@@ -20628,7 +20646,18 @@
       markSaveTrace(trace, 'outbox_refresh_surface_done');
     }
 
-    function handlePlaneacionOutboxFailure(item, error) {
+    function handlePlaneacionOutboxFailure(item, error, expectedToken) {
+      if (isInvalidSessionError(error)) {
+        markPlaneacionOutboxItem(item && item.id, {
+          status: 'pending',
+          retryable: true,
+          nextAttemptAt: '',
+          lastErrorCode: 'INVALID_SESSION',
+          lastErrorMessage: 'Pendiente de sincronizar. Vuelve a iniciar sesiÃ³n para terminar.'
+        });
+        handleBackgroundInvalidSessionError(error, expectedToken);
+        return;
+      }
       const retryable = isPlaneacionOutboxRetryableError(error);
       const attempts = Number(item && item.attempts || 0) + 1;
       const nextDelay = retryable ? getPlaneacionOutboxRetryDelay(error, attempts) : 0;
@@ -20682,6 +20711,7 @@
       if (!isPlaneacionOutboxEnabled() || !state.ui || state.ui.planeacionOutboxProcessing) return;
       const item = getNextPlaneacionOutboxItem();
       if (!item) return;
+      const outboxSessionToken = String((state.session && state.session.token) || '');
       const outboxTrace = beginSaveTrace('planeacionOutboxSync', {
         itemId: String(item.id || '').trim(),
         kind: String(item.kind || '').trim(),
@@ -20719,7 +20749,7 @@
           code: error && error.code || '',
           message: error && error.message || String(error || '')
         });
-        handlePlaneacionOutboxFailure(syncingItem, error);
+        handlePlaneacionOutboxFailure(syncingItem, error, outboxSessionToken);
         endSaveTrace(outboxTrace, 'error', {
           code: error && error.code || '',
           message: error && error.message || String(error || '')
