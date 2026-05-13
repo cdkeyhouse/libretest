@@ -12881,7 +12881,7 @@
               return (
                 '<label class="check-item">' +
                   '<input type="checkbox" data-group-id="' + escapeHtml(alumno.grupo_id || '') + '" value="' + escapeHtml(alumnoId) + '"' + (selected.has(alumnoId) && selectable ? ' checked' : '') + (selectable ? '' : ' disabled') + '>' +
-                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? '<span class="mini">' + escapeHtml(groupLabel) + '</span>' : '') + (selectable ? '' : '<span class="mini">No activo</span>') + '</span>' +
+                  '<span><strong>' + escapeHtml(label) + '</strong>' + (groupLabel ? ' <span class="mini">&middot; ' + escapeHtml(groupLabel) + '</span>' : '') + (selectable ? '' : '<span class="mini">No activo</span>') + '</span>' +
                 '</label>'
               );
             }).join('') : '<div class="empty">No hay alumnos activos en este taller para tus grupos.</div>') +
