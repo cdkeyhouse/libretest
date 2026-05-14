@@ -15644,6 +15644,8 @@
         const count = row.alumnos_count ? String(row.alumnos_count) + ' alumnos' : '';
         const areaLabel = String(row.area_nombre || formatEval360AreaLabel(row.area_id)).trim();
         const itemMeta = row.item_id ? (areaLabel ? areaLabel + ' · Habilidad' : 'Habilidad') : (row.scope_id ? 'Alumno ' + row.scope_id : '');
+        const insufficiencyLabel = String(row.datos_insuficientes || '').trim() === 'si' ? 'Datos insuficientes' : '';
+        const rowMetaRight = count || insufficiencyLabel;
         const actionHtml = typeof options.rowAction === 'function' ? options.rowAction(row) : '';
         return [
           '<div class="eval360-row">',
@@ -15654,7 +15656,7 @@
             '<div class="eval360-meter"><span style="width:' + eval360MeterWidth(score) + '%"></span></div>',
             '<div class="eval360-row-meta mini">',
               '<span>' + escapeHtml(itemMeta || 'Area') + '</span>',
-              '<span>' + escapeHtml(count || String(row.datos_insuficientes || '').trim() || '') + '</span>',
+              '<span>' + escapeHtml(rowMetaRight) + '</span>',
             '</div>',
             actionHtml,
           '</div>'
