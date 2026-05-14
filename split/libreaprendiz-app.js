@@ -291,6 +291,10 @@
           familyAdviceLoading: false,
           familyAdviceError: '',
           familyAdviceDraft: null,
+          microObservaciones: [],
+          microObservacionesLoading: false,
+          microObservacionesError: '',
+          microObservacionesPending: 0,
           activeSection: 'resumen',
           sectionLoading: '',
           sectionError: '',
@@ -324,11 +328,14 @@
             alumno_id: '',
             area_id: '',
             item_id: '',
+            planeacion_id: '',
+            actividad_id: '',
             context: 'juego',
             mode: 'skill_spot',
             mark: 'avance_observado',
             note: '',
-            noteOpen: false
+            noteOpen: false,
+            started_at: 0
           },
           microSaving: false,
           microSavedAt: '',
@@ -18050,6 +18057,9 @@
       if (ui.activeSection === 'resultados' && ui.selectedCicloId && !ui.resultados.length) {
         loadEval360AdminResultados().catch(() => {});
       }
+      if (ui.activeSection === 'micro' && ui.selectedCicloId && !ui.microObservaciones.length) {
+        loadEval360MicroObservacionesAdmin().catch(() => {});
+      }
       if (ui.activeSection === 'configuracion') {
         syncEval360InvitationDraftFromSelection();
       }
@@ -18094,6 +18104,7 @@
         ['resumen', 'Resumen'],
         ['aplicacion', 'Aplicacion'],
         ['resultados', 'Resultados'],
+        ['micro', 'Señales'],
         ['reporte', 'Reporte familiar'],
         ['sugerencias', 'Sugerencias'],
         ['configuracion', 'Configuracion']
@@ -18165,6 +18176,105 @@
           renderEval360InvitacionesTable((ui.invitaciones || []).slice(-10).reverse()),
         '</section>'
       ].join('');
+    }
+
+    async function loadEval360MicroObservacionesAdmin(button) {
+      const ui = getEval360Ui().admin;
+      if (!ui.selectedCicloId) return;
+      ui.microObservacionesLoading = true;
+      ui.microObservacionesError = '';
+      renderEval360SectionBodyOnly();
+      await handleAction('getEval360MicroObservacionesAdmin', async () => {
+        const data = await api('getEval360MicroObservacionesAdmin', {
+          ciclo_id: ui.selectedCicloId,
+          momento: ui.selectedMomento,
+          limit: 40
+        });
+        ui.microObservaciones = Array.isArray(data.rows) ? data.rows : [];
+        ui.microObservacionesPending = Number(data.pending || 0);
+        ui.microObservacionesLoading = false;
+        renderEval360SectionBodyOnly();
+      }, {
+        button,
+        key: buildActionKey('getEval360MicroObservacionesAdmin', [ui.selectedCicloId, ui.selectedMomento]),
+        onError: (err) => {
+          ui.microObservacionesLoading = false;
+          ui.microObservacionesError = formatApiError(err);
+          renderEval360SectionBodyOnly();
+          return false;
+        }
+      });
+    }
+
+    async function updateEval360MicroObservationReview(microId, status, button) {
+      const ui = getEval360Ui().admin;
+      const cleanId = String(microId || '').trim();
+      const cleanStatus = String(status || '').trim();
+      if (!cleanId || !cleanStatus) return;
+      await handleAction('actualizarEval360MicroObservacionRevision', async () => {
+        await api('actualizarEval360MicroObservacionRevision', {
+          micro_observacion_id: cleanId,
+          sync_status: cleanStatus
+        });
+        ui.microObservaciones = (ui.microObservaciones || []).map((row) =>
+          String(row.micro_observacion_id || '').trim() === cleanId
+            ? Object.assign({}, row, { sync_status: cleanStatus })
+            : row
+        );
+        ui.microObservacionesPending = ui.microObservaciones.filter((row) => String(row.sync_status || 'saved') === 'saved').length;
+        renderEval360SectionBodyOnly();
+      }, {
+        button,
+        key: buildActionKey('actualizarEval360MicroObservacionRevision', [cleanId, cleanStatus]),
+        busyText: 'Guardando'
+      });
+    }
+
+    function formatEval360MicroMarkLabel(mark) {
+      const labels = {
+        avance_observado: 'Lo observo',
+        necesita_apoyo: 'Acompanar',
+        no_aplica: 'No aplico',
+        destacado: 'Destaco'
+      };
+      return labels[String(mark || '').trim()] || String(mark || 'Senal').trim();
+    }
+
+    function renderEval360AdminMicroObservaciones(ui) {
+      const rows = Array.isArray(ui.microObservaciones) ? ui.microObservaciones : [];
+      if (ui.microObservacionesLoading) {
+        return renderEval360SectionSkeleton('Cargando señales');
+      }
+      if (ui.microObservacionesError) {
+        return renderEval360AdminEmptyState('No se pudieron cargar las señales', ui.microObservacionesError, '<button class="btn-secondary" type="button" onclick="loadEval360MicroObservacionesAdmin(this)">Reintentar</button>');
+      }
+      const head = [
+        '<section class="eval360-panel">',
+          '<div class="admin-alumnos-section-head"><div><h4>Señales rápidas</h4><p class="mini">Revisión interna antes de usar micro-observaciones en reportes o decisiones.</p></div><div class="actions compact"><span class="pill">' + escapeHtml(String(ui.microObservacionesPending || 0)) + ' pendientes</span><button class="btn-ghost" type="button" onclick="loadEval360MicroObservacionesAdmin(this)">Actualizar</button></div></div>'
+      ].join('');
+      if (!rows.length) {
+        return head + renderEval360AdminEmptyState('Sin señales registradas', 'Cuando el facilitador use Señal rápida, aparecerán aquí para revisión.') + '</section>';
+      }
+      const body = rows.map((row) => {
+        const status = String(row.sync_status || 'saved').trim();
+        const labels = Array.isArray(row.alumno_labels) && row.alumno_labels.length
+          ? row.alumno_labels.join(', ')
+          : (row.mode === 'group_pulse' ? 'Grupo completo' : 'Sin alumno');
+        const pilot = Number(row.pilot_ms || 0) > 0 ? Math.round(Number(row.pilot_ms) / 1000) + 's' : '-';
+        return [
+          '<article class="eval360-row-card">',
+            '<div class="eval360-row-head"><strong>' + escapeHtml(labels) + '</strong><span class="pill">' + escapeHtml(status === 'saved' ? 'Pendiente' : (status === 'reviewed' ? 'Revisada' : 'Descartada')) + '</span></div>',
+            '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.area_nombre || row.area_id || '') + (row.item_label ? ' · ' + escapeHtml(row.item_label) : '') + '</span><span>' + escapeHtml(formatEval360MicroMarkLabel(row.mark)) + '</span><span>' + escapeHtml(row.context || '') + '</span><span>' + escapeHtml(pilot) + '</span></div>',
+            row.note ? '<p class="subtle">' + escapeHtml(row.note) + '</p>' : '',
+            row.planeacion_id ? '<div class="mini">Planeacion: ' + escapeHtml(row.planeacion_id) + (row.actividad_id ? ' · Actividad: ' + escapeHtml(row.actividad_id) : '') + '</div>' : '',
+            '<div class="actions compact">',
+              '<button class="btn-secondary" type="button" onclick="updateEval360MicroObservationReview(\'' + escapeJsAttrValue(row.micro_observacion_id) + '\', \'reviewed\', this)"' + (status === 'reviewed' ? ' disabled' : '') + '>Marcar revisada</button>',
+              '<button class="btn-ghost" type="button" onclick="updateEval360MicroObservationReview(\'' + escapeJsAttrValue(row.micro_observacion_id) + '\', \'dismissed\', this)"' + (status === 'dismissed' ? ' disabled' : '') + '>Descartar</button>',
+            '</div>',
+          '</article>'
+        ].join('');
+      }).join('');
+      return head + body + '</section>';
     }
 
     function renderEval360AdminResultadosCompact(areaRows, skillRows, crecimientoAreas, crecimientoHabilidades) {
@@ -18290,6 +18400,9 @@
       }
       if (activeSection === 'resultados') {
         return renderEval360AdminResultadosCompact(areaRows, skillRows, crecimientoAreas, crecimientoHabilidades);
+      }
+      if (activeSection === 'micro') {
+        return renderEval360AdminMicroObservaciones(ui);
       }
       if (activeSection === 'reporte') {
         return renderEval360AdminReporteCompact(ui);
@@ -19055,11 +19168,14 @@
           alumno_id: '',
           area_id: '',
           item_id: '',
+          planeacion_id: '',
+          actividad_id: '',
           context: 'juego',
           mode: 'skill_spot',
           mark: 'avance_observado',
           note: '',
-          noteOpen: false
+          noteOpen: false,
+          started_at: 0
         };
       }
       return ui.microDraft;
@@ -19128,12 +19244,38 @@
       }));
     }
 
+    function getEval360MicroPlaneaciones() {
+      const userId = String(state.session && state.session.usuario && state.session.usuario.facilitador_id || '').trim();
+      return (Array.isArray(state.planeaciones) ? state.planeaciones : []).filter((plan) => {
+        if (!plan || !String(plan.planeacion_id || '').trim()) return false;
+        if (userId && String(plan.facilitador_id || '').trim() && String(plan.facilitador_id || '').trim() !== userId) return false;
+        const estado = String(plan.estado || '').trim();
+        return ['borrador', 'activa', 'cierre_pendiente'].includes(estado);
+      }).slice(0, 20);
+    }
+
+    function getEval360MicroSelectedPlan() {
+      const draft = getEval360MicroDraft();
+      const planId = String(draft.planeacion_id || '').trim();
+      if (!planId) return null;
+      return getEval360MicroPlaneaciones().find((plan) => String(plan.planeacion_id || '').trim() === planId) || getPlanById(planId) || null;
+    }
+
+    function getEval360MicroActivities() {
+      const plan = getEval360MicroSelectedPlan();
+      return Array.isArray(plan && plan.actividades) ? plan.actividades : [];
+    }
+
     function ensureEval360MicroDraftDefaults() {
       const draft = getEval360MicroDraft();
       const alumnos = getEval360MicroAlumnos();
       const habilidades = getEval360MicroHabilidades();
       const selectedAlumnoExists = alumnos.some((row) => row.alumno_id === draft.alumno_id);
-      if ((!draft.alumno_id || !selectedAlumnoExists) && alumnos[0]) draft.alumno_id = alumnos[0].alumno_id;
+      if (draft.mode === 'group_pulse') {
+        draft.alumno_id = '';
+      } else if ((!draft.alumno_id || !selectedAlumnoExists) && alumnos[0]) {
+        draft.alumno_id = alumnos[0].alumno_id;
+      }
       const selectedSkillExists = habilidades.some((row) =>
         String(row.area_id || '').trim() === String(draft.area_id || '').trim()
         && String(row.item_id || '').trim() === String(draft.item_id || '').trim()
@@ -19145,6 +19287,7 @@
       if (!draft.context) draft.context = 'juego';
       if (!draft.mode) draft.mode = 'skill_spot';
       if (!draft.mark) draft.mark = 'avance_observado';
+      if (!draft.started_at) draft.started_at = Date.now();
       return draft;
     }
 
@@ -19155,6 +19298,13 @@
         const parts = String(value || '').split('||');
         draft.area_id = String(parts[0] || '').trim();
         draft.item_id = String(parts[1] || '').trim();
+      } else if (field === 'mode') {
+        draft.mode = String(value || '').trim() === 'group_pulse' ? 'group_pulse' : 'skill_spot';
+        if (draft.mode === 'group_pulse') draft.alumno_id = '';
+        if (!draft.started_at) draft.started_at = Date.now();
+      } else if (field === 'planeacion_id') {
+        draft.planeacion_id = String(value || '').trim();
+        draft.actividad_id = '';
       } else if (field === 'noteOpen') {
         draft.noteOpen = !!value;
       } else {
@@ -19194,13 +19344,17 @@
           alumno_ids: draft.alumno_id ? [draft.alumno_id] : [],
           area_id: draft.area_id,
           item_id: draft.item_id,
-          note: draft.note
+          planeacion_id: draft.planeacion_id,
+          actividad_id: draft.actividad_id,
+          note: draft.note,
+          pilot_ms: draft.started_at ? Math.max(0, Date.now() - Number(draft.started_at || 0)) : 0
         });
         ui.microSaving = false;
         ui.microSavedAt = new Date().toISOString();
         draft.micro_observacion_id = '';
         draft.note = '';
         draft.noteOpen = false;
+        draft.started_at = Date.now();
         renderEval360FacilitadorPanel();
         setBanner('Observacion rapida guardada.', 'success', { anchor: captureFeedbackAnchor(button) });
       }, {
@@ -19221,10 +19375,18 @@
       const draft = ensureEval360MicroDraftDefaults();
       const alumnos = getEval360MicroAlumnos();
       const habilidades = getEval360MicroHabilidades();
+      const planeaciones = getEval360MicroPlaneaciones();
+      const actividades = getEval360MicroActivities();
       if (!alumnos.length || !habilidades.length) {
         return '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Senal rapida</h4></div><div class="eval360-empty">Carga invitaciones para registrar una senal rapida.</div></section>';
       }
       const alumnoOptions = alumnos.map((row) => '<option value="' + escapeHtml(row.alumno_id) + '"' + (draft.alumno_id === row.alumno_id ? ' selected' : '') + '>' + escapeHtml(row.alumno_label || 'Alumno') + '</option>').join('');
+      const planOptions = '<option value="">Sin vincular</option>' + planeaciones.map((plan) => '<option value="' + escapeHtml(plan.planeacion_id || '') + '"' + (String(draft.planeacion_id || '') === String(plan.planeacion_id || '') ? ' selected' : '') + '>' + escapeHtml(formatPlanShort(plan)) + '</option>').join('');
+      const activityOptions = '<option value="">Sin actividad especifica</option>' + actividades.map((activity, index) => {
+        const id = String(activity.actividad_id || '').trim();
+        const label = String(activity.texto || activity.titulo || ('Actividad ' + (index + 1))).trim();
+        return '<option value="' + escapeHtml(id) + '"' + (String(draft.actividad_id || '') === id ? ' selected' : '') + '>' + escapeHtml(label.slice(0, 80)) + '</option>';
+      }).join('');
       const skillOptions = habilidades.map((row) => {
         const value = row.area_id + '||' + row.item_id;
         const label = row.item_label ? row.item_label : (row.area_nombre || row.area_id);
@@ -19247,15 +19409,24 @@
         ['no_aplica', 'No aplico hoy'],
         ['destacado', 'Destaco']
       ].map(([value, label]) => '<button class="' + (draft.mark === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mark\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
+      const modeButtons = [
+        ['skill_spot', 'Alumno'],
+        ['group_pulse', 'Grupo']
+      ].map(([value, label]) => '<button class="' + (draft.mode === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mode\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
       const savedHtml = ui.microSavedAt ? '<span class="pill pill-green">Guardada</span>' : '';
       return [
         '<section class="eval360-panel eval360-micro-panel">',
           '<div class="admin-alumnos-section-head"><div><h4>Senal rapida</h4><p class="mini">Registra una conducta observable sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
           ui.microError ? '<div class="eval360-empty">' + escapeHtml(ui.microError) + '</div>' : '',
+          '<div class="actions compact eval360-micro-marks">' + modeButtons + '</div>',
           '<div class="eval360-micro-grid">',
-            '<div><label>Alumno</label><select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)">' + alumnoOptions + '</select></div>',
+            draft.mode === 'group_pulse'
+              ? '<div><label>Alcance</label><div class="eval360-empty">Senal grupal, sin alumno individual.</div></div>'
+              : '<div><label>Alumno</label><select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)">' + alumnoOptions + '</select></div>',
             '<div><label>Habilidad</label><select onchange="setEval360MicroDraftField(\'skill\', this.value)">' + skillOptions + '</select></div>',
             '<div><label>Contexto</label><select onchange="setEval360MicroDraftField(\'context\', this.value)">' + contextOptions + '</select></div>',
+            '<div><label>Planeacion</label><select onchange="setEval360MicroDraftField(\'planeacion_id\', this.value)">' + planOptions + '</select></div>',
+            '<div><label>Actividad</label><select onchange="setEval360MicroDraftField(\'actividad_id\', this.value)"' + (!draft.planeacion_id ? ' disabled' : '') + '>' + activityOptions + '</select></div>',
           '</div>',
           '<div class="actions compact eval360-micro-marks">' + markButtons + '</div>',
           '<details class="eval360-fac-note"' + (draft.noteOpen || draft.note ? ' open' : '') + '>',
@@ -22671,6 +22842,8 @@
         setEval360AdminShowQaClosed,
         setEval360AdminSection,
         loadMoreEval360AdminResults,
+        loadEval360MicroObservacionesAdmin,
+        updateEval360MicroObservationReview,
         loadEval360FamilyReport,
         printEval360FamilyReport,
         openEval360FamilyFinalReview,
