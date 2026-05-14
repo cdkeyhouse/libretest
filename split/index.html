@@ -7620,6 +7620,14 @@
         padding: 8px 9px;
       }
     }
+
+    @media (max-width: 720px) {
+      .eval360-micro-panel .eval360-micro-mode.actions,
+      .eval360-micro-panel .eval360-micro-marks.actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+    }
   </style>
 </head>
 <body>
