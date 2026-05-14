@@ -319,6 +319,19 @@
           formSavedAt: '',
           formSubmitAttempted: false,
           formAreaKey: '',
+          microDraft: {
+            alumno_id: '',
+            area_id: '',
+            item_id: '',
+            context: 'juego',
+            mode: 'skill_spot',
+            mark: 'avance_observado',
+            note: '',
+            noteOpen: false
+          },
+          microSaving: false,
+          microSavedAt: '',
+          microError: '',
           showQaClosed: false,
           error: ''
         },
@@ -19033,6 +19046,214 @@
       }, { button, key: 'eval360-fac-save-' + invitacionId + '-' + (enviar ? 'send' : 'draft'), busyText: enviar ? 'Enviando' : 'Guardando' });
     }
 
+    function getEval360MicroDraft() {
+      const ui = getEval360Ui().facilitador;
+      if (!ui.microDraft || typeof ui.microDraft !== 'object') {
+        ui.microDraft = {
+          alumno_id: '',
+          area_id: '',
+          item_id: '',
+          context: 'juego',
+          mode: 'skill_spot',
+          mark: 'avance_observado',
+          note: '',
+          noteOpen: false
+        };
+      }
+      return ui.microDraft;
+    }
+
+    function getEval360MicroAlumnos() {
+      const ui = getEval360Ui().facilitador;
+      const pulso = ui.pulso || {};
+      const fromPriorities = Array.isArray(pulso.alumnos_prioritarios) ? pulso.alumnos_prioritarios : [];
+      const fromInvitations = (Array.isArray(ui.invitaciones) ? ui.invitaciones : []).filter((row) => {
+        if (ui.selectedCicloId && String(row.ciclo_id || '').trim() !== ui.selectedCicloId) return false;
+        if (ui.selectedMomento && String(row.momento || '').trim() !== ui.selectedMomento) return false;
+        return String(row.estatus || '').trim() !== 'cancelada';
+      });
+      const map = new Map();
+      fromPriorities.concat(fromInvitations).forEach((row) => {
+        const alumnoId = String(row.alumno_id || '').trim();
+        if (!alumnoId || map.has(alumnoId)) return;
+        map.set(alumnoId, {
+          alumno_id: alumnoId,
+          alumno_label: getEval360AlumnoDisplayLabel(row)
+        });
+      });
+      return Array.from(map.values());
+    }
+
+    function getEval360MicroHabilidades() {
+      const ui = getEval360Ui().facilitador;
+      const pulso = ui.pulso || {};
+      const habilidades = Array.isArray(pulso.promedios_por_habilidad) ? pulso.promedios_por_habilidad : [];
+      const areas = Array.isArray(pulso.promedios_por_area) ? pulso.promedios_por_area : [];
+      const rows = habilidades.filter((row) => String(row.item_id || '').trim()).slice(0, 12).map((row) => ({
+        area_id: String(row.area_id || '').trim(),
+        area_nombre: String(row.area_nombre || formatEval360AreaLabel(row.area_id || '') || '').trim(),
+        item_id: String(row.item_id || '').trim(),
+        item_label: String(row.item_label || row.item_id || '').trim()
+      }));
+      if (rows.length) return rows;
+      const areaRows = areas.slice(0, 6).map((row) => ({
+        area_id: String(row.area_id || '').trim(),
+        area_nombre: String(row.area_nombre || formatEval360AreaLabel(row.area_id || '') || '').trim(),
+        item_id: '',
+        item_label: ''
+      })).filter((row) => row.area_id);
+      if (areaRows.length) return areaRows;
+      return [
+        ['corporalidad', 'Corporalidad'],
+        ['creatividad', 'Creatividad'],
+        ['afectividad', 'Afectividad'],
+        ['caracter', 'Caracter'],
+        ['sociabilidad', 'Sociabilidad'],
+        ['espiritualidad', 'Espiritualidad']
+      ].map(([areaId, areaNombre]) => ({
+        area_id: areaId,
+        area_nombre: areaNombre,
+        item_id: '',
+        item_label: ''
+      }));
+    }
+
+    function ensureEval360MicroDraftDefaults() {
+      const draft = getEval360MicroDraft();
+      const alumnos = getEval360MicroAlumnos();
+      const habilidades = getEval360MicroHabilidades();
+      const selectedAlumnoExists = alumnos.some((row) => row.alumno_id === draft.alumno_id);
+      if ((!draft.alumno_id || !selectedAlumnoExists) && alumnos[0]) draft.alumno_id = alumnos[0].alumno_id;
+      const selectedSkillExists = habilidades.some((row) =>
+        String(row.area_id || '').trim() === String(draft.area_id || '').trim()
+        && String(row.item_id || '').trim() === String(draft.item_id || '').trim()
+      );
+      if ((!draft.area_id || !selectedSkillExists) && habilidades[0]) {
+        draft.area_id = habilidades[0].area_id;
+        draft.item_id = habilidades[0].item_id;
+      }
+      if (!draft.context) draft.context = 'juego';
+      if (!draft.mode) draft.mode = 'skill_spot';
+      if (!draft.mark) draft.mark = 'avance_observado';
+      return draft;
+    }
+
+    function setEval360MicroDraftField(field, value) {
+      const ui = getEval360Ui().facilitador;
+      const draft = getEval360MicroDraft();
+      if (field === 'skill') {
+        const parts = String(value || '').split('||');
+        draft.area_id = String(parts[0] || '').trim();
+        draft.item_id = String(parts[1] || '').trim();
+      } else if (field === 'noteOpen') {
+        draft.noteOpen = !!value;
+      } else {
+        draft[field] = String(value || '').trim();
+      }
+      ui.microError = '';
+      renderEval360FacilitadorPanel();
+    }
+
+    async function saveEval360MicroObservation(button) {
+      const ui = getEval360Ui().facilitador;
+      const draft = ensureEval360MicroDraftDefaults();
+      if (!ui.selectedCicloId) {
+        setBanner('Selecciona ciclo para guardar observacion rapida.', 'error', { anchor: captureFeedbackAnchor(button) });
+        return;
+      }
+      if (!draft.alumno_id && draft.mode !== 'group_pulse') {
+        setBanner('Selecciona alumno para la observacion rapida.', 'error', { anchor: captureFeedbackAnchor(button) });
+        return;
+      }
+      if (!draft.area_id) {
+        setBanner('Selecciona habilidad o area para la observacion rapida.', 'error', { anchor: captureFeedbackAnchor(button) });
+        return;
+      }
+      ui.microSaving = true;
+      ui.microError = '';
+      renderEval360FacilitadorPanel();
+      await handleAction('guardarEval360MicroObservacion', async () => {
+        await api('guardarEval360MicroObservacion', {
+          ciclo_id: ui.selectedCicloId,
+          momento: ui.selectedMomento,
+          mode: draft.mode || 'skill_spot',
+          mark: draft.mark || 'avance_observado',
+          context: draft.context || 'juego',
+          alumno_ids: draft.alumno_id ? [draft.alumno_id] : [],
+          area_id: draft.area_id,
+          item_id: draft.item_id,
+          note: draft.note
+        });
+        ui.microSaving = false;
+        ui.microSavedAt = new Date().toISOString();
+        draft.note = '';
+        draft.noteOpen = false;
+        renderEval360FacilitadorPanel();
+        setBanner('Observacion rapida guardada.', 'success', { anchor: captureFeedbackAnchor(button) });
+      }, {
+        button,
+        key: buildActionKey('guardarEval360MicroObservacion', [ui.selectedCicloId, ui.selectedMomento, draft.alumno_id, draft.area_id, draft.item_id]),
+        busyText: 'Guardando',
+        onError: (err) => {
+          ui.microSaving = false;
+          ui.microError = formatApiError(err);
+          renderEval360FacilitadorPanel();
+          return false;
+        }
+      });
+    }
+
+    function renderEval360MicroObservacionRapida() {
+      const ui = getEval360Ui().facilitador;
+      const draft = ensureEval360MicroDraftDefaults();
+      const alumnos = getEval360MicroAlumnos();
+      const habilidades = getEval360MicroHabilidades();
+      if (!alumnos.length || !habilidades.length) {
+        return '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Observacion rapida</h4></div><div class="eval360-empty">Carga pulso e invitaciones para registrar una senal rapida.</div></section>';
+      }
+      const alumnoOptions = alumnos.map((row) => '<option value="' + escapeHtml(row.alumno_id) + '"' + (draft.alumno_id === row.alumno_id ? ' selected' : '') + '>' + escapeHtml(row.alumno_label || 'Alumno') + '</option>').join('');
+      const skillOptions = habilidades.map((row) => {
+        const value = row.area_id + '||' + row.item_id;
+        const label = row.item_label ? row.item_label : (row.area_nombre || row.area_id);
+        const selected = draft.area_id === row.area_id && draft.item_id === row.item_id;
+        return '<option value="' + escapeHtml(value) + '"' + (selected ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+      }).join('');
+      const contextOptions = [
+        ['asamblea', 'Asamblea'],
+        ['juego', 'Juego'],
+        ['proyecto', 'Proyecto'],
+        ['reto', 'Reto'],
+        ['convivencia', 'Convivencia'],
+        ['servicio', 'Servicio'],
+        ['cierre', 'Cierre'],
+        ['otro', 'Otro']
+      ].map(([value, label]) => '<option value="' + value + '"' + (draft.context === value ? ' selected' : '') + '>' + label + '</option>').join('');
+      const markButtons = [
+        ['avance_observado', 'Lo observe'],
+        ['necesita_apoyo', 'Necesita apoyo'],
+        ['no_aplica', 'No aplico hoy'],
+        ['destacado', 'Destaco']
+      ].map(([value, label]) => '<button class="' + (draft.mark === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mark\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
+      const savedHtml = ui.microSavedAt ? '<span class="pill pill-green">Guardada</span>' : '';
+      return [
+        '<section class="eval360-panel eval360-micro-panel">',
+          '<div class="admin-alumnos-section-head"><div><h4>Observacion rapida</h4><p class="mini">Registra una senal breve sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
+          ui.microError ? '<div class="eval360-empty">' + escapeHtml(ui.microError) + '</div>' : '',
+          '<div class="eval360-micro-grid">',
+            '<div><label>Alumno</label><select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)">' + alumnoOptions + '</select></div>',
+            '<div><label>Habilidad</label><select onchange="setEval360MicroDraftField(\'skill\', this.value)">' + skillOptions + '</select></div>',
+            '<div><label>Contexto</label><select onchange="setEval360MicroDraftField(\'context\', this.value)">' + contextOptions + '</select></div>',
+          '</div>',
+          '<div class="actions compact eval360-micro-marks">' + markButtons + '</div>',
+          '<details class="eval360-fac-note"' + (draft.noteOpen || draft.note ? ' open' : '') + '>',
+            '<summary onclick="setEval360MicroDraftField(\'noteOpen\', true)">+ Nota opcional</summary>',
+            '<textarea maxlength="280" placeholder="Solo si ayuda al seguimiento. No se muestra directo a familias." oninput="setEval360MicroDraftField(\'note\', this.value)">' + escapeHtml(draft.note || '') + '</textarea>',
+          '</details>',
+          '<div class="actions compact"><button class="btn-primary" type="button" onclick="saveEval360MicroObservation(this)"' + (ui.microSaving ? ' disabled' : '') + '>' + (ui.microSaving ? 'Guardando...' : 'Guardar observacion') + '</button></div>',
+        '</section>'
+      ].join('');
+    }
+
     async function loadEval360FacilitadorSugerencias(areaId, skillId, button) {
       const ui = getEval360Ui().facilitador;
       const pulso = ui.pulso || {};
@@ -19290,6 +19511,7 @@
           }) + '</section>',
         '</div>',
         '<section class="eval360-panel" id="eval360FacAlumnosPrioritariosPanel"><div class="admin-alumnos-section-head"><h4>Alumnos que requieren apoyo</h4></div>' + renderEval360AlumnosPrioritarios(alumnos) + '</section>',
+        renderEval360MicroObservacionRapida(),
         '<div class="actions compact">',
           firstNeed.item_id || firstNeed.area_id
             ? '<button class="btn-secondary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas (prioridad 1)</button>'
@@ -22419,6 +22641,8 @@
         setEval360FacilitadorFormComment,
         setEval360FacilitadorFormGeneralComment,
         saveEval360FacilitadorForm,
+        setEval360MicroDraftField,
+        saveEval360MicroObservation,
         loadEval360PublicForm,
         setEval360PublicValue,
         setEval360PublicComment,
