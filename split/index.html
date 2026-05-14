@@ -569,6 +569,69 @@
       gap: 12px;
     }
 
+    .eval360-micro-top {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.9fr) minmax(240px, 1.35fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .eval360-micro-target,
+    .eval360-micro-skillbox,
+    .eval360-micro-scope {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .eval360-micro-mode {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .eval360-micro-scope {
+      border: 1px solid rgba(23, 51, 45, 0.1);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.52);
+    }
+
+    .eval360-micro-scope b,
+    .eval360-micro-skillbox strong {
+      line-height: 1.15;
+    }
+
+    .eval360-micro-scope span,
+    .eval360-micro-skillbox span,
+    .eval360-micro-savebar span {
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    .eval360-micro-skillchips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .eval360-micro-chip {
+      border: 1px solid rgba(23, 51, 45, 0.12);
+      border-radius: 999px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.64);
+      color: var(--text-main);
+      cursor: pointer;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .eval360-micro-chip.is-selected {
+      border-color: rgba(31, 176, 186, 0.46);
+      background: rgba(31, 176, 186, 0.14);
+      color: var(--accent);
+    }
+
     .eval360-micro-grid {
       display: grid;
       grid-template-columns: 1fr 1.3fr 0.8fr;
@@ -582,6 +645,21 @@
       gap: 8px;
     }
 
+    .eval360-micro-secondary {
+      justify-content: flex-start;
+    }
+
+    .eval360-micro-savebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid rgba(23, 51, 45, 0.1);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.68);
+    }
+
     @media (max-width: 720px) {
       .eval360-fac-area-nav {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -592,9 +670,19 @@
         grid-template-columns: 1fr;
       }
 
-      .eval360-micro-grid,
-      .eval360-micro-marks {
+      .eval360-micro-top,
+      .eval360-micro-grid {
         grid-template-columns: 1fr;
+      }
+
+      .eval360-micro-marks {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .eval360-micro-savebar {
+        position: sticky;
+        bottom: 8px;
+        z-index: 5;
       }
     }
 
@@ -8360,7 +8448,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260514-eval360-micro-observaciones-v3"></script>
+<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4"></script>
 </body>
 </html>
 

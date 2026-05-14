@@ -18232,12 +18232,12 @@
 
     function formatEval360MicroMarkLabel(mark) {
       const labels = {
-        avance_observado: 'Lo observo',
-        necesita_apoyo: 'Acompanar',
-        no_aplica: 'No aplico',
-        destacado: 'Destaco'
+        avance_observado: 'Lo observó',
+        necesita_apoyo: 'Acompañar',
+        no_aplica: 'No aplicó',
+        destacado: 'Destacó'
       };
-      return labels[String(mark || '').trim()] || String(mark || 'Senal').trim();
+      return labels[String(mark || '').trim()] || String(mark || 'Señal').trim();
     }
 
     function renderEval360AdminMicroObservaciones(ui) {
@@ -19175,6 +19175,8 @@
           mark: 'avance_observado',
           note: '',
           noteOpen: false,
+          detailsOpen: false,
+          skillPickerOpen: false,
           started_at: 0
         };
       }
@@ -19306,12 +19308,35 @@
         draft.planeacion_id = String(value || '').trim();
         draft.actividad_id = '';
       } else if (field === 'noteOpen') {
-        draft.noteOpen = !!value;
+        draft.noteOpen = !!value && value !== 'false';
+      } else if (field === 'detailsOpen') {
+        draft.detailsOpen = !!value && value !== 'false';
+      } else if (field === 'skillPickerOpen') {
+        draft.skillPickerOpen = !!value && value !== 'false';
       } else {
         draft[field] = String(value || '').trim();
       }
       ui.microError = '';
-      renderEval360FacilitadorPanel();
+      renderEval360MicroObservacionRapidaOnly();
+    }
+
+    function setEval360MicroNoteValue(value) {
+      const ui = getEval360Ui().facilitador;
+      const draft = getEval360MicroDraft();
+      draft.note = String(value || '').trim();
+      ui.microError = '';
+    }
+
+    function renderEval360MicroObservacionRapidaOnly() {
+      const current = $('eval360MicroPanel');
+      if (!current) {
+        renderEval360FacilitadorPanel();
+        return;
+      }
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = renderEval360MicroObservacionRapida();
+      const next = wrapper.firstElementChild;
+      if (next) current.replaceWith(next);
     }
 
     async function saveEval360MicroObservation(button) {
@@ -19331,7 +19356,7 @@
       }
       ui.microSaving = true;
       ui.microError = '';
-      renderEval360FacilitadorPanel();
+      renderEval360MicroObservacionRapidaOnly();
       await handleAction('guardarEval360MicroObservacion', async () => {
         const microId = ensureEval360MicroObservationId();
         await api('guardarEval360MicroObservacion', {
@@ -19354,9 +19379,11 @@
         draft.micro_observacion_id = '';
         draft.note = '';
         draft.noteOpen = false;
+        draft.detailsOpen = false;
+        draft.skillPickerOpen = false;
         draft.started_at = Date.now();
-        renderEval360FacilitadorPanel();
-        setBanner('Observacion rapida guardada.', 'success', { anchor: captureFeedbackAnchor(button) });
+        renderEval360MicroObservacionRapidaOnly();
+        setBanner('Observación rápida guardada.', 'success', { anchor: captureFeedbackAnchor(button) });
       }, {
         button,
         key: buildActionKey('guardarEval360MicroObservacion', [draft.micro_observacion_id || ensureEval360MicroObservationId()]),
@@ -19364,7 +19391,7 @@
         onError: (err) => {
           ui.microSaving = false;
           ui.microError = formatApiError(err);
-          renderEval360FacilitadorPanel();
+          renderEval360MicroObservacionRapidaOnly();
           return false;
         }
       });
@@ -19378,7 +19405,7 @@
       const planeaciones = getEval360MicroPlaneaciones();
       const actividades = getEval360MicroActivities();
       if (!alumnos.length || !habilidades.length) {
-        return '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Senal rapida</h4></div><div class="eval360-empty">Carga invitaciones para registrar una senal rapida.</div></section>';
+        return '<section class="eval360-panel" id="eval360MicroPanel"><div class="admin-alumnos-section-head"><h4>Señal rápida</h4></div><div class="eval360-empty">Carga invitaciones para registrar una señal rápida.</div></section>';
       }
       const alumnoOptions = alumnos.map((row) => '<option value="' + escapeHtml(row.alumno_id) + '"' + (draft.alumno_id === row.alumno_id ? ' selected' : '') + '>' + escapeHtml(row.alumno_label || 'Alumno') + '</option>').join('');
       const planOptions = '<option value="">Sin vincular</option>' + planeaciones.map((plan) => '<option value="' + escapeHtml(plan.planeacion_id || '') + '"' + (String(draft.planeacion_id || '') === String(plan.planeacion_id || '') ? ' selected' : '') + '>' + escapeHtml(formatPlanShort(plan)) + '</option>').join('');
@@ -19393,6 +19420,18 @@
         const selected = draft.area_id === row.area_id && draft.item_id === row.item_id;
         return '<option value="' + escapeHtml(value) + '"' + (selected ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
       }).join('');
+      const selectedSkill = habilidades.find((row) =>
+        String(row.area_id || '').trim() === String(draft.area_id || '').trim()
+        && String(row.item_id || '').trim() === String(draft.item_id || '').trim()
+      ) || habilidades[0] || {};
+      const selectedSkillLabel = selectedSkill.item_label || selectedSkill.area_nombre || selectedSkill.area_id || 'Habilidad';
+      const selectedAreaLabel = selectedSkill.area_nombre || formatEval360AreaLabel(selectedSkill.area_id || draft.area_id || '');
+      const quickSkillButtons = habilidades.slice(0, 3).map((row) => {
+        const value = row.area_id + '||' + row.item_id;
+        const label = row.item_label || row.area_nombre || row.area_id || 'Habilidad';
+        const selected = draft.area_id === row.area_id && draft.item_id === row.item_id;
+        return '<button class="eval360-micro-chip' + (selected ? ' is-selected' : '') + '" type="button" onclick="setEval360MicroDraftField(\'skill\', \'' + escapeJsAttrValue(value) + '\')">' + escapeHtml(label) + '</button>';
+      }).join('');
       const contextOptions = [
         ['asamblea', 'Asamblea'],
         ['juego', 'Juego'],
@@ -19404,36 +19443,55 @@
         ['otro', 'Otro']
       ].map(([value, label]) => '<option value="' + value + '"' + (draft.context === value ? ' selected' : '') + '>' + label + '</option>').join('');
       const markButtons = [
-        ['avance_observado', 'Lo observe'],
-        ['necesita_apoyo', 'Acompanarlo'],
-        ['no_aplica', 'No aplico hoy'],
-        ['destacado', 'Destaco']
+        ['avance_observado', 'Lo observé'],
+        ['necesita_apoyo', 'Acompañar'],
+        ['no_aplica', 'No aplicó'],
+        ['destacado', 'Destacó']
       ].map(([value, label]) => '<button class="' + (draft.mark === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mark\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
       const modeButtons = [
         ['skill_spot', 'Alumno'],
         ['group_pulse', 'Grupo']
       ].map(([value, label]) => '<button class="' + (draft.mode === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mode\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
       const savedHtml = ui.microSavedAt ? '<span class="pill pill-green">Guardada</span>' : '';
+      const detailsHtml = draft.detailsOpen ? [
+        '<div class="eval360-micro-grid">',
+          '<div><label>Habilidad completa</label><select onchange="setEval360MicroDraftField(\'skill\', this.value)">' + skillOptions + '</select></div>',
+          '<div><label>Contexto</label><select onchange="setEval360MicroDraftField(\'context\', this.value)">' + contextOptions + '</select></div>',
+          '<div><label>Planeación</label><select onchange="setEval360MicroDraftField(\'planeacion_id\', this.value)">' + planOptions + '</select></div>',
+          '<div><label>Actividad</label><select onchange="setEval360MicroDraftField(\'actividad_id\', this.value)"' + (!draft.planeacion_id ? ' disabled' : '') + '>' + activityOptions + '</select></div>',
+        '</div>'
+      ].join('') : '';
+      const noteHtml = draft.noteOpen ? [
+        '<div class="eval360-fac-note is-open">',
+          '<label>Nota opcional</label>',
+          '<textarea maxlength="280" placeholder="Describe solo lo que viste. Evita etiquetas, causas o lenguaje clínico." oninput="setEval360MicroNoteValue(this.value)">' + escapeHtml(draft.note || '') + '</textarea>',
+        '</div>'
+      ].join('') : '';
       return [
-        '<section class="eval360-panel eval360-micro-panel">',
-          '<div class="admin-alumnos-section-head"><div><h4>Senal rapida</h4><p class="mini">Registra una conducta observable sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
+        '<section class="eval360-panel eval360-micro-panel" id="eval360MicroPanel">',
+          '<div class="admin-alumnos-section-head"><div><h4>Señal rápida</h4><p class="mini">Registra una conducta observable sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
           ui.microError ? '<div class="eval360-empty">' + escapeHtml(ui.microError) + '</div>' : '',
-          '<div class="actions compact eval360-micro-marks">' + modeButtons + '</div>',
-          '<div class="eval360-micro-grid">',
-            draft.mode === 'group_pulse'
-              ? '<div><label>Alcance</label><div class="eval360-empty">Senal grupal, sin alumno individual.</div></div>'
-              : '<div><label>Alumno</label><select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)">' + alumnoOptions + '</select></div>',
-            '<div><label>Habilidad</label><select onchange="setEval360MicroDraftField(\'skill\', this.value)">' + skillOptions + '</select></div>',
-            '<div><label>Contexto</label><select onchange="setEval360MicroDraftField(\'context\', this.value)">' + contextOptions + '</select></div>',
-            '<div><label>Planeacion</label><select onchange="setEval360MicroDraftField(\'planeacion_id\', this.value)">' + planOptions + '</select></div>',
-            '<div><label>Actividad</label><select onchange="setEval360MicroDraftField(\'actividad_id\', this.value)"' + (!draft.planeacion_id ? ' disabled' : '') + '>' + activityOptions + '</select></div>',
+          '<div class="eval360-micro-top">',
+            '<div class="eval360-micro-target">',
+              '<div class="actions compact eval360-micro-mode">' + modeButtons + '</div>',
+              draft.mode === 'group_pulse'
+                ? '<div class="eval360-micro-scope"><b>Grupo completo</b><span>Sin alumno individual</span></div>'
+                : '<div><label>Alumno</label><select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)">' + alumnoOptions + '</select></div>',
+            '</div>',
+            '<div class="eval360-micro-skillbox">',
+              '<div><label>Habilidad sugerida</label><strong>' + escapeHtml(selectedSkillLabel) + '</strong><span>' + escapeHtml(selectedAreaLabel || 'Area de desarrollo') + '</span></div>',
+              '<div class="eval360-micro-skillchips">' + quickSkillButtons + (habilidades.length > 3 ? '<button class="eval360-micro-chip" type="button" onclick="setEval360MicroDraftField(\'skillPickerOpen\', \'' + (draft.skillPickerOpen ? 'false' : 'true') + '\')">' + (draft.skillPickerOpen ? 'Ocultar' : 'Cambiar') + '</button>' : '') + '</div>',
+              draft.skillPickerOpen ? '<select onchange="setEval360MicroDraftField(\'skill\', this.value)">' + skillOptions + '</select>' : '',
+            '</div>',
           '</div>',
           '<div class="actions compact eval360-micro-marks">' + markButtons + '</div>',
-          '<details class="eval360-fac-note"' + (draft.noteOpen || draft.note ? ' open' : '') + '>',
-            '<summary onclick="setEval360MicroDraftField(\'noteOpen\', true)">+ Nota opcional</summary>',
-            '<textarea maxlength="280" placeholder="Describe solo lo que viste. Evita etiquetas, causas o lenguaje clinico." oninput="setEval360MicroDraftField(\'note\', this.value)">' + escapeHtml(draft.note || '') + '</textarea>',
-          '</details>',
-          '<div class="actions compact"><button class="btn-primary" type="button" onclick="saveEval360MicroObservation(this)"' + (ui.microSaving ? ' disabled' : '') + '>' + (ui.microSaving ? 'Guardando...' : 'Guardar observacion') + '</button></div>',
+          '<div class="actions compact eval360-micro-secondary">',
+            '<button class="btn-ghost" type="button" onclick="setEval360MicroDraftField(\'detailsOpen\', \'' + (draft.detailsOpen ? 'false' : 'true') + '\')">' + (draft.detailsOpen ? 'Ocultar detalles' : 'Detalles') + '</button>',
+            '<button class="btn-ghost" type="button" onclick="setEval360MicroDraftField(\'noteOpen\', \'' + (draft.noteOpen ? 'false' : 'true') + '\')">' + (draft.noteOpen ? 'Ocultar nota' : (draft.note ? 'Editar nota' : '+ Nota')) + '</button>',
+          '</div>',
+          detailsHtml,
+          noteHtml,
+          '<div class="eval360-micro-savebar"><span>' + escapeHtml(draft.mode === 'group_pulse' ? 'Señal grupal' : 'Señal individual') + ' · ' + escapeHtml(draft.context || 'juego') + '</span><button class="btn-primary" type="button" onclick="saveEval360MicroObservation(this)"' + (ui.microSaving ? ' disabled' : '') + '>' + (ui.microSaving ? 'Guardando...' : 'Guardar señal') + '</button></div>',
         '</section>'
       ].join('');
     }
@@ -22822,6 +22880,7 @@
         setEval360FacilitadorFormGeneralComment,
         saveEval360FacilitadorForm,
         setEval360MicroDraftField,
+        setEval360MicroNoteValue,
         saveEval360MicroObservation,
         loadEval360PublicForm,
         setEval360PublicValue,
