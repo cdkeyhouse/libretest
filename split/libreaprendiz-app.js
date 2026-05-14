@@ -19177,6 +19177,7 @@
           noteOpen: false,
           detailsOpen: false,
           skillPickerOpen: false,
+          studentPickerOpen: false,
           started_at: 0
         };
       }
@@ -19275,8 +19276,8 @@
       const selectedAlumnoExists = alumnos.some((row) => row.alumno_id === draft.alumno_id);
       if (draft.mode === 'group_pulse') {
         draft.alumno_id = '';
-      } else if ((!draft.alumno_id || !selectedAlumnoExists) && alumnos[0]) {
-        draft.alumno_id = alumnos[0].alumno_id;
+      } else if (draft.alumno_id && !selectedAlumnoExists) {
+        draft.alumno_id = '';
       }
       const selectedSkillExists = habilidades.some((row) =>
         String(row.area_id || '').trim() === String(draft.area_id || '').trim()
@@ -19313,6 +19314,8 @@
         draft.detailsOpen = !!value && value !== 'false';
       } else if (field === 'skillPickerOpen') {
         draft.skillPickerOpen = !!value && value !== 'false';
+      } else if (field === 'studentPickerOpen') {
+        draft.studentPickerOpen = !!value && value !== 'false';
       } else {
         draft[field] = String(value || '').trim();
       }
@@ -19381,6 +19384,7 @@
         draft.noteOpen = false;
         draft.detailsOpen = false;
         draft.skillPickerOpen = false;
+        draft.studentPickerOpen = false;
         draft.started_at = Date.now();
         renderEval360MicroObservacionRapidaOnly();
         setBanner('Observación rápida guardada.', 'success', { anchor: captureFeedbackAnchor(button) });
@@ -19408,6 +19412,11 @@
         return '<section class="eval360-panel" id="eval360MicroPanel"><div class="admin-alumnos-section-head"><h4>Señal rápida</h4></div><div class="eval360-empty">Carga invitaciones para registrar una señal rápida.</div></section>';
       }
       const alumnoOptions = alumnos.map((row) => '<option value="' + escapeHtml(row.alumno_id) + '"' + (draft.alumno_id === row.alumno_id ? ' selected' : '') + '>' + escapeHtml(row.alumno_label || 'Alumno') + '</option>').join('');
+      const selectedAlumno = alumnos.find((row) => row.alumno_id === draft.alumno_id) || null;
+      const alumnoChips = alumnos.slice(0, 6).map((row) => {
+        const selected = row.alumno_id === draft.alumno_id;
+        return '<button class="eval360-micro-chip' + (selected ? ' is-selected' : '') + '" type="button" onclick="setEval360MicroDraftField(\'alumno_id\', \'' + escapeJsAttrValue(row.alumno_id) + '\')">' + escapeHtml(row.alumno_label || 'Alumno') + '</button>';
+      }).join('');
       const planOptions = '<option value="">Sin vincular</option>' + planeaciones.map((plan) => '<option value="' + escapeHtml(plan.planeacion_id || '') + '"' + (String(draft.planeacion_id || '') === String(plan.planeacion_id || '') ? ' selected' : '') + '>' + escapeHtml(formatPlanShort(plan)) + '</option>').join('');
       const activityOptions = '<option value="">Sin actividad especifica</option>' + actividades.map((activity, index) => {
         const id = String(activity.actividad_id || '').trim();
@@ -19453,6 +19462,7 @@
         ['group_pulse', 'Grupo']
       ].map(([value, label]) => '<button class="' + (draft.mode === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mode\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
       const savedHtml = ui.microSavedAt ? '<span class="pill pill-green">Guardada</span>' : '';
+      const saveDisabled = ui.microSaving || (!draft.alumno_id && draft.mode !== 'group_pulse');
       const detailsHtml = draft.detailsOpen ? [
         '<div class="eval360-micro-grid">',
           '<div><label>Habilidad completa</label><select onchange="setEval360MicroDraftField(\'skill\', this.value)">' + skillOptions + '</select></div>',
@@ -19476,7 +19486,7 @@
               '<div class="actions compact eval360-micro-mode">' + modeButtons + '</div>',
               draft.mode === 'group_pulse'
                 ? '<div class="eval360-micro-scope"><b>Grupo completo</b><span>Sin alumno individual</span></div>'
-                : '<div><label>Alumno</label><select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)">' + alumnoOptions + '</select></div>',
+                : '<div class="eval360-micro-students"><label>Alumno</label><div class="eval360-micro-selected">' + escapeHtml(selectedAlumno ? selectedAlumno.alumno_label : 'Elige alumno') + '</div><div class="eval360-micro-skillchips">' + alumnoChips + (alumnos.length > 6 ? '<button class="eval360-micro-chip" type="button" onclick="setEval360MicroDraftField(\'studentPickerOpen\', \'' + (draft.studentPickerOpen ? 'false' : 'true') + '\')">' + (draft.studentPickerOpen ? 'Ocultar' : 'Más') + '</button>' : '') + '</div>' + (draft.studentPickerOpen ? '<select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)"><option value="">Selecciona alumno</option>' + alumnoOptions + '</select>' : '') + '</div>',
             '</div>',
             '<div class="eval360-micro-skillbox">',
               '<div><label>Habilidad sugerida</label><strong>' + escapeHtml(selectedSkillLabel) + '</strong><span>' + escapeHtml(selectedAreaLabel || 'Area de desarrollo') + '</span></div>',
@@ -19491,7 +19501,7 @@
           '</div>',
           detailsHtml,
           noteHtml,
-          '<div class="eval360-micro-savebar"><span>' + escapeHtml(draft.mode === 'group_pulse' ? 'Señal grupal' : 'Señal individual') + ' · ' + escapeHtml(draft.context || 'juego') + '</span><button class="btn-primary" type="button" onclick="saveEval360MicroObservation(this)"' + (ui.microSaving ? ' disabled' : '') + '>' + (ui.microSaving ? 'Guardando...' : 'Guardar señal') + '</button></div>',
+          '<div class="eval360-micro-savebar"><span>' + escapeHtml(draft.mode === 'group_pulse' ? 'Señal grupal' : (selectedAlumno ? selectedAlumno.alumno_label : 'Selecciona alumno')) + ' · ' + escapeHtml(draft.context || 'juego') + '</span><button class="btn-primary" type="button" onclick="saveEval360MicroObservation(this)"' + (saveDisabled ? ' disabled' : '') + '>' + (ui.microSaving ? 'Guardando...' : 'Guardar señal') + '</button></div>',
         '</section>'
       ].join('');
     }

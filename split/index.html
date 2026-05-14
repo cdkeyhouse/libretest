@@ -578,7 +578,8 @@
 
     .eval360-micro-target,
     .eval360-micro-skillbox,
-    .eval360-micro-scope {
+    .eval360-micro-scope,
+    .eval360-micro-students {
       display: grid;
       gap: 8px;
       align-content: start;
@@ -598,8 +599,17 @@
     }
 
     .eval360-micro-scope b,
-    .eval360-micro-skillbox strong {
+    .eval360-micro-skillbox strong,
+    .eval360-micro-selected {
       line-height: 1.15;
+    }
+
+    .eval360-micro-selected {
+      border: 1px solid rgba(31, 176, 186, 0.24);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: rgba(31, 176, 186, 0.09);
+      font-weight: 900;
     }
 
     .eval360-micro-scope span,
@@ -658,6 +668,21 @@
       border-radius: 14px;
       padding: 10px;
       background: rgba(255, 255, 255, 0.68);
+    }
+
+    body.role-facilitador:not(.auth-mode) .eval360-micro-scope,
+    body.role-facilitador:not(.auth-mode) .eval360-micro-selected,
+    body.role-facilitador:not(.auth-mode) .eval360-micro-savebar,
+    body.role-facilitador:not(.auth-mode) .eval360-micro-chip {
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(26, 23, 21, 0.72);
+      color: var(--text-main);
+    }
+
+    body.role-facilitador:not(.auth-mode) .eval360-micro-chip.is-selected {
+      border-color: rgba(31, 176, 186, 0.62);
+      background: rgba(31, 176, 186, 0.18);
+      color: var(--accent);
     }
 
     @media (max-width: 720px) {
@@ -8456,7 +8481,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4"></script>
+<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4b"></script>
 </body>
 </html>
 
