@@ -318,6 +318,7 @@
           formGeneralComment: '',
           formSavedAt: '',
           formSubmitAttempted: false,
+          formAreaKey: '',
           showQaClosed: false,
           error: ''
         },
@@ -18802,6 +18803,7 @@
       ui.formGeneralComment = '';
       ui.formSavedAt = '';
       ui.formSubmitAttempted = false;
+      ui.formAreaKey = '';
     }
 
     function hydrateEval360FacilitadorForm(data) {
@@ -18824,6 +18826,8 @@
         const itemId = String(item.item_id || '').trim();
         if (itemId && !Object.prototype.hasOwnProperty.call(ui.formValues, itemId)) ui.formValues[itemId] = '';
       });
+      const groups = groupEval360PublicItemsByArea(Array.isArray(data && data.items) ? data.items : []);
+      ui.formAreaKey = groups[0] ? groups[0].key : '';
     }
 
     async function loadEval360FacilitadorFormulario(invitacionId, button) {
@@ -18856,7 +18860,7 @@
       const cleanId = String(itemId || '').trim();
       ui.formValues[cleanId] = value === '' || value === 'no_vi' ? value : Number(value);
       ui.formTouched[cleanId] = true;
-      renderEval360FacilitadorPanel();
+      updateEval360FacilitadorFormProgressUi(cleanId);
     }
 
     function setEval360FacilitadorFormComment(itemId, value) {
@@ -18888,6 +18892,94 @@
         missing: Math.max(0, items.length - answered),
         percent: items.length ? Math.round((answered / items.length) * 100) : 0
       };
+    }
+
+    function getEval360FacilitadorFormGroups() {
+      const ui = getEval360Ui().facilitador;
+      const items = ui.form && Array.isArray(ui.form.items) ? ui.form.items : [];
+      return groupEval360PublicItemsByArea(items);
+    }
+
+    function getEval360FacilitadorAreaProgress(group) {
+      const items = group && Array.isArray(group.items) ? group.items : [];
+      const answered = items.filter((item) => isEval360FacilitadorFormItemAnswered(item.item_id)).length;
+      return {
+        answered,
+        total: items.length,
+        missing: Math.max(0, items.length - answered)
+      };
+    }
+
+    function getEval360FacilitadorSelectedArea(groups) {
+      const ui = getEval360Ui().facilitador;
+      const list = Array.isArray(groups) ? groups : getEval360FacilitadorFormGroups();
+      if (!list.length) return null;
+      const selectedKey = String(ui.formAreaKey || '').trim();
+      return list.find((group) => String(group.key || '').trim() === selectedKey) || list[0];
+    }
+
+    function setEval360FacilitadorFormArea(areaKey) {
+      const ui = getEval360Ui().facilitador;
+      ui.formAreaKey = String(areaKey || '').trim();
+      renderEval360FacilitadorPanel();
+      const formPanel = $('eval360FacilitadorFormPanel');
+      if (formPanel && typeof formPanel.scrollIntoView === 'function') {
+        formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function focusEval360FacilitadorNextPending() {
+      const ui = getEval360Ui().facilitador;
+      const groups = getEval360FacilitadorFormGroups();
+      let targetGroup = null;
+      let targetItem = null;
+      groups.some((group) => {
+        targetItem = (group.items || []).find((item) => !isEval360FacilitadorFormItemAnswered(item.item_id));
+        if (targetItem) {
+          targetGroup = group;
+          return true;
+        }
+        return false;
+      });
+      if (!targetGroup || !targetItem) {
+        setBanner('Todas las respuestas estan completas.', 'success');
+        return;
+      }
+      ui.formAreaKey = targetGroup.key;
+      renderEval360FacilitadorPanel();
+      setTimeout(() => {
+        const target = $('eval360FacItem-' + getEval360DomIdSuffix(targetItem.item_id));
+        if (target && typeof target.scrollIntoView === 'function') {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.add('is-missing');
+        }
+      }, 0);
+    }
+
+    function getEval360DomIdSuffix(value) {
+      return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '-');
+    }
+
+    function updateEval360FacilitadorFormProgressUi(itemId) {
+      const progress = getEval360FacilitadorFormProgress();
+      const pill = $('eval360FacProgressPill');
+      if (pill) pill.textContent = progress.answered + '/' + progress.total;
+      const bar = $('eval360FacProgressBar');
+      if (bar) bar.style.width = progress.percent + '%';
+      const missing = $('eval360FacProgressMissing');
+      if (missing) {
+        missing.textContent = progress.missing ? 'Faltan ' + progress.missing + ' respuestas por completar.' : 'Listo para enviar.';
+      }
+      const itemEl = $('eval360FacItem-' + getEval360DomIdSuffix(itemId));
+      if (itemEl && isEval360FacilitadorFormItemAnswered(itemId)) {
+        itemEl.classList.remove('is-missing');
+      }
+      const groups = getEval360FacilitadorFormGroups();
+      groups.forEach((group) => {
+        const areaProgress = getEval360FacilitadorAreaProgress(group);
+        const count = $('eval360FacAreaCount-' + getEval360DomIdSuffix(group.key));
+        if (count) count.textContent = areaProgress.answered + '/' + areaProgress.total;
+      });
     }
 
     function buildEval360FacilitadorItemsPayload() {
@@ -19039,7 +19131,7 @@
         return [
           '<div class="eval360-row">',
             '<div class="eval360-row-head"><strong>' + escapeHtml(alumnoLabel || row.alumno_id || '-') + '</strong><span class="pill">' + escapeHtml(estatus || '-') + '</span></div>',
-            '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.momento || '-') + '</span><span>ID ' + escapeHtml(row.alumno_id || '-') + '</span></div>',
+            '<div class="eval360-row-meta mini"><span>' + escapeHtml(row.momento || '-') + '</span><span>' + escapeHtml(row.instrumento_nombre || row.instrumento_id || '') + '</span></div>',
             '<div class="eval360-row-actions">',
               '<button class="btn-secondary eval360-fac-answer-btn" type="button" onclick="loadEval360FacilitadorFormulario(\'' + escapeJsAttrValue(invId) + '\', this)">' + (sent ? 'Ver enviada' : 'Responder') + '</button>',
             '</div>',
@@ -19061,23 +19153,49 @@
       const progress = getEval360FacilitadorFormProgress();
       const sent = String(form.respuesta_estatus || inv.estatus || '').trim() === 'enviada';
       const savedLabel = ui.formSavedAt ? 'Guardado ' + new Date(ui.formSavedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '';
-      const grouped = groupEval360PublicItemsByArea(items);
+      const grouped = getEval360FacilitadorFormGroups();
+      const selectedGroup = getEval360FacilitadorSelectedArea(grouped);
+      if (selectedGroup && String(ui.formAreaKey || '').trim() !== String(selectedGroup.key || '').trim()) {
+        ui.formAreaKey = selectedGroup.key;
+      }
       const alumnoLabel = getEval360AlumnoDisplayLabel(inv);
+      const areaIndex = selectedGroup ? grouped.findIndex((group) => group.key === selectedGroup.key) : -1;
+      const areaProgress = selectedGroup ? getEval360FacilitadorAreaProgress(selectedGroup) : { answered: 0, total: 0 };
+      const navHtml = grouped.length ? [
+        '<div class="eval360-fac-area-nav" role="tablist" aria-label="Areas de evaluacion">',
+          grouped.map((group, index) => {
+            const gProgress = getEval360FacilitadorAreaProgress(group);
+            const active = selectedGroup && group.key === selectedGroup.key;
+            return '<button type="button" class="' + (active ? 'is-active' : '') + '" onclick="setEval360FacilitadorFormArea(\'' + escapeJsAttrValue(group.key) + '\')">'
+              + '<span>' + escapeHtml(group.label || 'Area') + '</span>'
+              + '<b id="eval360FacAreaCount-' + escapeHtml(getEval360DomIdSuffix(group.key)) + '">' + escapeHtml(gProgress.answered + '/' + gProgress.total) + '</b>'
+              + '</button>';
+          }).join(''),
+        '</div>'
+      ].join('') : '';
+      const prevGroup = areaIndex > 0 ? grouped[areaIndex - 1] : null;
+      const nextGroup = areaIndex >= 0 && areaIndex < grouped.length - 1 ? grouped[areaIndex + 1] : null;
       return [
         '<section class="eval360-panel eval360-fac-form-panel" id="eval360FacilitadorFormPanel">',
           '<div class="eval360-head">',
-            '<div><h3>Mi observacion</h3><p class="subtle">' + escapeHtml([alumnoLabel, inv.momento, sent ? 'enviada' : 'borrador'].filter(Boolean).join(' | ')) + '</p><p class="mini">ID ' + escapeHtml(inv.alumno_id || '-') + '</p></div>',
-            '<span class="pill">' + escapeHtml(progress.answered + '/' + progress.total) + '</span>',
+            '<div><h3>Mi observacion</h3><p class="subtle">' + escapeHtml([alumnoLabel, inv.momento, sent ? 'enviada' : 'borrador'].filter(Boolean).join(' | ')) + '</p></div>',
+            '<span class="pill" id="eval360FacProgressPill">' + escapeHtml(progress.answered + '/' + progress.total) + '</span>',
           '</div>',
-          '<div class="eval360-meter"><span style="width:' + escapeHtml(progress.percent) + '%"></span></div>',
+          '<div class="eval360-meter"><span id="eval360FacProgressBar" style="width:' + escapeHtml(progress.percent) + '%"></span></div>',
           savedLabel ? '<div class="mini">' + escapeHtml(savedLabel) + '</div>' : '',
-          ui.formSubmitAttempted && progress.missing ? '<div class="mini">Faltan ' + escapeHtml(progress.missing) + ' respuestas por completar.</div>' : '',
-          grouped.length ? grouped.map((group) => [
-            '<section class="eval360-public-area">',
-              '<div class="admin-alumnos-section-head"><h4>' + escapeHtml(group.label || 'Area') + '</h4></div>',
-              (group.items || []).map((item) => renderEval360FacilitadorFormItem(item, sent)).join(''),
+          '<div class="mini" id="eval360FacProgressMissing">' + (ui.formSubmitAttempted && progress.missing ? 'Faltan ' + escapeHtml(progress.missing) + ' respuestas por completar.' : (progress.missing ? 'Puedes guardar borrador y continuar despues.' : 'Listo para enviar.')) + '</div>',
+          navHtml,
+          selectedGroup ? [
+            '<section class="eval360-public-area eval360-fac-area-current">',
+              '<div class="admin-alumnos-section-head"><h4>' + escapeHtml(selectedGroup.label || 'Area') + '</h4><span class="pill">' + escapeHtml((areaIndex + 1) + '/' + grouped.length + ' - ' + areaProgress.answered + '/' + areaProgress.total) + '</span></div>',
+              (selectedGroup.items || []).map((item) => renderEval360FacilitadorFormItem(item, sent)).join(''),
+              '<div class="actions compact eval360-fac-area-actions">',
+                prevGroup ? '<button class="btn-secondary" type="button" onclick="setEval360FacilitadorFormArea(\'' + escapeJsAttrValue(prevGroup.key) + '\')">Area anterior</button>' : '',
+                '<button class="btn-ghost" type="button" onclick="focusEval360FacilitadorNextPending()">Siguiente pendiente</button>',
+                nextGroup ? '<button class="btn-secondary" type="button" onclick="setEval360FacilitadorFormArea(\'' + escapeJsAttrValue(nextGroup.key) + '\')">Siguiente area</button>' : '',
+              '</div>',
             '</section>'
-          ].join('')).join('') : '<div class="eval360-empty">Este instrumento todavia no tiene preguntas disponibles.</div>',
+          ].join('') : '<div class="eval360-empty">Este instrumento todavia no tiene preguntas disponibles.</div>',
           '<label for="eval360FacGeneralComment">Comentario general opcional</label>',
           '<textarea id="eval360FacGeneralComment" placeholder="Algo util para tu observacion" oninput="setEval360FacilitadorFormGeneralComment(this.value)"' + (sent ? ' disabled' : '') + '>' + escapeHtml(ui.formGeneralComment || '') + '</textarea>',
           '<div class="actions compact">',
@@ -19101,13 +19219,13 @@
         { value: '4', label: 'Ya lo tiene claro' }
       ];
       return [
-        '<div class="eval360-public-item' + (missing ? ' is-missing' : '') + '">',
+        '<div class="eval360-public-item eval360-fac-question' + (missing ? ' is-missing' : '') + '" id="eval360FacItem-' + escapeHtml(getEval360DomIdSuffix(itemId)) + '">',
           '<div><strong>' + escapeHtml(item.texto || itemId) + '</strong><div class="mini">' + escapeHtml(item.area_nombre || item.area_id || '') + '</div></div>',
           '<div class="eval360-public-scale">',
             labels.map((entry) => '<label><input type="radio" name="eval360-fac-' + escapeHtml(itemId) + '" value="' + escapeHtml(entry.value) + '"' + (current === entry.value ? ' checked' : '') + (locked ? ' disabled' : '') + ' onchange="setEval360FacilitadorFormValue(\'' + escapeJsAttrValue(itemId) + '\', this.value)">' + escapeHtml(entry.label) + '</label>').join(''),
           '</div>',
           missing ? '<div class="mini">Pendiente de responder.</div>' : '',
-          '<textarea placeholder="Comentario opcional" oninput="setEval360FacilitadorFormComment(\'' + escapeJsAttrValue(itemId) + '\', this.value)"' + (locked ? ' disabled' : '') + '>' + escapeHtml(ui.formComments[itemId] || '') + '</textarea>',
+          '<details class="eval360-fac-note"' + (ui.formComments[itemId] ? ' open' : '') + '><summary>+ Nota opcional</summary><textarea placeholder="Comentario opcional" oninput="setEval360FacilitadorFormComment(\'' + escapeJsAttrValue(itemId) + '\', this.value)"' + (locked ? ' disabled' : '') + '>' + escapeHtml(ui.formComments[itemId] || '') + '</textarea></details>',
         '</div>'
       ].join('');
     }
@@ -19211,7 +19329,6 @@
             + '<span class="' + pillClass + '">' + escapeHtml(pillLabel) + '</span>'
           + '</div>'
           + '<div class="eval360-row-meta">'
-            + '<span class="mini">ID ' + escapeHtml(row.alumno_id || '-') + '</span>'
             + '<span class="mini">' + escapeHtml(row.area_nombre || row.area_id || '') + '</span>'
             + habilidadHtml
             + '<span class="mini">' + escapeHtml(promStr) + '</span>'
@@ -22293,6 +22410,8 @@
         setEval360FacilitadorCiclo,
         setEval360FacilitadorMomento,
         setEval360FacilitadorShowQaClosed,
+        setEval360FacilitadorFormArea,
+        focusEval360FacilitadorNextPending,
         loadEval360FacilitadorSugerencias,
         openPlanDraftFromEval360Suggestion,
         loadEval360FacilitadorFormulario,

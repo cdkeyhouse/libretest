@@ -515,6 +515,66 @@
       gap: 12px;
     }
 
+    .eval360-fac-area-nav {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .eval360-fac-area-nav button {
+      display: grid;
+      gap: 4px;
+      min-height: 56px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(23, 51, 45, 0.12);
+      background: rgba(255, 255, 255, 0.74);
+      color: var(--text-strong);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .eval360-fac-area-nav button.is-active {
+      border-color: rgba(31, 182, 229, 0.72);
+      background: rgba(31, 182, 229, 0.16);
+    }
+
+    .eval360-fac-area-nav b {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .eval360-fac-area-actions {
+      justify-content: space-between;
+    }
+
+    .eval360-fac-note {
+      border-top: 1px solid rgba(23, 51, 45, 0.1);
+      padding-top: 8px;
+    }
+
+    .eval360-fac-note summary {
+      cursor: pointer;
+      color: var(--text-soft);
+      font-weight: 800;
+    }
+
+    .eval360-fac-note:not([open]) textarea {
+      display: none !important;
+    }
+
+    @media (max-width: 720px) {
+      .eval360-fac-area-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .eval360-fac-area-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+    }
+
     .eval360-public-item.is-missing {
       border-color: rgba(190, 74, 74, 0.38);
       background: rgba(190, 74, 74, 0.06);
@@ -5969,6 +6029,22 @@
       color: var(--text-strong) !important;
     }
 
+    .eval360-fac-area-nav button {
+      background: rgba(24,22,20,0.94) !important;
+      border-color: var(--border-strong) !important;
+      color: var(--text-strong) !important;
+    }
+
+    .eval360-fac-area-nav button.is-active {
+      background: rgba(31,182,229,0.18) !important;
+      border-color: rgba(31,182,229,0.56) !important;
+    }
+
+    .eval360-fac-area-nav b,
+    .eval360-fac-note summary {
+      color: var(--text-soft) !important;
+    }
+
     .eval360-empty,
     .eval360-disabled,
     .eval360-family-report-resumen,
@@ -8261,7 +8337,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260514-eval360-row-meta-cleanup-v1"></script>
+<script defer src="./libreaprendiz-app.js?v=20260514-eval360-fac-compact-assessment-v1"></script>
 </body>
 </html>
 
