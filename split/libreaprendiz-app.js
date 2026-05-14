@@ -320,6 +320,7 @@
           formSubmitAttempted: false,
           formAreaKey: '',
           microDraft: {
+            micro_observacion_id: '',
             alumno_id: '',
             area_id: '',
             item_id: '',
@@ -19050,6 +19051,7 @@
       const ui = getEval360Ui().facilitador;
       if (!ui.microDraft || typeof ui.microDraft !== 'object') {
         ui.microDraft = {
+          micro_observacion_id: '',
           alumno_id: '',
           area_id: '',
           item_id: '',
@@ -19061,6 +19063,14 @@
         };
       }
       return ui.microDraft;
+    }
+
+    function ensureEval360MicroObservationId() {
+      const draft = getEval360MicroDraft();
+      if (!String(draft.micro_observacion_id || '').trim()) {
+        draft.micro_observacion_id = uid('E360MIC');
+      }
+      return draft.micro_observacion_id;
     }
 
     function getEval360MicroAlumnos() {
@@ -19173,7 +19183,9 @@
       ui.microError = '';
       renderEval360FacilitadorPanel();
       await handleAction('guardarEval360MicroObservacion', async () => {
+        const microId = ensureEval360MicroObservationId();
         await api('guardarEval360MicroObservacion', {
+          micro_observacion_id: microId,
           ciclo_id: ui.selectedCicloId,
           momento: ui.selectedMomento,
           mode: draft.mode || 'skill_spot',
@@ -19186,13 +19198,14 @@
         });
         ui.microSaving = false;
         ui.microSavedAt = new Date().toISOString();
+        draft.micro_observacion_id = '';
         draft.note = '';
         draft.noteOpen = false;
         renderEval360FacilitadorPanel();
         setBanner('Observacion rapida guardada.', 'success', { anchor: captureFeedbackAnchor(button) });
       }, {
         button,
-        key: buildActionKey('guardarEval360MicroObservacion', [ui.selectedCicloId, ui.selectedMomento, draft.alumno_id, draft.area_id, draft.item_id]),
+        key: buildActionKey('guardarEval360MicroObservacion', [draft.micro_observacion_id || ensureEval360MicroObservationId()]),
         busyText: 'Guardando',
         onError: (err) => {
           ui.microSaving = false;
@@ -19209,7 +19222,7 @@
       const alumnos = getEval360MicroAlumnos();
       const habilidades = getEval360MicroHabilidades();
       if (!alumnos.length || !habilidades.length) {
-        return '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Observacion rapida</h4></div><div class="eval360-empty">Carga pulso e invitaciones para registrar una senal rapida.</div></section>';
+        return '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Senal rapida</h4></div><div class="eval360-empty">Carga invitaciones para registrar una senal rapida.</div></section>';
       }
       const alumnoOptions = alumnos.map((row) => '<option value="' + escapeHtml(row.alumno_id) + '"' + (draft.alumno_id === row.alumno_id ? ' selected' : '') + '>' + escapeHtml(row.alumno_label || 'Alumno') + '</option>').join('');
       const skillOptions = habilidades.map((row) => {
@@ -19230,14 +19243,14 @@
       ].map(([value, label]) => '<option value="' + value + '"' + (draft.context === value ? ' selected' : '') + '>' + label + '</option>').join('');
       const markButtons = [
         ['avance_observado', 'Lo observe'],
-        ['necesita_apoyo', 'Necesita apoyo'],
+        ['necesita_apoyo', 'Acompanarlo'],
         ['no_aplica', 'No aplico hoy'],
         ['destacado', 'Destaco']
       ].map(([value, label]) => '<button class="' + (draft.mark === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mark\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
       const savedHtml = ui.microSavedAt ? '<span class="pill pill-green">Guardada</span>' : '';
       return [
         '<section class="eval360-panel eval360-micro-panel">',
-          '<div class="admin-alumnos-section-head"><div><h4>Observacion rapida</h4><p class="mini">Registra una senal breve sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
+          '<div class="admin-alumnos-section-head"><div><h4>Senal rapida</h4><p class="mini">Registra una conducta observable sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
           ui.microError ? '<div class="eval360-empty">' + escapeHtml(ui.microError) + '</div>' : '',
           '<div class="eval360-micro-grid">',
             '<div><label>Alumno</label><select onchange="setEval360MicroDraftField(\'alumno_id\', this.value)">' + alumnoOptions + '</select></div>',
@@ -19247,7 +19260,7 @@
           '<div class="actions compact eval360-micro-marks">' + markButtons + '</div>',
           '<details class="eval360-fac-note"' + (draft.noteOpen || draft.note ? ' open' : '') + '>',
             '<summary onclick="setEval360MicroDraftField(\'noteOpen\', true)">+ Nota opcional</summary>',
-            '<textarea maxlength="280" placeholder="Solo si ayuda al seguimiento. No se muestra directo a familias." oninput="setEval360MicroDraftField(\'note\', this.value)">' + escapeHtml(draft.note || '') + '</textarea>',
+            '<textarea maxlength="280" placeholder="Describe solo lo que viste. Evita etiquetas, causas o lenguaje clinico." oninput="setEval360MicroDraftField(\'note\', this.value)">' + escapeHtml(draft.note || '') + '</textarea>',
           '</details>',
           '<div class="actions compact"><button class="btn-primary" type="button" onclick="saveEval360MicroObservation(this)"' + (ui.microSaving ? ' disabled' : '') + '>' + (ui.microSaving ? 'Guardando...' : 'Guardar observacion') + '</button></div>',
         '</section>'
@@ -19495,6 +19508,7 @@
           '<div><label for="eval360FacCiclo">Ciclo</label><select id="eval360FacCiclo" onchange="setEval360FacilitadorCiclo(this.value)">' + getEval360CicloOptions(ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed }) + '</select>' + (hiddenQaClosed ? '<label class="eval360-qa-toggle"><input type="checkbox"' + (ui.showQaClosed ? ' checked' : '') + ' onchange="setEval360FacilitadorShowQaClosed(this.checked)"> Mostrar QA cerrados <span class="mini">(' + escapeHtml(hiddenQaClosed) + ' ocultos)</span></label>' : '') + '</div>',
           '<div><label for="eval360FacMomento">Momento</label><select id="eval360FacMomento" onchange="setEval360FacilitadorMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
         '</div>',
+        renderEval360MicroObservacionRapida(),
         '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Mis observaciones</h4></div>' + renderEval360FacilitadorInvitaciones() + '</section>',
         renderEval360FacilitadorForm(),
         '<div class="eval360-grid">',
@@ -19510,8 +19524,7 @@
             }
           }) + '</section>',
         '</div>',
-        '<section class="eval360-panel" id="eval360FacAlumnosPrioritariosPanel"><div class="admin-alumnos-section-head"><h4>Alumnos que requieren apoyo</h4></div>' + renderEval360AlumnosPrioritarios(alumnos) + '</section>',
-        renderEval360MicroObservacionRapida(),
+        '<section class="eval360-panel" id="eval360FacAlumnosPrioritariosPanel"><div class="admin-alumnos-section-head"><h4>Senales para acompanar</h4></div>' + renderEval360AlumnosPrioritarios(alumnos) + '</section>',
         '<div class="actions compact">',
           firstNeed.item_id || firstNeed.area_id
             ? '<button class="btn-secondary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas (prioridad 1)</button>'
@@ -19524,17 +19537,15 @@
     function renderEval360AlumnosPrioritarios(rows) {
       const list = Array.isArray(rows) ? rows : [];
       if (!list.length) {
-        return '<div class="eval360-empty">Todavia no hay alumnos prioritarios para esta seleccion.</div>';
+        return '<div class="eval360-empty">Todavia no hay senales de seguimiento para esta seleccion.</div>';
       }
       return list.map(function(row) {
-        const pillClass = row.prioridad === 'alta' ? 'pill pill-red'
+        const pillClass = row.prioridad === 'alta' ? 'pill pill-yellow'
           : row.prioridad === 'media' ? 'pill pill-yellow'
           : 'pill pill-grey';
-        const pillLabel = row.prioridad === 'alta' ? 'Alta'
-          : row.prioridad === 'media' ? 'Media'
-          : 'Observacion';
-        const promStr = (row.promedio != null && !isNaN(Number(row.promedio)))
-          ? formatEval360Score(Number(row.promedio)) + '/4' : '-';
+        const pillLabel = row.prioridad === 'alta' ? 'Seguimiento'
+          : row.prioridad === 'media' ? 'Observar'
+          : 'Mas evidencia';
         const habilidadHtml = (row.item_id && row.item_label)
           ? '<span class="mini"> · ' + escapeHtml(row.item_label) + '</span>' : '';
         const ideasBtn = (row.area_id || row.item_id)
@@ -19553,8 +19564,6 @@
           + '<div class="eval360-row-meta">'
             + '<span class="mini">' + escapeHtml(row.area_nombre || row.area_id || '') + '</span>'
             + habilidadHtml
-            + '<span class="mini">' + escapeHtml(promStr) + '</span>'
-            + '<span class="mini">' + escapeHtml(row.motivo || '') + '</span>'
           + '</div>'
           + ideasBtn
           + '</div>';
