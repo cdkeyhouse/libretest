@@ -19497,7 +19497,7 @@
         '</div>'
       ].join('') : '';
       return [
-        '<section class="eval360-panel eval360-micro-panel" id="eval360MicroPanel">',
+        '<section class="eval360-panel eval360-micro-panel' + (draft.detailsOpen || draft.noteOpen ? ' is-expanded' : '') + '" id="eval360MicroPanel">',
           '<div class="admin-alumnos-section-head"><div><h4>Señal rápida</h4><p class="mini">Registra una conducta observable sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
           ui.microError ? '<div class="eval360-empty">' + escapeHtml(ui.microError) + '</div>' : '',
           repeatHtml,

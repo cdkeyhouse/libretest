@@ -602,7 +602,9 @@
     .eval360-micro-scope b,
     .eval360-micro-skillbox strong,
     .eval360-micro-selected {
+      display: block;
       line-height: 1.15;
+      overflow-wrap: anywhere;
     }
 
     .eval360-micro-selected {
@@ -616,6 +618,7 @@
     .eval360-micro-scope span,
     .eval360-micro-skillbox span,
     .eval360-micro-savebar span {
+      display: block;
       color: var(--text-soft);
       font-size: 0.82rem;
     }
@@ -732,6 +735,10 @@
         position: sticky;
         bottom: 8px;
         z-index: 5;
+      }
+
+      .eval360-micro-panel.is-expanded .eval360-micro-savebar {
+        position: static;
       }
 
       .eval360-micro-repeat {
@@ -8515,7 +8522,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4d"></script>
+<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4e"></script>
 </body>
 </html>
 
