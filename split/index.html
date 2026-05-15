@@ -671,9 +671,32 @@
       background: rgba(255, 255, 255, 0.68);
     }
 
+    .eval360-micro-repeat {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 10px;
+      align-items: center;
+      border: 1px solid rgba(29, 139, 102, 0.2);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(29, 139, 102, 0.09);
+    }
+
+    .eval360-micro-repeat span {
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    .eval360-micro-repeat button {
+      grid-row: 1 / span 2;
+      grid-column: 2;
+      margin: 0;
+    }
+
     body.role-facilitador:not(.auth-mode) .eval360-micro-scope,
     body.role-facilitador:not(.auth-mode) .eval360-micro-selected,
     body.role-facilitador:not(.auth-mode) .eval360-micro-savebar,
+    body.role-facilitador:not(.auth-mode) .eval360-micro-repeat,
     body.role-facilitador:not(.auth-mode) .eval360-micro-chip {
       border-color: rgba(255, 255, 255, 0.12);
       background: rgba(26, 23, 21, 0.72);
@@ -709,6 +732,15 @@
         position: sticky;
         bottom: 8px;
         z-index: 5;
+      }
+
+      .eval360-micro-repeat {
+        grid-template-columns: 1fr;
+      }
+
+      .eval360-micro-repeat button {
+        grid-row: auto;
+        grid-column: auto;
       }
     }
 
@@ -8483,7 +8515,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4c"></script>
+<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4d"></script>
 </body>
 </html>
 

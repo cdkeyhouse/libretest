@@ -19297,6 +19297,8 @@
     function setEval360MicroDraftField(field, value) {
       const ui = getEval360Ui().facilitador;
       const draft = getEval360MicroDraft();
+      const passiveFields = ['noteOpen', 'detailsOpen', 'skillPickerOpen', 'studentPickerOpen'];
+      if (!passiveFields.includes(field)) ui.microLastSaved = null;
       if (field === 'skill') {
         const parts = String(value || '').split('||');
         draft.area_id = String(parts[0] || '').trim();
@@ -19328,6 +19330,7 @@
       const draft = getEval360MicroDraft();
       draft.note = String(value || '').trim();
       ui.microError = '';
+      ui.microLastSaved = null;
     }
 
     function renderEval360MicroObservacionRapidaOnly() {
@@ -19362,6 +19365,9 @@
       renderEval360MicroObservacionRapidaOnly();
       await handleAction('guardarEval360MicroObservacion', async () => {
         const microId = ensureEval360MicroObservationId();
+        const savedAlumnoId = String(draft.alumno_id || '').trim();
+        const savedMode = String(draft.mode || 'skill_spot').trim();
+        const savedAlumno = getEval360MicroAlumnos().find((row) => row.alumno_id === savedAlumnoId) || null;
         await api('guardarEval360MicroObservacion', {
           micro_observacion_id: microId,
           ciclo_id: ui.selectedCicloId,
@@ -19379,6 +19385,12 @@
         });
         ui.microSaving = false;
         ui.microSavedAt = new Date().toISOString();
+        ui.microLastSaved = {
+          alumno_id: savedAlumnoId,
+          alumno_label: savedAlumno ? savedAlumno.alumno_label : '',
+          mode: savedMode,
+          at: ui.microSavedAt
+        };
         draft.micro_observacion_id = '';
         draft.note = '';
         draft.noteOpen = false;
@@ -19463,6 +19475,13 @@
       ].map(([value, label]) => '<button class="' + (draft.mode === value ? 'btn-primary' : 'btn-secondary') + '" type="button" onclick="setEval360MicroDraftField(\'mode\', \'' + value + '\')">' + escapeHtml(label) + '</button>').join('');
       const savedHtml = ui.microSavedAt ? '<span class="pill pill-green">Guardada</span>' : '';
       const saveDisabled = ui.microSaving || (!draft.alumno_id && draft.mode !== 'group_pulse');
+      const repeatHtml = ui.microLastSaved && ui.microLastSaved.at ? [
+        '<div class="eval360-micro-repeat">',
+          '<b>Guardada para ' + escapeHtml(ui.microLastSaved.mode === 'group_pulse' ? 'grupo completo' : (ui.microLastSaved.alumno_label || 'el alumno')) + '.</b>',
+          '<span>Lista para otra señal con el mismo contexto.</span>',
+          ui.microLastSaved.mode === 'group_pulse' ? '' : '<button class="btn-ghost" type="button" onclick="setEval360MicroDraftField(\'alumno_id\', \'\')">Cambiar alumno</button>',
+        '</div>'
+      ].join('') : '';
       const detailsHtml = draft.detailsOpen ? [
         '<div class="eval360-micro-grid">',
           '<div><label>Habilidad completa</label><select onchange="setEval360MicroDraftField(\'skill\', this.value)">' + skillOptions + '</select></div>',
@@ -19481,6 +19500,7 @@
         '<section class="eval360-panel eval360-micro-panel" id="eval360MicroPanel">',
           '<div class="admin-alumnos-section-head"><div><h4>Señal rápida</h4><p class="mini">Registra una conducta observable sin cambiar calificaciones.</p></div>' + savedHtml + '</div>',
           ui.microError ? '<div class="eval360-empty">' + escapeHtml(ui.microError) + '</div>' : '',
+          repeatHtml,
           '<div class="eval360-micro-top">',
             '<div class="eval360-micro-target">',
               '<div class="actions compact eval360-micro-mode">' + modeButtons + '</div>',
