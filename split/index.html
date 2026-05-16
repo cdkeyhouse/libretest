@@ -340,6 +340,95 @@
     }
     .card { padding: 22px; }
 
+    .fac-workspace-nav {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 0 18px;
+      padding: 8px;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.045);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.18);
+    }
+
+    .fac-workspace-nav[hidden] {
+      display: none !important;
+    }
+
+    .fac-workspace-nav button {
+      min-height: 58px;
+      display: grid;
+      gap: 2px;
+      justify-items: start;
+      align-content: center;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.045);
+      color: var(--text);
+      text-align: left;
+    }
+
+    .fac-workspace-nav button strong {
+      font-size: 0.98rem;
+      line-height: 1.15;
+    }
+
+    .fac-workspace-nav button span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    .fac-workspace-nav button.is-active {
+      border-color: rgba(39,189,233,0.42);
+      background: linear-gradient(135deg, rgba(39,189,233,0.95), rgba(89,199,238,0.92));
+      color: #12100f;
+      box-shadow: 0 12px 30px rgba(39,189,233,0.18);
+    }
+
+    .fac-workspace-nav button.is-active span {
+      color: rgba(18,16,15,0.74);
+    }
+
+    body.role-facilitador:not(.auth-mode) .tabs {
+      display: none;
+    }
+
+    body.role-facilitador:not(.auth-mode) #panel-planeaciones:not(.is-active),
+    body.role-facilitador:not(.auth-mode) #panel-seguimiento:not(.is-active) {
+      display: none;
+    }
+
+    body.role-facilitador:not(.auth-mode).fac-mode-observaciones #panel-seguimiento.is-active {
+      display: grid !important;
+    }
+
+    body.role-facilitador:not(.auth-mode).fac-mode-senales #planBuilderCard,
+    body.role-facilitador:not(.auth-mode).fac-mode-senales #planeacionesListCard,
+    body.role-facilitador:not(.auth-mode).fac-mode-senales #suplenciasActivasSection,
+    body.role-facilitador:not(.auth-mode).fac-mode-eval360 #planBuilderCard,
+    body.role-facilitador:not(.auth-mode).fac-mode-eval360 #planeacionesListCard,
+    body.role-facilitador:not(.auth-mode).fac-mode-eval360 #suplenciasActivasSection,
+    body.role-facilitador:not(.auth-mode).fac-mode-ideas #planBuilderCard,
+    body.role-facilitador:not(.auth-mode).fac-mode-ideas #planeacionesListCard,
+    body.role-facilitador:not(.auth-mode).fac-mode-ideas #suplenciasActivasSection {
+      display: none !important;
+    }
+
+    body.role-facilitador:not(.auth-mode) #eval360FacilitadorPanel {
+      margin-bottom: 0;
+    }
+
+    body.role-facilitador:not(.auth-mode) #panel-seguimiento > article.card:last-child {
+      display: none;
+    }
+
     #sessionCard {
       position: relative;
       overflow: hidden;
@@ -7472,6 +7561,35 @@
         border-radius: 14px;
       }
 
+      body.role-facilitador:not(.auth-mode) .fac-workspace-nav {
+        grid-template-columns: repeat(5, minmax(112px, 1fr));
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        gap: 6px;
+        margin-bottom: 10px;
+        padding: 6px;
+        border-radius: 15px;
+      }
+
+      body.role-facilitador:not(.auth-mode) .fac-workspace-nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      body.role-facilitador:not(.auth-mode) .fac-workspace-nav button {
+        min-height: 48px;
+        padding: 8px 9px;
+        border-radius: 12px;
+      }
+
+      body.role-facilitador:not(.auth-mode) .fac-workspace-nav button strong {
+        font-size: 0.88rem;
+      }
+
+      body.role-facilitador:not(.auth-mode) .fac-workspace-nav button span {
+        font-size: 0.68rem;
+      }
+
       body.role-facilitador:not(.auth-mode) .workspace-session-copy {
         gap: 0;
         min-width: 0;
@@ -7742,6 +7860,29 @@
       <button id="eval360FacilitadorOpenBtn" class="btn-secondary" type="button" hidden>Evaluación 360</button>
       <button id="workspaceLogoutBtn" class="btn-ghost" type="button">Cerrar sesión</button>
     </div>
+
+    <nav id="facilitadorWorkspaceNav" class="fac-workspace-nav" hidden aria-label="Espacio del facilitador">
+      <button type="button" data-fac-workspace-mode="planeaciones" class="is-active">
+        <strong>Planeaciones</strong>
+        <span>Crear y trabajar semana</span>
+      </button>
+      <button type="button" data-fac-workspace-mode="senales">
+        <strong>Se&ntilde;ales</strong>
+        <span>Micro-observaciones</span>
+      </button>
+      <button type="button" data-fac-workspace-mode="observaciones">
+        <strong>Observaciones</strong>
+        <span>Notas por alumno</span>
+      </button>
+      <button type="button" data-fac-workspace-mode="eval360">
+        <strong>Eval360</strong>
+        <span>Pulso y prioridades</span>
+      </button>
+      <button type="button" data-fac-workspace-mode="ideas">
+        <strong>Ideas</strong>
+        <span>Planeaciones sugeridas</span>
+      </button>
+    </nav>
 
     <section class="top-grid">
       <article id="sessionCard" class="card">
@@ -8522,7 +8663,7 @@
     </div>
   </div>
 
-<script defer src="./libreaprendiz-app.js?v=20260514-eval360-quick-capture-v4e"></script>
+<script defer src="./libreaprendiz-app.js?v=20260515-fac-workspace-v2e"></script>
 </body>
 </html>
 

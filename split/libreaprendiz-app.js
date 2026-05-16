@@ -515,6 +515,7 @@
         estatus: 'borrador'
       },
       activeTab: 'planeaciones',
+      facilitadorWorkspaceMode: 'planeaciones',
       activeAdminModule: 'dashboard'
     };
 
@@ -4079,7 +4080,7 @@
         alertsCard.hidden = (adminMode && state.activeAdminModule !== 'dashboard') || !hasVisibleAlerts;
       }
       if (seguimientoTabBtn) seguimientoTabBtn.hidden = facilitatorMode;
-      if (seguimientoPanel) seguimientoPanel.hidden = facilitatorMode;
+      if (seguimientoPanel) seguimientoPanel.hidden = facilitatorMode && getFacilitadorWorkspaceMode() !== 'observaciones';
       if (reportTabBtn) reportTabBtn.hidden = !canViewReportes;
       if (reportPanel) reportPanel.hidden = facilitatorMode || adminMode || !canViewReportes;
       if (estadoFilter) {
@@ -4103,12 +4104,13 @@
       if (adminMode && !['dashboard', 'planeaciones', 'alumnos', 'notificaciones', 'reporte-ciclo', 'facilitadores', 'eval360', 'materias', 'talleres', 'configuracion'].includes(state.activeAdminModule)) {
         state.activeAdminModule = 'dashboard';
       }
-      if (facilitatorMode && state.activeTab !== 'planeaciones') {
+      if (facilitatorMode && state.activeTab !== 'planeaciones' && !(getFacilitadorWorkspaceMode() === 'observaciones' && state.activeTab === 'seguimiento')) {
         state.activeTab = 'planeaciones';
       }
       if (!canViewReportes && state.activeTab === 'reportes') {
         state.activeTab = 'planeaciones';
       }
+      syncFacilitadorWorkspaceUi();
     }
 
     function renderSession() {
@@ -15036,7 +15038,7 @@
     }
 
     function activateTab(tabName) {
-      if (getCurrentRole() === 'facilitador' && tabName !== 'planeaciones') {
+      if (getCurrentRole() === 'facilitador' && !['planeaciones', 'seguimiento'].includes(tabName)) {
         tabName = 'planeaciones';
       }
       if (tabName === 'reportes' && !canUseReportes()) {
@@ -15062,6 +15064,7 @@
           }))
           .catch(() => {});
       }
+      syncFacilitadorWorkspaceUi();
     }
 
     function renderAll() {
@@ -18836,7 +18839,13 @@
     function toggleEval360FacilitadorPanel(button) {
       const ui = getEval360Ui().facilitador;
       ui.open = !ui.open;
+      state.facilitadorWorkspaceMode = ui.open ? 'senales' : 'planeaciones';
+      if (getCurrentRole() === 'facilitador' && !canUseAdminShell()) {
+        state.activeTab = 'planeaciones';
+        activateTab('planeaciones');
+      }
       renderEval360FacilitadorPanel();
+      syncFacilitadorWorkspaceUi();
       if (ui.open && !ui.loaded && !ui.loading) {
         refreshEval360FacilitadorModule(button);
       }
@@ -19732,7 +19741,7 @@
       const btn = $('eval360FacilitadorOpenBtn');
       if (btn) {
         btn.hidden = role !== 'facilitador' || canUseAdminShell();
-        btn.textContent = ui.open ? 'Ocultar Eval360' : 'Evaluacion 360';
+        btn.textContent = ui.open ? 'Cerrar vista' : 'Eval360';
       }
       if (panel.hidden) return;
       if (ui.loading && !ui.loaded) {
@@ -19758,20 +19767,27 @@
       const habilidades = Array.isArray(pulso.promedios_por_habilidad) ? pulso.promedios_por_habilidad : [];
       const alumnos = Array.isArray(pulso.alumnos_prioritarios) ? pulso.alumnos_prioritarios : [];
       const firstNeed = habilidades[0] || areas[0] || {};
-      panel.innerHTML = [
-        '<div class="eval360-head">',
-          '<div><h2>Evaluacion 360</h2><p class="subtle">Promedios agregados de tus alumnos asignados. No muestra respuestas crudas de familia ni alumno.</p></div>',
-          '<div class="actions compact"><button class="btn-secondary" type="button" onclick="refreshEval360FacilitadorModule(this)">Actualizar</button><button class="btn-ghost" type="button" onclick="loadEval360FacilitadorPulso(this)">Pulso</button></div>',
-        '</div>',
-        '<div class="grid-2">',
-          '<div><label for="eval360FacCiclo">Ciclo</label><select id="eval360FacCiclo" onchange="setEval360FacilitadorCiclo(this.value)">' + getEval360CicloOptions(ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed }) + '</select>' + (hiddenQaClosed ? '<label class="eval360-qa-toggle"><input type="checkbox"' + (ui.showQaClosed ? ' checked' : '') + ' onchange="setEval360FacilitadorShowQaClosed(this.checked)"> Mostrar QA cerrados <span class="mini">(' + escapeHtml(hiddenQaClosed) + ' ocultos)</span></label>' : '') + '</div>',
-          '<div><label for="eval360FacMomento">Momento</label><select id="eval360FacMomento" onchange="setEval360FacilitadorMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
-        '</div>',
-        renderEval360MicroObservacionRapida(),
-        '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Mis observaciones</h4></div>' + renderEval360FacilitadorInvitaciones() + '</section>',
-        renderEval360FacilitadorForm(),
+      const workspaceMode = getFacilitadorWorkspaceMode();
+      const titleByMode = {
+        senales: 'Señales rápidas',
+        eval360: 'Evaluación 360',
+        ideas: 'Ideas para planear'
+      };
+      const copyByMode = {
+        senales: 'Registra micro-observaciones en segundos, sin abrir toda la evaluación.',
+        eval360: 'Pulso agregado de tus alumnos asignados. No muestra respuestas crudas de familia ni alumno.',
+        ideas: 'Actividades sugeridas para trabajar la habilidad o área que más necesita acompañamiento.'
+      };
+      const showSignals = workspaceMode === 'senales';
+      const showPulse = workspaceMode === 'eval360';
+      const showIdeas = workspaceMode === 'ideas';
+      const microHtml = showSignals ? renderEval360MicroObservacionRapida() : '';
+      const observacionesHtml = (showPulse || showSignals)
+        ? '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Mis observaciones</h4></div>' + renderEval360FacilitadorInvitaciones() + '</section>' + renderEval360FacilitadorForm()
+        : '';
+      const pulseHtml = showPulse ? [
         '<div class="eval360-grid">',
-          '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Areas a trabajar</h4></div>' + renderEval360Rows(areas, { limit: 6 }) + '</section>',
+          '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Áreas de desarrollo</h4></div>' + renderEval360Rows(areas, { limit: 6 }) + '</section>',
           '<section class="eval360-panel"><div class="admin-alumnos-section-head"><h4>Habilidades prioritarias</h4></div>' + renderEval360Rows(habilidades, { titleField: 'item_label', limit: 6,
             rowAction: function(row) {
               if (!row.item_id) return '';
@@ -19783,13 +19799,41 @@
             }
           }) + '</section>',
         '</div>',
-        '<section class="eval360-panel" id="eval360FacAlumnosPrioritariosPanel"><div class="admin-alumnos-section-head"><h4>Senales para acompanar</h4></div>' + renderEval360AlumnosPrioritarios(alumnos) + '</section>',
-        '<div class="actions compact">',
-          firstNeed.item_id || firstNeed.area_id
-            ? '<button class="btn-secondary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Ver ideas (prioridad 1)</button>'
-            : '',
+        '<section class="eval360-panel" id="eval360FacAlumnosPrioritariosPanel"><div class="admin-alumnos-section-head"><h4>Señales para acompañar</h4></div>' + renderEval360AlumnosPrioritarios(alumnos) + '</section>'
+      ].join('') : '';
+      const ideasHtml = showIdeas ? [
+        '<section class="eval360-panel">',
+          '<div class="admin-alumnos-section-head"><div><h4>Banco de ideas sugeridas</h4><p class="mini">Empieza por la primera necesidad detectada o elige otra habilidad.</p></div></div>',
+          '<div class="eval360-grid">',
+            '<div>' + renderEval360Rows(habilidades.length ? habilidades : areas, { titleField: habilidades.length ? 'item_label' : 'area_nombre', limit: 6,
+              rowAction: function(row) {
+                return '<div class="eval360-row-actions">'
+                  + '<button class="btn-ghost eval360-ideas-btn" type="button"'
+                  + ' onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(row.area_id || '') + '\', \'' + escapeJsAttrValue(row.item_id || '') + '\', this)"'
+                  + ' title="Ver ideas">Ver ideas</button>'
+                  + '</div>';
+              }
+            }) + '</div>',
+            '<div>' + (firstNeed.item_id || firstNeed.area_id
+              ? '<button class="btn-secondary" type="button" onclick="loadEval360FacilitadorSugerencias(\'' + escapeJsAttrValue(firstNeed.area_id || '') + '\', \'' + escapeJsAttrValue(firstNeed.item_id || '') + '\', this)">Cargar prioridad 1</button>'
+              : '<div class="eval360-empty">Todavía no hay una prioridad detectada para esta selección.</div>') + '</div>',
+          '</div>',
+        '</section>',
+        renderEval360Sugerencias(ui.sugerencias, ui.selectedNeed)
+      ].join('') : '';
+      panel.innerHTML = [
+        '<div class="eval360-head">',
+          '<div><h2>' + escapeHtml(titleByMode[workspaceMode] || 'Evaluación 360') + '</h2><p class="subtle">' + escapeHtml(copyByMode[workspaceMode] || copyByMode.eval360) + '</p></div>',
+          '<div class="actions compact"><button class="btn-secondary" type="button" onclick="refreshEval360FacilitadorModule(this)">Actualizar</button><button class="btn-ghost" type="button" onclick="loadEval360FacilitadorPulso(this)">Pulso</button></div>',
         '</div>',
-        renderEval360Sugerencias(ui.sugerencias, ui.selectedNeed),
+        '<div class="grid-2">',
+          '<div><label for="eval360FacCiclo">Ciclo</label><select id="eval360FacCiclo" onchange="setEval360FacilitadorCiclo(this.value)">' + getEval360CicloOptions(ciclos, ui.selectedCicloId, { showQaClosed: ui.showQaClosed }) + '</select>' + (hiddenQaClosed ? '<label class="eval360-qa-toggle"><input type="checkbox"' + (ui.showQaClosed ? ' checked' : '') + ' onchange="setEval360FacilitadorShowQaClosed(this.checked)"> Mostrar QA cerrados <span class="mini">(' + escapeHtml(hiddenQaClosed) + ' ocultos)</span></label>' : '') + '</div>',
+          '<div><label for="eval360FacMomento">Momento</label><select id="eval360FacMomento" onchange="setEval360FacilitadorMomento(this.value)"><option value="inicio"' + (ui.selectedMomento === 'inicio' ? ' selected' : '') + '>Inicio</option><option value="final"' + (ui.selectedMomento === 'final' ? ' selected' : '') + '>Final</option></select></div>',
+        '</div>',
+        microHtml,
+        observacionesHtml,
+        pulseHtml,
+        ideasHtml,
       ].join('');
     }
 
@@ -22742,6 +22786,78 @@
       }
     }
 
+    const FACILITADOR_WORKSPACE_MODES = ['planeaciones', 'senales', 'observaciones', 'eval360', 'ideas'];
+
+    function getFacilitadorWorkspaceMode() {
+      const raw = String(state.facilitadorWorkspaceMode || 'planeaciones').trim();
+      return FACILITADOR_WORKSPACE_MODES.includes(raw) ? raw : 'planeaciones';
+    }
+
+    function isFacilitadorWorkspaceEval360Mode(mode) {
+      return ['senales', 'eval360', 'ideas'].includes(String(mode || '').trim());
+    }
+
+    function syncFacilitadorWorkspaceUi() {
+      const enabled = getCurrentRole() === 'facilitador' && !canUseAdminShell();
+      const nav = $('facilitadorWorkspaceNav');
+      FACILITADOR_WORKSPACE_MODES.forEach((mode) => document.body.classList.remove('fac-mode-' + mode));
+      if (!enabled) {
+        if (nav) nav.hidden = true;
+        return;
+      }
+      const mode = getFacilitadorWorkspaceMode();
+      document.body.classList.add('fac-mode-' + mode);
+      if (nav) {
+        nav.hidden = false;
+        nav.querySelectorAll('[data-fac-workspace-mode]').forEach((btn) => {
+          btn.classList.toggle('is-active', btn.dataset.facWorkspaceMode === mode);
+        });
+      }
+      const planBuilderCard = $('planBuilderCard');
+      const planeacionesListCard = $('planeacionesListCard');
+      const suplencias = $('suplenciasActivasSection');
+      const seguimientoPanel = $('panel-seguimiento');
+      const showPlaneaciones = mode === 'planeaciones';
+      if (planBuilderCard) planBuilderCard.hidden = !showPlaneaciones;
+      if (planeacionesListCard) planeacionesListCard.hidden = !showPlaneaciones;
+      if (suplencias) suplencias.hidden = !showPlaneaciones;
+      if (seguimientoPanel) seguimientoPanel.hidden = mode !== 'observaciones';
+    }
+
+    function ensureFacilitadorEval360WorkspaceLoaded(button) {
+      const ui = getEval360Ui().facilitador;
+      ui.open = true;
+      renderEval360FacilitadorPanel();
+      if (!ui.loaded && !ui.loading) {
+        refreshEval360FacilitadorModule(button).catch(() => {});
+      }
+    }
+
+    function setFacilitadorWorkspaceMode(mode, button) {
+      const nextMode = FACILITADOR_WORKSPACE_MODES.includes(String(mode || '').trim())
+        ? String(mode || '').trim()
+        : 'planeaciones';
+      state.facilitadorWorkspaceMode = nextMode;
+      if (nextMode === 'observaciones') {
+        state.activeTab = 'seguimiento';
+        activateTab('seguimiento');
+        renderBaseSelects({ planeaciones: false, seguimiento: true, reportes: false });
+        renderObsAlumnoSelect();
+        renderEvaluationDependencies();
+      } else {
+        state.activeTab = 'planeaciones';
+        activateTab('planeaciones');
+      }
+      if (isFacilitadorWorkspaceEval360Mode(nextMode)) {
+        ensureFacilitadorEval360WorkspaceLoaded(button);
+      } else {
+        const ui = getEval360Ui().facilitador;
+        ui.open = false;
+        renderEval360FacilitadorPanel();
+      }
+      syncFacilitadorWorkspaceUi();
+    }
+
     function bindEvents() {
       bindHiddenPingShortcut();
       document.addEventListener('click', (event) => {
@@ -22779,6 +22895,15 @@
       $('logoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       $('workspaceLogoutBtn').addEventListener('click', (event) => handleAction('logout', logout, { button: event.currentTarget }));
       if ($('eval360FacilitadorOpenBtn')) $('eval360FacilitadorOpenBtn').addEventListener('click', (event) => toggleEval360FacilitadorPanel(event.currentTarget));
+      if ($('facilitadorWorkspaceNav')) {
+        $('facilitadorWorkspaceNav').addEventListener('click', (event) => {
+          const button = event.target && typeof event.target.closest === 'function'
+            ? event.target.closest('[data-fac-workspace-mode]')
+            : null;
+          if (!button) return;
+          setFacilitadorWorkspaceMode(button.dataset.facWorkspaceMode, button);
+        });
+      }
       $('reloadBtn').addEventListener('click', (event) => handleAction('refresh', refreshAll, { button: event.currentTarget }));
       $('savePlanBtn').addEventListener('click', (event) => handleAction('guardarPlaneacionCompleta', () => savePlanEditor(), {
         button: event.currentTarget,
